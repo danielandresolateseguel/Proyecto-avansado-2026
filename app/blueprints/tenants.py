@@ -60,15 +60,56 @@ def calculate_average_times(conn, slug):
         
     return avgs
 
-@bp.route('/tenant_header', methods=['GET'])
+@bp.route('/tenant_header', methods=['GET', 'PATCH'])
 def get_tenant_header():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    
+    if request.method == 'PATCH':
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        if not check_csrf():
+            return jsonify({'error': 'csrf inválido'}), 403
+            
+        payload = request.get_json(silent=True) or {}
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
+        row = cur.fetchone()
+        
+        current_cfg = {}
+        if row and row[0]:
+            try:
+                current_cfg = json.loads(row[0])
+            except:
+                pass
+                
+        # Update header fields
+        fields = ['whatsapp', 'instagram', 'location_label', 'location_url', 'opening_hours', 'logo_url']
+        for f in fields:
+            if f in payload:
+                current_cfg[f] = payload[f]
+        
+        # Special case for location/location_label compatibility
+        if 'location_label' in payload:
+            current_cfg['location'] = payload['location_label']
+            
+        try:
+            cur.execute("INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)", 
+                       (slug, json.dumps(current_cfg, ensure_ascii=False)))
+            conn.commit()
+            invalidate_tenant_config(slug)
+            return jsonify({'ok': True})
+        except Exception as e:
+            print(f"Error saving header: {e}")
+            return jsonify({'error': 'error al guardar'}), 500
+
     cfg = get_cached_tenant_config(slug)
     return jsonify({
         'whatsapp': cfg.get('whatsapp', ''),
         'instagram': cfg.get('instagram', ''),
         'location': cfg.get('location', ''),
-        'location_label': cfg.get('location_label', ''),
+        'location_label': cfg.get('location_label', '') or cfg.get('location', ''),
         'location_url': cfg.get('location_url', ''),
         'opening_hours': cfg.get('opening_hours', ''),
         'logo_url': cfg.get('logo_url', '')
