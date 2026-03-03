@@ -85,7 +85,7 @@ def get_tenant_header():
                 pass
                 
         # Update header fields
-        fields = ['whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'logo_url']
+        fields = ['whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'logo_url', 'announcement_text', 'announcement_active']
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]

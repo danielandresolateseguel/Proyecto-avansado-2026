@@ -275,6 +275,27 @@ function initHeaderContact() {
                 }
             }
         }
+
+        // Announcement Banner
+        const announcementActive = data.announcement_active;
+        const announcementText = (data.announcement_text || '').trim();
+        const banner = document.getElementById('announcement-banner');
+        const bannerText = document.getElementById('announcement-text');
+        const bannerClose = document.getElementById('announcement-close');
+
+        if (banner && bannerText && announcementActive && announcementText) {
+            const closedKey = 'announcement_closed_' + slug;
+            if (!sessionStorage.getItem(closedKey)) {
+                bannerText.textContent = announcementText;
+                banner.style.display = 'block';
+                if (bannerClose) {
+                    bannerClose.onclick = () => {
+                        banner.style.display = 'none';
+                        sessionStorage.setItem(closedKey, 'true');
+                    };
+                }
+            }
+        }
     }).catch(() => {
         // Fallback or error handling
     });

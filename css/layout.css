@@ -95,3 +95,39 @@ body.sector-gastronomia .footer-section p { color: #d9d9d9; }
 body.sector-gastronomia .footer-section i { color: var(--gastro-accent); }
 body.sector-gastronomia .footer-bottom { border-top: 1px solid var(--gastro-accent-25); }
 body.sector-gastronomia .footer-bottom p { color: #cfcfcf; }
+
+/* Announcement Banner */
+body.sector-gastronomia .announcement-banner {
+    background: var(--gastro-accent, #ff6a00);
+    color: #ffffff;
+    text-align: center;
+    padding: 12px 40px;
+    position: relative;
+    font-size: 15px;
+    font-weight: 600;
+    z-index: 1100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    display: none;
+}
+body.sector-gastronomia .announcement-banner button {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: #ffffff;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+body.sector-gastronomia .announcement-banner button:hover {
+    background: rgba(255,255,255,0.4);
+}

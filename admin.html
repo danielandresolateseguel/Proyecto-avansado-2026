@@ -1532,6 +1532,14 @@
         </div>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Barra de Anuncios</label>
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <input type="checkbox" id="header-announcement-active">
+            <label for="header-announcement-active" style="font-size:12px;">Activar anuncio superior</label>
+        </div>
+        <textarea id="header-announcement-text" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; height:60px;" placeholder="Ej: ¡Hoy 2x1 en Lomos!"></textarea>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <div id="header-hours-header" style="font-size:12px; font-weight:bold; margin-bottom:4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
           <span>Horarios de apertura</span>
           <span id="header-hours-toggle-label" style="font-size:11px; color:#2196F3;">Mostrar</span>
@@ -4832,7 +4840,9 @@
             location_label: headerLocationLabelInput ? headerLocationLabelInput.value.trim() : '',
             location_url: headerLocationUrlInput ? headerLocationUrlInput.value.trim() : '',
             opening_hours: openingHours,
-            logo_url: headerLogoInput ? headerLogoInput.value.trim() : ''
+            logo_url: headerLogoInput ? headerLogoInput.value.trim() : '',
+            announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
+            announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''
           };
           const resp = await wFetch(url.toString(), {
             method: 'PATCH',
