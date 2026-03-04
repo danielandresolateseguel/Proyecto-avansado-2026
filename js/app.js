@@ -216,23 +216,25 @@ function initHeaderContact() {
                             if (offset === 0) {
                                 if (s <= e) {
                                     if (s > minutes) {
-                                        return s;
+                                        return { minutes: s, offset: offset, day: key };
                                     }
                                 } else {
                                     if (minutes < s) {
-                                        return s;
+                                        return { minutes: s, offset: offset, day: key };
                                     }
                                 }
                             } else {
-                                return s;
+                                return { minutes: s, offset: offset, day: key };
                             }
                         }
                     }
                     return null;
                 };
+                let nextOpening = null;
                 const next = findNextOpening();
                 if (next != null) {
-                    nextOpeningMinutes = next;
+                    nextOpeningMinutes = next.minutes;
+                    nextOpening = next;
                 }
             } catch (e) {}
             const clockIcon = headerContact.querySelector('.fa-clock');
@@ -242,14 +244,28 @@ function initHeaderContact() {
                 if (span) {
                     if (isOpenNow) {
                         span.textContent = 'Abierto';
+                        span.className = 'text-success fw-bold';
                     } else if (nextOpeningMinutes != null) {
                         const h = Math.floor(nextOpeningMinutes / 60);
                         const m = nextOpeningMinutes % 60;
                         const hh = h.toString().padStart(2, '0');
                         const mm = m.toString().padStart(2, '0');
-                        span.textContent = 'Abre a las ' + hh + ':' + mm;
+                        
+                        let dayLabel = '';
+                        if (nextOpening && nextOpening.offset > 0) {
+                            const dayLabels = { mon: 'Lun', tue: 'Mar', wed: 'Mié', thu: 'Jue', fri: 'Vie', sat: 'Sáb', sun: 'Dom' };
+                            if (nextOpening.offset === 1) {
+                                dayLabel = 'Mañana ';
+                            } else {
+                                dayLabel = (dayLabels[nextOpening.day] || '') + ' ';
+                            }
+                        }
+                        
+                        span.textContent = 'Abre ' + dayLabel + 'a las ' + hh + ':' + mm;
+                        span.className = 'text-warning fw-bold';
                     } else {
                         span.textContent = 'Cerrado';
+                        span.className = 'text-danger fw-bold';
                     }
                 }
                 const formatIntervals = (arr) => {
