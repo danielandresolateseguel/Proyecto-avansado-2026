@@ -98,7 +98,7 @@ body.sector-gastronomia .footer-bottom p { color: #cfcfcf; }
 
 /* Announcement Banner */
 body.sector-gastronomia .announcement-banner {
-    background: var(--gastro-accent, #ff6a00);
+    background: var(--gastro-accent);
     color: #ffffff;
     text-align: center;
     padding: 12px 40px;

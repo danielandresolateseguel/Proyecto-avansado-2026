@@ -85,7 +85,7 @@ def get_tenant_header():
                 pass
                 
         # Update header fields
-        fields = ['whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'logo_url', 'announcement_text', 'announcement_active']
+        fields = ['whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color']
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
@@ -115,7 +115,8 @@ def get_tenant_header():
         'opening_hours': cfg.get('opening_hours', ''),
         'logo_url': cfg.get('logo_url', ''),
         'announcement_active': cfg.get('announcement_active', False),
-        'announcement_text': cfg.get('announcement_text', '')
+        'announcement_text': cfg.get('announcement_text', ''),
+        'theme_color': cfg.get('theme_color', '#ff6a00')
     })
 
 @bp.route('/tenants', methods=['GET'])

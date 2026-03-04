@@ -1532,6 +1532,13 @@
         </div>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Color de Marca</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="color" id="header-theme-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#ff6a00">
+          <span style="font-size:12px; color:#666;">Selecciona el color principal para botones y acentos.</span>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Barra de Anuncios</label>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <input type="checkbox" id="header-announcement-active">
@@ -4709,6 +4716,7 @@
     const headerLocationLabelInput = document.getElementById('header-location-label');
     const headerLocationUrlInput = document.getElementById('header-location-url');
     const headerLogoInput = document.getElementById('header-logo-url');
+    const headerThemeColor = document.getElementById('header-theme-color');
     const headerAnnouncementActive = document.getElementById('header-announcement-active');
     const headerAnnouncementText = document.getElementById('header-announcement-text');
     const headerHoursTable = document.getElementById('header-hours-table');
@@ -4802,6 +4810,7 @@
         if (headerLocationLabelInput) headerLocationLabelInput.value = (data.location_label || data.location || '');
         if (headerLocationUrlInput) headerLocationUrlInput.value = data.location_url || '';
         if (headerLogoInput) headerLogoInput.value = data.logo_url || '';
+        if (headerThemeColor) headerThemeColor.value = data.theme_color || '#ff6a00';
         if (headerAnnouncementActive) headerAnnouncementActive.checked = data.announcement_active || false;
         if (headerAnnouncementText) headerAnnouncementText.value = data.announcement_text || '';
         if (headerHoursTable) fillHeaderHours(data.opening_hours || {});
@@ -4845,6 +4854,7 @@
             location_url: headerLocationUrlInput ? headerLocationUrlInput.value.trim() : '',
             opening_hours: openingHours,
             logo_url: headerLogoInput ? headerLogoInput.value.trim() : '',
+            theme_color: headerThemeColor ? headerThemeColor.value : '#ff6a00',
             announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
             announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''
           };

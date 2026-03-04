@@ -101,6 +101,53 @@ function initHeaderContact() {
         const locationUrl = (data.location_url || '').trim();
         const openingHours = data.opening_hours || null;
         const logoUrl = (data.logo_url || '').trim();
+        
+        // Apply Theme Color
+        const themeColor = data.theme_color || '#ff6a00';
+        if (themeColor) {
+            // Use document.body to override CSS definitions on body.sector-gastronomia
+            document.body.style.setProperty('--gastro-accent', themeColor);
+            
+            // Calculate dark variant
+            const darken = (hex, amount) => {
+                let col = hex.replace(/^#/, '');
+                if (col.length === 3) col = col[0] + col[0] + col[1] + col[1] + col[2] + col[2];
+                let num = parseInt(col, 16);
+                let r = (num >> 16) + amount;
+                let g = ((num >> 8) & 0x00FF) + amount;
+                let b = (num & 0x0000FF) + amount;
+                return '#' + (
+                    0x1000000 +
+                    (r < 255 ? (r < 1 ? 0 : r) : 255) * 0x10000 +
+                    (g < 255 ? (g < 1 ? 0 : g) : 255) * 0x100 +
+                    (b < 255 ? (b < 1 ? 0 : b) : 255)
+                ).toString(16).slice(1);
+            };
+            document.body.style.setProperty('--gastro-accent-dark', darken(themeColor, -40));
+            
+            // Calculate rgba variants
+            const hexToRgba = (hex, alpha) => {
+                let c = hex.replace(/^#/, '');
+                if(c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+                const num = parseInt(c, 16);
+                const r = (num >> 16) & 255;
+                const g = (num >> 8) & 255;
+                const b = num & 255;
+                return `rgba(${r},${g},${b},${alpha})`;
+            };
+            
+            // Set all alpha variants used in CSS
+            const alphas = [0.08, 0.18, 0.22, 0.25, 0.28, 0.35, 0.42, 0.55, 0.85];
+            alphas.forEach(a => {
+                let key = a.toString().split('.')[1]; 
+                // key is "08", "18", etc.
+                document.body.style.setProperty(`--gastro-accent-${key}`, hexToRgba(themeColor, a));
+            });
+            
+            // Set light background tint
+            document.body.style.setProperty('--gastro-bg', hexToRgba(themeColor, 0.04));
+        }
+
         const logoImg = document.querySelector('.site-logo img');
         if (logoImg) {
             logoImg.src = logoUrl || 'Imagenes/Epalogo.png';

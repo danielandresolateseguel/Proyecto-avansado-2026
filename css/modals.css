@@ -182,7 +182,7 @@
 }
 
 #product-modal .modal-add-to-cart:hover {
-    background-color: var(--gastro-accent-dark, #c85000);
+    background-color: var(--gastro-accent-dark);
 }
 
 .status-header {
