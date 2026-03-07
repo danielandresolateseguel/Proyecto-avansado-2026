@@ -161,7 +161,40 @@ function initHeaderContact() {
             favicon.rel = 'icon';
             document.head.appendChild(favicon);
         }
-        favicon.href = faviconUrl;
+        
+        // Attempt to create a circular favicon
+        const img = new Image();
+        img.crossOrigin = "Anonymous"; 
+        img.onload = function() {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const size = 64; 
+                canvas.width = size;
+                canvas.height = size;
+
+                // Draw circle clip
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, size/2, 0, 2 * Math.PI);
+                ctx.closePath();
+                ctx.clip();
+
+                // Draw image
+                ctx.drawImage(img, 0, 0, size, size);
+                
+                // Update favicon
+                favicon.href = canvas.toDataURL();
+            } catch (e) {
+                // Fallback to square if CORS or other issues prevent canvas export
+                console.warn('Could not create circular favicon:', e);
+                favicon.href = faviconUrl;
+            }
+        };
+        img.onerror = function() {
+             // Fallback if image fails to load
+             favicon.href = faviconUrl;
+        };
+        img.src = faviconUrl;
 
         if (whatsappValue) {
             const whatsappIcon = headerContact.querySelector('.fa-whatsapp');
