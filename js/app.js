@@ -3,7 +3,14 @@
  */
 // FORCE CONFIG REFRESH: Clear cached config to ensure fresh load from backend
 try {
-    const slug = window.BUSINESS_SLUG || 'gastronomia-local1';
+    let slug = window.BUSINESS_SLUG;
+    if (!slug) {
+        // Fallback to URL parsing if not set by inline script
+        const urlParams = new URLSearchParams(window.location.search);
+        slug = urlParams.get('slug') || urlParams.get('tenant') || urlParams.get('tenant_slug');
+    }
+    if (!slug) slug = 'gastronomia-local1';
+
     localStorage.removeItem('ordersConfig_' + slug); // Remove slug-specific config
     localStorage.removeItem('ordersConfig'); // Remove legacy config
     console.log('Config cache cleared for update.');
@@ -143,10 +150,12 @@ function initHeaderContact() {
         // Si no hay configuración, usar fallback #333 (gris oscuro) en lugar de violeta
         const headerBgColor = data.header_bg_color || '#333333';
         if (headerBgColor) {
-            // Generate a gradient similar to the original effect
-            // We'll use the selected color as the start, and a darkened version as the end
-            const darkVariant = darken(headerBgColor, -40); 
-            const gradient = `linear-gradient(135deg, ${headerBgColor} 0%, ${darkVariant} 100%)`;
+            // Smart Gradient: Detect if color is dark or light to apply contrast
+            const isDark = getContrastColor(headerBgColor) === '#ffffff';
+            // If dark, lighten the end. If light, darken the end.
+            const endColor = isDark ? darken(headerBgColor, 50) : darken(headerBgColor, -50);
+            
+            const gradient = `linear-gradient(135deg, ${headerBgColor} 0%, ${endColor} 100%)`;
             document.body.style.setProperty('--header-bg', gradient);
             // Cache para evitar flash en la próxima carga
             try {
@@ -175,23 +184,24 @@ function initHeaderContact() {
         }
 
         // Apply Section Background Colors
-        const featuredBg = data.featured_bg_color;
-        if (featuredBg) {
-            document.body.style.setProperty('--gastro-special-discounts-bg', featuredBg);
-            document.body.style.setProperty('--gastro-special-discounts-text', getContrastColor(featuredBg));
-        }
+        const applySectionGradient = (variableName, textVarName, color) => {
+            if (!color) return;
+            const isDark = getContrastColor(color) === '#ffffff';
+            // 3-stop gradient for more depth
+            // Dark BG: Color -> Lighter -> Even Lighter
+            // Light BG: Color -> Darker -> Even Darker
+            const midColor = isDark ? darken(color, 30) : darken(color, -30);
+            const endColor = isDark ? darken(color, 60) : darken(color, -60);
+            
+            const grad = `linear-gradient(135deg, ${color} 0%, ${midColor} 60%, ${endColor} 100%)`;
+            
+            document.body.style.setProperty(variableName, grad);
+            document.body.style.setProperty(textVarName, getContrastColor(color));
+        };
 
-        const menuBg = data.menu_bg_color;
-        if (menuBg) {
-            document.body.style.setProperty('--gastro-products-bg', menuBg);
-            document.body.style.setProperty('--gastro-products-text', getContrastColor(menuBg));
-        }
-
-        const interestBg = data.interest_bg_color;
-        if (interestBg) {
-            document.body.style.setProperty('--gastro-interest-bg', interestBg);
-            document.body.style.setProperty('--gastro-interest-text', getContrastColor(interestBg));
-        }
+        applySectionGradient('--gastro-special-discounts-bg', '--gastro-special-discounts-text', data.featured_bg_color);
+        applySectionGradient('--gastro-products-bg', '--gastro-products-text', data.menu_bg_color);
+        applySectionGradient('--gastro-interest-bg', '--gastro-interest-text', data.interest_bg_color);
 
         const logoImg = document.querySelector('.site-logo img');
         if (logoImg) {

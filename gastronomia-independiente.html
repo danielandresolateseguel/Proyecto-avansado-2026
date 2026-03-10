@@ -452,6 +452,15 @@
     <!-- Resolución dinámica del BUSINESS_SLUG según el nombre del archivo solicitado -->
     <script>
       (function(){
+        // 1. Intentar obtener slug de la URL
+        var urlParams = new URLSearchParams(window.location.search);
+        var qsSlug = urlParams.get('slug') || urlParams.get('tenant') || urlParams.get('tenant_slug');
+        
+        if (qsSlug) {
+            window.BUSINESS_SLUG = qsSlug.trim();
+        }
+
+        // 2. Fallback al nombre del archivo si no hay slug en URL
         if (!window.BUSINESS_SLUG) {
           try {
             var name = (window.location.pathname.split('/').pop() || '').replace(/\.html$/,'').trim();
@@ -460,6 +469,13 @@
             window.BUSINESS_SLUG = 'gastronomia';
           }
         }
+        // Intentar cargar color de fondo de cabecera desde cache para evitar flash
+        try {
+            var cachedBg = localStorage.getItem('cached_header_bg_' + window.BUSINESS_SLUG);
+            if (cachedBg) {
+                document.body.style.setProperty('--header-bg', cachedBg);
+            }
+        } catch(e) {}
       })();
     </script>
     <script src="theme-loader.js" defer></script>

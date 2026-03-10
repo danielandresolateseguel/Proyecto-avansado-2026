@@ -1,10 +1,35 @@
 import secrets
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import check_password_hash, generate_password_hash
-from app.database import get_db
+from app.database import get_db, is_postgres
 from app.utils import is_authed, check_csrf, get_csrf_token
 
 bp = Blueprint('auth', __name__, url_prefix='/api')
+
+def ensure_master_users_table(db, cur):
+    if is_postgres():
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS master_users (
+                id SERIAL PRIMARY KEY,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+    else:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS master_users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+    db.commit()
 
 @bp.route('/auth/login', methods=['POST'])
 def auth_login():
@@ -70,30 +95,38 @@ def master_bootstrap():
     db = get_db()
     cur = db.cursor()
     try:
+        ensure_master_users_table(db, cur)
+    except Exception:
+        return jsonify({'error': 'base de datos no disponible'}), 503
+
+    try:
         cur.execute("SELECT COUNT(*) FROM master_users")
         row = cur.fetchone()
     except Exception:
-        # Fallback in caso de que la tabla aún no exista por algún motivo
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS master_users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT NOT NULL UNIQUE,
-                password_hash TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
-            """
-        )
-        db.commit()
-        cur.execute("SELECT COUNT(*) FROM master_users")
-        row = cur.fetchone()
+        return jsonify({'error': 'base de datos no disponible'}), 503
     count = int(row[0]) if row else 0
     if count > 0:
         return jsonify({'error': 'ya existe un usuario master'}), 409
     ph = generate_password_hash(password)
     import datetime
-    cur.execute("INSERT INTO master_users (username, password_hash, created_at) VALUES (?, ?, ?)", (username, ph, datetime.datetime.utcnow().isoformat()))
-    db.commit()
+    try:
+        if is_postgres():
+            cur.execute(
+                "INSERT INTO master_users (username, password_hash, created_at) VALUES (%s, %s, %s)",
+                (username, ph, datetime.datetime.utcnow().isoformat())
+            )
+        else:
+            cur.execute(
+                "INSERT INTO master_users (username, password_hash, created_at) VALUES (?, ?, ?)",
+                (username, ph, datetime.datetime.utcnow().isoformat())
+            )
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return jsonify({'error': 'base de datos no disponible'}), 503
     return jsonify({'ok': True, 'username': username})
 
 @bp.route('/auth/master_login', methods=['POST'])
@@ -105,8 +138,19 @@ def master_login():
         return jsonify({'error': 'datos incompletos'}), 400
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT password_hash FROM master_users WHERE username = ?", (username,))
-    row = cur.fetchone()
+    try:
+        ensure_master_users_table(db, cur)
+    except Exception:
+        return jsonify({'error': 'base de datos no disponible'}), 503
+
+    try:
+        if is_postgres():
+            cur.execute("SELECT password_hash FROM master_users WHERE username = %s", (username,))
+        else:
+            cur.execute("SELECT password_hash FROM master_users WHERE username = ?", (username,))
+        row = cur.fetchone()
+    except Exception:
+        return jsonify({'error': 'base de datos no disponible'}), 503
     if not row or not check_password_hash(row[0], password):
         return jsonify({'error': 'usuario o contraseña inválidos'}), 401
     import secrets as _secrets

@@ -2355,8 +2355,16 @@
       const dataSlug = (document.body && document.body.dataset && document.body.dataset.tenant) ? document.body.dataset.tenant.trim() : '';
       if (dataSlug) return dataSlug;
       try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const slugParam = urlParams.get('slug') || urlParams.get('tenant');
+        if (slugParam) return slugParam.trim();
+
         const name = (window.location.pathname.split('/').pop() || '').replace(/\.html$/,'');
         if (name && name !== 'admin') return name;
+      } catch (_) {}
+      try {
+        const session = sessionStorage.getItem('current_tenant_slug');
+        if (session) return session;
       } catch (_) {}
       try {
         const last = localStorage.getItem('tenant_last_selected') || '';
@@ -5186,7 +5194,9 @@
           if (typeof tenantInput !== 'undefined' && tenantInput) {
             const slug = currentTenantSlug || tenantInput.value.trim() || defaultSlug();
             tenantInput.value = slug;
-            try { localStorage.setItem('tenant_last_selected', slug); } catch (_) {}
+            try { sessionStorage.setItem('current_tenant_slug', slug); } catch (_) {}
+            // Evitamos sobreescribir localStorage al cargar para mantener aislamiento entre pestañas
+            // try { localStorage.setItem('tenant_last_selected', slug); } catch (_) {}
           }
           await fetchCsrfToken(); // Uses the global function defined at the top
           if (typeof csrfToken !== 'undefined') csrfToken = CSRF_TOKEN;
@@ -5283,6 +5293,7 @@
         }
         isAuthed = true;
         currentTenantSlug = slug;
+        try { sessionStorage.setItem('current_tenant_slug', slug); } catch (_) {}
         try { localStorage.setItem('tenant_last_selected', slug); } catch (_) {}
         if (tenantInput) tenantInput.value = slug;
         const box = document.getElementById('login-box');
