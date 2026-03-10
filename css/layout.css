@@ -6,14 +6,14 @@ body.sector-gastronomia .special-discounts {
 }
 body.sector-gastronomia .special-discounts .section-title,
 body.sector-gastronomia .special-discounts h2 {
-  color: #f5f5f5;
+  color: var(--gastro-special-discounts-text, #f5f5f5);
 }
 
 body.sector-gastronomia #menu-gastronomia.products.searchable-section {
   background: var(--gastro-products-bg, linear-gradient(90deg, rgba(15, 15, 15, 0.95) 0%, rgba(28, 28, 28, 0.88) 45%, rgba(58, 58, 58, 0.72) 100%));
 }
 body.sector-gastronomia #menu-gastronomia .section-title {
-  color: #f5f5f5;
+  color: var(--gastro-products-text, #f5f5f5);
 }
 
 body.sector-gastronomia.products-loading #menu-gastronomia .product-image img,
@@ -34,7 +34,7 @@ body.sector-gastronomia .interest-products {
   border-radius: 12px;
 }
 body.sector-gastronomia .interest-products .section-title {
-  color: #f5f5f5;
+  color: var(--gastro-interest-text, #f5f5f5);
 }
 
 /* Tarjetas dentro de Recomendados por interés */

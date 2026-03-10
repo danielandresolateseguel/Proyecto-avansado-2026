@@ -1546,6 +1546,27 @@
         </div>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Fondo Platos Destacados</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="color" id="featured-bg-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#0c0c0c">
+          <span style="font-size:12px; color:#666;">Fondo para la sección de destacados.</span>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Fondo Menú Principal</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="color" id="menu-bg-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#0f0f0f">
+          <span style="font-size:12px; color:#666;">Fondo para la lista de productos.</span>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Fondo Recomendados</label>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="color" id="interest-bg-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#121212">
+          <span style="font-size:12px; color:#666;">Fondo para sugerencias por interés.</span>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Barra de Anuncios</label>
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <input type="checkbox" id="header-announcement-active">
@@ -4725,6 +4746,9 @@
     const headerLogoInput = document.getElementById('header-logo-url');
     const headerThemeColor = document.getElementById('header-theme-color');
     const headerBgColor = document.getElementById('header-bg-color');
+    const featuredBgColor = document.getElementById('featured-bg-color');
+    const menuBgColor = document.getElementById('menu-bg-color');
+    const interestBgColor = document.getElementById('interest-bg-color');
     const headerAnnouncementActive = document.getElementById('header-announcement-active');
     const headerAnnouncementText = document.getElementById('header-announcement-text');
     const headerHoursTable = document.getElementById('header-hours-table');
@@ -4820,6 +4844,9 @@
         if (headerLogoInput) headerLogoInput.value = data.logo_url || '';
         if (headerThemeColor) headerThemeColor.value = data.theme_color || '#ff6a00';
         if (headerBgColor) headerBgColor.value = data.header_bg_color || '#667eea';
+        if (featuredBgColor) featuredBgColor.value = data.featured_bg_color || '#0c0c0c';
+        if (menuBgColor) menuBgColor.value = data.menu_bg_color || '#0f0f0f';
+        if (interestBgColor) interestBgColor.value = data.interest_bg_color || '#121212';
         if (headerAnnouncementActive) headerAnnouncementActive.checked = data.announcement_active || false;
         if (headerAnnouncementText) headerAnnouncementText.value = data.announcement_text || '';
         if (headerHoursTable) fillHeaderHours(data.opening_hours || {});
@@ -4865,6 +4892,9 @@
             logo_url: headerLogoInput ? headerLogoInput.value.trim() : '',
             theme_color: headerThemeColor ? headerThemeColor.value : '#ff6a00',
             header_bg_color: headerBgColor ? headerBgColor.value : '#667eea',
+            featured_bg_color: featuredBgColor ? featuredBgColor.value : '#0c0c0c',
+            menu_bg_color: menuBgColor ? menuBgColor.value : '#0f0f0f',
+            interest_bg_color: interestBgColor ? interestBgColor.value : '#121212',
             announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
             announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''
           };

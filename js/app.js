@@ -128,6 +128,17 @@ function initHeaderContact() {
             return `rgba(${r},${g},${b},${alpha})`;
         };
 
+        const getContrastColor = (hex) => {
+            let c = hex.replace(/^#/, '');
+            if(c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+            const num = parseInt(c, 16);
+            const r = (num >> 16) & 255;
+            const g = (num >> 8) & 255;
+            const b = num & 255;
+            const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+            return hsp > 127.5 ? '#000000' : '#ffffff';
+        };
+
         // Apply Header Background Color
         // Si no hay configuración, usar fallback #333 (gris oscuro) en lugar de violeta
         const headerBgColor = data.header_bg_color || '#333333';
@@ -161,6 +172,25 @@ function initHeaderContact() {
             
             // Set light background tint
             document.body.style.setProperty('--gastro-bg', hexToRgba(themeColor, 0.04));
+        }
+
+        // Apply Section Background Colors
+        const featuredBg = data.featured_bg_color;
+        if (featuredBg) {
+            document.body.style.setProperty('--gastro-special-discounts-bg', featuredBg);
+            document.body.style.setProperty('--gastro-special-discounts-text', getContrastColor(featuredBg));
+        }
+
+        const menuBg = data.menu_bg_color;
+        if (menuBg) {
+            document.body.style.setProperty('--gastro-products-bg', menuBg);
+            document.body.style.setProperty('--gastro-products-text', getContrastColor(menuBg));
+        }
+
+        const interestBg = data.interest_bg_color;
+        if (interestBg) {
+            document.body.style.setProperty('--gastro-interest-bg', interestBg);
+            document.body.style.setProperty('--gastro-interest-text', getContrastColor(interestBg));
         }
 
         const logoImg = document.querySelector('.site-logo img');
@@ -350,7 +380,8 @@ function initHeaderContact() {
                 if (span) {
                     if (isOpenNow) {
                         span.textContent = 'Abierto';
-                        span.className = 'text-success fw-bold';
+                        span.className = 'fw-bold';
+                        span.style.color = '#ffffff';
                     } else if (nextOpeningMinutes != null) {
                         const h = Math.floor(nextOpeningMinutes / 60);
                         const m = nextOpeningMinutes % 60;
@@ -368,10 +399,12 @@ function initHeaderContact() {
                         }
                         
                         span.textContent = 'Abre ' + dayLabel + 'a las ' + hh + ':' + mm + ' hs';
-                        span.className = 'text-warning fw-bold';
+                        span.className = 'fw-bold';
+                        span.style.color = '#ffffff';
                     } else {
                         span.textContent = 'Cerrado';
-                        span.className = 'text-danger fw-bold';
+                        span.className = 'fw-bold';
+                        span.style.color = '#ffffff';
                     }
                 }
                 const formatIntervals = (arr) => {
