@@ -474,6 +474,13 @@
             window.BUSINESS_SLUG = 'gastronomia-local1';
           }
         }
+        // Intentar cargar color de fondo de cabecera desde cache para evitar flash
+        try {
+            var cachedBg = localStorage.getItem('cached_header_bg_' + window.BUSINESS_SLUG);
+            if (cachedBg) {
+                document.body.style.setProperty('--header-bg', cachedBg);
+            }
+        } catch(e) {}
       })();
     </script>
     <script src="theme-loader.js?v=3" defer></script>

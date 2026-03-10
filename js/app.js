@@ -137,6 +137,10 @@ function initHeaderContact() {
             const darkVariant = darken(headerBgColor, -40); 
             const gradient = `linear-gradient(135deg, ${headerBgColor} 0%, ${darkVariant} 100%)`;
             document.body.style.setProperty('--header-bg', gradient);
+            // Cache para evitar flash en la próxima carga
+            try {
+                localStorage.setItem('cached_header_bg_' + slug, gradient);
+            } catch(e) {}
         }
 
         // Apply Theme Color
