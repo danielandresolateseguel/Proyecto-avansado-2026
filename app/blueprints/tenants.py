@@ -137,6 +137,11 @@ def get_tenants():
     tenants_list = [
         {'slug': 'gastronomia-local1', 'name': 'Gastronomía Local 1'}
     ]
+    if not session.get('master_auth'):
+        s = str(session.get('tenant_slug') or '').strip()
+        if s and s != 'gastronomia-local1':
+            tenants_list.append({'slug': s, 'name': s.replace('-', ' ').title()})
+        return jsonify(tenants_list)
     # Intentar leer más tenants de la DB si existen (opcional)
     try:
         conn = get_db()
