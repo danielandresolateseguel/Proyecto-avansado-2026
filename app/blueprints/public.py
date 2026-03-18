@@ -4,6 +4,15 @@ import re
 
 bp = Blueprint('public', __name__)
 
+def _no_store(resp):
+    try:
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Expires'] = '0'
+    except Exception:
+        pass
+    return resp
+
 @bp.route('/Imagenes/<path:filename>')
 def serve_images(filename):
     # Construct absolute path to Imagenes directory in project root
@@ -14,7 +23,8 @@ def serve_images(filename):
 
 @bp.route('/')
 def index():
-    return send_from_directory(current_app.static_folder, 'index.html')
+    resp = send_from_directory(current_app.static_folder, 'index.html')
+    return _no_store(resp)
 
 @bp.route('/api/ping')
 def ping():
@@ -30,13 +40,17 @@ def static_proxy(path):
     if path.startswith('api/'):
         return jsonify({'error': 'Ruta de API no válida'}), 404
     try:
-        return send_from_directory(current_app.static_folder, path)
+        resp = send_from_directory(current_app.static_folder, path)
+        if path.endswith('.html'):
+            resp = _no_store(resp)
+        return resp
     except Exception:
         # Si piden un HTML que no existe, devolvemos la carta base principal.
         # El JS interno calculará el tenant_slug a partir del nombre del archivo solicitado.
         if path.endswith('.html') and re.match(r'^[a-z0-9\-_]+\.html$', path):
             try:
-                return send_from_directory(current_app.static_folder, 'gastronomia-local1.html')
+                resp = send_from_directory(current_app.static_folder, 'gastronomia-local1.html')
+                return _no_store(resp)
             except Exception:
                 return jsonify({'error': 'Página no disponible'}), 404
         # Para otros assets inexistentes devolvemos 404 controlado
