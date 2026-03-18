@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, current_app
 import os
 import sys
+from datetime import datetime, timezone
 
 bp = Blueprint('system', __name__)
 
@@ -11,9 +12,11 @@ def favicon():
 @bp.route('/api/version')
 def version():
     return jsonify({
-        'version': '1.0.9', 
-        'timestamp': '2026-02-09 13:00:00', 
+        'version': '1.0.11',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
         'deploy_check': 'ok',
+        'render_commit': os.environ.get('RENDER_GIT_COMMIT') or '',
+        'render_service': os.environ.get('RENDER_SERVICE_NAME') or '',
         'python_version': sys.version,
         'cwd': os.getcwd()
     })

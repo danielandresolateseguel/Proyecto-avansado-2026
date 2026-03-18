@@ -1,7 +1,6 @@
 from flask import Blueprint, send_from_directory, current_app, jsonify
 import os
 import re
-from datetime import datetime, timezone
 
 bp = Blueprint('public', __name__)
 
@@ -24,17 +23,6 @@ def ping():
 @bp.route('/api/routes')
 def routes_list():
     return jsonify({'routes': [{'rule': r.rule, 'methods': list(r.methods)} for r in current_app.url_map.iter_rules()]})
-
-@bp.route('/api/version')
-def version():
-    return jsonify({
-        'version': '1.0.10',
-        'timestamp': datetime.now(timezone.utc).isoformat(),
-        'render_commit': os.environ.get('RENDER_GIT_COMMIT') or '',
-        'render_service': os.environ.get('RENDER_SERVICE_NAME') or '',
-        'render_env': os.environ.get('RENDER') or '',
-        'deploy_check': 'ok'
-    })
 
 @bp.route('/<path:path>')
 def static_proxy(path):
