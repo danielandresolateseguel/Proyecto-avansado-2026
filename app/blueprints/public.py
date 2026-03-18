@@ -1,6 +1,7 @@
 from flask import Blueprint, send_from_directory, current_app, jsonify
 import os
 import re
+from datetime import datetime, timezone
 
 bp = Blueprint('public', __name__)
 
@@ -26,7 +27,14 @@ def routes_list():
 
 @bp.route('/api/version')
 def version():
-    return jsonify({'version': '1.0.8', 'timestamp': '2026-02-09 12:00:00', 'deploy_check': 'ok'})
+    return jsonify({
+        'version': '1.0.10',
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'render_commit': os.environ.get('RENDER_GIT_COMMIT') or '',
+        'render_service': os.environ.get('RENDER_SERVICE_NAME') or '',
+        'render_env': os.environ.get('RENDER') or '',
+        'deploy_check': 'ok'
+    })
 
 @bp.route('/<path:path>')
 def static_proxy(path):
