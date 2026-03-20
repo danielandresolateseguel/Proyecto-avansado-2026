@@ -41,29 +41,26 @@ def ensure_master_users_table(db, cur):
     db.commit()
 
 def ensure_admin_users_last_seen_column(db, cur):
+    if is_postgres():
+        try:
+            cur.execute("ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS last_seen_at TEXT")
+            db.commit()
+        except Exception:
+            try:
+                db.rollback()
+            except Exception:
+                pass
+        return
     try:
         cur.execute("ALTER TABLE admin_users ADD COLUMN last_seen_at TEXT")
         db.commit()
+    except Exception:
         return
-    except Exception:
-        try:
-            db.rollback()
-        except Exception:
-            pass
-    try:
-        cur.execute("ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS last_seen_at TEXT")
-        db.commit()
-    except Exception:
-        try:
-            db.rollback()
-        except Exception:
-            pass
 
 def touch_admin_user_last_seen(db, cur, tenant_slug, username):
     if not tenant_slug or not username:
         return
     try:
-        ensure_admin_users_last_seen_column(db, cur)
         now = datetime.utcnow().replace(tzinfo=timezone.utc).isoformat().replace('+00:00', 'Z')
         cur.execute(
             "UPDATE admin_users SET last_seen_at = ? WHERE tenant_slug = ? AND username = ?",
@@ -299,12 +296,23 @@ def master_admin_users_create():
         ensure_admin_users_last_seen_column(db, cur)
     except Exception:
         pass
-    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
-    if cur.fetchone():
-        return jsonify({'error': 'usuario ya existe'}), 409
-    ph = generate_password_hash(password)
-    cur.execute("INSERT INTO admin_users (tenant_slug, username, password_hash) VALUES (?, ?, ?)", (tenant_slug, username, ph))
-    touch_admin_user_last_seen(db, cur, tenant_slug, username)
+    try:
+        cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
+        if cur.fetchone():
+            return jsonify({'error': 'usuario ya existe'}), 409
+        ph = generate_password_hash(password)
+        cur.execute("INSERT INTO admin_users (tenant_slug, username, password_hash) VALUES (?, ?, ?)", (tenant_slug, username, ph))
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return jsonify({'error': 'no se pudo crear el usuario'}), 500
+    try:
+        touch_admin_user_last_seen(db, cur, tenant_slug, username)
+    except Exception:
+        pass
     return jsonify({'ok': True, 'tenant_slug': tenant_slug, 'username': username})
 
 @bp.route('/master/admin_users', methods=['PATCH'])
@@ -328,19 +336,30 @@ def master_admin_users_update():
         ensure_admin_users_last_seen_column(db, cur)
     except Exception:
         pass
-    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
-    if not cur.fetchone():
-        return jsonify({'error': 'usuario no encontrado'}), 404
-    if new_username:
-        cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, new_username))
-        if cur.fetchone():
-            return jsonify({'error': 'el nuevo usuario ya existe'}), 409
-        cur.execute("UPDATE admin_users SET username = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (new_username, tenant_slug, username))
-        username = new_username
-    if new_password:
-        ph = generate_password_hash(new_password)
-        cur.execute("UPDATE admin_users SET password_hash = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (ph, tenant_slug, username))
-    touch_admin_user_last_seen(db, cur, tenant_slug, username)
+    try:
+        cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
+        if not cur.fetchone():
+            return jsonify({'error': 'usuario no encontrado'}), 404
+        if new_username:
+            cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, new_username))
+            if cur.fetchone():
+                return jsonify({'error': 'el nuevo usuario ya existe'}), 409
+            cur.execute("UPDATE admin_users SET username = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (new_username, tenant_slug, username))
+            username = new_username
+        if new_password:
+            ph = generate_password_hash(new_password)
+            cur.execute("UPDATE admin_users SET password_hash = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (ph, tenant_slug, username))
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        return jsonify({'error': 'no se pudo actualizar el usuario'}), 500
+    try:
+        touch_admin_user_last_seen(db, cur, tenant_slug, username)
+    except Exception:
+        pass
     return jsonify({'ok': True, 'tenant_slug': tenant_slug, 'username': username})
 
 @bp.route('/admin_users', methods=['GET'])
