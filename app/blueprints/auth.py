@@ -9,6 +9,12 @@ import time
 
 bp = Blueprint('auth', __name__, url_prefix='/api')
 
+def _norm_slug(v):
+    return str(v or '').strip().lower()
+
+def _norm_user(v):
+    return str(v or '').strip()
+
 def ensure_master_users_table(db, cur):
     if is_postgres():
         cur.execute(
@@ -92,23 +98,27 @@ def touch_last_seen_on_activity():
 @bp.route('/auth/login', methods=['POST'])
 def auth_login():
     payload = request.get_json(silent=True) or {}
-    username = str(payload.get('username') or '')
+    username = _norm_user(payload.get('username'))
     password = str(payload.get('password') or '')
-    tenant_slug = str(payload.get('tenant_slug') or '')
+    tenant_slug = _norm_slug(payload.get('tenant_slug'))
     if not username or not password or not tenant_slug:
         return jsonify({'error': 'credenciales incompletas'}), 400
     
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT password_hash FROM admin_users WHERE tenant_slug = ? AND username = ?", (tenant_slug, username))
+    cur.execute(
+        "SELECT username, password_hash FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)",
+        (tenant_slug, username)
+    )
     row = cur.fetchone()
     
-    if not row or not check_password_hash(row[0], password):
+    if not row or not check_password_hash(row[1], password):
         return jsonify({'error': 'usuario o contraseña inválidos'}), 401
     
-    touch_admin_user_last_seen(db, cur, tenant_slug, username)
+    real_username = str(row[0] or '').strip() or username
+    touch_admin_user_last_seen(db, cur, tenant_slug, real_username)
     session['admin_auth'] = True
-    session['admin_user'] = username
+    session['admin_user'] = real_username
     session['tenant_slug'] = tenant_slug
     session['csrf_token'] = secrets.token_urlsafe(32)
     return jsonify({'ok': True, 'tenant_slug': tenant_slug})
@@ -119,8 +129,8 @@ def auth_login_dev():
     if not session.get('master_auth') and not allow_dev:
         return jsonify({'error': 'no autorizado'}), 401
     payload = request.get_json(silent=True) or {}
-    u = str(payload.get('username') or '')
-    t = str(payload.get('tenant_slug') or '')
+    u = _norm_user(payload.get('username'))
+    t = _norm_slug(payload.get('tenant_slug'))
     session['admin_auth'] = True
     session['admin_user'] = u or 'admin'
     if t:
@@ -239,7 +249,7 @@ def master_logout():
 def master_admin_users_list():
     if not session.get('master_auth'):
         return jsonify({'error': 'no autorizado'}), 401
-    tenant_slug = (request.args.get('tenant_slug') or request.args.get('slug') or '').strip()
+    tenant_slug = _norm_slug(request.args.get('tenant_slug') or request.args.get('slug'))
     if not tenant_slug:
         return jsonify({'error': 'tenant_slug requerido'}), 400
     db = get_db()
@@ -278,8 +288,8 @@ def master_admin_users_create():
     if not check_csrf():
         return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
-    tenant_slug = str(payload.get('tenant_slug') or payload.get('slug') or '').strip()
-    username = str(payload.get('username') or '').strip()
+    tenant_slug = _norm_slug(payload.get('tenant_slug') or payload.get('slug'))
+    username = _norm_user(payload.get('username'))
     password = str(payload.get('password') or '')
     if not tenant_slug or not username or not password:
         return jsonify({'error': 'datos incompletos'}), 400
@@ -289,7 +299,7 @@ def master_admin_users_create():
         ensure_admin_users_last_seen_column(db, cur)
     except Exception:
         pass
-    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND username = ?", (tenant_slug, username))
+    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
     if cur.fetchone():
         return jsonify({'error': 'usuario ya existe'}), 409
     ph = generate_password_hash(password)
@@ -304,9 +314,9 @@ def master_admin_users_update():
     if not check_csrf():
         return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
-    tenant_slug = str(payload.get('tenant_slug') or payload.get('slug') or '').strip()
-    username = str(payload.get('username') or '').strip()
-    new_username = str(payload.get('new_username') or '').strip()
+    tenant_slug = _norm_slug(payload.get('tenant_slug') or payload.get('slug'))
+    username = _norm_user(payload.get('username'))
+    new_username = _norm_user(payload.get('new_username'))
     new_password = str(payload.get('new_password') or '')
     if not tenant_slug or not username:
         return jsonify({'error': 'tenant_slug y username requeridos'}), 400
@@ -318,18 +328,18 @@ def master_admin_users_update():
         ensure_admin_users_last_seen_column(db, cur)
     except Exception:
         pass
-    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND username = ?", (tenant_slug, username))
+    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
     if not cur.fetchone():
         return jsonify({'error': 'usuario no encontrado'}), 404
     if new_username:
-        cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND username = ?", (tenant_slug, new_username))
+        cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, new_username))
         if cur.fetchone():
             return jsonify({'error': 'el nuevo usuario ya existe'}), 409
-        cur.execute("UPDATE admin_users SET username = ? WHERE tenant_slug = ? AND username = ?", (new_username, tenant_slug, username))
+        cur.execute("UPDATE admin_users SET username = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (new_username, tenant_slug, username))
         username = new_username
     if new_password:
         ph = generate_password_hash(new_password)
-        cur.execute("UPDATE admin_users SET password_hash = ? WHERE tenant_slug = ? AND username = ?", (ph, tenant_slug, username))
+        cur.execute("UPDATE admin_users SET password_hash = ? WHERE tenant_slug = ? AND lower(username) = lower(?)", (ph, tenant_slug, username))
     touch_admin_user_last_seen(db, cur, tenant_slug, username)
     return jsonify({'ok': True, 'tenant_slug': tenant_slug, 'username': username})
 
@@ -337,7 +347,7 @@ def master_admin_users_update():
 def admin_users_list():
     if not is_authed():
         return jsonify({'error': 'no autorizado'}), 401
-    tenant_slug = request.args.get('tenant_slug') or session.get('tenant_slug') or ''
+    tenant_slug = _norm_slug(request.args.get('tenant_slug') or session.get('tenant_slug'))
     if session.get('tenant_slug') and tenant_slug and session.get('tenant_slug') != tenant_slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
     
@@ -355,9 +365,9 @@ def admin_users_create():
     if not check_csrf():
         return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
-    username = str(payload.get('username') or '').strip()
+    username = _norm_user(payload.get('username'))
     password = str(payload.get('password') or '')
-    tenant_slug = str(payload.get('tenant_slug') or session.get('tenant_slug') or '').strip()
+    tenant_slug = _norm_slug(payload.get('tenant_slug') or session.get('tenant_slug'))
     if not username or not password or not tenant_slug:
         return jsonify({'error': 'datos incompletos'}), 400
     if session.get('tenant_slug') and session.get('tenant_slug') != tenant_slug:
@@ -365,7 +375,7 @@ def admin_users_create():
     
     db = get_db()
     cur = db.cursor()
-    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND username = ?", (tenant_slug, username))
+    cur.execute("SELECT 1 FROM admin_users WHERE tenant_slug = ? AND lower(username) = lower(?)", (tenant_slug, username))
     exists = cur.fetchone()
     if exists:
         return jsonify({'error': 'usuario ya existe'}), 409
