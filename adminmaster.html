@@ -310,7 +310,7 @@
       try{
         const url = new URL('/api/master/admin_users', API_BASE);
         url.searchParams.set('tenant_slug', slug);
-        const r = await fetch(url.toString(), { cache:'no-store' });
+        const r = await fetch(url.toString(), { cache:'no-store', credentials:'include' });
         if (!r.ok){
           let msg = 'No se pudo cargar usuarios';
           try{ const j = await r.json(); if (j.error) msg = j.error; }catch(_){}
@@ -348,6 +348,7 @@
               const rr = await fetch(new URL('/api/master/admin_users', API_BASE).toString(), {
                 method:'PATCH',
                 headers: headersJSON(),
+                credentials:'include',
                 body: JSON.stringify({ tenant_slug: slug, username: user, new_password: np })
               });
               if (rr.ok){ showToast('Clave actualizada','success'); await loadTenantUsers(); }
@@ -364,6 +365,7 @@
               const rr = await fetch(new URL('/api/master/admin_users', API_BASE).toString(), {
                 method:'PATCH',
                 headers: headersJSON(),
+                credentials:'include',
                 body: JSON.stringify({ tenant_slug: slug, username: user, new_username: nu })
               });
               if (rr.ok){ showToast('Usuario actualizado','success'); await loadTenantUsers(); }
@@ -595,6 +597,7 @@
           const r = await fetch(new URL('/api/master/admin_users', API_BASE).toString(), {
             method:'POST',
             headers: headersJSON(),
+            credentials:'include',
             body: JSON.stringify({ tenant_slug: slug, username: u, password: p })
           });
           if (r.ok){
