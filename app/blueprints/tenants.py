@@ -4,6 +4,7 @@ from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidat
 import os
 import json
 from datetime import datetime, timedelta
+from werkzeug.security import generate_password_hash
 
 # Force reload check
 print("DEBUG: Loading tenants.py blueprint...")
@@ -204,9 +205,13 @@ def create_demo_tenant():
     name = str(payload.get('name') or '').strip()
     contact_email = str(payload.get('contact_email') or '').strip() or None
     contact_phone = str(payload.get('contact_phone') or '').strip() or None
+    admin_username = str(payload.get('admin_username') or '').strip()
+    admin_password = str(payload.get('admin_password') or '')
     
     if not slug:
         return jsonify({'error': 'tenant_slug requerido'}), 400
+    if not admin_username or not admin_password:
+        return jsonify({'error': 'usuario y clave requeridos'}), 400
     slug = slug.lower()
     allowed = "abcdefghijklmnopqrstuvwxyz0123456789-_"
     if any(ch not in allowed for ch in slug):
@@ -242,10 +247,23 @@ def create_demo_tenant():
         "INSERT OR IGNORE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)",
         (slug, json.dumps(default_cfg, ensure_ascii=False))
     )
+
+    ph = generate_password_hash(admin_password)
+    try:
+        cur.execute(
+            "INSERT INTO admin_users (tenant_slug, username, password_hash) VALUES (?, ?, ?)",
+            (slug, admin_username, ph)
+        )
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+        return jsonify({'error': 'no se pudo crear el usuario principal (puede existir)'}), 409
     conn.commit()
     invalidate_tenant_config(slug)
     
-    return jsonify({'ok': True, 'tenant_slug': slug, 'name': name})
+    return jsonify({'ok': True, 'tenant_slug': slug, 'name': name, 'admin_username': admin_username})
 
 @bp.route('/tenant_tables', methods=['GET'])
 def get_tenant_tables():

@@ -66,6 +66,14 @@
           <label>Teléfono</label>
           <input id="t-phone" placeholder="+54 9 ..." />
         </div>
+        <div class="field">
+          <label>Usuario principal</label>
+          <input id="t-admin-user" placeholder="usuario" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label>Clave</label>
+          <input id="t-admin-pass" type="password" placeholder="clave" autocomplete="new-password" />
+        </div>
       </div>
       <div class="row">
         <div class="field">
@@ -244,6 +252,8 @@
       const name = document.getElementById('t-name').value.trim();
       const email = document.getElementById('t-email').value.trim();
       const phone = document.getElementById('t-phone').value.trim();
+      const adminUser = document.getElementById('t-admin-user').value.trim();
+      const adminPass = document.getElementById('t-admin-pass').value;
       const ship = parseInt(document.getElementById('t-ship').value||'0',10) || 0;
       const tm = parseInt(document.getElementById('t-time-mesa').value||'0',10) || 0;
       const te = parseInt(document.getElementById('t-time-espera').value||'0',10) || 0;
@@ -251,6 +261,8 @@
       const w = Math.max(1, parseInt(document.getElementById('t-sla-w').value||'15',10));
       const c = Math.max(w+1, parseInt(document.getElementById('t-sla-c').value||'30',10));
       if (!validSlug(slug)){ showToast('Slug inválido','error'); return; }
+      if (!adminUser){ showToast('Usuario principal requerido','error'); return; }
+      if (!adminPass || String(adminPass).length < 6){ showToast('Clave requerida (mínimo 6 caracteres)','error'); return; }
       try{
         const url = new URL('/api/tenants/create_demo', API_BASE).toString() + `?tenant_slug=${encodeURIComponent(slug)}`;
         const r = await fetch(url, {
@@ -261,6 +273,8 @@
             name: name || slug.replace(/[-_]/g,' ').replace(/\b\w/g,m=>m.toUpperCase()),
             contact_email: email || undefined,
             contact_phone: phone || undefined,
+            admin_username: adminUser,
+            admin_password: adminPass,
             shipping_cost: ship,
             time_mesa: tm,
             time_espera: te,
