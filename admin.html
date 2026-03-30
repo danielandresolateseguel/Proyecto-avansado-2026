@@ -979,7 +979,7 @@
               <option value="failed">Falló</option>
             </select>
           </label>
-          <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Mi ruta</button>
+          <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Mis pedidos</button>
           <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Sin asignar</button>
           <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Empezar ruta</button>
           <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Abrir ruta</button>
@@ -6583,8 +6583,7 @@
           filterSel.value = 'mine';
           deliveryFilter = 'mine';
           lastDeliverySignature = '';
-          try { loadOrdersSafe(); } catch (_) {}
-          try { openMyDeliveryRouteInGoogleMaps(); } catch (_) {}
+          await loadOrdersSafe();
           try { refreshDeliveryRunLabel(); } catch (_) {}
         });
       }
