@@ -254,6 +254,7 @@ def init_db_postgres(cur):
         CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
             tenant_slug TEXT NOT NULL,
+            tenant_order_number INTEGER,
             customer_name TEXT,
             customer_phone TEXT,
             order_type TEXT NOT NULL,
@@ -276,6 +277,35 @@ def init_db_postgres(cur):
         )
         """
     )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_runs (
+            id SERIAL PRIMARY KEY,
+            tenant_slug TEXT NOT NULL,
+            driver_username TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            started_at TEXT NOT NULL,
+            closed_at TEXT
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_runs_tenant_driver_status ON delivery_runs(tenant_slug, driver_username, status)")
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_run_orders (
+            id SERIAL PRIMARY KEY,
+            run_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            sequence INTEGER NOT NULL,
+            added_at TEXT NOT NULL,
+            UNIQUE(run_id, order_id)
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_run_seq ON delivery_run_orders(run_id, sequence)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_order ON delivery_run_orders(order_id)")
     
     # Check columns (Postgres way)
     cur.execute("SAVEPOINT add_order_notes")
@@ -340,6 +370,31 @@ def init_db_postgres(cur):
         cur.execute("RELEASE SAVEPOINT add_delivered_at")
     except Exception:
         cur.execute("ROLLBACK TO SAVEPOINT add_delivered_at")
+
+    cur.execute("SAVEPOINT add_tenant_order_number")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN tenant_order_number INTEGER")
+        cur.execute("RELEASE SAVEPOINT add_tenant_order_number")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_tenant_order_number")
+
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tenant_counters (
+                tenant_slug TEXT PRIMARY KEY,
+                next_order_number INTEGER NOT NULL
+            )
+            """
+        )
+    except Exception:
+        pass
+    try:
+        cur.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_tenant_order_number ON orders(tenant_slug, tenant_order_number) WHERE tenant_order_number IS NOT NULL"
+        )
+    except Exception:
+        pass
 
     # Ítems del pedido
     cur.execute(
@@ -594,6 +649,7 @@ def init_db_sqlite(cur):
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tenant_slug TEXT NOT NULL,
+            tenant_order_number INTEGER,
             customer_name TEXT,
             customer_phone TEXT,
             order_type TEXT NOT NULL,
@@ -616,6 +672,35 @@ def init_db_sqlite(cur):
         )
         """
     )
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_slug TEXT NOT NULL,
+            driver_username TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            started_at TEXT NOT NULL,
+            closed_at TEXT
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_runs_tenant_driver_status ON delivery_runs(tenant_slug, driver_username, status)")
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_run_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            sequence INTEGER NOT NULL,
+            added_at TEXT NOT NULL,
+            UNIQUE(run_id, order_id)
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_run_seq ON delivery_run_orders(run_id, sequence)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_order ON delivery_run_orders(order_id)")
     
     # Check columns
     try:
@@ -639,6 +724,8 @@ def init_db_sqlite(cur):
             cur.execute("ALTER TABLE orders ADD COLUMN delivery_assigned_at TEXT")
         if 'delivered_at' not in cols:
             cur.execute("ALTER TABLE orders ADD COLUMN delivered_at TEXT")
+        if 'tenant_order_number' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN tenant_order_number INTEGER")
     except Exception:
         pass
 
@@ -663,6 +750,19 @@ def init_db_sqlite(cur):
     # Índices básicos
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_tenant_status ON orders(tenant_slug, status)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at)")
+    try:
+        cur.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_tenant_order_number ON orders(tenant_slug, tenant_order_number) WHERE tenant_order_number IS NOT NULL")
+    except Exception:
+        pass
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tenant_counters (
+            tenant_slug TEXT PRIMARY KEY,
+            next_order_number INTEGER NOT NULL
+        )
+        """
+    )
 
     # Historial de cambios de estado
     cur.execute(

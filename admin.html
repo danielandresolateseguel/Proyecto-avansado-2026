@@ -982,8 +982,11 @@
           <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Mi ruta</button>
           <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Sin asignar</button>
           <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Empezar ruta</button>
+          <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Abrir ruta</button>
+          <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Cerrar salida</button>
           <button id="delivery-reload">Recargar</button>
           <span id="delivery-count" class="small" style="color:#666;"></span>
+          <span id="delivery-run-label" class="small" style="color:#666;"></span>
         </div>
       </div>
       <div id="delivery-list" class="orders-mobile"></div>
@@ -2359,7 +2362,18 @@
       });
     });
     
-    function wFetch(url, opts){ const o = opts || {}; o.credentials = 'include'; return fetch(url, o); }
+    function wFetch(url, opts){
+      const o = opts ? Object.assign({}, opts) : {};
+      o.credentials = 'include';
+      if (!Object.prototype.hasOwnProperty.call(o, 'cache')) o.cache = 'no-store';
+      if (!o.signal && typeof AbortController !== 'undefined') {
+        const controller = new AbortController();
+        o.signal = controller.signal;
+        const t = setTimeout(() => { try { controller.abort(); } catch(_) {} }, 15000);
+        return fetch(url, o).finally(() => clearTimeout(t));
+      }
+      return fetch(url, o);
+    }
     let csrfToken = '';
     let isAuthed = false;
     let currentTenantSlug = '';
@@ -2643,6 +2657,125 @@
       } catch (_) {
         return `$${v}`;
       }
+    }
+    function getTenantOrderNumber(o) {
+      const raw = o && (o.tenant_order_number ?? o.tenantOrderNumber ?? o.order_number ?? o.orderNumber ?? null);
+      const n = Number(raw);
+      return (Number.isFinite(n) && n > 0) ? Math.trunc(n) : null;
+    }
+    function formatTenantOrderNumber(n) {
+      if (!n) return '';
+      const s = String(Math.trunc(Number(n)));
+      return s.length >= 3 ? s : s.padStart(3, '0');
+    }
+    function displayOrderNumber(o) {
+      const n = getTenantOrderNumber(o);
+      if (n) return formatTenantOrderNumber(n);
+      return String(o && o.id || '').trim();
+    }
+    function getOrderAddressOneLine(o) {
+      let a = '';
+      try {
+        a = (typeof getAddressText === 'function') ? getAddressText(o && o.address_json) : String((o && o.address_json) || '');
+      } catch (_) {
+        a = String((o && o.address_json) || '');
+      }
+      return String(a || '').replace(/\n+/g, ' ').trim();
+    }
+    function buildGoogleRouteUrl(stops) {
+      const arr = Array.isArray(stops) ? stops.map(s => String(s || '').trim()).filter(Boolean) : [];
+      if (!arr.length) return '';
+      if (arr.length === 1) {
+        return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(arr[0]) + '&travelmode=driving';
+      }
+      const destination = arr[arr.length - 1];
+      const waypoints = arr.slice(0, -1).join('|');
+      return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination) + '&waypoints=' + encodeURIComponent(waypoints) + '&travelmode=driving';
+    }
+    async function fetchActiveDeliveryRun() {
+      const slug = tenantInput?.value?.trim() || defaultSlug();
+      const url = new URL('/api/delivery/run/active', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      const resp = await wFetch(url.toString());
+      if (!resp.ok) {
+        let msg = 'No se pudo cargar la salida activa';
+        try { const j = await resp.json(); if (j && j.error) msg = String(j.error); } catch (_) {}
+        throw new Error(msg);
+      }
+      return await resp.json();
+    }
+    async function closeActiveDeliveryRun() {
+      const slug = tenantInput?.value?.trim() || defaultSlug();
+      const url = new URL('/api/delivery/run/close', API_BASE);
+      const resp = await wFetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
+        body: JSON.stringify({ tenant_slug: slug }),
+      });
+      if (!resp.ok) {
+        let msg = 'No se pudo cerrar la salida';
+        try { const j = await resp.json(); if (j && j.error) msg = String(j.error); } catch (_) {}
+        throw new Error(msg);
+      }
+      return await resp.json();
+    }
+    async function refreshDeliveryRunLabel() {
+      const el = document.getElementById('delivery-run-label');
+      if (!el) return;
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') { el.textContent = ''; return; }
+      try {
+        const j = await fetchActiveDeliveryRun();
+        const run = j && j.run ? j.run : null;
+        if (!run || !run.id) { el.textContent = ''; return; }
+        el.textContent = `Salida activa: #${run.id}`;
+      } catch (_) {
+        el.textContent = '';
+      }
+    }
+    function openMyDeliveryRouteInGoogleMaps() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return;
+      const me = String(currentUserName || '').trim().toLowerCase();
+      if (!me) return;
+      const w = window.open('about:blank', '_blank');
+      if (!w) { alert('No se pudo abrir la ventana (bloqueador de popups)'); return; }
+      (async () => {
+        try {
+          let routeOrders = [];
+          try {
+            const j = await fetchActiveDeliveryRun();
+            routeOrders = (j && Array.isArray(j.orders)) ? j.orders : [];
+            const run = j && j.run ? j.run : null;
+            const lbl = document.getElementById('delivery-run-label');
+            if (lbl) lbl.textContent = (run && run.id) ? `Salida activa: #${run.id}` : '';
+          } catch (_) {
+            routeOrders = [];
+          }
+          if (!routeOrders.length) {
+            const arr = Array.isArray(window.currentDeliveryOrders) ? window.currentDeliveryOrders.slice() : [];
+            const mine = arr.filter(o => String(o && o.delivery_assigned_to || '').trim().toLowerCase() === me);
+            const open = mine.filter(o => String(o && o.delivery_status || 'pending').trim().toLowerCase() !== 'delivered');
+            routeOrders = open.slice().sort((a, b) => {
+              const sa = (a && a.delivery_sequence != null) ? Number(a.delivery_sequence) : 999999;
+              const sb = (b && b.delivery_sequence != null) ? Number(b.delivery_sequence) : 999999;
+              if (sa !== sb) return sa - sb;
+              return Number(a.id) - Number(b.id);
+            });
+          }
+          const stopsAll = routeOrders.map(getOrderAddressOneLine).filter(Boolean);
+          if (!stopsAll.length) { try { w.close(); } catch (_) {} alert('No hay direcciones para armar la ruta'); return; }
+          const maxStops = 11;
+          const stops = stopsAll.slice(0, maxStops);
+          if (stopsAll.length > maxStops) alert(`Google Maps permite un máximo de ${maxStops} paradas. Se abrirán las primeras ${maxStops}.`);
+          const url = buildGoogleRouteUrl(stops);
+          if (!url) { try { w.close(); } catch (_) {} return; }
+          try { w.location.href = url; } catch (_) { try { w.close(); } catch (_) {} window.open(url, '_blank', 'noopener'); }
+        } catch (err) {
+          try { w.close(); } catch (_) {}
+          alert(String(err && err.message || 'No se pudo abrir la ruta'));
+        }
+      })();
     }
     // Functions getAddressText, destinoLabelFor, getWaLink moved to js/admin-wa-helper.js
 
@@ -3060,7 +3193,7 @@
         const statusLabelText = (order.order_type === 'mesa' && order.status === 'en_camino') ? 'mesa' : order.status;
 
         box.innerHTML = `
-          <p class="d-id"><strong>Pedido #${order.id}</strong></p>
+          <p class="d-id"><strong>Pedido #${displayOrderNumber(order)}</strong></p>
           <span id="detail-order-id" style="display:none;">${order.id}</span>
           <p class="d-tenant">Establecimiento: ${order.tenant_slug}</p>
           <p class="d-date">Fecha: ${formatARDate(order.created_at)}</p>
@@ -3416,7 +3549,7 @@
         const baseTotal = Number(o.total || 0);
 
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
           <td><span class="pill">${o.order_type}</span></td>
           <td>${(isMesa || isEspera) ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
@@ -3490,7 +3623,7 @@
           card.className = 'card';
           card.innerHTML = `
               <div class="card-content">
-              <div class="title">Pedido #${o.id} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
+              <div class="title">Pedido #${displayOrderNumber(o)} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
               <div class="meta">${phoneRaw2 ? `Tel: ${phoneRaw2}` : ''} ${waUrl2 ? `<a href='${waUrl2}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">
@@ -4028,7 +4161,14 @@
       if (currentSearch) url.searchParams.set('q', currentSearch);
       url.searchParams.set('limit', '200');
       url.searchParams.set('offset', '0');
-      const resp = await wFetch(url.toString());
+      let resp = null;
+      try {
+        resp = await wFetch(url.toString());
+      } catch (e) {
+        const name = String(e && e.name || '');
+        if (name === 'AbortError') throw new Error('Tiempo de espera agotado al cargar repartos. Reintenta con Recargar.');
+        throw e;
+      }
       if (!resp.ok) {
         let msg = 'No se pudo cargar repartos';
         try { const j = await resp.json(); if (j && j.error) msg = String(j.error); } catch (_) {}
@@ -4186,7 +4326,7 @@
 
         card.innerHTML = `
           <div class="card-content">
-            <div class="title">Pedido #${o.id} <span class="pill" style="margin-left:6px;">${dStatus}</span>${stopPill}</div>
+            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatus}</span>${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
             <div class="meta">Destino: ${addrOneLine.slice(0,120) || '-'}</div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
@@ -4374,10 +4514,10 @@
           if (!oid) return;
           const o = (orders || []).find(x => Number(x.id) === oid) || null;
           if (!o) return;
-          const a = (typeof getAddressText === 'function') ? getAddressText(o.address_json) : String(o.address_json || '');
-          const addrOneLine = String(a || '').replace(/\n+/g, ' ').trim();
+          const addrOneLine = getOrderAddressOneLine(o);
           if (!addrOneLine) return;
-          const url = 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(addrOneLine) + '&travelmode=driving';
+          const url = buildGoogleRouteUrl([addrOneLine]);
+          if (!url) return;
           window.open(url, '_blank', 'noopener');
         });
       });
@@ -4508,7 +4648,7 @@
         card.innerHTML = `
           <div class="k-head">
             <div>
-              <div class="k-title">Pedido #${o.id}</div>
+              <div class="k-title">Pedido #${displayOrderNumber(o)}</div>
               <div class="k-meta">${formatARDate(o.created_at || '')} · ${o.order_type}</div>
               <div class="k-dest">Destino: ${(isMesa || isEspera) ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</div>
             </div>
@@ -4589,7 +4729,7 @@
         const baseTotal = Number(o.total || 0);
         const totalWithTip = baseTotal + (Number(o.tip_amount) || 0);
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
           <td><span class="pill">${o.order_type}</span></td>
           <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
@@ -4635,7 +4775,7 @@
           const statusClass = statusClasses[o.status] || 'status-entregado';
           card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${o.id}</div>
+              <div class="title">Pedido #${displayOrderNumber(o)}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
               <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
@@ -4735,7 +4875,7 @@
         const destLabel = destinoLabelFor(o);
         const statusClass = statusClasses[o.status] || 'status-cancelado';
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
           <td><span class="pill">${o.order_type}</span></td>
           <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
@@ -4768,7 +4908,7 @@
           card.className = 'card';
           card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${o.id}</div>
+              <div class="title">Pedido #${displayOrderNumber(o)}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
               <div class="grid">
@@ -5037,7 +5177,7 @@
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
           <td><span class=\"pill\">${o.order_type}</span></td>
           <td>${dest}</td>
@@ -5059,7 +5199,7 @@
           card.className = 'card';
           card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${o.id}</div>
+              <div class="title">Pedido #${displayOrderNumber(o)}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${dest}</span>`:dest}</div>
               <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
@@ -5098,7 +5238,7 @@
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
           <td><span class=\"pill\">${o.order_type}</span></td>
           <td>${destLabel}</td>
@@ -5119,7 +5259,7 @@
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <div class="title">Pedido #${o.id}</div>
+            <div class="title">Pedido #${displayOrderNumber(o)}</div>
             <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
             <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
@@ -5150,7 +5290,7 @@
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${o.id}</td>
+          <td>${displayOrderNumber(o)}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
           <td><span class=\"pill\">${o.order_type}</span></td>
           <td>${destLabel}</td>
@@ -5171,7 +5311,7 @@
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <div class="title">Pedido #${o.id}</div>
+            <div class="title">Pedido #${displayOrderNumber(o)}</div>
             <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
             <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
@@ -6325,11 +6465,14 @@
       const mineBtn = document.getElementById('delivery-mine');
       const unassignedBtn = document.getElementById('delivery-unassigned');
       const startRouteBtn = document.getElementById('delivery-start-route');
+      const openRouteBtn = document.getElementById('delivery-open-route');
+      const closeRunBtn = document.getElementById('delivery-close-run');
       if (btn && box) {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
           try { box.open = true; } catch (_) {}
           try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+          try { refreshDeliveryRunLabel(); } catch (_) {}
         });
       }
       if (filterSel) {
@@ -6352,7 +6495,9 @@
           filterSel.value = 'mine';
           deliveryFilter = 'mine';
           lastDeliverySignature = '';
-          await loadOrdersSafe();
+          try { loadOrdersSafe(); } catch (_) {}
+          try { openMyDeliveryRouteInGoogleMaps(); } catch (_) {}
+          try { refreshDeliveryRunLabel(); } catch (_) {}
         });
       }
       if (unassignedBtn && filterSel) {
@@ -6372,9 +6517,17 @@
           if (role !== 'repartidor') return;
           const me = String(currentUserName || '').trim().toLowerCase();
           if (!me) return;
-          const arr = (window.currentDeliveryOrders || []).slice();
-          const mine = arr.filter(o => String(o && o.delivery_assigned_to || '').trim().toLowerCase() === me);
-          const toStart = mine.filter(o => {
+          let routeOrders = [];
+          try {
+            const j = await fetchActiveDeliveryRun();
+            routeOrders = (j && Array.isArray(j.orders)) ? j.orders : [];
+            const run = j && j.run ? j.run : null;
+            const lbl = document.getElementById('delivery-run-label');
+            if (lbl) lbl.textContent = (run && run.id) ? `Salida activa: #${run.id}` : '';
+          } catch (_) {
+            routeOrders = (window.currentDeliveryOrders || []).slice().filter(o => String(o && o.delivery_assigned_to || '').trim().toLowerCase() === me);
+          }
+          const toStart = routeOrders.filter(o => {
             const ds = String(o && o.delivery_status || 'pending').trim().toLowerCase();
             return ds === 'assigned' || ds === 'pending';
           });
@@ -6402,6 +6555,37 @@
             startRouteBtn.style.opacity = '';
             startRouteBtn.style.cursor = '';
             startRouteBtn.textContent = originalText;
+          }
+        });
+      }
+      if (openRouteBtn) {
+        openRouteBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (!isAuthed) return;
+          openMyDeliveryRouteInGoogleMaps();
+          try { refreshDeliveryRunLabel(); } catch (_) {}
+        });
+      }
+      if (closeRunBtn) {
+        closeRunBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (!isAuthed) return;
+          const role = String(currentUserRole || '').trim().toLowerCase();
+          if (role !== 'repartidor') return;
+          const ok = await askConfirm('¿Cerrar la salida activa?');
+          if (!ok) return;
+          closeRunBtn.disabled = true;
+          closeRunBtn.style.opacity = '0.6';
+          try {
+            await closeActiveDeliveryRun();
+            lastDeliverySignature = '';
+            await loadOrdersSafe();
+            await refreshDeliveryRunLabel();
+          } catch (err) {
+            alert(String(err && err.message || 'No se pudo cerrar la salida'));
+          } finally {
+            closeRunBtn.disabled = false;
+            closeRunBtn.style.opacity = '';
           }
         });
       }
@@ -10425,7 +10609,7 @@
             const html = `
                 <html>
                 <head>
-                    <title>Cuenta #${o.id}</title>
+                    <title>Cuenta #${displayOrderNumber(o)}</title>
                     <style>
                         @media print {
                             @page { size: 80mm auto; margin: 0; }
@@ -10456,7 +10640,7 @@
                 <body>
                     <div class="center bold">${tenantName.toUpperCase()}</div>
                     <div class="center">${destText}</div>
-                    <div class="center">Pedido: #${o.id}</div>
+                    <div class="center">Pedido: #${displayOrderNumber(o)}</div>
                     <div class="center">${dateStr}</div>
                     ${paymentHeader}
                     <div class="line"></div>
@@ -10568,7 +10752,7 @@
             const html = `
                 <html>
                 <head>
-                    <title>Comanda #${o.id}</title>
+                    <title>Comanda #${displayOrderNumber(o)}</title>
                     <style>
                         @media print {
                             @page { size: 80mm auto; margin: 0; }
@@ -10599,7 +10783,7 @@
                 <body>
                     <div class="center bold big">COCINA</div>
                     <div class="center bold">${destText}</div>
-                    <div class="center">Pedido: #${o.id}</div>
+                    <div class="center">Pedido: #${displayOrderNumber(o)}</div>
                     <div class="center">${dateStr}</div>
                     <div class="line"></div>
                     ${itemsHtml}
@@ -10721,7 +10905,7 @@
 
          card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${o.id} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
+              <div class="title">Pedido #${displayOrderNumber(o)} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
               <div class="meta">${new Date(o.created_at).toLocaleString()} · ${o.order_type}</div>
               <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">

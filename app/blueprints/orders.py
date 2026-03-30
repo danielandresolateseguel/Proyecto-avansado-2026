@@ -95,6 +95,203 @@ def ensure_orders_delivery_columns(conn, cur):
         except Exception:
             pass
 
+def ensure_delivery_run_tables(conn, cur):
+    if is_postgres():
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS delivery_runs (
+                id SERIAL PRIMARY KEY,
+                tenant_slug TEXT NOT NULL,
+                driver_username TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                started_at TEXT NOT NULL,
+                closed_at TEXT
+            )
+            """
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_runs_tenant_driver_status ON delivery_runs(tenant_slug, driver_username, status)")
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS delivery_run_orders (
+                id SERIAL PRIMARY KEY,
+                run_id INTEGER NOT NULL,
+                order_id INTEGER NOT NULL,
+                sequence INTEGER NOT NULL,
+                added_at TEXT NOT NULL,
+                UNIQUE(run_id, order_id)
+            )
+            """
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_run_seq ON delivery_run_orders(run_id, sequence)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_order ON delivery_run_orders(order_id)")
+        return
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_slug TEXT NOT NULL,
+            driver_username TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'open',
+            started_at TEXT NOT NULL,
+            closed_at TEXT
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_runs_tenant_driver_status ON delivery_runs(tenant_slug, driver_username, status)")
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS delivery_run_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            sequence INTEGER NOT NULL,
+            added_at TEXT NOT NULL,
+            UNIQUE(run_id, order_id)
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_run_seq ON delivery_run_orders(run_id, sequence)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_delivery_run_orders_order ON delivery_run_orders(order_id)")
+
+def _get_active_run_id(cur, tenant_slug, driver_username):
+    cur.execute(
+        "SELECT id FROM delivery_runs WHERE tenant_slug = ? AND lower(driver_username) = lower(?) AND status = 'open' ORDER BY id DESC LIMIT 1",
+        (tenant_slug, driver_username),
+    )
+    row = cur.fetchone()
+    return int(row[0]) if row and row[0] is not None else None
+
+def _create_run(conn, cur, tenant_slug, driver_username):
+    now = datetime.utcnow().isoformat()
+    if is_postgres():
+        cur.execute(
+            "INSERT INTO delivery_runs (tenant_slug, driver_username, status, started_at) VALUES (?, ?, 'open', ?) RETURNING id",
+            (tenant_slug, driver_username, now),
+        )
+        rid = cur.fetchone()
+        return int(rid[0])
+    cur.execute(
+        "INSERT INTO delivery_runs (tenant_slug, driver_username, status, started_at) VALUES (?, ?, 'open', ?)",
+        (tenant_slug, driver_username, now),
+    )
+    return int(cur.lastrowid)
+
+def _get_or_create_active_run(conn, cur, tenant_slug, driver_username):
+    rid = _get_active_run_id(cur, tenant_slug, driver_username)
+    if rid:
+        return rid
+    return _create_run(conn, cur, tenant_slug, driver_username)
+
+def _next_run_sequence(cur, run_id):
+    cur.execute("SELECT COALESCE(MAX(sequence), 0) FROM delivery_run_orders WHERE run_id = ?", (run_id,))
+    row = cur.fetchone()
+    n = int(row[0] or 0) if row else 0
+    return n + 1
+
+def _upsert_run_order(conn, cur, run_id, order_id, sequence=None):
+    cur.execute("SELECT id, sequence FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (run_id, order_id))
+    row = cur.fetchone()
+    now = datetime.utcnow().isoformat()
+    if row:
+        if sequence is not None and int(row[1] or 0) != int(sequence):
+            cur.execute("UPDATE delivery_run_orders SET sequence = ? WHERE run_id = ? AND order_id = ?", (int(sequence), run_id, order_id))
+        return int(row[1] or 0)
+    if sequence is None:
+        sequence = _next_run_sequence(cur, run_id)
+    try:
+        cur.execute(
+            "INSERT INTO delivery_run_orders (run_id, order_id, sequence, added_at) VALUES (?, ?, ?, ?)",
+            (run_id, order_id, int(sequence), now),
+        )
+    except Exception:
+        cur.execute("SELECT id, sequence FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (run_id, order_id))
+        row2 = cur.fetchone()
+        if row2 and row2[1] is not None:
+            return int(row2[1] or 0)
+    return int(sequence)
+
+def ensure_orders_tenant_number_columns(conn, cur):
+    if not is_postgres():
+        try:
+            cur.execute("PRAGMA table_info(orders)")
+            cols = [r[1] for r in (cur.fetchall() or [])]
+            if 'tenant_order_number' not in cols:
+                cur.execute("ALTER TABLE orders ADD COLUMN tenant_order_number INTEGER")
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS tenant_counters (
+                    tenant_slug TEXT PRIMARY KEY,
+                    next_order_number INTEGER NOT NULL
+                )
+                """
+            )
+            try:
+                cur.execute(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_tenant_order_number ON orders(tenant_slug, tenant_order_number) WHERE tenant_order_number IS NOT NULL"
+                )
+            except Exception:
+                pass
+            conn.commit()
+            return
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS tenant_order_number INTEGER")
+    except Exception:
+        pass
+    try:
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tenant_counters (
+                tenant_slug TEXT PRIMARY KEY,
+                next_order_number INTEGER NOT NULL
+            )
+            """
+        )
+    except Exception:
+        pass
+    try:
+        cur.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_tenant_order_number ON orders(tenant_slug, tenant_order_number) WHERE tenant_order_number IS NOT NULL"
+        )
+    except Exception:
+        pass
+    try:
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+def allocate_tenant_order_number(cur, tenant_slug):
+    tenant_slug = str(tenant_slug or '').strip()
+    if not tenant_slug:
+        return None
+    try:
+        if is_postgres():
+            cur.execute(
+                "INSERT INTO tenant_counters (tenant_slug, next_order_number) VALUES (?, 2) "
+                "ON CONFLICT (tenant_slug) DO UPDATE SET next_order_number = tenant_counters.next_order_number + 1 "
+                "RETURNING next_order_number",
+                (tenant_slug,),
+            )
+            row = cur.fetchone()
+            new_next = int((row[0] if row else 2) or 2)
+            return max(1, new_next - 1)
+        cur.execute("INSERT OR IGNORE INTO tenant_counters (tenant_slug, next_order_number) VALUES (?, 1)", (tenant_slug,))
+        cur.execute("UPDATE tenant_counters SET next_order_number = next_order_number + 1 WHERE tenant_slug = ?", (tenant_slug,))
+        cur.execute("SELECT next_order_number - 1 FROM tenant_counters WHERE tenant_slug = ?", (tenant_slug,))
+        row = cur.fetchone()
+        return int((row[0] if row else 1) or 1)
+    except Exception:
+        return None
+
 def compute_total(items):
     total = 0
     for it in items:
@@ -240,6 +437,10 @@ def create_order():
 
         conn = get_db()
         cur = conn.cursor()
+        try:
+            ensure_orders_tenant_number_columns(conn, cur)
+        except Exception:
+            pass
         
         shipping_cost = 0
         if order_type == 'direccion':
@@ -252,15 +453,16 @@ def create_order():
         total += shipping_cost
         
         order_notes = (payload.get('order_notes') or '').strip()
+        tenant_order_number = allocate_tenant_order_number(cur, tenant_slug)
         
         # Insert Order
         try:
             cur.execute(
                 """
-                INSERT INTO orders (tenant_slug, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, shipping_cost)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, shipping_cost)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (tenant_slug, customer_name, customer_phone, order_type, table_number, str(address_json), status, total, None, None, created_at, order_notes, shipping_cost)
+                (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, str(address_json), status, total, None, None, created_at, order_notes, shipping_cost)
             )
             order_id = cur.lastrowid
             print(f"DEBUG: Order created with ID {order_id}")
@@ -321,7 +523,7 @@ def create_order():
             cur.execute("UPDATE products SET stock = stock - ? WHERE tenant_slug = ? AND product_id = ?", (qty, tenant_slug, pid))
         
         conn.commit()
-        return jsonify({'order_id': order_id, 'status': status, 'total': total, 'tenant_slug': tenant_slug}), 201
+        return jsonify({'order_id': order_id, 'tenant_order_number': tenant_order_number, 'status': status, 'total': total, 'tenant_slug': tenant_slug}), 201
 
     except Exception as e:
         import traceback
@@ -343,7 +545,11 @@ def list_orders():
     
     conn = get_db()
     cur = conn.cursor()
-    base = "SELECT id, tenant_slug, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at FROM orders WHERE tenant_slug = ?"
+    try:
+        ensure_orders_tenant_number_columns(conn, cur)
+    except Exception:
+        pass
+    base = "SELECT id, tenant_slug, tenant_order_number, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at FROM orders WHERE tenant_slug = ?"
     params = [tenant_slug]
     if exclude_archived == 'true':
         base += " AND id NOT IN (SELECT order_id FROM archived_orders)"
@@ -403,9 +609,13 @@ def list_orders():
 def get_order_detail(order_id):
     conn = get_db()
     cur = conn.cursor()
+    try:
+        ensure_orders_tenant_number_columns(conn, cur)
+    except Exception:
+        pass
     cur.execute(
         """
-        SELECT id, tenant_slug, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at
+        SELECT id, tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at
         FROM orders WHERE id = ?
         """,
         (order_id,)
@@ -545,8 +755,12 @@ def list_delivery_orders():
         ensure_orders_delivery_columns(conn, cur)
     except Exception:
         pass
+    try:
+        ensure_orders_tenant_number_columns(conn, cur)
+    except Exception:
+        pass
     sql = (
-        "SELECT id, tenant_slug, customer_name, customer_phone, order_type, table_number, address_json, status, total, "
+        "SELECT id, tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, "
         "payment_method, payment_status, tip_amount, shipping_cost, created_at, order_notes, "
         "delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at "
         "FROM orders WHERE tenant_slug = ? AND lower(trim(COALESCE(order_type,''))) = 'direccion'"
@@ -629,6 +843,17 @@ def assign_delivery_order(order_id):
         "WHERE id = ?",
         (assigned_to, now, order_id),
     )
+    try:
+        ensure_delivery_run_tables(conn, cur)
+        if str(current_assigned or '').strip() and str(current_assigned or '').strip().lower() != assigned_to.lower():
+            prev_run_id = _get_active_run_id(cur, tenant_slug, str(current_assigned or '').strip())
+            if prev_run_id:
+                cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (prev_run_id, order_id))
+        run_id = _get_or_create_active_run(conn, cur, tenant_slug, assigned_to)
+        seq = _upsert_run_order(conn, cur, run_id, order_id, None)
+        cur.execute("UPDATE orders SET delivery_sequence = ? WHERE id = ? AND tenant_slug = ?", (seq, order_id, tenant_slug))
+    except Exception:
+        pass
     try:
         cur.execute(
             "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -798,6 +1023,16 @@ def update_delivery_route():
 
     conn = get_db()
     cur = conn.cursor()
+    try:
+        ensure_delivery_run_tables(conn, cur)
+    except Exception:
+        pass
+    run_id = None
+    if role == 'repartidor':
+        try:
+            run_id = _get_or_create_active_run(conn, cur, tenant_slug, actor or '')
+        except Exception:
+            run_id = None
     for oid, seq in updates:
         cur.execute(
             "SELECT order_type, COALESCE(delivery_assigned_to,'') FROM orders WHERE id = ? AND tenant_slug = ?",
@@ -812,9 +1047,107 @@ def update_delivery_route():
         if role == 'repartidor' and (assigned_to or '').strip().lower() != (actor or '').lower():
             return jsonify({'error': f'orden asignada a otro repartidor: {oid}'}), 403
         cur.execute("UPDATE orders SET delivery_sequence = ? WHERE id = ? AND tenant_slug = ?", (seq, oid, tenant_slug))
+        if run_id:
+            try:
+                _upsert_run_order(conn, cur, run_id, oid, seq)
+            except Exception:
+                pass
 
     conn.commit()
     return jsonify({'ok': True, 'count': len(updates)})
+
+@bp.route('/delivery/run/active', methods=['GET'])
+def get_active_delivery_run():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    session_tenant, actor, role, perms, owner = _ctx()
+    if not _has_perm(perms, owner, role, 'orders_view'):
+        return jsonify({'error': 'sin permisos'}), 403
+
+    tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or session_tenant or 'gastronomia-local1'
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+
+    driver = str(request.args.get('driver') or '').strip()
+    if role == 'repartidor':
+        driver = actor or ''
+    if not driver:
+        return jsonify({'run': None, 'orders': []})
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        ensure_orders_delivery_columns(conn, cur)
+    except Exception:
+        pass
+    try:
+        ensure_orders_tenant_number_columns(conn, cur)
+    except Exception:
+        pass
+    try:
+        ensure_delivery_run_tables(conn, cur)
+    except Exception:
+        pass
+
+    run_id = _get_active_run_id(cur, tenant_slug, driver)
+    if not run_id:
+        return jsonify({'run': None, 'orders': []})
+
+    cur.execute("SELECT id, tenant_slug, driver_username, status, started_at, closed_at FROM delivery_runs WHERE id = ?", (run_id,))
+    run_row = cur.fetchone()
+    run = dict(run_row) if run_row else {'id': run_id}
+
+    cur.execute(
+        """
+        SELECT o.id, o.tenant_slug, o.tenant_order_number, o.customer_name, o.customer_phone, o.order_type, o.table_number, o.address_json, o.status, o.total,
+               o.payment_method, o.payment_status, o.tip_amount, o.shipping_cost, o.created_at, o.order_notes,
+               o.delivery_assigned_to, o.delivery_status, ro.sequence AS delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at
+        FROM delivery_run_orders ro
+        JOIN orders o ON o.id = ro.order_id
+        WHERE ro.run_id = ? AND o.tenant_slug = ?
+        ORDER BY ro.sequence ASC, o.id ASC
+        """,
+        (run_id, tenant_slug),
+    )
+    rows = cur.fetchall()
+    return jsonify({'run': run, 'orders': [dict(r) for r in rows]})
+
+@bp.route('/delivery/run/close', methods=['POST'])
+def close_active_delivery_run():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    session_tenant, actor, role, perms, owner = _ctx()
+    if not _has_perm(perms, owner, role, 'delivery_manage'):
+        return jsonify({'error': 'sin permisos'}), 403
+
+    payload = request.get_json(silent=True) or {}
+    tenant_slug = str(payload.get('tenant_slug') or session_tenant or '').strip() or 'gastronomia-local1'
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+
+    driver = str(payload.get('driver') or payload.get('driver_username') or '').strip()
+    if role == 'repartidor':
+        driver = actor or ''
+    if not driver:
+        return jsonify({'error': 'driver requerido'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        ensure_delivery_run_tables(conn, cur)
+    except Exception:
+        pass
+
+    run_id = _get_active_run_id(cur, tenant_slug, driver)
+    if not run_id:
+        return jsonify({'ok': True, 'closed': False})
+
+    now = datetime.utcnow().isoformat()
+    cur.execute("UPDATE delivery_runs SET status = 'closed', closed_at = ? WHERE id = ?", (now, run_id))
+    conn.commit()
+    return jsonify({'ok': True, 'closed': True, 'run_id': run_id})
 
 @bp.route('/orders/<int:order_id>/pay', methods=['POST'])
 def pay_order(order_id):

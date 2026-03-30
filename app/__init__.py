@@ -38,6 +38,7 @@ def create_app(test_config=None):
         DATABASE=os.getenv('DATABASE_PATH', os.path.join(app.root_path, '..', 'orders.db')),
         CONFIG_DIR=os.path.join(app.root_path, '..', 'config'),
         JSON_AS_ASCII=True,  # Force ASCII JSON to avoid encoding issues with emojis
+        SEND_FILE_MAX_AGE_DEFAULT=0,
         # Security: Session Cookie Configuration
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE='Lax',
@@ -93,7 +94,7 @@ def create_app(test_config=None):
 
     @app.route('/')
     def root():
-        return {'status': 'ok', 'message': 'Root application running', 'version': '1.0.9'}
+        return {'status': 'ok', 'message': 'Root application running', 'version': '1.0.12'}
 
     @app.errorhandler(500)
     def internal_error(error):

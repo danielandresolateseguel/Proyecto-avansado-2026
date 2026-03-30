@@ -12,7 +12,7 @@ def favicon():
 @bp.route('/api/version')
 def version():
     return jsonify({
-        'version': '1.0.11',
+        'version': '1.0.12',
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'deploy_check': 'ok',
         'render_commit': os.environ.get('RENDER_GIT_COMMIT') or '',
