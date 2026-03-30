@@ -983,8 +983,13 @@
           <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Sin asignar</button>
           <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Empezar ruta</button>
           <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Abrir ruta</button>
+          <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Siguiente parada</button>
           <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Cerrar salida</button>
           <button id="delivery-reload">Recargar</button>
+          <label class="small" style="display:flex; align-items:center; gap:6px; color:#666;">
+            <input type="checkbox" id="delivery-auto-next" />
+            Auto siguiente
+          </label>
           <span id="delivery-count" class="small" style="color:#666;"></span>
           <span id="delivery-run-label" class="small" style="color:#666;"></span>
         </div>
@@ -2732,6 +2737,66 @@
         el.textContent = '';
       }
     }
+    function _normUser(s) {
+      return String(s || '').trim().toLowerCase();
+    }
+    function _sortStops(a, b) {
+      const sa = (a && a.delivery_sequence != null) ? Number(a.delivery_sequence) : 999999;
+      const sb = (b && b.delivery_sequence != null) ? Number(b.delivery_sequence) : 999999;
+      if (sa !== sb) return sa - sb;
+      return Number(a.id) - Number(b.id);
+    }
+    async function getMyRouteOrdersPreferRun() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return { run: null, orders: [] };
+      const me = _normUser(currentUserName || '');
+      if (!me) return { run: null, orders: [] };
+      try {
+        const j = await fetchActiveDeliveryRun();
+        const run = j && j.run ? j.run : null;
+        const orders = (j && Array.isArray(j.orders)) ? j.orders : [];
+        const mine = orders.filter(o => _normUser(o && o.delivery_assigned_to || '') === me);
+        return { run, orders: mine };
+      } catch (_) {
+        const arr = Array.isArray(window.currentDeliveryOrders) ? window.currentDeliveryOrders.slice() : [];
+        const mine = arr.filter(o => _normUser(o && o.delivery_assigned_to || '') === me);
+        return { run: null, orders: mine };
+      }
+    }
+    async function openNextDeliveryStopInGoogleMaps(preOpenedWindow, silent) {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return;
+      const w = preOpenedWindow || null;
+      try {
+        const j = await getMyRouteOrdersPreferRun();
+        const ordered = (j.orders || []).slice().sort(_sortStops);
+        const next = ordered.find(o => {
+          const ds = _normUser(o && o.delivery_status || 'pending');
+          if (ds === 'delivered') return false;
+          const addr = getOrderAddressOneLine(o);
+          return !!addr;
+        });
+        if (!next) {
+          if (w) { try { w.close(); } catch (_) {} }
+          if (!silent) alert('No hay siguiente parada');
+          return;
+        }
+        const addrOneLine = getOrderAddressOneLine(next);
+        const url = buildGoogleRouteUrl([addrOneLine]);
+        if (!url) {
+          if (w) { try { w.close(); } catch (_) {} }
+          if (!silent) alert('No hay dirección válida para la siguiente parada');
+          return;
+        }
+        if (w) {
+          try { w.location.href = url; return; } catch (_) { try { w.close(); } catch (_) {} }
+        }
+        window.open(url, '_blank', 'noopener');
+      } catch (err) {
+        if (w) { try { w.close(); } catch (_) {} }
+        if (!silent) alert(String(err && err.message || 'No se pudo abrir la siguiente parada'));
+      }
+    }
     function openMyDeliveryRouteInGoogleMaps() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       if (role !== 'repartidor') return;
@@ -4463,6 +4528,13 @@
           const oid = Number(btn.dataset.id || 0);
           const st = String(btn.dataset.st || '').trim();
           if (!oid || !st) return;
+          const autoNext = (() => {
+            try { return String(localStorage.getItem('delivery_auto_next_stop') || '') === '1'; } catch (_) { return false; }
+          })();
+          let preW = null;
+          if (st === 'delivered' && autoNext) {
+            try { preW = window.open('about:blank', '_blank'); } catch (_) { preW = null; }
+          }
           try {
             if (st === 'delivered') {
               const ok = await ensureCashOpen();
@@ -4470,7 +4542,13 @@
             }
             await setDeliveryStatus(oid, st);
             await loadOrdersSafe();
+            if (st === 'delivered' && autoNext) {
+              await openNextDeliveryStopInGoogleMaps(preW, true);
+            } else {
+              if (preW) { try { preW.close(); } catch (_) {} }
+            }
           } catch (err) {
+            if (preW) { try { preW.close(); } catch (_) {} }
             alert(String(err && err.message || 'No se pudo actualizar'));
           }
         });
@@ -6465,7 +6543,9 @@
       const unassignedBtn = document.getElementById('delivery-unassigned');
       const startRouteBtn = document.getElementById('delivery-start-route');
       const openRouteBtn = document.getElementById('delivery-open-route');
+      const nextStopBtn = document.getElementById('delivery-next-stop');
       const closeRunBtn = document.getElementById('delivery-close-run');
+      const autoNextChk = document.getElementById('delivery-auto-next');
       if (btn && box) {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -6473,6 +6553,15 @@
           try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
           try { refreshDeliveryRunLabel(); } catch (_) {}
         });
+      }
+      if (autoNextChk) {
+        try {
+          const k = 'delivery_auto_next_stop';
+          autoNextChk.checked = String(localStorage.getItem(k) || '') === '1';
+          autoNextChk.addEventListener('change', () => {
+            try { localStorage.setItem(k, autoNextChk.checked ? '1' : '0'); } catch (_) {}
+          });
+        } catch (_) {}
       }
       if (filterSel) {
         filterSel.addEventListener('change', async () => {
@@ -6562,6 +6651,14 @@
           e.preventDefault();
           if (!isAuthed) return;
           openMyDeliveryRouteInGoogleMaps();
+          try { refreshDeliveryRunLabel(); } catch (_) {}
+        });
+      }
+      if (nextStopBtn) {
+        nextStopBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          if (!isAuthed) return;
+          await openNextDeliveryStopInGoogleMaps(null, false);
           try { refreshDeliveryRunLabel(); } catch (_) {}
         });
       }
