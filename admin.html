@@ -2697,17 +2697,6 @@
       const parts = [origin].concat(arr).map(s => encodeURIComponent(s));
       return 'https://www.google.com/maps/dir/' + parts.join('/') + '/?travelmode=driving&dir_action=navigate';
     }
-    function getWaLink(o, phoneDigits) {
-      try {
-        const num = String(phoneDigits || '').replace(/\D+/g, '');
-        if (!num) return '';
-        const ordNum = displayOrderNumber(o);
-        const msg = 'Hola, consultamos por el pedido #' + ordNum;
-        return 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
-      } catch (_) {
-        return '';
-      }
-    }
     function _isAndroid() {
       try { return /Android/i.test(String(navigator.userAgent || '')); } catch (_) { return false; }
     }
@@ -4338,6 +4327,22 @@
       return await resp.json();
     }
 
+    async function unassignDelivery(orderId) {
+      if (!csrfToken) await fetchCSRF();
+      const url = new URL(`/api/delivery/orders/${orderId}/unassign`, API_BASE);
+      const resp = await wFetch(url.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
+        body: JSON.stringify({})
+      });
+      if (!resp.ok) {
+        let msg = 'No se pudo devolver a sin asignar';
+        try { const j = await resp.json(); if (j && j.error) msg = String(j.error); } catch (_) {}
+        throw new Error(msg);
+      }
+      return await resp.json();
+    }
+
     async function setDeliveryStatus(orderId, newStatus, extras) {
       if (!csrfToken) await fetchCSRF();
       const url = new URL(`/api/delivery/orders/${orderId}/delivery_status`, API_BASE);
@@ -4457,6 +4462,9 @@
           : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${o.id}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
         const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim();
         const mapBtn = addrOneLine ? `<button class="delivery-map" data-id="${o.id}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
+        const unassignBtn = (role === 'repartidor' && _deliveryMine(o) && String(o && o.delivery_status || 'pending').trim().toLowerCase() !== 'delivered')
+          ? `<button class="delivery-unassign" data-id="${o.id}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
+          : '';
         const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${o.id}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
         const viewBtn = `<button class="delivery-view" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
 
@@ -4470,15 +4478,16 @@
           </div>
           <div class="actions" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
             ${assignBtn}
-            ${upBtn}
-            ${downBtn}
             ${enRouteBtn}
             ${deliveredBtn}
-            ${failedBtn}
             ${payBtn}
             ${mapBtn}
+            ${failedBtn}
+            ${unassignBtn}
             ${notesBtn}
             ${viewBtn}
+            ${upBtn}
+            ${downBtn}
           </div>
         `;
         list.appendChild(card);
@@ -4666,6 +4675,30 @@
           const addrOneLine = getOrderAddressOneLine(o);
           if (!addrOneLine) return;
           openGoogleMapsDestination(addrOneLine, null);
+        });
+      });
+      list.querySelectorAll('.delivery-unassign').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const oid = Number(btn.dataset.id || 0);
+          if (!oid || btn.disabled) return;
+          const ok = await askConfirm('¿Devolver el pedido a "Sin asignar"?');
+          if (!ok) return;
+          const originalText = btn.textContent;
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.textContent = 'Devolviendo...';
+          try {
+            await unassignDelivery(oid);
+            lastDeliverySignature = '';
+            await loadOrdersSafe();
+          } catch (err) {
+            alert(String(err && err.message || 'No se pudo devolver'));
+          } finally {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.textContent = originalText;
+          }
         });
       });
       list.querySelectorAll('.delivery-notes').forEach(btn => {

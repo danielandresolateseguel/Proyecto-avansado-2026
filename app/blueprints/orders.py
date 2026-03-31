@@ -953,6 +953,8 @@ def update_delivery_status(order_id):
         new_main = 'en_camino'
     if new_status == 'delivered' and st_norm != 'entregado':
         new_main = 'entregado'
+    if new_status == 'failed' and st_norm == 'en_camino':
+        new_main = 'listo'
 
     if new_main == 'entregado':
         scope = _scope_for(role, owner=owner)
@@ -990,6 +992,74 @@ def update_delivery_status(order_id):
 
     conn.commit()
     return jsonify({'order_id': order_id, 'delivery_status': new_status, 'order_status': new_main})
+
+
+@bp.route('/delivery/orders/<int:order_id>/unassign', methods=['POST', 'PATCH'])
+def unassign_delivery_order(order_id):
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    session_tenant, actor, role, perms, owner = _ctx()
+    if not _has_perm(perms, owner, role, 'delivery_manage'):
+        return jsonify({'error': 'sin permisos'}), 403
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT tenant_slug, order_type, status, COALESCE(delivery_assigned_to,''), COALESCE(delivery_status,'pending') FROM orders WHERE id = ?",
+        (order_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'orden no encontrada'}), 404
+    tenant_slug, order_type, st, assigned_to, delivery_status = row
+    tenant_slug = str(tenant_slug or '')
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    if str(order_type or '').strip().lower() != 'direccion':
+        return jsonify({'error': 'orden no es de delivery'}), 400
+
+    if role == 'repartidor' and (assigned_to or '').strip().lower() != (actor or '').lower():
+        return jsonify({'error': 'orden asignada a otro repartidor'}), 403
+
+    st_norm = str(st or '').strip().lower()
+    ds_norm = str(delivery_status or '').strip().lower() or 'pending'
+    if st_norm == 'entregado' or ds_norm == 'delivered':
+        return jsonify({'error': 'no se puede devolver una orden entregada'}), 400
+
+    now = datetime.utcnow().isoformat()
+    cur.execute(
+        "UPDATE orders SET delivery_assigned_to = NULL, delivery_assigned_at = NULL, delivery_sequence = NULL, delivery_status = 'pending' WHERE id = ?",
+        (order_id,),
+    )
+
+    if st_norm == 'en_camino':
+        cur.execute("UPDATE orders SET status = 'listo' WHERE id = ?", (order_id,))
+        cur.execute(
+            "INSERT INTO order_status_history (order_id, status, changed_at, changed_by) VALUES (?, ?, ?, ?)",
+            (order_id, 'listo', now, actor or ''),
+        )
+
+    try:
+        ensure_delivery_run_tables(conn, cur)
+        if str(assigned_to or '').strip():
+            run_id = _get_active_run_id(cur, tenant_slug, str(assigned_to or '').strip())
+            if run_id:
+                cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (run_id, order_id))
+    except Exception:
+        pass
+
+    try:
+        cur.execute(
+            "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (order_id, 'delivery_unassign', actor or '', 0, json.dumps({'prev_assigned_to': str(assigned_to or '').strip()}), now),
+        )
+    except Exception:
+        pass
+
+    conn.commit()
+    return jsonify({'ok': True, 'order_id': order_id, 'assigned_to': None, 'delivery_status': 'pending', 'order_status': 'listo' if st_norm == 'en_camino' else None})
 
 @bp.route('/delivery/route', methods=['PATCH'])
 def update_delivery_route():

@@ -57,6 +57,24 @@ function destinoLabelFor(order) {
   return getAddressText(order.address_json).replace(/\n+/g,' ').slice(0,64);
 }
 
+function _getTenantOrderNumber(order) {
+  const raw = order && (order.tenant_order_number ?? order.tenantOrderNumber ?? order.order_number ?? order.orderNumber ?? null);
+  const n = Number(raw);
+  return (Number.isFinite(n) && n > 0) ? Math.trunc(n) : null;
+}
+
+function _formatTenantOrderNumber(n) {
+  if (!n) return '';
+  const s = String(Math.trunc(Number(n)));
+  return s.length >= 3 ? s : s.padStart(3, '0');
+}
+
+function _displayOrderNumber(order) {
+  const n = _getTenantOrderNumber(order);
+  if (n) return _formatTenantOrderNumber(n);
+  return String(order && order.id || '').trim();
+}
+
 function getWaLink(order, phoneDigits) {
   if (!phoneDigits) return '';
   let tenantName = 'Nuestro Local';
@@ -79,7 +97,8 @@ function getWaLink(order, phoneDigits) {
   const waveEmoji = '\uD83D\uDC4B'; 
   const pinEmoji = '\uD83D\uDCCD';
 
-  let msg = `Hola${cName ? ' ' + cName : ''}! ${waveEmoji} Te escribimos de *${tenantName}* por tu pedido *#${order.id}*.`;
+  const ord = _displayOrderNumber(order);
+  let msg = `Hola${cName ? ' ' + cName : ''}! ${waveEmoji} Te escribimos de *${tenantName}* por tu pedido *#${ord}*.`;
   if (address) {
     msg += ` ${pinEmoji} Dirección de entrega: ${address}.`;
   }
