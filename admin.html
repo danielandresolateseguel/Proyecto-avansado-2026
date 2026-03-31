@@ -979,12 +979,12 @@
               <option value="failed">Falló</option>
             </select>
           </label>
-          <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Mis pedidos</button>
-          <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Sin asignar</button>
-          <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Empezar ruta</button>
-          <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Abrir ruta</button>
-          <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Siguiente parada</button>
-          <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Cerrar salida</button>
+          <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mis pedidos</button>
+          <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Sin asignar</button>
+          <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Empezar ruta</button>
+          <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
+          <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
+          <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cerrar salida</button>
           <button id="delivery-reload">Recargar</button>
           <label class="small" style="display:flex; align-items:center; gap:6px; color:#666;">
             <input type="checkbox" id="delivery-auto-next" />
@@ -2696,6 +2696,17 @@
       }
       const parts = [origin].concat(arr).map(s => encodeURIComponent(s));
       return 'https://www.google.com/maps/dir/' + parts.join('/') + '/?travelmode=driving&dir_action=navigate';
+    }
+    function getWaLink(o, phoneDigits) {
+      try {
+        const num = String(phoneDigits || '').replace(/\D+/g, '');
+        if (!num) return '';
+        const ordNum = displayOrderNumber(o);
+        const msg = 'Hola, consultamos por el pedido #' + ordNum;
+        return 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
+      } catch (_) {
+        return '';
+      }
     }
     function _isAndroid() {
       try { return /Android/i.test(String(navigator.userAgent || '')); } catch (_) { return false; }
@@ -4434,30 +4445,30 @@
         const seqText = seq ? `Ruta: ${seq}` : '';
         const metaBits = [who, seqText, payText].filter(Boolean).join(' · ');
 
-        const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${o.id}" style="background:#ff6f00; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">Tomar + ruta</button>` : '';
-        const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${o.id}" style="padding:6px 10px;">↑</button>` : '';
-        const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${o.id}" style="padding:6px 10px;">↓</button>` : '';
-        const enRouteBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route">En camino</button>` : '';
-        const deliveredBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" style="background:#2e7d32; color:#fff;">Entregado</button>` : '';
-        const failedBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" style="background:#b71c1c; color:#fff;">Falló</button>` : '';
+        const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${o.id}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
+        const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
+        const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
+        const enRouteBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>` : '';
+        const deliveredBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>` : '';
+        const failedBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>` : '';
         const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
         const payBtn = isPaid
-          ? `<button class="delivery-pay" data-id="${o.id}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:6px 10px; border-radius:6px;">Pagado</button>`
-          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${o.id}" style="background:#1976d2; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">Cobrar</button>` : '');
+          ? `<button class="delivery-pay" data-id="${o.id}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:4px 8px; border-radius:4px;">Pagado</button>`
+          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${o.id}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
         const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim();
-        const mapBtn = addrOneLine ? `<button class="delivery-map" data-id="${o.id}" style="background:#455a64; color:#fff; border:none; padding:6px 10px; border-radius:6px; cursor:pointer;">Mapa</button>` : '';
-        const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${o.id}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer;">Notas</button>` : '';
-        const viewBtn = `<button class="delivery-view" data-id="${o.id}">Ver</button>`;
+        const mapBtn = addrOneLine ? `<button class="delivery-map" data-id="${o.id}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
+        const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${o.id}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
+        const viewBtn = `<button class="delivery-view" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
 
         card.innerHTML = `
           <div class="card-content">
             <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatus}</span>${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
-            <div class="meta">Destino: ${addrOneLine.slice(0,120) || '-'}</div>
+            <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${addrOneLine.slice(0,120) || '-'}</span></div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
             <div class="meta">${metaBits || ''}</div>
           </div>
-          <div class="actions" style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div class="actions" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
             ${assignBtn}
             ${upBtn}
             ${downBtn}
@@ -4654,8 +4665,7 @@
           if (!o) return;
           const addrOneLine = getOrderAddressOneLine(o);
           if (!addrOneLine) return;
-          const w = window.open('about:blank', '_blank', 'noopener');
-          openGoogleMapsDestination(addrOneLine, w);
+          openGoogleMapsDestination(addrOneLine, null);
         });
       });
       list.querySelectorAll('.delivery-notes').forEach(btn => {
