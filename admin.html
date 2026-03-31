@@ -2690,11 +2690,12 @@
     function buildGoogleRouteUrl(stops) {
       const arr = Array.isArray(stops) ? stops.map(s => String(s || '').trim()).filter(Boolean) : [];
       if (!arr.length) return '';
+      const origin = 'My Location';
       if (arr.length === 1) {
-        return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(arr[0]) + '&travelmode=driving&dir_action=navigate';
+        return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origin) + '&destination=' + encodeURIComponent(arr[0]) + '&travelmode=driving&dir_action=navigate';
       }
-      const parts = arr.map(s => encodeURIComponent(s));
-      return 'https://www.google.com/maps/dir/' + parts.join('/') + '/?travelmode=driving';
+      const parts = [origin].concat(arr).map(s => encodeURIComponent(s));
+      return 'https://www.google.com/maps/dir/' + parts.join('/') + '/?travelmode=driving&dir_action=navigate';
     }
     async function fetchActiveDeliveryRun() {
       const slug = tenantInput?.value?.trim() || defaultSlug();
