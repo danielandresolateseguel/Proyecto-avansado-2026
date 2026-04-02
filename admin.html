@@ -3219,6 +3219,13 @@
         const items = detail.items || [];
         const history = detail.history || [];
         const events = detail.events || [];
+
+        const escapeHtml = (v) => String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
         
         const combinedHistory = [];
         const failNotesByKey = new Map();
@@ -3356,7 +3363,7 @@
         const timeline = combinedHistory.length ? `
           <h3>Historial</h3>
           <div>
-            ${combinedHistory.map(h => `<div class="small"><strong>${h.label}</strong> — ${formatARDate(h.date)}${h.actor ? ' (' + h.actor + ')' : ''}</div>`).join('')}
+            ${combinedHistory.map(h => `<div class="small"><strong>${escapeHtml(h.label)}</strong> — ${formatARDate(h.date)}${h.actor ? ' (' + escapeHtml(h.actor) + ')' : ''}</div>`).join('')}
           </div>
         ` : '';
 
@@ -6999,10 +7006,25 @@
         const otherOk = document.getElementById('delivery-fail-other-ok');
 
         const renderReasonButtons = () => {
-          const buttonsHtml = reasons.map(r => `<button type="button" data-reason="${String(r).replace(/"/g,'&quot;')}" style="padding:10px 12px; border-radius:8px;">${r}</button>`).join('');
-          if (optBox) {
-            optBox.innerHTML = buttonsHtml + `<button type="button" data-reason="__other__" style="padding:10px 12px; border-radius:8px; background:#f3f4f6;">Otro…</button>`;
-          }
+          if (!optBox) return;
+          optBox.textContent = '';
+          reasons.forEach(r => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.setAttribute('data-reason', String(r));
+            btn.style.padding = '10px 12px';
+            btn.style.borderRadius = '8px';
+            btn.textContent = String(r);
+            optBox.appendChild(btn);
+          });
+          const otherBtn = document.createElement('button');
+          otherBtn.type = 'button';
+          otherBtn.setAttribute('data-reason', '__other__');
+          otherBtn.style.padding = '10px 12px';
+          otherBtn.style.borderRadius = '8px';
+          otherBtn.style.background = '#f3f4f6';
+          otherBtn.textContent = 'Otro…';
+          optBox.appendChild(otherBtn);
         };
 
         renderReasonButtons();

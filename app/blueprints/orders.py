@@ -384,6 +384,17 @@ def get_tenant_config():
     slug = request.args.get('slug') or 'gastronomia-local1'
     
     cfg = get_cached_tenant_config(slug)
+    default_fail_reasons = [
+        "No atiende",
+        "Dirección incorrecta",
+        "Reprogramar",
+        "No tiene efectivo / Pago pendiente",
+        "No se pudo acceder",
+    ]
+    r = cfg.get('delivery_fail_reasons')
+    if not isinstance(r, list) or not [str(x).strip() for x in r if str(x).strip()]:
+        cfg = cfg.copy()
+        cfg['delivery_fail_reasons'] = default_fail_reasons
             
     if cfg.get('time_auto'):
         conn = get_db()
