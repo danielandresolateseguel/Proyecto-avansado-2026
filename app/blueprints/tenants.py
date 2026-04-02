@@ -231,6 +231,51 @@ def get_tenant_header():
     except Exception:
         tenant_name = ''
     
+    oh = cfg.get('opening_hours') or meta_contact.get('opening_hours') or {}
+    def _parse_intervals(v):
+        out = []
+        if isinstance(v, list):
+            for it in v:
+                if isinstance(it, list) and len(it) >= 2 and it[0] and it[1]:
+                    out.append([str(it[0]), str(it[1])])
+                elif isinstance(it, str) and '-' in it:
+                    parts = [p.strip() for p in it.split('-') if p.strip()]
+                    if len(parts) >= 2:
+                        out.append([parts[0], parts[1]])
+        elif isinstance(v, str):
+            segs = [s.strip() for s in v.split(',') if s.strip()]
+            for seg in segs:
+                if '-' in seg:
+                    a, b = [p.strip() for p in seg.split('-', 1)]
+                    if a and b:
+                        out.append([a, b])
+        return out
+    def _normalize_hours(obj):
+        days_map = {
+            'mon': 'mon','monday':'mon','lunes':'mon','lun':'mon',
+            'tue': 'tue','tuesday':'tue','martes':'tue','mar':'tue',
+            'wed': 'wed','wednesday':'wed','miercoles':'wed','miércoles':'wed','mie':'wed','mié':'wed',
+            'thu': 'thu','thursday':'thu','jueves':'thu','jue':'thu',
+            'fri': 'fri','friday':'fri','viernes':'fri','vie':'fri',
+            'sat': 'sat','saturday':'sat','sabado':'sat','sábado':'sat','sab':'sat','sáb':'sat',
+            'sun': 'sun','sunday':'sun','domingo':'sun','dom':'sun'
+        }
+        if isinstance(obj, dict):
+            res = {}
+            for k, v in obj.items():
+                key = days_map.get(str(k).strip().lower())
+                if not key:
+                    continue
+                parsed = _parse_intervals(v)
+                if parsed:
+                    res[key] = parsed
+            return res
+        if isinstance(obj, str):
+            parsed = _parse_intervals(obj)
+            if parsed:
+                return {'mon': parsed, 'tue': parsed, 'wed': parsed, 'thu': parsed, 'fri': parsed, 'sat': parsed, 'sun': parsed}
+        return {}
+    opening_hours = _normalize_hours(oh)
     return jsonify({
         'name': tenant_name or (cfg.get('name') or meta_branding.get('name', '')),
         'whatsapp': cfg.get('whatsapp') or meta_contact.get('whatsapp', ''),
@@ -239,7 +284,7 @@ def get_tenant_header():
         'location': cfg.get('location') or meta_contact.get('location', ''),
         'location_label': cfg.get('location_label') or cfg.get('location') or meta_contact.get('location_label') or meta_contact.get('location', ''),
         'location_url': cfg.get('location_url') or meta_contact.get('location_url', ''),
-        'opening_hours': cfg.get('opening_hours') or meta_contact.get('opening_hours', ''),
+        'opening_hours': opening_hours,
         'logo_url': cfg.get('logo_url') or meta_branding.get('logo_url', ''),
         'announcement_active': cfg.get('announcement_active', False),
         'announcement_text': cfg.get('announcement_text') or meta_branding.get('announcement_text', ''),
