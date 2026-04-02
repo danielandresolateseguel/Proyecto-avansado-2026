@@ -4685,13 +4685,6 @@
           const oid = Number(btn.dataset.id || 0);
           const st = String(btn.dataset.st || '').trim();
           if (!oid || !st) return;
-          const autoNext = (() => {
-            try { return String(localStorage.getItem('delivery_auto_next_stop') || '') === '1'; } catch (_) { return false; }
-          })();
-          let preW = null;
-          if (st === 'delivered' && autoNext) {
-            try { preW = window.open('about:blank', '_blank'); } catch (_) { preW = null; }
-          }
           try {
             if (st === 'delivered') {
               const ok = await ensureCashOpen();
@@ -4708,13 +4701,7 @@
             if (res && res.run_closed) {
               try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}
             }
-            if (st === 'delivered' && autoNext) {
-              await openNextDeliveryStopInGoogleMaps(preW, true);
-            } else {
-              if (preW) { try { preW.close(); } catch (_) {} }
-            }
           } catch (err) {
-            if (preW) { try { preW.close(); } catch (_) {} }
             alert(String(err && err.message || 'No se pudo actualizar'));
           }
         });
