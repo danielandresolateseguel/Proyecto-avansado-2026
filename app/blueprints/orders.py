@@ -1021,9 +1021,12 @@ def update_delivery_status(order_id):
 
     if new_main:
         cur.execute("UPDATE orders SET status = ? WHERE id = ?", (new_main, order_id))
+        changed_by = actor or ''
+        if new_status == 'failed' and new_main == 'listo':
+            changed_by = 'sistema'
         cur.execute(
             "INSERT INTO order_status_history (order_id, status, changed_at, changed_by) VALUES (?, ?, ?, ?)",
-            (order_id, new_main, now, actor or ''),
+            (order_id, new_main, now, changed_by),
         )
 
     try:
