@@ -3221,9 +3221,28 @@
         const events = detail.events || [];
         
         const combinedHistory = [];
+        const failNotesByKey = new Map();
+        events.forEach(e => {
+            if (e.event_type !== 'delivery_status_change') return;
+            try {
+                const payload = JSON.parse(e.payload_json || '{}') || {};
+                const to = String(payload.to || '').trim().toLowerCase();
+                if (to !== 'failed') return;
+                const notes = String(payload.delivery_notes || '').trim();
+                if (!notes) return;
+                const key = `${String(e.created_at || '')}__${String(e.actor || '').trim().toLowerCase()}`;
+                failNotesByKey.set(key, notes);
+            } catch (_) {}
+        });
         history.forEach(h => {
+            let label = h.status;
+            if (String(h.status || '').trim().toLowerCase() === 'fallo') {
+                const key = `${String(h.changed_at || '')}__${String(h.changed_by || '').trim().toLowerCase()}`;
+                const notes = failNotesByKey.get(key) || '';
+                if (notes) label = `${label} — ${notes}`;
+            }
             combinedHistory.push({
-                label: h.status,
+                label,
                 date: h.changed_at,
                 actor: h.changed_by,
                 type: 'status'
@@ -3256,26 +3275,13 @@
                     type: 'event'
                 });
             }
-            if (e.event_type === 'delivery_status_change') {
-                try {
-                    const payload = JSON.parse(e.payload_json || '{}') || {};
-                    const stMap = { pending: 'Pendiente', assigned: 'Asignado', en_route: 'En camino', delivered: 'Entregado', failed: 'Falló' };
-                    const to = String(payload.to || '').trim().toLowerCase();
-                    const txt = stMap[to] || to || 'Actualizado';
-                    const notes = String(payload.delivery_notes || '').trim();
-                    label = `Reparto: ${txt}` + (to === 'failed' && notes ? ` — ${notes}` : '');
-                } catch (_) {
-                    label = 'Reparto: estado actualizado';
-                }
-                combinedHistory.push({ label, date: e.created_at, actor: e.actor, type: 'event' });
-            }
             if (e.event_type === 'delivery_unassign') {
                 try {
                     const payload = JSON.parse(e.payload_json || '{}') || {};
                     const prev = String(payload.prev_assigned_to || '').trim();
-                    label = 'Reparto: devuelto a sin asignar' + (prev ? ` (antes: ${prev})` : '');
+                    label = 'Devuelto a sin asignar' + (prev ? ` (antes: ${prev})` : '');
                 } catch (_) {
-                    label = 'Reparto: devuelto a sin asignar';
+                    label = 'Devuelto a sin asignar';
                 }
                 combinedHistory.push({ label, date: e.created_at, actor: e.actor, type: 'event' });
             }
@@ -3283,9 +3289,9 @@
                 try {
                     const payload = JSON.parse(e.payload_json || '{}') || {};
                     const to = String(payload.assigned_to || '').trim();
-                    label = 'Reparto: asignado' + (to ? ` a ${to}` : '');
+                    label = 'Asignado' + (to ? ` a ${to}` : '');
                 } catch (_) {
-                    label = 'Reparto: asignado';
+                    label = 'Asignado';
                 }
                 combinedHistory.push({ label, date: e.created_at, actor: e.actor, type: 'event' });
             }
