@@ -387,8 +387,10 @@ function initHeaderContact() {
                     nextOpening = next;
                 }
             } catch (e) {}
-            const clockIcon = headerContact.querySelector('.fa-clock');
-            const clockItem = clockIcon ? (clockIcon.closest('.contact-item-compact') || clockIcon.closest('div')) : null;
+            const clockItem = headerContact.querySelector('.clock-status') || (() => {
+                const clockIcon = headerContact.querySelector('.fa-clock');
+                return clockIcon ? (clockIcon.closest('.contact-item-compact') || clockIcon.closest('div')) : null;
+            })();
             if (clockItem) {
                 const span = clockItem.querySelector('span');
                 if (span) {
@@ -442,6 +444,21 @@ function initHeaderContact() {
                 if (tooltip) {
                     clockItem.setAttribute('data-tooltip', tooltip);
                 }
+
+                try {
+                    const infoItems = Array.from(document.querySelectorAll('.restaurant-info .info-item'));
+                    const hoursItem = infoItems.find(el => {
+                        const icon = el.querySelector('i');
+                        const strong = el.querySelector('strong');
+                        const iconOk = icon && (icon.classList.contains('fa-clock') || icon.classList.contains('fas') && icon.classList.contains('fa-clock'));
+                        const strongOk = strong && String(strong.textContent || '').trim().toLowerCase() === 'horarios';
+                        return iconOk || strongOk;
+                    });
+                    if (hoursItem) {
+                        const valueSpan = hoursItem.querySelector('.info-content span') || hoursItem.querySelector('span');
+                        if (valueSpan && tooltip) valueSpan.textContent = tooltip;
+                    }
+                } catch (_) {}
             }
         }
 
