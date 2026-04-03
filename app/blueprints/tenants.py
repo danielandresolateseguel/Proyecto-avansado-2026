@@ -301,6 +301,72 @@ def get_tenant_header():
         'interest_bg_color': cfg.get('interest_bg_color', '#121212')
     })
 
+@bp.route('/tenant_checkout', methods=['GET', 'PATCH'])
+def tenant_checkout():
+    slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+
+    if request.method == 'PATCH':
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        if not check_csrf():
+            return jsonify({'error': 'csrf inválido'}), 403
+
+        payload = request.get_json(silent=True) or {}
+        val_enabled = payload.get('whatsapp_enabled', None)
+        val_number = payload.get('whatsapp_number', None)
+        val_template = payload.get('whatsapp_template', None)
+
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
+        row = cur.fetchone()
+
+        current_cfg = {}
+        if row and row[0]:
+            try:
+                current_cfg = json.loads(row[0])
+            except Exception:
+                current_cfg = {}
+
+        checkout = current_cfg.get('checkout')
+        if not isinstance(checkout, dict):
+            checkout = {}
+
+        if val_enabled is not None:
+            checkout['whatsappEnabled'] = bool(val_enabled)
+        if val_number is not None:
+            checkout['whatsappNumber'] = str(val_number or '').strip()
+        if val_template is not None:
+            checkout['whatsappTemplate'] = str(val_template or '')
+
+        current_cfg['checkout'] = checkout
+
+        try:
+            cur.execute(
+                "INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)",
+                (slug, json.dumps(current_cfg, ensure_ascii=False))
+            )
+            conn.commit()
+            invalidate_tenant_config(slug)
+            return jsonify({'ok': True, 'checkout': checkout})
+        except Exception as e:
+            print(f"Error saving tenant checkout: {e}")
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': 'error al guardar'}), 500
+
+    cfg = get_cached_tenant_config(slug)
+    checkout = cfg.get('checkout')
+    if not isinstance(checkout, dict):
+        checkout = {}
+    return jsonify({
+        'whatsappEnabled': bool(checkout.get('whatsappEnabled', True)),
+        'whatsappNumber': str(checkout.get('whatsappNumber', '') or ''),
+        'whatsappTemplate': str(checkout.get('whatsappTemplate', '') or '')
+    })
+
 @bp.route('/tenants', methods=['GET'])
 def get_tenants():
     """Returns a list of available tenants. Currently returns hardcoded list based on config or DB."""
