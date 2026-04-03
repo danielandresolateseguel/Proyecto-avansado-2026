@@ -8,7 +8,7 @@ export const PAGE = (document.body && document.body.dataset && document.body.dat
 // Configuración por rubro/negocio
 export const CATEGORY = window.CATEGORY || (document.body ? document.body.getAttribute('data-category') : null) || 'general';
 export const VENDOR_ID = window.VENDOR_ID || (document.body ? document.body.getAttribute('data-vendor') : null) || 'default';
-export const VENDOR_SLUG = window.VENDOR_SLUG || (document.body ? document.body.getAttribute('data-slug') : null) || '';
+export const VENDOR_SLUG = window.VENDOR_SLUG || window.BUSINESS_SLUG || (document.body ? document.body.getAttribute('data-slug') : null) || '';
 export const THEME = window.THEME || (document.body ? document.body.getAttribute('data-theme') : null) || '';
 export const CART_KEY_PREFIX = window.CART_KEY_PREFIX || 'cart';
 

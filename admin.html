@@ -1681,6 +1681,23 @@
         <input type="text" id="header-location-url" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="https://maps.app.goo.gl/...">
       </div>
       <div style="margin-bottom:16px;">
+        <label style="font-size:12px; display:block; margin-bottom:4px;">Zona horaria (IANA)</label>
+        <input type="text" id="header-timezone" list="header-timezone-list" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="America/Argentina/Mendoza">
+        <datalist id="header-timezone-list">
+          <option value="America/Argentina/Mendoza"></option>
+          <option value="America/Argentina/Buenos_Aires"></option>
+          <option value="America/Santiago"></option>
+          <option value="America/Montevideo"></option>
+          <option value="America/Asuncion"></option>
+          <option value="America/Sao_Paulo"></option>
+          <option value="America/Lima"></option>
+          <option value="America/Bogota"></option>
+          <option value="America/Mexico_City"></option>
+          <option value="America/New_York"></option>
+          <option value="Europe/Madrid"></option>
+        </datalist>
+      </div>
+      <div style="margin-bottom:16px;">
         <label style="font-size:12px; display:block; margin-bottom:4px;">Logo (URL de imagen)</label>
         <input type="text" id="header-logo-url" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="https://...">
         <div style="margin-top:4px;">
@@ -6038,6 +6055,7 @@
     const headerInstagramLabelInput = document.getElementById('header-instagram-label');
     const headerLocationLabelInput = document.getElementById('header-location-label');
     const headerLocationUrlInput = document.getElementById('header-location-url');
+    const headerTimezoneInput = document.getElementById('header-timezone');
     const headerLogoInput = document.getElementById('header-logo-url');
     const headerThemeColor = document.getElementById('header-theme-color');
     const headerBgColor = document.getElementById('header-bg-color');
@@ -6136,6 +6154,7 @@
         if (headerInstagramLabelInput) headerInstagramLabelInput.value = data.instagram_label || '';
         if (headerLocationLabelInput) headerLocationLabelInput.value = (data.location_label || data.location || '');
         if (headerLocationUrlInput) headerLocationUrlInput.value = data.location_url || '';
+        if (headerTimezoneInput) headerTimezoneInput.value = data.timezone || 'America/Argentina/Mendoza';
         if (headerLogoInput) headerLogoInput.value = data.logo_url || '';
         if (headerThemeColor) headerThemeColor.value = data.theme_color || '#ff6a00';
         if (headerBgColor) headerBgColor.value = data.header_bg_color || '#667eea';
@@ -6184,6 +6203,7 @@
             location_label: headerLocationLabelInput ? headerLocationLabelInput.value.trim() : '',
             location_url: headerLocationUrlInput ? headerLocationUrlInput.value.trim() : '',
             opening_hours: openingHours,
+            timezone: headerTimezoneInput ? (headerTimezoneInput.value.trim() || 'America/Argentina/Mendoza') : 'America/Argentina/Mendoza',
             logo_url: headerLogoInput ? headerLogoInput.value.trim() : '',
             theme_color: headerThemeColor ? headerThemeColor.value : '#ff6a00',
             header_bg_color: headerBgColor ? headerBgColor.value : '#667eea',

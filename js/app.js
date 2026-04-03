@@ -111,6 +111,7 @@ function initHeaderContact() {
         const locationLabel = (data.location_label || data.location || '').trim();
         const locationUrl = (data.location_url || '').trim();
         const openingHours = data.opening_hours || null;
+        const timeZone = (data.timezone || '').trim();
         const logoUrl = (data.logo_url || '').trim();
         
         // Helper functions for color manipulation
@@ -313,11 +314,37 @@ function initHeaderContact() {
             let nextOpening = null;
             try {
                 const days = ['sun','mon','tue','wed','thu','fri','sat'];
+                const getZonedNow = () => {
+                    if (!timeZone) return null;
+                    if (!window.Intl || !Intl.DateTimeFormat) return null;
+                    try {
+                        const dtf = new Intl.DateTimeFormat('en-US', {
+                            timeZone,
+                            weekday: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                        });
+                        const parts = dtf.formatToParts(new Date());
+                        const weekday = (parts.find(p => p.type === 'weekday') || {}).value;
+                        const hour = (parts.find(p => p.type === 'hour') || {}).value;
+                        const minute = (parts.find(p => p.type === 'minute') || {}).value;
+                        const dayKey = String(weekday || '').slice(0, 3).toLowerCase();
+                        const idx = days.indexOf(dayKey);
+                        const h = parseInt(hour, 10);
+                        const m = parseInt(minute, 10);
+                        if (idx < 0 || isNaN(h) || isNaN(m)) return null;
+                        return { idx, minutes: h * 60 + m };
+                    } catch (_) {
+                        return null;
+                    }
+                };
+                const zonedNow = getZonedNow();
                 const now = new Date();
-                const idx = now.getDay();
+                const idx = zonedNow ? zonedNow.idx : now.getDay();
                 const dayKey = days[idx];
                 const prevKey = days[(idx + 6) % 7];
-                const minutes = now.getHours() * 60 + now.getMinutes();
+                const minutes = zonedNow ? zonedNow.minutes : (now.getHours() * 60 + now.getMinutes());
                 const parseMinutes = (str) => {
                     if (!str || typeof str !== 'string') return null;
                     const parts = str.split(':');
@@ -381,7 +408,6 @@ function initHeaderContact() {
                     }
                     return null;
                 };
-                let nextOpening = null;
                 const next = findNextOpening();
                 if (next != null) {
                     nextOpeningMinutes = next.minutes;
