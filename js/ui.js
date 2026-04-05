@@ -486,71 +486,125 @@ export async function initDynamicProducts() {
         const featuredGrid = document.querySelector('#featured-dishes .discounts-grid') || document.querySelector('.special-discounts .discounts-grid');
         const mainGrid = document.querySelector('#menu-gastronomia .products-grid') || document.querySelector('#menu-electronica .products-grid');
         const interestGrid = document.querySelector('.interest-products .products-grid');
+        const existingFeaturedIds = new Set();
+        const existingMainIds = new Set();
+        const existingInterestIds = new Set();
+        try {
+            if (featuredGrid) {
+                featuredGrid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                    const bid = (btn.getAttribute('data-id') || '').trim();
+                    if (bid) existingFeaturedIds.add(bid);
+                });
+            }
+            if (mainGrid) {
+                mainGrid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                    const bid = (btn.getAttribute('data-id') || '').trim();
+                    if (bid) existingMainIds.add(bid);
+                });
+            }
+            if (interestGrid) {
+                interestGrid.querySelectorAll('.add-to-cart-btn').forEach(btn => {
+                    const bid = (btn.getAttribute('data-id') || '').trim();
+                    if (bid) existingInterestIds.add(bid);
+                });
+            }
+        } catch (_) {}
         arr.forEach(p => {
             if (!p || !p.id) return;
             if (p.active === false) return;
-            if (existingIds.has(p.id)) return;
             const v = p._variants || {};
-            // Default to 'main' section if not specified to ensure visibility
-            const section = v.section || 'main'; 
-            if (!section) return;
-            let targetGrid = null;
-            let className = 'product-card searchable-item';
-            if (section === 'featured') {
-                targetGrid = featuredGrid;
-                className = 'product-card discount-card searchable-item';
-            } else if (section === 'main') {
-                targetGrid = mainGrid;
-            } else if (section === 'interest') {
-                targetGrid = interestGrid;
-            }
-            if (!targetGrid) return;
-            const priceVal = isFinite(parseInt(p.price)) ? parseInt(p.price) : 0;
-            const card = document.createElement('div');
-            card.className = className;
-            card.id = p.id;
             const fc = v.food_categories;
-            let fcStr = '';
-            if (Array.isArray(fc)) {
-                fcStr = fc.join(', ');
-            } else if (typeof fc === 'string') {
-                fcStr = fc;
-            }
-            if (section === 'main' && fcStr) {
-                card.setAttribute('data-food-category', fcStr);
-                card.setAttribute('data-product-category', fcStr);
-            }
-            if (section === 'interest') {
-                const tag = (v.interest_tag || '').toLowerCase();
-                let cat = '';
-                if (tag === '2x1') {
-                    cat = '2x1';
-                } else if (tag === 'promocion' || tag === 'oferta') {
-                    cat = 'Promociones';
-                } else if (tag === 'especialidad') {
-                    cat = 'Especialidad de la casa';
-                }
-                if (cat) {
-                    card.setAttribute('data-interest-category', cat);
-                }
-            }
+            const hasFoodCats = (Array.isArray(fc) && fc.length > 0) || (typeof fc === 'string' && fc.trim());
+            const hasInterestTag = !!String(v.interest_tag || '').trim();
+            const baseSection = (v.section || '').trim();
+            const sections = [];
+            if (baseSection) sections.push(baseSection);
+            if (hasFoodCats && !sections.includes('main')) sections.push('main');
+            if (hasInterestTag && !sections.includes('interest')) sections.push('interest');
+            if (!sections.length) sections.push('main');
+
+            const normalizeTag = (value) => {
+                const s = String(value || '').trim().toLowerCase();
+                return s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
+            };
+
+            const priceVal = isFinite(parseInt(p.price)) ? parseInt(p.price) : 0;
             const imgSrc = p.image_url || '';
             let priceText = '';
             if (priceVal > 0) {
                 priceText = formatMoneyWithCode(priceVal);
             }
-            card.innerHTML = '<div class="product-image">' +
-                (imgSrc ? '<img src="' + imgSrc + '" alt="">' : '') +
-                '</div>' +
-                '<div class="product-info">' +
-                '<h3>' + (p.name || '') + '</h3>' +
-                '<p class="product-description">' + (p.details || '') + '</p>' +
-                '<div class="price-container">' +
-                (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
-                '</div>' +
-                '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '">Añadir al carrito</button>' +
-                '</div>';
-            targetGrid.appendChild(card);
+
+            const buildCard = (section, className) => {
+                const card = document.createElement('div');
+                card.className = className;
+                card.id = `${p.id}--${section}`;
+                card.setAttribute('data-product-id', p.id);
+                let fcStr = '';
+                if (Array.isArray(fc)) {
+                    fcStr = fc.join(', ');
+                } else if (typeof fc === 'string') {
+                    fcStr = fc;
+                }
+                if (section === 'main' && fcStr) {
+                    card.setAttribute('data-food-category', fcStr);
+                    card.setAttribute('data-product-category', fcStr);
+                }
+                if (section === 'interest') {
+                    const tag = normalizeTag(v.interest_tag || '');
+                    let cat = '';
+                    if (tag === '2x1') {
+                        cat = '2x1';
+                    } else if (tag === 'promocion' || tag === 'promociones' || tag === 'oferta' || tag === 'ofertas' || tag === 'promo') {
+                        cat = 'Promociones';
+                    } else if (tag === 'especialidad' || tag === 'especialidad_de_la_casa' || tag === 'especialidad de la casa') {
+                        cat = 'Especialidad de la casa';
+                    } else if (tag === 'combos' || tag === 'combo') {
+                        cat = 'Combos';
+                    } else if (tag === 'entradas_rapidas' || tag === 'entradas rapidas' || tag === 'entradas' || tag === 'entrada') {
+                        cat = 'Entradas rápidas';
+                    } else if (!tag) {
+                        cat = 'Promociones';
+                    }
+                    if (cat) {
+                        card.setAttribute('data-interest-category', cat);
+                    }
+                }
+                card.innerHTML = '<div class="product-image">' +
+                    (imgSrc ? '<img src="' + imgSrc + '" alt="">' : '') +
+                    '</div>' +
+                    '<div class="product-info">' +
+                    '<h3>' + (p.name || '') + '</h3>' +
+                    '<p class="product-description">' + (p.details || '') + '</p>' +
+                    '<div class="price-container">' +
+                    (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
+                    '</div>' +
+                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '">Añadir al carrito</button>' +
+                    '</div>';
+                return card;
+            };
+
+            sections.forEach(section => {
+                let targetGrid = null;
+                let className = 'product-card searchable-item';
+                if (section === 'featured') {
+                    targetGrid = featuredGrid;
+                    className = 'product-card discount-card searchable-item';
+                } else if (section === 'main') {
+                    targetGrid = mainGrid;
+                } else if (section === 'interest') {
+                    targetGrid = interestGrid;
+                }
+                if (!targetGrid) return;
+                if (section === 'featured' && existingFeaturedIds.has(p.id)) return;
+                if (section === 'main' && existingMainIds.has(p.id)) return;
+                if (section === 'interest' && existingInterestIds.has(p.id)) return;
+                const card = buildCard(section, className);
+                targetGrid.appendChild(card);
+                if (section === 'featured') existingFeaturedIds.add(p.id);
+                if (section === 'main') existingMainIds.add(p.id);
+                if (section === 'interest') existingInterestIds.add(p.id);
+            });
         });
         bindAddToCartEvents(document);
 

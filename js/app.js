@@ -31,7 +31,7 @@ import {
     openDialog, 
     closeDialog,
     closeCartUI
-} from './ui.js?v=8';
+} from './ui.js?v=10';
 import { 
     initSearch
 } from './search.js?v=8';
@@ -52,7 +52,9 @@ import {
     initProductModals,
     initInterestFiltering,
     initDynamicProducts
-} from './ui.js?v=8';
+} from './ui.js?v=10';
+ 
+ 
 import { initOrderStatus } from './order-status.js?v=10';
 
 // Exponer funciones globales necesarias para HTML inline (onclick="...")

@@ -76,8 +76,10 @@ def create_product():
     if (not section) and food_categories:
         section = 'main'
     
-    if not tenant_slug or not product_id or not name:
-        return jsonify({'error': 'Faltan campos obligatorios (tenant, id, name)'}), 400
+    if isinstance(product_id, str):
+        product_id = product_id.strip()
+    if not tenant_slug or not name:
+        return jsonify({'error': 'Faltan campos obligatorios (tenant, name)'}), 400
 
     variants = {}
     if section: variants['section'] = section
@@ -92,6 +94,38 @@ def create_product():
     try:
         conn = get_db()
         cur = conn.cursor()
+
+        if not product_id:
+            cur.execute("SELECT product_id FROM products WHERE tenant_slug = ?", (tenant_slug,))
+            rows = cur.fetchall() or []
+            max_n = 0
+            width = 0
+            for r in rows:
+                raw = str(r[0] or '').strip()
+                if not raw.isdigit():
+                    continue
+                width = max(width, len(raw))
+                try:
+                    n = int(raw)
+                except Exception:
+                    continue
+                if n > max_n:
+                    max_n = n
+            next_n = max_n + 1
+            candidate = str(next_n)
+            if width > 1 and len(candidate) < width:
+                candidate = candidate.zfill(width)
+            while True:
+                cur.execute("SELECT 1 FROM products WHERE tenant_slug = ? AND product_id = ? LIMIT 1", (tenant_slug, candidate))
+                exists = cur.fetchone()
+                if not exists:
+                    break
+                next_n += 1
+                candidate = str(next_n)
+                if width > 1 and len(candidate) < width:
+                    candidate = candidate.zfill(width)
+            product_id = candidate
+
         cur.execute("SELECT active FROM products WHERE tenant_slug=? AND product_id=?", (tenant_slug, product_id))
         row = cur.fetchone()
         if row:
@@ -162,7 +196,7 @@ def update_product(product_id):
                 params.append(v)
             else:
                 fields.append('variants_json = ?')
-                params.append(json.dumps(v or []))
+                params.append(json.dumps(v or {}))
         except: return jsonify({'error': 'variants inválido'}), 400
         
     if not fields: return jsonify({'error': 'sin cambios'}), 400

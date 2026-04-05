@@ -1455,6 +1455,27 @@
               <input type="number" id="edit-prod-stock" min="0">
             </div>
             <div class="edit-form-group">
+              <label>Sección en Carta Online</label>
+              <select id="edit-prod-section" style="width:100%; padding:8px;">
+                <option value="">-- Sin asignar --</option>
+                <option value="featured">Platos destacados</option>
+                <option value="main">Menú principal</option>
+                <option value="interest">Recomendados por interés</option>
+              </select>
+            </div>
+            <div class="edit-form-group">
+              <label>Etiqueta de interés (requerida si es “Recomendados por interés”)</label>
+              <select id="edit-prod-interest" style="width:100%; padding:8px;">
+                <option value="">Sin etiqueta</option>
+                <option value="2x1">2x1</option>
+                <option value="entradas_rapidas">Entradas rápidas</option>
+                <option value="promocion">Promoción</option>
+                <option value="oferta">Oferta</option>
+                <option value="especialidad">Especialidad</option>
+                <option value="combos">Combos</option>
+              </select>
+            </div>
+            <div class="edit-form-group">
               <label>Categorías de filtro (menú principal)</label>
               <select id="edit-prod-food-cats" multiple style="width:100%; padding:8px;">
                 <option value="sandwich">Sándwich</option>
@@ -1924,6 +1945,8 @@
     const prodEditStock = document.getElementById('edit-prod-stock');
     const prodEditActive = document.getElementById('edit-prod-active');
     const prodEditLastMod = document.getElementById('edit-prod-last-mod');
+    const prodEditSection = document.getElementById('edit-prod-section');
+    const prodEditInterest = document.getElementById('edit-prod-interest');
     const prodEditFoodCats = document.getElementById('edit-prod-food-cats');
     const prodEditTriggerUpload = document.getElementById('edit-prod-trigger-upload');
     const prodEditFile = document.getElementById('edit-prod-file');
@@ -1952,6 +1975,8 @@
       prodEditLastMod.textContent = product.last_modified ? 'Última modificación: ' + formatARDate(product.last_modified) : 'Sin modificaciones recientes';
 
       // Preseleccionar categorías de filtro desde variants_json
+      let existingSection = '';
+      let existingInterest = '';
       let existingCats = [];
       if (prodEditFoodCats) {
         try {
@@ -1963,6 +1988,8 @@
               v = product.variants || {};
             }
           }
+          existingSection = (v.section || '').trim();
+          existingInterest = (v.interest_tag || '').trim();
           const fc = v.food_categories;
           if (Array.isArray(fc)) {
             existingCats = fc;
@@ -1976,6 +2003,8 @@
           opt.selected = existingCats.includes(opt.value);
         });
       }
+      if (prodEditSection) prodEditSection.value = existingSection;
+      if (prodEditInterest) prodEditInterest.value = existingInterest;
 
       // Update Preview
       updatePreview();
@@ -2014,6 +2043,7 @@
     if (prodEditDetails) prodEditDetails.addEventListener('input', updatePreview);
     if (prodEditPrice) prodEditPrice.addEventListener('input', updatePreview);
     if (prodEditImage) prodEditImage.addEventListener('input', updatePreview);
+    if (prodEditSection) prodEditSection.addEventListener('change', () => {});
 
     // Image Upload & Delete Handlers
     if (prodEditTriggerUpload && prodEditFile) {
@@ -2165,6 +2195,24 @@
                 }
             } catch (e) {
                 variants = {};
+            }
+
+            if (prodEditSection) {
+              const sec = (prodEditSection.value || '').trim();
+              if (sec) {
+                variants.section = sec;
+              } else if (variants && typeof variants === 'object' && 'section' in variants) {
+                delete variants.section;
+              }
+            }
+
+            if (prodEditInterest) {
+              const it = (prodEditInterest.value || '').trim();
+              if (it) {
+                variants.interest_tag = it;
+              } else if (variants && typeof variants === 'object' && 'interest_tag' in variants) {
+                delete variants.interest_tag;
+              }
             }
 
             // Recolectar categorías seleccionadas
@@ -12107,13 +12155,15 @@
           <small>Usado para los filtros de la carta online.</small>
         </div>
         <div>
-          <label>Etiqueta de interés (opcional)</label>
+          <label>Etiqueta de interés (requerida si es “Recomendados por interés”)</label>
           <select id="create-prod-interest" style="width:100%; padding:8px;">
             <option value="">Sin etiqueta</option>
             <option value="2x1">2x1</option>
+            <option value="entradas_rapidas">Entradas rápidas</option>
             <option value="promocion">Promoción</option>
             <option value="oferta">Oferta</option>
             <option value="especialidad">Especialidad</option>
+            <option value="combos">Combos</option>
           </select>
         </div>
         <div>
@@ -12401,6 +12451,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const previewImg = document.getElementById('create-preview-img');
   const previewPlaceholder = document.getElementById('create-preview-img-placeholder');
 
+  async function suggestNextProductId(tenantSlug) {
+    try {
+      if (!tenantSlug) return '';
+      const origin = window.location.origin || '';
+      const base = (window.location.protocol === 'file:' || origin === 'null' || !origin) ? 'http://127.0.0.1:8000' : origin;
+      const url = new URL('/api/products', base);
+      url.searchParams.set('tenant_slug', tenantSlug);
+      url.searchParams.set('include_inactive', 'true');
+      const resp = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
+      if (!resp.ok) return '';
+      const data = await resp.json();
+      const arr = Array.isArray(data.products) ? data.products : [];
+      let max = 0;
+      let width = 0;
+      for (const p of arr) {
+        const raw = String((p && p.id) || '').trim();
+        if (!/^\d+$/.test(raw)) continue;
+        width = Math.max(width, raw.length);
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n)) max = Math.max(max, n);
+      }
+      const next = String(max + 1);
+      if (width > 1 && next.length < width) {
+        return next.padStart(width, '0');
+      }
+      return next;
+    } catch (_) {
+      return '';
+    }
+  }
+
   if (createBtn) {
     createBtn.addEventListener('click', () => {
       pId.value = '';
@@ -12422,6 +12503,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       createModal.style.display = 'block';
+      (async () => {
+        try {
+          const tenantInputEl = document.getElementById('tenant-input');
+          const tenant = (typeof currentTenantSlug !== 'undefined' && currentTenantSlug)
+            ? currentTenantSlug
+            : (tenantInputEl && tenantInputEl.value && tenantInputEl.value.trim())
+              || (window.BUSINESS_SLUG || 'gastronomia-local1');
+          const suggested = await suggestNextProductId(tenant);
+          if (suggested && !pId.value.trim()) {
+            pId.value = suggested;
+          }
+        } catch (_) {}
+      })();
     });
   }
 
@@ -12511,6 +12605,11 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!confirm("DEBUG: Se guardarán las siguientes categorías: " + selectedCats.join(', ') + ". ¿Continuar?")) {
               return;
           }
+      }
+
+      if (pSection.value === 'interest' && pInterest && !pInterest.value) {
+        alert('Seleccioná una etiqueta de interés para que el producto aparezca al tocar esa etiqueta en “Recomendados por interés”.');
+        return;
       }
       
       if (!id || !name || price < 0) {
