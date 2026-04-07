@@ -78,7 +78,8 @@
     .delivered summary, .inventory summary, .carousel summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
     .canceled summary, .archived summary, .carousel summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
     .pager { display:flex; gap:8px; align-items:center; margin-top:8px; }
-    .phone-row { display:inline-flex; align-items:center; gap:6px; }
+    .phone-row { display:flex; align-items:center; gap:6px; width:100%; max-width:100%; flex-wrap:wrap; }
+    .phone-row .small { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; word-break:break-word; }
     .phone-action { width:28px; height:28px; min-height:0; padding:0; border-radius:6px; display:inline-flex; align-items:center; justify-content:center; background: var(--kds-accent); color:#fff; text-decoration:none; }
     .phone-action:hover { background: #3f5f8a; }
     .phone-action svg { width:16px; height:16px; fill:#fff; }
