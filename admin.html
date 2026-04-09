@@ -697,6 +697,9 @@
         <label class="small" style="display:flex; align-items:center; gap:6px;"><input id="sound-toggle" type="checkbox" checked /> Sonido</label>
         <div class="auth-bar">
           <span id="auth-status-badge" class="auth-badge off">Sin sesión</span>
+          <button id="users-admin-open" title="Usuarios" aria-label="Usuarios" style="display:none; border:none; background:#455a64; color:#fff; width:32px; height:32px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M12 8a3 3 0 100 6 3 3 0 000-6zm8.94 3a7.99 7.99 0 00-.6-2.99l2.06-1.59-2-3.46-2.42.97a8.1 8.1 0 00-2.6-1.5L14 0h-4l-.38 2.43a8.1 8.1 0 00-2.6 1.5l-2.42-.97-2 3.46L4.66 8A7.99 7.99 0 004.06 11c0 1.04.2 2.03.6 2.99l-2.06 1.59 2 3.46 2.42-.97c.78.6 1.64 1.1 2.6 1.5L10 24h4l.38-2.43c.96-.4 1.82-.9 2.6-1.5l2.42.97 2-3.46-2.06-1.59c.4-.96.6-1.95.6-2.99z"/></svg>
+          </button>
           <button id="login-open-btn">Entrar</button>
           <button id="logout-btn" disabled>Salir</button>
         </div>
@@ -721,10 +724,7 @@
     <div class="subcontrols">
 
       <button id="tables-open" style="background:#673ab7; color:#fff;">Gestión Mesas</button>
-      <button id="btn-view-carta" style="background:#009688; color:#fff;" onclick="const s=document.getElementById('tenant-input').value||'gastronomia-local1'; window.open('/gastronomia-local1.html?slug='+s, '_blank')">Ver Carta Online</button>
-      <button id="carousel-open" style="background:#e91e63; color:#fff;">Editor Carrusel</button>
-      <button id="users-admin-open" style="background:#455a64; color:#fff; display:none;">Usuarios</button>
-      <button id="delivery-open" style="background:#ff6f00; color:#fff; display:none;">Repartos</button>
+      
     </div>
   </header>
 
@@ -1134,6 +1134,7 @@
           <button id="car-reload">Recargar</button>
           <button id="header-config-open" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cabecera</button>
           <button id="footer-config-open" style="background-color:#795548; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Pie de página</button>
+          <button id="btn-view-carta" style="background:#009688; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Ver Carta Online</button>
         </div>
         <button id="close-carousel-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
       </div>
@@ -9722,11 +9723,29 @@
         document.addEventListener('DOMContentLoaded', initWhatsappConfigUI);
         document.addEventListener('DOMContentLoaded', initRestaurantConfigUI);
         document.addEventListener('DOMContentLoaded', initUsersAdminUI);
+        document.addEventListener('DOMContentLoaded', () => {
+          const btnView = document.getElementById('btn-view-carta');
+          if (btnView) {
+            btnView.onclick = () => {
+              const s = (document.getElementById('tenant-input')?.value || 'gastronomia-local1');
+              window.open('/gastronomia-local1.html?slug=' + s, '_blank');
+            };
+          }
+        });
     } else {
         initOrdersConfigUI();
         initWhatsappConfigUI();
         initRestaurantConfigUI();
         initUsersAdminUI();
+        (function(){
+          const btnView = document.getElementById('btn-view-carta');
+          if (btnView) {
+            btnView.onclick = () => {
+              const s = (document.getElementById('tenant-input')?.value || 'gastronomia-local1');
+              window.open('/gastronomia-local1.html?slug=' + s, '_blank');
+            };
+          }
+        })();
     }
     // --- NEW ORDER MODAL LOGIC ---
     document.addEventListener('DOMContentLoaded', function() {
