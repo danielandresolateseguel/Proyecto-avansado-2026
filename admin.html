@@ -427,6 +427,9 @@
     }
     #kitchen-box { margin: 12px 0; }
     #kitchen-box > summary { cursor: pointer; font-weight: 700; }
+    .kitchen-quick-filters { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+    .kitchen-quick-filters button { border:none; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:800; font-size:12px; background:#607d8b; color:#fff; line-height:1; }
+    .kitchen-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
     #kitchen-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-top: 10px; }
     .kitchen-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); display: grid; gap: 10px; }
     .kitchen-card .k-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -980,6 +983,10 @@
     </div>
     <details class="kitchen" id="kitchen-box" style="display:none;">
       <summary>Cocina (Comandas)</summary>
+      <div class="kitchen-quick-filters" id="kitchen-quick-filters">
+        <button type="button" id="kitchen-qf-ingresos" class="active" aria-label="Ingresos">Ingresos</button>
+        <button type="button" id="kitchen-qf-listos" aria-label="Listos">Listos</button>
+      </div>
       <div class="small" id="kitchen-count" style="margin-top:8px; color:#666;"></div>
       <div id="kitchen-cards"></div>
     </details>
@@ -4617,7 +4624,7 @@
       tbody.replaceChildren(frag);
       if (omobilePtr) omobilePtr.replaceChildren(fragCards);
       initSLAClock();
-      await renderKitchenOrders(active);
+      await renderKitchenOrders(activeAll);
       const role0 = String(currentUserRole || '').trim().toLowerCase();
       const me0 = String(currentUserName || '').trim().toLowerCase();
       const isRepartidor0 = role0 === 'repartidor';
@@ -5197,13 +5204,39 @@
       }
     }
 
+    let kitchenQuickFilter = 'ingresos';
+    function updateKitchenQuickFilterUI() {
+      const bIn = document.getElementById('kitchen-qf-ingresos');
+      const bLi = document.getElementById('kitchen-qf-listos');
+      if (bIn) bIn.classList.toggle('active', kitchenQuickFilter === 'ingresos');
+      if (bLi) bLi.classList.toggle('active', kitchenQuickFilter === 'listos');
+    }
+    function bindKitchenQuickFilters() {
+      const bIn = document.getElementById('kitchen-qf-ingresos');
+      const bLi = document.getElementById('kitchen-qf-listos');
+      if (bIn) bIn.onclick = () => { kitchenQuickFilter = 'ingresos'; updateKitchenQuickFilterUI(); try { renderKitchenOrders(window.__kitchenLastActiveAll || []); } catch(_) {} };
+      if (bLi) bLi.onclick = () => { kitchenQuickFilter = 'listos'; updateKitchenQuickFilterUI(); try { renderKitchenOrders(window.__kitchenLastActiveAll || []); } catch(_) {} };
+      updateKitchenQuickFilterUI();
+    }
+    (function initKitchenQuickFiltersOnce() {
+      try { bindKitchenQuickFilters(); } catch(_) {}
+    })();
+
     async function renderKitchenOrders(activeOrders) {
       const box = document.getElementById('kitchen-box');
       const cardsEl = document.getElementById('kitchen-cards');
       const countElK = document.getElementById('kitchen-count');
       if (!box || !cardsEl || !countElK) return;
       if (box.style.display === 'none' || !box.open) return;
-      const list = (Array.isArray(activeOrders) ? activeOrders : []).filter(o => ['pendiente','preparacion','listo'].includes(String(o.status || '').toLowerCase()));
+      window.__kitchenLastActiveAll = Array.isArray(activeOrders) ? activeOrders : [];
+      try { updateKitchenQuickFilterUI(); } catch(_) {}
+      let list = (Array.isArray(activeOrders) ? activeOrders : []).filter(o => ['pendiente','preparacion','listo'].includes(String(o.status || '').toLowerCase()));
+      const kf = String(kitchenQuickFilter || 'ingresos');
+      if (kf === 'listos') {
+        list = list.filter(o => String(o.status || '').toLowerCase() === 'listo');
+      } else {
+        list = list.filter(o => ['pendiente','preparacion'].includes(String(o.status || '').toLowerCase()));
+      }
       list.sort((a,b) => parseDateSafe(a.created_at) - parseDateSafe(b.created_at));
       countElK.textContent = `Mostrando ${list.length} comanda(s)`;
       const frag = document.createDocumentFragment();
