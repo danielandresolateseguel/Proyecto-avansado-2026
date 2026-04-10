@@ -330,6 +330,13 @@
     .auth-badge.off { background:#b0bec5; color:#fff; }
     #users-admin-open { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; padding:0; line-height:0; border:none; background:#455a64; color:#fff; cursor:pointer; }
     #users-admin-open svg { display:block; width:18px; height:18px; }
+    .orders-quick-filters { display:flex; gap:6px; align-items:center; margin-left: 8px; flex-wrap: wrap; }
+    .orders-quick-filters button { border:none; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; color:#fff; line-height:1; }
+    .orders-quick-filters button.qf-pending { background: var(--st-pendiente); }
+    .orders-quick-filters button.qf-prep { background: var(--st-preparacion); color:#111; }
+    .orders-quick-filters button.qf-ready { background: var(--st-listo); }
+    .orders-quick-filters button.qf-en-camino { background: var(--st-en_camino); }
+    .orders-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
     @media (max-width: 720px) {
       .archived .controls { flex-direction: row !important; align-items: center !important; flex-wrap: wrap !important; }
       .archived .controls > * { width: auto !important; }
@@ -856,6 +863,12 @@
       <button id="whatsapp-config-btn" title="Configuración de WhatsApp" style="background:#25D366;">
         <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
       </button>
+      <div class="orders-quick-filters" id="orders-quick-filters">
+        <button type="button" id="orders-qf-pending" class="qf-pending" title="Nuevos / Pendientes" aria-label="Nuevos / Pendientes">Nuevos</button>
+        <button type="button" id="orders-qf-prep" class="qf-prep" title="En preparación" aria-label="En preparación">Preparación</button>
+        <button type="button" id="orders-qf-ready" class="qf-ready" title="Listos para entrega" aria-label="Listos para entrega">Listos</button>
+        <button type="button" id="orders-qf-en-camino" class="qf-en-camino" title="En camino (Delivery)" aria-label="En camino (Delivery)">En camino</button>
+      </div>
     </div>
 
     <!-- WHATSAPP CONFIG MODAL -->
@@ -3764,13 +3777,48 @@
       const s = localStorage.getItem('ordersConfig');
       if (s) ordersConfig = { ...ordersConfig, ...JSON.parse(s) };
     } catch(_) {}
+    let ordersQuickStatusFilter = '';
+    window.setOrdersQuickStatusFilter = function(key) {
+      const k = String(key || '').trim();
+      ordersQuickStatusFilter = (ordersQuickStatusFilter === k) ? '' : k;
+      try { window.updateOrdersQuickFilterUI(); } catch (_) {}
+      try {
+        if (window.__lastOrdersData) renderOrders(window.__lastOrdersData);
+        else loadOrdersSafe();
+      } catch (_) {}
+    };
+    window.updateOrdersQuickFilterUI = function() {
+      const box = document.getElementById('orders-quick-filters');
+      if (!box) return;
+      const setActive = (id, on) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        if (on) b.classList.add('active'); else b.classList.remove('active');
+      };
+      setActive('orders-qf-pending', ordersQuickStatusFilter === 'pending');
+      setActive('orders-qf-prep', ordersQuickStatusFilter === 'preparacion');
+      setActive('orders-qf-ready', ordersQuickStatusFilter === 'listo');
+      setActive('orders-qf-en-camino', ordersQuickStatusFilter === 'en_camino_delivery');
+    };
+    (function bindOrdersQuickFilters(){
+      const p = document.getElementById('orders-qf-pending');
+      const pr = document.getElementById('orders-qf-prep');
+      const r = document.getElementById('orders-qf-ready');
+      const c = document.getElementById('orders-qf-en-camino');
+      if (p) p.addEventListener('click', () => window.setOrdersQuickStatusFilter('pending'));
+      if (pr) pr.addEventListener('click', () => window.setOrdersQuickStatusFilter('preparacion'));
+      if (r) r.addEventListener('click', () => window.setOrdersQuickStatusFilter('listo'));
+      if (c) c.addEventListener('click', () => window.setOrdersQuickStatusFilter('en_camino_delivery'));
+      try { window.updateOrdersQuickFilterUI(); } catch (_) {}
+    })();
 
     async function renderOrders(data) {
+        window.__lastOrdersData = data;
         const orders = data.orders || [];
         window.currentOrders = orders; // Expose for Table Management
         // Filtro para mostrar activos: NO entregados/cancelados, O entregados pero MESA NO pagada
         // Y respetar filtros de configuración
-        const active = orders.filter(o => {
+        let active = orders.filter(o => {
             if (o.status === 'cancelado') return false;
             if (o.status === 'entregado') {
                 const pStatus = String(o.payment_status || '').trim().toLowerCase();
@@ -3784,6 +3832,19 @@
 
             return true;
         });
+        try {
+          const f = String(ordersQuickStatusFilter || '').trim();
+          if (f) {
+            active = active.filter(o => {
+              const st = String(o && o.status || '').trim().toLowerCase();
+              const ot = String(o && o.order_type || '').trim().toLowerCase();
+              if (f === 'pending') return (st === 'pendiente' || st === 'por_aprobar');
+              if (f === 'en_camino_delivery') return (st === 'en_camino' && ot === 'direccion');
+              return st === f;
+            });
+          }
+        } catch (_) {}
+        try { window.updateOrdersQuickFilterUI(); } catch (_) {}
 
         const total = Number(data.total || orders.length || 0);
         const page = Math.floor(currentOffset / currentLimit) + 1;
