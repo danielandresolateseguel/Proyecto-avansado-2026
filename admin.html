@@ -3833,7 +3833,7 @@
         window.currentOrders = orders; // Expose for Table Management
         // Filtro para mostrar activos: NO entregados/cancelados, O entregados pero MESA NO pagada
         // Y respetar filtros de configuración
-        let active = orders.filter(o => {
+        const activeAll = orders.filter(o => {
             if (o.status === 'cancelado') return false;
             if (o.status === 'entregado') {
                 const pStatus = String(o.payment_status || '').trim().toLowerCase();
@@ -3847,10 +3847,11 @@
 
             return true;
         });
+        let active = activeAll;
         try {
           const f = String(ordersQuickStatusFilter || '').trim();
           if (f) {
-            active = active.filter(o => {
+            active = activeAll.filter(o => {
               const st = String(o && o.status || '').trim().toLowerCase();
               const ot = String(o && o.order_type || '').trim().toLowerCase();
               if (f === 'pending') return (st === 'pendiente' || st === 'por_aprobar');
@@ -3882,15 +3883,15 @@
           return;
         }
         
-        const activeIds = new Set(active.map(o => o.id));
+        const activeIdsForNew = new Set(activeAll.map(o => o.id));
         let hasNew = false;
         if (!firstOrderLoad) {
-          for (const id of activeIds) { if (!lastActiveIds.has(id)) { hasNew = true; break; } }
+          for (const id of activeIdsForNew) { if (!lastActiveIds.has(id)) { hasNew = true; break; } }
         }
         firstOrderLoad = false;
         window.activeCurrent = active;
         if (hasNew) {
-          const newList = active.filter(o => !(lastActiveIds && lastActiveIds.has(o.id)));
+          const newList = activeAll.filter(o => !(lastActiveIds && lastActiveIds.has(o.id)));
           let targetId = 0;
           if (newList.length) {
             const sortedNew = newList.slice().sort((a,b) => parseDateSafe(b.created_at) - parseDateSafe(a.created_at));
@@ -4564,7 +4565,7 @@
       await renderCanceled(canceled);
       
       lastOrdersSignature = newSignature;
-      lastActiveIds = activeIds;
+      lastActiveIds = activeIdsForNew;
       
       // Auto-scroll to order if search by ID
       if (currentSearch && /^\d+$/.test(currentSearch.trim())) {
