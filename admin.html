@@ -787,7 +787,8 @@
     <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
   </div>
 
-  <section class="grid sales-area">
+  <section class="grid">
+    <div class="sales-area" id="sales-area">
     <div id="orders-header-row" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
       <h2>Pedidos</h2>
       <button id="orders-config-btn" title="Configuración de Pedidos" style="background:#607d8b;">
@@ -976,15 +977,6 @@
         </table>
       </div>
     </div>
-    <details class="kitchen" id="kitchen-box" style="display:none;">
-      <summary>Cocina (Comandas)</summary>
-      <div class="kitchen-quick-filters" id="kitchen-quick-filters">
-        <button type="button" id="kitchen-qf-ingresos" class="active" aria-label="Ingresos">Ingresos</button>
-        <button type="button" id="kitchen-qf-listos" aria-label="Listos">Listos</button>
-      </div>
-      <div class="small" id="kitchen-count" style="margin-top:8px; color:#666;"></div>
-      <div id="kitchen-cards"></div>
-    </details>
       <table id="orders-table" class="orders-table">
         <thead>
           <tr>
@@ -1007,6 +999,17 @@
       <span id="page-info" class="small"></span>
       <button id="next-page">Siguiente</button>
     </div>
+    </div>
+
+    <details class="kitchen" id="kitchen-box" style="display:none;">
+      <summary>Cocina (Comandas)</summary>
+      <div class="kitchen-quick-filters" id="kitchen-quick-filters">
+        <button type="button" id="kitchen-qf-ingresos" class="active" aria-label="Ingresos">Ingresos</button>
+        <button type="button" id="kitchen-qf-listos" aria-label="Listos">Listos</button>
+      </div>
+      <div class="small" id="kitchen-count" style="margin-top:8px; color:#666;"></div>
+      <div id="kitchen-cards"></div>
+    </details>
     <details class="delivered" id="delivery-box" style="display:none;">
       <summary>Repartos</summary>
       <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
