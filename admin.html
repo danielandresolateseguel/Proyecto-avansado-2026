@@ -72,6 +72,16 @@
     .grid { display:grid; grid-template-columns: 1fr; grid-template-areas: "orders"; gap: 16px; align-items:start; }
     .sales-area { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 10px 24px rgba(0,0,0,0.06); }
     .sales-area #orders-header-row { margin-bottom: 8px; }
+    body.tm-open #orders-table,
+    html.tm-open body #orders-table,
+    body.tm-open #orders-mobile,
+    html.tm-open body #orders-mobile,
+    body.tm-open #orders-count,
+    html.tm-open body #orders-count,
+    body.tm-open .sales-area .pager,
+    html.tm-open body .sales-area .pager { display: none !important; }
+    body.tm-open #sales-area > :not(#orders-header-row):not(#table-management),
+    html.tm-open body #sales-area > :not(#orders-header-row):not(#table-management) { display: none !important; }
     @media (max-width: 720px) { .sales-area { padding: 10px; } }
     .grid > div:first-child { grid-area: orders; }
     .sla-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-left:6px; background:#bbb; }
@@ -3830,6 +3840,20 @@
       }
       return buckets;
     }
+    window.__kdsSetOrdersListHidden = function(hidden) {
+      const els = [
+        document.getElementById('orders-table'),
+        document.getElementById('orders-mobile'),
+        document.getElementById('orders-count'),
+        document.querySelector('#sales-area .pager')
+      ];
+      els.forEach(el => {
+        if (!el) return;
+        el.hidden = !!hidden;
+        if (hidden) el.style.display = 'none';
+        else el.style.display = '';
+      });
+    };
     function markOrdersQuickSeenFor(key, buckets) {
       const k = String(key || '').trim();
       const src = buckets && buckets[k] ? buckets[k] : null;
@@ -3856,7 +3880,25 @@
     }
     window.setOrdersQuickStatusFilter = function(key) {
       const k = String(key || '').trim();
-      ordersQuickStatusFilter = (ordersQuickStatusFilter === k) ? '' : k;
+      ordersQuickStatusFilter = k;
+      
+      try {
+        const tmSection = document.getElementById('table-management');
+        if (tmSection && tmSection.style.display !== 'none') {
+          tmSection.style.display = 'none';
+          document.body.classList.remove('tm-open');
+          document.documentElement.classList.remove('tm-open');
+          const listEls = [
+            document.getElementById('orders-table'),
+            document.getElementById('orders-mobile'),
+            document.getElementById('orders-count'),
+            document.querySelector('.sales-area > .pager')
+          ];
+          listEls.forEach(el => { if (el) el.style.display = ''; });
+        }
+      } catch (_) {}
+      try { window.__kdsSetOrdersListHidden(false); } catch (_) {}
+      
       try { window.updateOrdersQuickFilterUI(); } catch (_) {}
       try {
         if (window.__lastOrdersData) renderOrders(window.__lastOrdersData);
@@ -10819,6 +10861,30 @@
     let selectedTableId = null;
     let mergeState = { active: false, selectedIds: [] };
 
+    const syncTmOpenState = () => {
+      try {
+        if (!tmSection) return;
+        const open = window.getComputedStyle(tmSection).display !== 'none';
+        if (open) {
+          document.body.classList.add('tm-open');
+          document.documentElement.classList.add('tm-open');
+          try { window.__kdsSetOrdersListHidden(true); } catch (_) {}
+        } else {
+          document.body.classList.remove('tm-open');
+          document.documentElement.classList.remove('tm-open');
+          try { window.__kdsSetOrdersListHidden(false); } catch (_) {}
+        }
+      } catch (_) {}
+    };
+
+    try {
+      syncTmOpenState();
+      if (tmSection && typeof MutationObserver !== 'undefined') {
+        new MutationObserver(syncTmOpenState).observe(tmSection, { attributes: true, attributeFilter: ['style', 'class'] });
+      }
+      window.addEventListener('resize', syncTmOpenState);
+    } catch (_) {}
+
     function initTableManagement() {
       if (!tmBtn || !tmSection) return;
 
@@ -10844,11 +10910,14 @@
 
       // Navigation
       tmBtn.addEventListener('click', async () => {
-        // Keep section.grid visible so Entregados/Cancelados/etc are accessible
         const analytics = document.getElementById('analytics');
         if (analytics) analytics.style.display = 'none';
         
+        try { window.__kdsSetOrdersListHidden(true); } catch (_) {}
+        
         document.body.classList.remove('show-analytics');
+         document.body.classList.add('tm-open');
+        document.documentElement.classList.add('tm-open');
         tmSection.style.display = 'block';
         
         // Scroll to map section
@@ -10894,6 +10963,10 @@
         tmSection.style.display = 'none';
         const grid = document.querySelector('section.grid');
         if (grid) grid.style.display = '';
+        document.body.classList.remove('tm-open');
+        document.documentElement.classList.remove('tm-open');
+        
+        try { window.__kdsSetOrdersListHidden(false); } catch (_) {}
       };
 
       const closeBtn = document.getElementById('tm-close-btn');
