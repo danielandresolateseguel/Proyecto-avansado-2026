@@ -848,7 +848,12 @@ def list_delivery_orders():
     sql = (
         "SELECT id, tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, "
         "payment_method, payment_status, tip_amount, shipping_cost, created_at, order_notes, "
-        "delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at "
+        "delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at, "
+        "CASE WHEN "
+        "COALESCE((SELECT MAX(created_at) FROM order_events WHERE order_id = orders.id AND event_type = 'delivery_unassign'), '') != '' "
+        "AND COALESCE((SELECT MAX(created_at) FROM order_events WHERE order_id = orders.id AND event_type = 'delivery_unassign'), '') > "
+        "COALESCE((SELECT MAX(created_at) FROM order_events WHERE order_id = orders.id AND event_type = 'delivery_assign'), '') "
+        "THEN 1 ELSE 0 END AS delivery_returned "
         "FROM orders WHERE tenant_slug = ? AND lower(trim(COALESCE(order_type,''))) = 'direccion'"
     )
     params = [tenant_slug]

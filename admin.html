@@ -4902,7 +4902,11 @@
         const waUrl = (typeof getWaLink === 'function') ? getWaLink(o, phoneDigits) : '';
         const assigned = String(o.delivery_assigned_to || '').trim();
         const dStatus = _effectiveDeliveryStatus(o);
+        const returned = Number(o && o.delivery_returned || 0) === 1;
         const seq = (o.delivery_sequence === null || typeof o.delivery_sequence === 'undefined') ? '' : String(o.delivery_sequence);
+        if (dStatus === 'en_route') {
+          card.style.opacity = '0.6';
+        }
         let stopNum = null;
         if (_deliveryMine(o)) {
           if (!seq) stopNum = idx + 1;
@@ -4921,7 +4925,10 @@
         const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${o.id}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
         const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
         const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
-        const enRouteBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>` : '';
+        const canEnRoute = (role === 'repartidor') ? _deliveryMine(o) : returned;
+        const enRouteBtn = canEnRoute
+          ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
+          : `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`;
         const deliveredBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>` : '';
         const failedBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>` : '';
         const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
