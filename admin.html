@@ -4904,6 +4904,13 @@
         const waUrl = (typeof getWaLink === 'function') ? getWaLink(o, phoneDigits) : '';
         const assigned = String(o.delivery_assigned_to || '').trim();
         const dStatus = _effectiveDeliveryStatus(o);
+        const kStatus = _normUser(o && o.status || 'pendiente');
+        
+        let kStatusPill = '';
+        if (kStatus === 'pendiente' || kStatus === 'por_aprobar') kStatusPill = `<span class="pill" style="margin-left:6px; background:#ffeb3b; color:#e65100;">Nuevos</span>`;
+        else if (kStatus === 'preparacion') kStatusPill = `<span class="pill" style="margin-left:6px; background:#2196f3; color:#fff;">Preparación</span>`;
+        else if (kStatus === 'listo') kStatusPill = `<span class="pill" style="margin-left:6px; background:#4caf50; color:#fff;">Listos</span>`;
+        
         const returned = Number(o && o.delivery_returned || 0) === 1;
         const seq = (o.delivery_sequence === null || typeof o.delivery_sequence === 'undefined') ? '' : String(o.delivery_sequence);
         if (dStatus === 'en_route') {
@@ -4948,7 +4955,7 @@
 
         card.innerHTML = `
           <div class="card-content">
-            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatus}</span>${stopPill}</div>
+            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatus}</span>${kStatusPill}${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
             <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${addrOneLine.slice(0,120) || '-'}</span></div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
