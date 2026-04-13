@@ -82,6 +82,7 @@
     html.tm-open body .sales-area .pager { display: none !important; }
     body.tm-open #sales-area > :not(#orders-header-row):not(#table-management),
     html.tm-open body #sales-area > :not(#orders-header-row):not(#table-management) { display: none !important; }
+    body.role-repartidor #sales-area { display: none !important; }
     @media (max-width: 720px) { .sales-area { padding: 10px; } }
     .grid > div:first-child { grid-area: orders; }
     .sla-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-left:6px; background:#bbb; }
@@ -2677,7 +2678,7 @@
     }
 
     function applyRoleUI() {
-      const role = String(currentUserRole || '').toLowerCase();
+      const role = String(currentUserRole || '').trim().toLowerCase();
       const isKitchen = !!isAuthed && role === 'cocina';
       const isMozo = !!isAuthed && role === 'mozo';
       const isRepartidor = !!isAuthed && role === 'repartidor';
@@ -2722,6 +2723,7 @@
       setRoleVisibilityById('carousel-box', !isKitchen && canCarousel);
       setRoleVisibilityById('archived-box', !isKitchen && canReports);
       setRoleVisibilityById('delivery-box', !isKitchen && canDelivery);
+      try { document.body.classList.toggle('role-repartidor', !!isRepartidor); } catch (_) {}
 
       if (isRepartidor && canDelivery) {
         try {
