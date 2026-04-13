@@ -3045,6 +3045,15 @@
       if (ds === 'delivered') return 99;
       return 50;
     }
+    function _deliveryStatusLabel(dsRaw) {
+      const ds = _normUser(dsRaw || 'pending');
+      if (ds === 'pending') return 'Pendiente';
+      if (ds === 'assigned') return 'Asignado';
+      if (ds === 'en_route') return 'En camino';
+      if (ds === 'delivered') return 'Entregado';
+      if (ds === 'failed') return 'Falló';
+      return dsRaw ? String(dsRaw) : 'Pendiente';
+    }
     async function getMyRouteOrdersPreferRun() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       if (role !== 'repartidor') return { run: null, orders: [] };
@@ -4905,17 +4914,15 @@
         const assigned = String(o.delivery_assigned_to || '').trim();
         const dStatus = _effectiveDeliveryStatus(o);
         const kStatus = _normUser(o && o.status || 'pendiente');
+        const dStatusLabel = _deliveryStatusLabel(dStatus);
         
         let kStatusPill = '';
         if (kStatus === 'pendiente' || kStatus === 'por_aprobar') kStatusPill = `<span class="pill" style="margin-left:6px; background:#ffeb3b; color:#e65100;">Nuevos</span>`;
         else if (kStatus === 'preparacion') kStatusPill = `<span class="pill" style="margin-left:6px; background:#2196f3; color:#fff;">Preparación</span>`;
-        else if (kStatus === 'listo') kStatusPill = `<span class="pill" style="margin-left:6px; background:#4caf50; color:#fff;">Listos</span>`;
+        else if (kStatus === 'listo') kStatusPill = `<span class="pill" style="margin-left:6px; background:#4caf50; color:#fff;">Listo</span>`;
         
         const returned = Number(o && o.delivery_returned || 0) === 1;
         const seq = (o.delivery_sequence === null || typeof o.delivery_sequence === 'undefined') ? '' : String(o.delivery_sequence);
-        if (dStatus === 'en_route') {
-          card.style.opacity = '0.6';
-        }
         let stopNum = null;
         if (_deliveryMine(o)) {
           if (!seq) stopNum = idx + 1;
@@ -4935,9 +4942,13 @@
         const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
         const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
         const canEnRoute = (role === 'repartidor') ? _deliveryMine(o) : returned;
-        const enRouteBtn = canEnRoute
-          ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
-          : `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`;
+        const enRouteAlready = dStatus === 'en_route';
+        const canEnRouteClick = !!canEnRoute && !enRouteAlready && dStatus !== 'delivered';
+        const enRouteBtn = enRouteAlready
+          ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.55; background:#607d8b; color:#fff; cursor:default;">En camino</button>`
+          : (canEnRouteClick
+            ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
+            : `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`);
         const deliveredBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>` : '';
         const failedBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>` : '';
         const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
@@ -4955,7 +4966,7 @@
 
         card.innerHTML = `
           <div class="card-content">
-            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatus}</span>${kStatusPill}${stopPill}</div>
+            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatusLabel}</span>${kStatusPill}${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
             <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${addrOneLine.slice(0,120) || '-'}</span></div>
             <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
