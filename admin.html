@@ -5329,7 +5329,7 @@
         const statusLabelText = (isMesa && o.status === 'en_camino') ? 'mesa' : o.status;
         const s = String(o.status || '').toLowerCase();
         const isPrepOrLater = ['preparacion', 'listo', 'en_camino', 'entregado'].includes(s);
-        const newBadge = s === 'pendiente' ? '<span class="k-new-badge">Nuevo</span>' : '';
+        const newBadge = (s === 'pendiente' || s === 'por_aprobar') ? '<span class="k-new-badge">Nuevo</span>' : '';
         const lDisabled = !isPrepOrLater ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : '';
         const prepBtn = `<button class="status-action preparacion" data-status="preparacion" aria-label="Preparación" data-tip="Preparación">P</button>`;
         const listoBtn = `<button class="status-action listo" data-status="listo" aria-label="Listo" data-tip="Listo" ${lDisabled}>L</button>`;
@@ -6223,7 +6223,7 @@
     function initSLAClock() {
       if (slaTimer) clearInterval(slaTimer);
       const thresholds = currentSlaThresholds;
-      const update = async () => {
+      const update = () => {
         const now = Date.now();
         const nodes = Array.from(document.querySelectorAll('.sla-container'));
         for (const n of nodes) {
@@ -6289,8 +6289,8 @@
           if (orderId) {
             const prev = slaStateMap.get(orderId) || '';
             if (stateStr !== prev && soundEnabled) {
-              if (stateStr === 'warning') { try { await playSlaWarningSound(); } catch (_) {} }
-              else if (stateStr === 'critical') { try { await playSlaCriticalSound(); } catch (_) {} }
+              if (stateStr === 'warning') { try { playSlaWarningSound(); } catch (_) {} }
+              else if (stateStr === 'critical') { try { playSlaCriticalSound(); } catch (_) {} }
             }
             slaStateMap.set(orderId, stateStr);
           }
