@@ -20,7 +20,6 @@
                 const data = await res.json();
                 if (data.token) {
                     window.CSRF_TOKEN = data.token;
-                    console.log('CSRF Token loaded:', window.CSRF_TOKEN);
                 }
             }
         } catch (e) {
@@ -9316,7 +9315,6 @@
     }
     // Config events
     window.initOrdersConfigUI = function() {
-      console.log('[DEBUG] initOrdersConfigUI called');
       try {
         const saveBtn = document.getElementById('cfg-save-btn');
         if (saveBtn) {
@@ -9325,8 +9323,6 @@
             const newSaveBtn = document.getElementById('cfg-save-btn');
             
             newSaveBtn.addEventListener('click', async () => {
-                 console.log('[DEBUG] Save button clicked');
-                 
                  const inp = document.getElementById('cfg-shipping-cost');
                  const val = inp ? (parseInt(inp.value)||0) : 0;
                  const reqApprovalEl = document.getElementById('cfg-require-approval');
@@ -9352,9 +9348,6 @@
                  const slaCritIn = document.getElementById('sla-critical');
                  const valSlaWarn = slaWarnIn ? parseInt(slaWarnIn.value || '15', 10) : 15;
                  const valSlaCrit = slaCritIn ? parseInt(slaCritIn.value || '30', 10) : 30;
-                 
-                 console.log('[DEBUG] Values to save:', { val, valMesa, valEspera, valDelivery, valAuto, valSlaWarn, valSlaCrit });
-                 
                  const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
 
                  const bodyStr = JSON.stringify({
@@ -9404,7 +9397,6 @@
                       if (slaWarnIn) slaWarnIn.value = String(wmin);
                       if (slaCritIn) slaCritIn.value = String(cmin);
                       currentSlaThresholds = { warning: wmin, critical: cmin };
-                      console.warn('[DEBUG] SLA save failed', { status: slaResp.status, err: errObj });
                    }
 
                    alert('Configuración guardada correctamente.');
@@ -9415,19 +9407,16 @@
                    if (window.loadSlaThresholds) window.loadSlaThresholds();
 
                  } catch(e) { 
-                   console.error('[DEBUG] Exception:', e);
                    alert('Error al guardar: ' + e.message);
                  }
             });
         } else {
-             console.error('[DEBUG] cfg-save-btn NOT FOUND');
+             console.error('cfg-save-btn NOT FOUND');
         }
 
         const btn = document.getElementById('orders-config-btn');
         const modal = document.getElementById('orders-config-modal');
         const close = document.getElementById('cfg-close-btn');
-        
-        console.log('[DEBUG] UI Elements:', { btn: !!btn, modal: !!modal, close: !!close });
 
         window.loadSlaThresholds = function() {
             const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
@@ -9457,7 +9446,6 @@
 
         if (btn && modal) {
           btn.onclick = () => {
-            console.log('[DEBUG] Open config modal');
             modal.style.display = 'flex';
             
             if (window.loadSlaThresholds) window.loadSlaThresholds();
@@ -9472,7 +9460,6 @@
             fetch(`/api/config?slug=${slug}`)
               .then(r => r.json())
               .then(d => {
-                 console.log('[DEBUG] Config loaded:', d);
                  const inp = document.getElementById('cfg-shipping-cost');
                  if(inp) inp.value = d.shipping_cost || 0;
                  const reqApprovalEl = document.getElementById('cfg-require-approval');
@@ -9506,7 +9493,7 @@
                    fr.value = list.map(x => String(x || '').trim()).filter(Boolean).join('\n');
                  }
               })
-              .catch(err => console.error('[DEBUG] Load config error:', err));
+              .catch(err => console.error('Load config error:', err));
             
             // Bind reset orders inside modal
             const resetInModal = document.getElementById('cfg-reset-orders-btn');
