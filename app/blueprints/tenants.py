@@ -7,8 +7,6 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
 # Force reload check
-print("DEBUG: Loading tenants.py blueprint...")
-
 bp = Blueprint('tenants', __name__, url_prefix='/api')
 
 def ensure_tenants_status_message_column(conn, cur):

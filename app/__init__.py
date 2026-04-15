@@ -36,6 +36,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY=os.getenv('SECRET_KEY', 'dev'),
         DATABASE=os.getenv('DATABASE_PATH', os.path.join(app.root_path, '..', 'orders.db')),
+        DATABASE_URL=os.getenv('DATABASE_URL'),
         CONFIG_DIR=os.path.join(app.root_path, '..', 'config'),
         JSON_AS_ASCII=True,  # Force ASCII JSON to avoid encoding issues with emojis
         SEND_FILE_MAX_AGE_DEFAULT=0,

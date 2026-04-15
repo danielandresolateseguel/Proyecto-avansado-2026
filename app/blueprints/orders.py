@@ -459,8 +459,6 @@ def create_order():
         tenant_slug = payload.get('tenant_slug') or payload.get('slug') or 'gastronomia-local1'
         order_type = (payload.get('order_type') or 'mesa').lower()
         
-        print(f"DEBUG: Creating order for {tenant_slug}, type={order_type}")
-        
         if order_type not in ('mesa', 'direccion', 'espera', 'none'):
             return jsonify({'error': 'order_type inválido'}), 400
             
@@ -541,7 +539,6 @@ def create_order():
                 (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, json.dumps(address_json, ensure_ascii=False), status, total, None, None, created_at, order_notes, shipping_cost)
             )
             order_id = cur.lastrowid
-            print(f"DEBUG: Order created with ID {order_id}")
         except Exception as e:
             print(f"Error executing INSERT orders: {e}")
             raise e

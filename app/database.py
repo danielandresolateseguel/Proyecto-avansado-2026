@@ -16,10 +16,11 @@ except ImportError:
 # Global connection pool
 pg_pool = None
 
-def init_pool():
+def init_pool(database_url=None):
     global pg_pool
     if pg_pool is None and HAS_PSYCOPG2:
-        database_url = os.environ.get('DATABASE_URL')
+        if database_url is None:
+            database_url = os.environ.get('DATABASE_URL')
         if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
             try:
                 pg_pool = psycopg2.pool.ThreadedConnectionPool(1, 20, database_url)
@@ -132,7 +133,7 @@ def is_postgres():
 
 def get_db():
     if 'db' not in g:
-        database_url = os.environ.get('DATABASE_URL')
+        database_url = current_app.config.get('DATABASE_URL', os.environ.get('DATABASE_URL'))
         if database_url and (database_url.startswith('postgres://') or database_url.startswith('postgresql://')):
             if not HAS_PSYCOPG2:
                 raise ImportError("psycopg2 is required for PostgreSQL")
@@ -140,7 +141,7 @@ def get_db():
             # Initialize pool if needed
             global pg_pool
             if pg_pool is None:
-                init_pool()
+                init_pool(database_url)
             
             # Get connection from pool
             if pg_pool:
