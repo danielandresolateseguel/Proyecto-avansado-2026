@@ -9,6 +9,24 @@ from werkzeug.security import generate_password_hash
 # Force reload check
 bp = Blueprint('tenants', __name__, url_prefix='/api')
 
+def _parse_perms_json(s):
+    if not s:
+        return {}
+    try:
+        v = json.loads(s)
+        if isinstance(v, dict):
+            return {str(k): bool(v[k]) for k in v.keys()}
+        if isinstance(v, list):
+            out = {}
+            for it in v:
+                k = str(it or '').strip()
+                if k:
+                    out[k] = True
+            return out
+    except Exception:
+        return {}
+    return {}
+
 def ensure_tenants_status_message_column(conn, cur):
     if is_postgres():
         try:
@@ -623,6 +641,14 @@ def update_tenant_tables():
     
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
     payload = request.get_json(silent=True) or {}
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    role = str(session.get('admin_role') or '').strip().lower()
+    owner = bool(session.get('admin_owner'))
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    if session_tenant and slug and session_tenant != slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    if not (owner or role == 'admin' or perms.get('tables_manage')):
+        return jsonify({'error': 'sin permisos'}), 403
     
     conn = get_db()
     cur = conn.cursor()
