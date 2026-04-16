@@ -232,6 +232,8 @@ def cash_open():
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
     opening_amount = int(payload.get('opening_amount') or 0)
+    if opening_amount < 0:
+        return jsonify({'error': 'monto inicial inválido'}), 400
     notes_open = (payload.get('notes') or '').strip()
     now = datetime.utcnow().isoformat()
     conn = get_db()
@@ -261,6 +263,8 @@ def cash_close():
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
     closing_amount = int(payload.get('closing_amount') or 0)
+    if closing_amount < 0:
+        return jsonify({'error': 'monto de cierre inválido'}), 400
     notes_close = (payload.get('notes') or '').strip()
     now = datetime.utcnow().isoformat()
     conn = get_db()
