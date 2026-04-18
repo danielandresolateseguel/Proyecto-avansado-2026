@@ -59,6 +59,62 @@ def _session_where(tenant_slug, scope, actor=None):
         params.append(actor or '')
     return q, params
 
+_BREAKDOWN_KEYS = ('efectivo', 'pos', 'transferencia', 'otros')
+
+def _safe_int(value, default=0):
+    try:
+        return int(value or 0)
+    except Exception:
+        return int(default or 0)
+
+def _empty_breakdown():
+    return {key: 0 for key in _BREAKDOWN_KEYS}
+
+def _breakdown_total(breakdown):
+    return sum(max(0, _safe_int((breakdown or {}).get(key))) for key in _BREAKDOWN_KEYS)
+
+def _align_breakdown_to_amount(breakdown, target_amount):
+    aligned = {key: max(0, _safe_int((breakdown or {}).get(key))) for key in _BREAKDOWN_KEYS}
+    target = max(0, _safe_int(target_amount))
+    delta = target - _breakdown_total(aligned)
+    if delta == 0:
+        return aligned
+    if delta > 0:
+        aligned['efectivo'] += delta
+        return aligned
+    remaining = abs(delta)
+    for key in ('efectivo', 'otros', 'transferencia', 'pos'):
+        if remaining <= 0:
+            break
+        current = aligned[key]
+        take = min(current, remaining)
+        aligned[key] = current - take
+        remaining -= take
+    return aligned
+
+def _normalize_declared_breakdown(raw_breakdown, fallback_amount=0, prefer_fallback=False):
+    normalized = _empty_breakdown()
+    source = raw_breakdown if isinstance(raw_breakdown, dict) else {}
+    aliases = {
+        'efectivo': ('efectivo', 'cash'),
+        'pos': ('pos', 'qr', 'tarjeta'),
+        'transferencia': ('transferencia', 'trans'),
+        'otros': ('otros', 'otro'),
+    }
+    for canonical, keys in aliases.items():
+        for key in keys:
+            if key in source:
+                normalized[canonical] = max(0, _safe_int(source.get(key)))
+                break
+    fallback = max(0, _safe_int(fallback_amount))
+    total = _breakdown_total(normalized)
+    if total == 0 and fallback > 0:
+        normalized['efectivo'] = fallback
+        return normalized
+    if prefer_fallback and fallback >= 0 and total != fallback:
+        return _align_breakdown_to_amount(normalized, fallback)
+    return normalized
+
 def _aggregate_sales_by_payments(cur, tenant_slug, actor, start_at, end_at):
     base_total = 0
     tip_total = 0
@@ -345,9 +401,9 @@ def cash_close():
                 breakdown_counts['efectivo'] += cnt
 
     theoretical_cash = opening_amount + entradas - salidas
+    declared_breakdown = _normalize_declared_breakdown(payload.get('breakdown') or {}, fallback_amount=closing_amount)
+    closing_amount = _breakdown_total(declared_breakdown)
     closing_diff = closing_amount - theoretical_cash
-    
-    declared_breakdown = payload.get('breakdown') or {}
     closing_metadata = json.dumps({'declared_breakdown': declared_breakdown})
     
     cur.execute("UPDATE cash_sessions SET closed_at = ?, closed_by = ?, closing_amount = ?, notes_close = ?, closing_diff = ?, closing_metadata = ? WHERE id = ?", (now, actor, closing_amount, notes_close, closing_diff, closing_metadata, sid))
@@ -670,12 +726,16 @@ def cash_sessions_list():
                     breakdown['efectivo'] -= amt
                     breakdown_counts['efectivo'] += cnt
 
-        declared_breakdown = {}
+        declared_breakdown = _normalize_declared_breakdown({}, fallback_amount=int(s.get('closing_amount') or 0))
         try:
             meta = s.get('closing_metadata')
             if meta:
                 meta_obj = json.loads(meta)
-                declared_breakdown = meta_obj.get('declared_breakdown') or {}
+                declared_breakdown = _normalize_declared_breakdown(
+                    meta_obj.get('declared_breakdown') or {},
+                    fallback_amount=int(s.get('closing_amount') or 0),
+                    prefer_fallback=True,
+                )
         except:
             pass
 

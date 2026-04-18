@@ -8897,9 +8897,10 @@
       
       // Helper to safely get metadata string
       const getMeta = (s) => {
-        // Prefer explicit declared_breakdown from summary if available, to ensure data consistency
-        // But the attach function expects the full metadata string to parse.
-        // We ensure we pass the DB stored metadata.
+        const declared = s && s.summary && s.summary.declared_breakdown;
+        if (declared && typeof declared === 'object') {
+          return JSON.stringify({ declared_breakdown: declared }).replace(/"/g, '&quot;');
+        }
         return (s.closing_metadata || '').replace(/"/g, '&quot;');
       };
 
