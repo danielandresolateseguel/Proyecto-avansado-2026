@@ -1,4 +1,7 @@
-from flask import Blueprint, send_from_directory, current_app, jsonify
+from flask import Blueprint, send_from_directory, current_app, jsonify, make_response, request
+from app.database import get_db
+from app.utils import get_cached_tenant_config
+import html
 import os
 import re
 
@@ -12,6 +15,47 @@ def _no_store(resp):
     except Exception:
         pass
     return resp
+
+def _title_from_slug(slug):
+    try:
+        return re.sub(r'\s+', ' ', str(slug or '').replace('-', ' ').replace('_', ' ')).strip().title()
+    except Exception:
+        return ''
+
+def _resolve_tenant_display_name(slug):
+    cfg = get_cached_tenant_config(slug) or {}
+    meta_branding = cfg.get('meta', {}).get('branding', {})
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT name FROM tenants WHERE tenant_slug = ?", (slug,))
+        row = cur.fetchone()
+        tenant_name = str(row[0] or '').strip() if row and row[0] else ''
+    except Exception:
+        tenant_name = ''
+    return (
+        str(cfg.get('name') or '').strip()
+        or tenant_name
+        or str(meta_branding.get('name') or '').strip()
+        or _title_from_slug(slug)
+        or 'Carta Online'
+    )
+
+def _render_public_shell(slug):
+    title = _resolve_tenant_display_name(slug)
+    safe_title = html.escape(title, quote=False)
+    public_url = request.url_root.rstrip('/') + '/' + slug + '.html'
+    shell_path = os.path.join(current_app.static_folder, 'gastronomia-local1.html')
+    with open(shell_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    content = re.sub(r'<title>.*?</title>', f'<title>{safe_title}</title>', content, count=1, flags=re.IGNORECASE | re.DOTALL)
+    content = re.sub(r'(<meta\s+property="og:title"\s+content=")([^"]*)(")', rf'\g<1>{safe_title}\g<3>', content, count=1, flags=re.IGNORECASE)
+    content = re.sub(r'(<meta\s+name="twitter:title"\s+content=")([^"]*)(")', rf'\g<1>{safe_title}\g<3>', content, count=1, flags=re.IGNORECASE)
+    content = re.sub(r'(<link\s+rel="canonical"\s+href=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
+    content = re.sub(r'(<meta\s+property="og:url"\s+content=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
+    resp = make_response(content)
+    resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+    return _no_store(resp)
 
 @bp.route('/Imagenes/<path:filename>')
 def serve_images(filename):
@@ -49,8 +93,8 @@ def static_proxy(path):
         # El JS interno calculará el tenant_slug a partir del nombre del archivo solicitado.
         if path.endswith('.html') and re.match(r'^[a-z0-9\-_]+\.html$', path):
             try:
-                resp = send_from_directory(current_app.static_folder, 'gastronomia-local1.html')
-                return _no_store(resp)
+                slug = path[:-5]
+                return _render_public_shell(slug)
             except Exception:
                 return jsonify({'error': 'Página no disponible'}), 404
         # Para otros assets inexistentes devolvemos 404 controlado
