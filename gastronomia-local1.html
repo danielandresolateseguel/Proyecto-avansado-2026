@@ -5,16 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
     <link rel="canonical" href="http://localhost:8000/gastronomia-local1.html">
-    <title>Gastronomía Local 1</title>
+    <title>Carta Online</title>
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#ff6a00">
-    <meta property="og:title" content="Gastronomía Local 1">
+    <meta property="og:title" content="Carta Online">
     <meta property="og:description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
     <meta property="og:type" content="website">
     <meta property="og:url" content="http://localhost:8000/gastronomia-local1.html">
     <meta property="og:image" content="Imagenes/lomo a lo pobre.webp">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Gastronomía Local 1">
+    <meta name="twitter:title" content="Carta Online">
     <meta name="twitter:description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
     <meta name="twitter:image" content="Imagenes/lomo a lo pobre.webp">
     <link rel="icon" href="Imagenes/Epalogo.png" type="image/png">
@@ -435,6 +435,13 @@
     <!-- Resolución dinámica del BUSINESS_SLUG según el nombre del archivo solicitado -->
     <script>
       (function(){
+        function titleFromSlug(slug) {
+          return String(slug || '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, function(ch){ return ch.toUpperCase(); })
+            .trim();
+        }
+
         // 1. Intentar obtener slug de la URL
         var urlParams = new URLSearchParams(window.location.search);
         var qsSlug = urlParams.get('slug') || urlParams.get('tenant') || urlParams.get('tenant_slug');
@@ -451,6 +458,13 @@
           } catch(e) {
             window.BUSINESS_SLUG = 'gastronomia-local1';
           }
+        }
+
+        try {
+            var cachedTitle = localStorage.getItem('cached_tenant_name_' + window.BUSINESS_SLUG);
+            document.title = (cachedTitle && cachedTitle.trim()) || titleFromSlug(window.BUSINESS_SLUG) || 'Carta Online';
+        } catch(e) {
+            document.title = titleFromSlug(window.BUSINESS_SLUG) || 'Carta Online';
         }
         
         // Intentar cargar color de fondo de cabecera desde cache para evitar flash

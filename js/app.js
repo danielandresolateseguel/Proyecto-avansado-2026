@@ -440,6 +440,9 @@ function initHeaderContact() {
         const tenantName = (data.name || '').trim();
         if (tenantName) {
             document.title = tenantName;
+            try {
+                localStorage.setItem('cached_tenant_name_' + slug, tenantName);
+            } catch (e) {}
         }
         const whatsappValue = (data.whatsapp || '').trim();
         const instagramValue = (data.instagram || '').trim();
