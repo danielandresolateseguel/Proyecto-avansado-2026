@@ -88,8 +88,8 @@
     .sla-warning { background:#ff9800; }
     .sla-critical { background:#f44336; }
     .sla-label { margin-left:4px; font-size:12px; color:#666; }
-    .delivered summary, .inventory summary, .carousel summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
-    .canceled summary, .archived summary, .carousel summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
+    .delivered summary, .inventory summary, .carousel summary, .orders-history-group summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
+    .canceled summary, .archived summary, .carousel summary, .orders-history-group summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
     .pager { display:flex; gap:8px; align-items:center; margin-top:8px; }
     .phone-row { display:flex; align-items:center; gap:6px; width:100%; max-width:100%; flex-wrap:wrap; }
     .phone-row .small { flex:1 1 auto; min-width:0; overflow-wrap:anywhere; word-break:break-word; }
@@ -133,7 +133,10 @@
     .pill-mesa { font-weight: 700; }
     .sla-label { font-weight: 600; color: #445; }
     .sla-dot { transition: background-color 0.2s ease; }
-    .delivered summary, .canceled summary, .archived summary, .inventory summary, .carousel summary { background: #f0f3f8; border-color: var(--kds-border); }
+    .delivered summary, .canceled summary, .archived summary, .inventory summary, .carousel summary, .orders-history-group summary { background: #f0f3f8; border-color: var(--kds-border); }
+    .orders-history-group { margin: 12px 0; }
+    .orders-history-group .orders-history-inner { margin-top: 10px; display: grid; gap: 10px; padding: 0 6px 6px; }
+    .orders-history-group .orders-history-inner > details { margin: 0; }
     .actions button, .pager button { border-radius: 8px; }
     button { touch-action: manipulation; }
     .archived .copy-phone { background:#0f766e; color:#fff; }
@@ -1061,72 +1064,188 @@
       </div>
       <div id="delivery-list" class="orders-mobile"></div>
     </details>
-    <details class="delivered" id="delivered-box">
-      <summary>Entregados</summary>
-      <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <label>Tamaño
-            <select id="del-page-size">
-              <option value="20">20</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
-          <button id="del-prev">Anterior</button>
-          <button id="del-next">Siguiente</button>
-          <span id="del-page-info" class="small" style="color:#666;"></span>
-        </div>
-        <button id="close-delivered-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+    <details class="orders-history-group" id="orders-history-group">
+      <summary>Pedidos Cerrados</summary>
+      <div class="orders-history-inner">
+        <details class="delivered" id="delivered-box">
+          <summary>Entregados</summary>
+          <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label>Tamaño
+                <select id="del-page-size">
+                  <option value="20">20</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <button id="del-prev">Anterior</button>
+              <button id="del-next">Siguiente</button>
+              <span id="del-page-info" class="small" style="color:#666;"></span>
+            </div>
+            <button id="close-delivered-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Destino</th>
+                <th>Teléfono</th>
+                <th>Total Pagado</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="delivered-tbody"></tbody>
+          </table>
+          <div id="delivered-mobile" class="delivered-mobile"></div>
+        </details>
+        <details class="canceled" id="canceled-box">
+          <summary>Cancelados</summary>
+          <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label>Tamaño
+                <select id="can-page-size">
+                  <option value="20">20</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <button id="can-prev">Anterior</button>
+              <button id="can-next">Siguiente</button>
+              <span id="can-page-info" class="small" style="color:#666;"></span>
+            </div>
+            <button id="close-canceled-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Destino</th>
+                <th>Total</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="canceled-tbody"></tbody>
+          </table>
+          <div id="canceled-mobile" class="canceled-mobile"></div>
+        </details>
+        <details class="archived" id="archived-box">
+          <summary>Historial de Pedidos</summary>
+          <div class="controls" style="margin:12px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+            <!-- Search Bar Row -->
+            <div style="margin-bottom: 12px;">
+               <input id="arch-search" type="text" placeholder="Buscar por ID, Cliente o Dirección..." style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;" />
+            </div>
+
+            <!-- Filters Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Desde</label>
+                    <input id="arch-from" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Hasta</label>
+                    <input id="arch-to" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Tipo de Pedido</label>
+                    <select id="arch-order-type" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                        <option value="">Todos</option>
+                        <option value="mesa">Mesa</option>
+                        <option value="direccion">Delivery</option>
+                        <option value="retiro">Retiro</option>
+                    </select>
+                </div>
+                 <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Filtrar por fecha</label>
+                    <select id="arch-date-mode" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                        <option value="archived" selected>Fecha de archivado</option>
+                        <option value="order">Fecha de pedido</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Actions Row -->
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                 <button id="arch-export-btn" style="background: #fff; color: #28a745; border: 1px solid #28a745; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                    <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    Exportar CSV
+                 </button>
+                 <button id="arch-filter-btn" style="background: #007bff; color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    Buscar
+                 </button>
+            </div>
+          </div>
+          <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <label>Tamaño
+                <select id="arch-page-size">
+                  <option value="20">20</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <button id="arch-prev">Anterior</button>
+              <button id="arch-next">Siguiente</button>
+              <button id="arch-reload">Recargar</button>
+              <span id="arch-page-info" class="small" style="color:#666;"></span>
+            </div>
+            <button id="close-archived-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+          </div>
+          <div id="archived-metrics" class="small" style="margin:6px 0;color:#444;"></div>
+          <h3 class="small">Entregados archivados <span id="arch-del-count"></span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Destino</th>
+                <th>Total</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="archived-delivered-tbody"></tbody>
+          </table>
+          <div id="archived-mobile-del" class="archived-mobile"></div>
+          <h3 class="small" style="margin-top:12px;">Cancelados archivados <span id="arch-can-count"></span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Destino</th>
+                <th>Total</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="archived-canceled-tbody"></tbody>
+          </table>
+          <div id="archived-mobile-can" class="archived-mobile"></div>
+          <h3 class="small" style="margin-top:12px;">Limpiados archivados <span id="arch-reset-count"></span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Destino</th>
+                <th>Total</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="archived-reset-tbody"></tbody>
+          </table>
+          <div id="archived-mobile-reset" class="archived-mobile"></div>
+        </details>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Teléfono</th>
-            <th>Total Pagado</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="delivered-tbody"></tbody>
-      </table>
-      <div id="delivered-mobile" class="delivered-mobile"></div>
-    </details>
-    <details class="canceled" id="canceled-box">
-      <summary>Cancelados</summary>
-      <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <label>Tamaño
-            <select id="can-page-size">
-              <option value="20">20</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
-          <button id="can-prev">Anterior</button>
-          <button id="can-next">Siguiente</button>
-          <span id="can-page-info" class="small" style="color:#666;"></span>
-        </div>
-        <button id="close-canceled-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Total</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="canceled-tbody"></tbody>
-      </table>
-      <div id="canceled-mobile" class="canceled-mobile"></div>
     </details>
     <details class="inventory" id="inventory-box">
       <summary>Inventario</summary>
@@ -1184,117 +1303,6 @@
         <tbody id="carousel-tbody"></tbody>
       </table>
       <div id="carousel-mobile" class="carousel-mobile"></div>
-    </details>
-    <details class="archived" id="archived-box">
-      <summary>Historial de Pedidos</summary>
-      <div class="controls" style="margin:12px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
-        <!-- Search Bar Row -->
-        <div style="margin-bottom: 12px;">
-           <input id="arch-search" type="text" placeholder="Buscar por ID, Cliente o Dirección..." style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;" />
-        </div>
-
-        <!-- Filters Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: #495057;">Desde</label>
-                <input id="arch-from" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: #495057;">Hasta</label>
-                <input id="arch-to" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: #495057;">Tipo de Pedido</label>
-                <select id="arch-order-type" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                    <option value="">Todos</option>
-                    <option value="mesa">Mesa</option>
-                    <option value="direccion">Delivery</option>
-                    <option value="retiro">Retiro</option>
-                </select>
-            </div>
-             <div style="display: flex; flex-direction: column; gap: 4px;">
-                <label style="font-size: 12px; font-weight: 600; color: #495057;">Filtrar por fecha</label>
-                <select id="arch-date-mode" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                    <option value="archived" selected>Fecha de archivado</option>
-                    <option value="order">Fecha de pedido</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Actions Row -->
-        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-             <button id="arch-export-btn" style="background: #fff; color: #28a745; border: 1px solid #28a745; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                Exportar CSV
-             </button>
-             <button id="arch-filter-btn" style="background: #007bff; color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                Buscar
-             </button>
-        </div>
-      </div>
-      <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <label>Tamaño
-            <select id="arch-page-size">
-              <option value="20">20</option>
-              <option value="50" selected>50</option>
-              <option value="100">100</option>
-            </select>
-          </label>
-          <button id="arch-prev">Anterior</button>
-          <button id="arch-next">Siguiente</button>
-          <button id="arch-reload">Recargar</button>
-          <span id="arch-page-info" class="small" style="color:#666;"></span>
-        </div>
-        <button id="close-archived-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
-      </div>
-      <div id="archived-metrics" class="small" style="margin:6px 0;color:#444;"></div>
-      <h3 class="small">Entregados archivados <span id="arch-del-count"></span></h3>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Total</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody id="archived-delivered-tbody"></tbody>
-      </table>
-      <div id="archived-mobile-del" class="archived-mobile"></div>
-      <h3 class="small" style="margin-top:12px;">Cancelados archivados <span id="arch-can-count"></span></h3>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Total</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody id="archived-canceled-tbody"></tbody>
-      </table>
-      <div id="archived-mobile-can" class="archived-mobile"></div>
-      <h3 class="small" style="margin-top:12px;">Limpiados archivados <span id="arch-reset-count"></span></h3>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Fecha</th>
-            <th>Tipo</th>
-            <th>Destino</th>
-            <th>Total</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody id="archived-reset-tbody"></tbody>
-      </table>
-      <div id="archived-mobile-reset" class="archived-mobile"></div>
     </details>
 
     <div id="orders-filters-export" style="margin: 12px 0; border: 1px solid #ddd; border-radius: 8px; padding: 12px; background: #fff;">
@@ -2525,10 +2533,14 @@
     const canPageInfoEl = document.getElementById('can-page-info');
     const invReloadBtn = document.getElementById('inv-reload');
     const invTbody = document.getElementById('inventory-tbody');
+    const ordersHistoryGroup = document.getElementById('orders-history-group');
     const closeDeliveredBtn = document.getElementById('close-delivered-box');
     const closeCanceledBtn = document.getElementById('close-canceled-box');
     const closeInventoryBtn = document.getElementById('close-inventory-box');
     const closeArchivedBtn = document.getElementById('close-archived-box');
+    function openOrdersHistoryGroup() {
+      if (ordersHistoryGroup) ordersHistoryGroup.open = true;
+    }
     if (closeDeliveredBtn) {
       closeDeliveredBtn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -2717,13 +2729,17 @@
       setRoleVisibilityById('orders-table', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       setRoleVisibilityById('orders-mobile', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       setRoleVisibilityById('orders-count', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
-      setRoleVisibilityById('delivered-box', !isKitchen && !mozoTablesOnly && canOrdersView);
-      setRoleVisibilityById('canceled-box', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
+      const canDeliveredHistory = !isKitchen && !mozoTablesOnly && canOrdersView;
+      const canCanceledHistory = !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor;
+      const canArchivedHistory = !isKitchen && canReports;
+      setRoleVisibilityById('orders-history-group', canDeliveredHistory || canCanceledHistory || canArchivedHistory);
+      setRoleVisibilityById('delivered-box', canDeliveredHistory);
+      setRoleVisibilityById('canceled-box', canCanceledHistory);
       setRoleVisibilityById('orders-filters-export', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       setRoleVisibilityById('orders-export-btn', !isKitchen && !mozoTablesOnly && canReports && !isRepartidor);
       setRoleVisibilityById('inventory-box', !isKitchen && canInventory);
       setRoleVisibilityById('carousel-box', !isKitchen && canCarousel);
-      setRoleVisibilityById('archived-box', !isKitchen && canReports);
+      setRoleVisibilityById('archived-box', canArchivedHistory);
       setRoleVisibilityById('delivery-box', !isKitchen && canDelivery);
       try { document.body.classList.toggle('role-repartidor', !!isRepartidor); } catch (_) {}
 
@@ -4725,6 +4741,7 @@
          for (const r of allDeliveredRows) {
             const idCell = r.querySelector('td:first-child');
             if (idCell && idCell.textContent.trim() === searchedId) {
+                openOrdersHistoryGroup();
                 const box = document.getElementById('delivered-box');
                 if (box) box.open = true;
                 r.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -4740,6 +4757,7 @@
          for (const r of allCanceledRows) {
             const idCell = r.querySelector('td:first-child');
             if (idCell && idCell.textContent.trim() === searchedId) {
+                openOrdersHistoryGroup();
                 const box = document.getElementById('canceled-box');
                 if (box) box.open = true;
                 r.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -8083,6 +8101,7 @@
         const deliveredCard = el.querySelector('#metric-delivered');
         if (deliveredCard) {
           deliveredCard.onclick = () => {
+            openOrdersHistoryGroup();
             const box = document.getElementById('delivered-box');
             if (box) {
               box.open = true;
@@ -8093,6 +8112,7 @@
         const canceledCard = el.querySelector('#metric-canceled');
         if (canceledCard) {
           canceledCard.onclick = () => {
+            openOrdersHistoryGroup();
             const box = document.getElementById('canceled-box');
             if (box) {
               box.open = true;
