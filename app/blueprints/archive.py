@@ -773,6 +773,7 @@ def sales_analytics():
         by_channel = {}
         by_payment = {}
         by_hour = {}
+        by_day = {}
         for hour in range(24):
             by_hour[hour] = {
                 'hour': hour,
@@ -813,6 +814,16 @@ def sales_analytics():
                 if hour_bucket is not None:
                     hour_bucket['count'] += 1
                     hour_bucket['total'] += total
+                if delivered_local is not None:
+                    day_key = delivered_local.strftime('%Y-%m-%d')
+                    day_bucket = by_day.setdefault(day_key, {
+                        'date': day_key,
+                        'label': delivered_local.strftime('%d/%m'),
+                        'count': 0,
+                        'total': 0,
+                    })
+                    day_bucket['count'] += 1
+                    day_bucket['total'] += total
 
         by_channel_list = sorted(by_channel.values(), key=lambda item: (-item['total'], -item['count'], item['label']))
         for item in by_channel_list:
@@ -827,6 +838,7 @@ def sales_analytics():
         by_hour_list = [bucket for bucket in by_hour.values() if bucket['count'] > 0 or bucket['total'] > 0]
         if not by_hour_list:
             by_hour_list = list(by_hour.values())
+        by_day_list = sorted(by_day.values(), key=lambda item: item['date'])
 
         cur.execute(
             """
@@ -849,20 +861,36 @@ def sales_analytics():
             (tenant_slug, from_iso, to_iso),
         )
         top_products = []
+        top_products_by_qty = []
+        total_items_sold = 0
         for row in cur.fetchall():
             revenue = _money(row[2])
+            qty_total = _money(row[1])
+            total_items_sold += qty_total
             top_products.append({
                 'name': str(row[0] or '(Sin nombre)'),
-                'qty': _money(row[1]),
+                'qty': qty_total,
                 'revenue': revenue,
                 'share_percent': _percent(revenue, current_net_sales),
             })
+            top_products_by_qty.append({
+                'name': str(row[0] or '(Sin nombre)'),
+                'qty': qty_total,
+                'revenue': revenue,
+                'share_percent': 0.0,
+            })
+        top_products_by_qty = sorted(top_products_by_qty, key=lambda item: (-item['qty'], -item['revenue'], item['name']))[:10]
+        for item in top_products_by_qty:
+            item['share_percent'] = _percent(item['qty'], total_items_sold)
 
         current_from_local = _utc_naive_to_local(from_dt)
         current_to_local = _utc_naive_to_local(to_dt)
         prev_from_local = _utc_naive_to_local(prev_from_dt)
         prev_to_local = _utc_naive_to_local(prev_to_dt)
         top_hour = max(by_hour_list, key=lambda item: (item.get('total', 0), item.get('count', 0), -item.get('hour', 0))) if by_hour_list else None
+        top_day = max(by_day_list, key=lambda item: (item.get('total', 0), item.get('count', 0), item.get('date', ''))) if by_day_list else None
+        avg_items_per_order = _money(total_items_sold / current_delivered_count) if current_delivered_count else 0
+        previous_avg_ticket = _money(prev_summary['delivered_total'] / prev_summary['delivered_count']) if prev_summary['delivered_count'] else 0
 
         response = jsonify({
             'range': {
@@ -880,6 +908,8 @@ def sales_analytics():
                 'cancellation_rate': cancellation_rate,
                 'tips_total': current_tip_total,
                 'shipping_total': current_shipping_total,
+                'items_sold_total': total_items_sold,
+                'avg_items_per_order': avg_items_per_order,
             },
             'comparison': {
                 'previous_from': prev_from_iso,
@@ -889,19 +919,27 @@ def sales_analytics():
                 'previous_net_sales': prev_summary['delivered_total'],
                 'previous_delivered_orders': prev_summary['delivered_count'],
                 'previous_canceled_orders': prev_summary['canceled_count'],
+                'previous_average_ticket': previous_avg_ticket,
                 'delta_amount': current_net_sales - prev_summary['delivered_total'],
                 'delta_percent': _delta_percent(current_net_sales, prev_summary['delivered_total']),
+                'delta_orders': current_delivered_count - prev_summary['delivered_count'],
+                'delta_orders_percent': _delta_percent(current_delivered_count, prev_summary['delivered_count']),
+                'delta_avg_ticket': avg_ticket - previous_avg_ticket,
+                'delta_avg_ticket_percent': _delta_percent(avg_ticket, previous_avg_ticket),
             },
             'leaders': {
                 'channel': by_channel_list[0]['label'] if by_channel_list else '',
                 'payment_method': by_payment_list[0]['label'] if by_payment_list else '',
                 'top_hour': top_hour['label'] if top_hour else '',
                 'top_product': top_products[0]['name'] if top_products else '',
+                'top_day': top_day['label'] if top_day else '',
             },
             'by_channel': by_channel_list,
             'by_payment_method': by_payment_list,
             'top_products': top_products,
+            'top_products_by_qty': top_products_by_qty,
             'by_hour': by_hour_list,
+            'by_day': by_day_list,
         })
         response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
         response.headers['Pragma'] = 'no-cache'

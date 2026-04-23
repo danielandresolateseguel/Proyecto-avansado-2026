@@ -261,6 +261,11 @@
     .analytics-card .label { font-size:12px; color:#5b7083; font-weight:700; text-transform:uppercase; letter-spacing:.02em; }
     .analytics-card .value { margin-top:6px; font-size:22px; font-weight:800; color:#1f2937; }
     .analytics-card .sub { margin-top:6px; font-size:12px; color:#6b7280; }
+    .analytics-card.accent-sales { background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-color:#bfdbfe; }
+    .analytics-card.accent-orders { background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); border-color:#bbf7d0; }
+    .analytics-card.accent-cancel { background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-color:#fed7aa; }
+    .analytics-card.accent-volume { background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-color:#ddd6fe; }
+    .analytics-card.accent-extra { background: linear-gradient(135deg, #effdf7 0%, #ffffff 100%); border-color:#a7f3d0; }
     .analytics-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; }
     .analytics-block { background:#fff; border:1px solid var(--kds-border); border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); }
     .analytics-block h3 { margin:0 0 8px 0; color:#425b76; font-size:15px; }
@@ -270,6 +275,32 @@
     .analytics-table td.num { text-align:right; font-variant-numeric: tabular-nums; }
     .analytics-empty { color:#6b7280; font-size:12px; }
     .analytics-badge { display:inline-block; padding:2px 8px; border-radius:999px; background:#edf2ff; color:#355070; font-size:12px; font-weight:700; }
+    .analytics-bar-list { display:grid; gap:10px; }
+    .analytics-bar-row { display:grid; gap:6px; }
+    .analytics-bar-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .analytics-bar-label { color:#334e68; font-size:13px; font-weight:700; }
+    .analytics-bar-meta { color:#6b7280; font-size:12px; text-align:right; }
+    .analytics-bar-track { width:100%; height:10px; border-radius:999px; background:#edf2f7; overflow:hidden; }
+    .analytics-bar-fill { height:100%; border-radius:999px; background:linear-gradient(90deg, #2563eb, #60a5fa); }
+    .analytics-bar-fill.secondary { background:linear-gradient(90deg, #7c3aed, #a78bfa); }
+    .analytics-bar-fill.success { background:linear-gradient(90deg, #059669, #34d399); }
+    .analytics-bar-fill.warning { background:linear-gradient(90deg, #d97706, #fbbf24); }
+    .analytics-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
+    .analytics-mini-card { border:1px solid #e8edf3; border-radius:10px; padding:10px; background:#f8fafc; }
+    .analytics-mini-card .label { font-size:11px; color:#5b7083; font-weight:700; text-transform:uppercase; }
+    .analytics-mini-card .value { margin-top:4px; font-size:20px; font-weight:800; color:#1f2937; }
+    .analytics-mini-card .sub { margin-top:4px; font-size:12px; color:#6b7280; }
+    .analytics-trend-grid { display:grid; gap:8px; }
+    .analytics-trend-row { display:grid; grid-template-columns: 58px 1fr auto; align-items:center; gap:8px; }
+    .analytics-trend-label { font-size:12px; font-weight:700; color:#425b76; }
+    .analytics-trend-value { font-size:12px; color:#334155; font-variant-numeric:tabular-nums; }
+    .analytics-insight { margin-top:6px; font-size:12px; color:#64748b; }
+    @media (max-width: 720px) {
+      .analytics-toolbar { align-items:stretch; }
+      .analytics-toolbar label { width:100%; }
+      .analytics-toolbar input, .analytics-toolbar select { min-width: 0; width:100%; }
+      .analytics-trend-row { grid-template-columns: 48px 1fr auto; }
+    }
     body.no-auth header .toolbar, body.no-auth header .subcontrols { display: none !important; }
     body.no-auth .header-rest, body.no-auth .header-end { display: none !important; }
     body.no-auth .header-main > :not(h1) { display: none !important; }
@@ -842,8 +873,16 @@
             <div id="analytics-top-products"></div>
           </div>
           <div class="analytics-block">
+            <h3>Top por Unidades</h3>
+            <div id="analytics-top-products-qty"></div>
+          </div>
+          <div class="analytics-block">
             <h3>Ventas por Hora</h3>
             <div id="analytics-by-hour"></div>
+          </div>
+          <div class="analytics-block">
+            <h3>Tendencia Diaria</h3>
+            <div id="analytics-by-day"></div>
           </div>
         </div>
       </div>
@@ -2517,7 +2556,9 @@
     const analyticsChannelEl = document.getElementById('analytics-channel');
     const analyticsPaymentEl = document.getElementById('analytics-payment');
     const analyticsTopProductsEl = document.getElementById('analytics-top-products');
+    const analyticsTopProductsQtyEl = document.getElementById('analytics-top-products-qty');
     const analyticsByHourEl = document.getElementById('analytics-by-hour');
+    const analyticsByDayEl = document.getElementById('analytics-by-day');
     const cashBoxEl = document.getElementById('cash-box');
     const cashHistoryEl = document.getElementById('cash-history');
     const DAILY_VISIBLE_KEY = 'daily_visible';
@@ -8109,6 +8150,55 @@
       `).join('');
       return `<table class="analytics-table"><thead><tr>${thead}</tr></thead><tbody>${tbody}</tbody></table>`;
     }
+    function renderAnalyticsBarList(rows, options = {}) {
+      if (!Array.isArray(rows) || !rows.length) {
+        return `<div class="analytics-empty">${analyticsEscapeHtml(options.emptyMessage || 'Sin datos')}</div>`;
+      }
+      const colorClass = options.colorClass || '';
+      return `<div class="analytics-bar-list">${rows.map((row, index) => {
+        const label = analyticsEscapeHtml(typeof options.getLabel === 'function' ? options.getLabel(row, index) : (row.label || row.name || 'Sin nombre'));
+        const meta = typeof options.getMeta === 'function' ? options.getMeta(row, index) : '';
+        const percent = Math.max(0, Math.min(100, Number(typeof options.getPercent === 'function' ? options.getPercent(row, index) : row.share_percent || 0)));
+        return `
+          <div class="analytics-bar-row">
+            <div class="analytics-bar-head">
+              <div class="analytics-bar-label">${label}</div>
+              <div class="analytics-bar-meta">${meta}</div>
+            </div>
+            <div class="analytics-bar-track">
+              <div class="analytics-bar-fill ${colorClass}" style="width:${percent}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('')}</div>`;
+    }
+    function renderAnalyticsMiniCards(items) {
+      if (!Array.isArray(items) || !items.length) return '';
+      return `<div class="analytics-kpi-grid">${items.map(item => `
+        <div class="analytics-mini-card">
+          <div class="label">${analyticsEscapeHtml(item.label || '')}</div>
+          <div class="value">${item.value || ''}</div>
+          <div class="sub">${analyticsEscapeHtml(item.sub || '')}</div>
+        </div>
+      `).join('')}</div>`;
+    }
+    function renderAnalyticsTrend(rows, emptyMessage) {
+      if (!Array.isArray(rows) || !rows.length) {
+        return `<div class="analytics-empty">${analyticsEscapeHtml(emptyMessage || 'Sin datos')}</div>`;
+      }
+      const maxTotal = Math.max(...rows.map(row => Number(row.total || 0)), 0);
+      return `<div class="analytics-trend-grid">${rows.map(row => {
+        const total = Number(row.total || 0);
+        const width = maxTotal > 0 ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
+        return `
+          <div class="analytics-trend-row">
+            <div class="analytics-trend-label">${analyticsEscapeHtml(row.label || '')}</div>
+            <div class="analytics-bar-track"><div class="analytics-bar-fill secondary" style="width:${width}%;"></div></div>
+            <div class="analytics-trend-value">${formatMoney(total)}</div>
+          </div>
+        `;
+      }).join('')}</div>`;
+    }
     async function fetchSalesAnalytics() {
       const slug = tenantInput.value.trim() || defaultSlug();
       const url = new URL('/api/sales/analytics', API_BASE);
@@ -8152,22 +8242,27 @@
         }
         if (analyticsSummaryEl) {
           analyticsSummaryEl.innerHTML = `
-            <div class="analytics-card">
+            <div class="analytics-card accent-sales">
               <div class="label">Ventas Netas</div>
               <div class="value">${formatMoney(summary.net_sales)}</div>
               <div class="sub">Canal líder: ${analyticsEscapeHtml(leaders.channel || 'Sin datos')} · Pago líder: ${analyticsEscapeHtml(leaders.payment_method || 'Sin datos')}</div>
             </div>
-            <div class="analytics-card">
+            <div class="analytics-card accent-orders">
               <div class="label">Pedidos Entregados</div>
               <div class="value">${Number(summary.delivered_orders || 0)}</div>
               <div class="sub">Ticket promedio: ${formatMoney(summary.average_ticket)} · Hora pico: ${analyticsEscapeHtml(leaders.top_hour || 'Sin datos')}</div>
             </div>
-            <div class="analytics-card">
+            <div class="analytics-card accent-cancel">
               <div class="label">Cancelados</div>
               <div class="value">${Number(summary.canceled_orders || 0)}</div>
               <div class="sub">Tasa: ${formatPercent(summary.cancellation_rate)}</div>
             </div>
-            <div class="analytics-card">
+            <div class="analytics-card accent-volume">
+              <div class="label">Volumen</div>
+              <div class="value">${Number(summary.items_sold_total || 0)}</div>
+              <div class="sub">Promedio por pedido: ${Number(summary.avg_items_per_order || 0)} ítems · Día pico: ${analyticsEscapeHtml(leaders.top_day || 'Sin datos')}</div>
+            </div>
+            <div class="analytics-card accent-extra">
               <div class="label">Propinas y Envíos</div>
               <div class="value">${formatMoney((summary.tips_total || 0) + (summary.shipping_total || 0))}</div>
               <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Top: ${analyticsEscapeHtml(leaders.top_product || 'Sin datos')}</div>
@@ -8176,69 +8271,73 @@
         }
         if (analyticsComparisonEl) {
           const deltaAmount = Number(comparison.delta_amount || 0);
+          const deltaOrders = Number(comparison.delta_orders || 0);
+          const deltaTicket = Number(comparison.delta_avg_ticket || 0);
           const deltaColor = deltaAmount >= 0 ? '#2e7d32' : '#c62828';
+          const deltaOrdersColor = deltaOrders >= 0 ? '#2e7d32' : '#c62828';
+          const deltaTicketColor = deltaTicket >= 0 ? '#2e7d32' : '#c62828';
           analyticsComparisonEl.innerHTML = `
             <div class="small" style="margin-bottom:8px; color:#5b7083;">Período anterior: ${analyticsEscapeHtml(formatARDate(comparison.previous_from_local || comparison.previous_from || ''))} a ${analyticsEscapeHtml(formatARDate(comparison.previous_to_local || comparison.previous_to || ''))}</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
-              <div class="analytics-card">
-                <div class="label">Ventas Anteriores</div>
-                <div class="value">${formatMoney(comparison.previous_net_sales)}</div>
-                <div class="sub">Pedidos: ${Number(comparison.previous_delivered_orders || 0)}</div>
-              </div>
-              <div class="analytics-card">
-                <div class="label">Variación</div>
-                <div class="value" style="color:${deltaColor};">${formatMoney(deltaAmount)}</div>
-                <div class="sub" style="color:${deltaColor};">${formatPercent(comparison.delta_percent)}</div>
-              </div>
-            </div>
+            ${renderAnalyticsMiniCards([
+              { label: 'Ventas anteriores', value: formatMoney(comparison.previous_net_sales), sub: `Pedidos: ${Number(comparison.previous_delivered_orders || 0)}` },
+              { label: 'Variación', value: `<span style="color:${deltaColor};">${formatMoney(deltaAmount)}</span>`, sub: `${formatPercent(comparison.delta_percent)}` },
+              { label: 'Pedidos', value: `<span style="color:${deltaOrdersColor};">${deltaOrders >= 0 ? '+' : ''}${deltaOrders}</span>`, sub: `${formatPercent(comparison.delta_orders_percent)}` },
+              { label: 'Ticket promedio', value: `<span style="color:${deltaTicketColor};">${formatMoney(deltaTicket)}</span>`, sub: `${formatPercent(comparison.delta_avg_ticket_percent)}` },
+            ])}
+            <div class="analytics-insight">Lectura rápida: ${deltaAmount >= 0 ? 'crece' : 'cae'} la facturación, con ${deltaOrders >= 0 ? 'mejor' : 'menor'} volumen de pedidos y un ticket ${deltaTicket >= 0 ? 'más alto' : 'más bajo'}.</div>
           `;
         }
         if (analyticsChannelEl) {
-          analyticsChannelEl.innerHTML = renderAnalyticsTable(
-            data.by_channel || [],
-            [
-              { label: 'Canal', render: row => analyticsEscapeHtml(row.label || '') },
-              { label: 'Pedidos', className: 'num', render: row => String(Number(row.count || 0)) },
-              { label: 'Total', className: 'num', render: row => formatMoney(row.total || 0) },
-              { label: '%', className: 'num', render: row => formatPercent(row.share_percent || 0) },
-            ],
-            'Sin ventas por canal en este rango',
-          );
+          analyticsChannelEl.innerHTML = renderAnalyticsBarList(data.by_channel || [], {
+            emptyMessage: 'Sin ventas por canal en este rango',
+            colorClass: 'success',
+            getLabel: row => row.label || '',
+            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)}`,
+            getPercent: row => row.share_percent || 0,
+          });
         }
         if (analyticsPaymentEl) {
-          analyticsPaymentEl.innerHTML = renderAnalyticsTable(
-            data.by_payment_method || [],
-            [
-              { label: 'Pago', render: row => analyticsEscapeHtml(row.label || '') },
-              { label: 'Pedidos', className: 'num', render: row => String(Number(row.count || 0)) },
-              { label: 'Total', className: 'num', render: row => formatMoney(row.total || 0) },
-              { label: '%', className: 'num', render: row => formatPercent(row.share_percent || 0) },
-            ],
-            'Sin pagos registrados en este rango',
-          );
+          analyticsPaymentEl.innerHTML = renderAnalyticsBarList(data.by_payment_method || [], {
+            emptyMessage: 'Sin pagos registrados en este rango',
+            colorClass: 'warning',
+            getLabel: row => row.label || '',
+            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)}`,
+            getPercent: row => row.share_percent || 0,
+          });
         }
         if (analyticsTopProductsEl) {
-          analyticsTopProductsEl.innerHTML = renderAnalyticsTable(
-            data.top_products || [],
-            [
-              { label: 'Producto', render: row => analyticsEscapeHtml(row.name || '') },
-              { label: 'Cant.', className: 'num', render: row => String(Number(row.qty || 0)) },
-              { label: 'Ingresos', className: 'num', render: row => formatMoney(row.revenue || 0) },
-              { label: '%', className: 'num', render: row => formatPercent(row.share_percent || 0) },
-            ],
-            'Sin productos vendidos en este rango',
-          );
+          analyticsTopProductsEl.innerHTML = renderAnalyticsBarList(data.top_products || [], {
+            emptyMessage: 'Sin productos vendidos en este rango',
+            colorClass: '',
+            getLabel: row => row.name || '',
+            getMeta: row => `${formatMoney(row.revenue || 0)} · ${Number(row.qty || 0)} uds · ${formatPercent(row.share_percent || 0)}`,
+            getPercent: row => row.share_percent || 0,
+          });
+        }
+        if (analyticsTopProductsQtyEl) {
+          analyticsTopProductsQtyEl.innerHTML = renderAnalyticsBarList(data.top_products_by_qty || [], {
+            emptyMessage: 'Sin volumen de productos en este rango',
+            colorClass: 'secondary',
+            getLabel: row => row.name || '',
+            getMeta: row => `${Number(row.qty || 0)} uds · ${formatMoney(row.revenue || 0)} · ${formatPercent(row.share_percent || 0)}`,
+            getPercent: row => row.share_percent || 0,
+          });
         }
         if (analyticsByHourEl) {
-          analyticsByHourEl.innerHTML = renderAnalyticsTable(
-            data.by_hour || [],
-            [
-              { label: 'Hora', render: row => analyticsEscapeHtml(row.label || '') },
-              { label: 'Pedidos', className: 'num', render: row => String(Number(row.count || 0)) },
-              { label: 'Total', className: 'num', render: row => formatMoney(row.total || 0) },
-            ],
-            'Sin ventas por hora en este rango',
-          );
+          analyticsByHourEl.innerHTML = renderAnalyticsBarList(data.by_hour || [], {
+            emptyMessage: 'Sin ventas por hora en este rango',
+            colorClass: 'secondary',
+            getLabel: row => row.label || '',
+            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos`,
+            getPercent: row => {
+              const rows = Array.isArray(data.by_hour) ? data.by_hour : [];
+              const maxTotal = Math.max(...rows.map(item => Number(item.total || 0)), 0);
+              return maxTotal > 0 ? (Number(row.total || 0) / maxTotal) * 100 : 0;
+            },
+          });
+        }
+        if (analyticsByDayEl) {
+          analyticsByDayEl.innerHTML = renderAnalyticsTrend(data.by_day || [], 'Sin tendencia diaria en este rango');
         }
       } catch (err) {
         const msg = analyticsEscapeHtml(err && err.message ? err.message : 'No se pudo cargar el análisis');
@@ -8247,7 +8346,9 @@
         if (analyticsChannelEl) analyticsChannelEl.innerHTML = '';
         if (analyticsPaymentEl) analyticsPaymentEl.innerHTML = '';
         if (analyticsTopProductsEl) analyticsTopProductsEl.innerHTML = '';
+        if (analyticsTopProductsQtyEl) analyticsTopProductsQtyEl.innerHTML = '';
         if (analyticsByHourEl) analyticsByHourEl.innerHTML = '';
+        if (analyticsByDayEl) analyticsByDayEl.innerHTML = '';
       } finally {
         analyticsLoading = false;
       }
