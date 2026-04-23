@@ -8146,20 +8146,21 @@
         const summary = data.summary || {};
         const comparison = data.comparison || {};
         const range = data.range || {};
+        const leaders = data.leaders || {};
         if (analyticsRangeLabelEl) {
-          analyticsRangeLabelEl.innerHTML = `<span class="analytics-badge">${analyticsEscapeHtml(formatARDate(range.from || analyticsFromInput.value || ''))} a ${analyticsEscapeHtml(formatARDate(range.to || analyticsToInput.value || ''))}</span>`;
+          analyticsRangeLabelEl.innerHTML = `<span class="analytics-badge">${analyticsEscapeHtml(formatARDate(range.from_local || range.from || analyticsFromInput.value || ''))} a ${analyticsEscapeHtml(formatARDate(range.to_local || range.to || analyticsToInput.value || ''))}</span>`;
         }
         if (analyticsSummaryEl) {
           analyticsSummaryEl.innerHTML = `
             <div class="analytics-card">
               <div class="label">Ventas Netas</div>
               <div class="value">${formatMoney(summary.net_sales)}</div>
-              <div class="sub">Canal líder: ${analyticsEscapeHtml((data.leaders && data.leaders.channel) || 'Sin datos')}</div>
+              <div class="sub">Canal líder: ${analyticsEscapeHtml(leaders.channel || 'Sin datos')} · Pago líder: ${analyticsEscapeHtml(leaders.payment_method || 'Sin datos')}</div>
             </div>
             <div class="analytics-card">
               <div class="label">Pedidos Entregados</div>
               <div class="value">${Number(summary.delivered_orders || 0)}</div>
-              <div class="sub">Ticket promedio: ${formatMoney(summary.average_ticket)}</div>
+              <div class="sub">Ticket promedio: ${formatMoney(summary.average_ticket)} · Hora pico: ${analyticsEscapeHtml(leaders.top_hour || 'Sin datos')}</div>
             </div>
             <div class="analytics-card">
               <div class="label">Cancelados</div>
@@ -8169,7 +8170,7 @@
             <div class="analytics-card">
               <div class="label">Propinas y Envíos</div>
               <div class="value">${formatMoney((summary.tips_total || 0) + (summary.shipping_total || 0))}</div>
-              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)}</div>
+              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Top: ${analyticsEscapeHtml(leaders.top_product || 'Sin datos')}</div>
             </div>
           `;
         }
@@ -8177,7 +8178,7 @@
           const deltaAmount = Number(comparison.delta_amount || 0);
           const deltaColor = deltaAmount >= 0 ? '#2e7d32' : '#c62828';
           analyticsComparisonEl.innerHTML = `
-            <div class="small" style="margin-bottom:8px; color:#5b7083;">Período anterior: ${analyticsEscapeHtml(formatARDate(comparison.previous_from || ''))} a ${analyticsEscapeHtml(formatARDate(comparison.previous_to || ''))}</div>
+            <div class="small" style="margin-bottom:8px; color:#5b7083;">Período anterior: ${analyticsEscapeHtml(formatARDate(comparison.previous_from_local || comparison.previous_from || ''))} a ${analyticsEscapeHtml(formatARDate(comparison.previous_to_local || comparison.previous_to || ''))}</div>
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px;">
               <div class="analytics-card">
                 <div class="label">Ventas Anteriores</div>

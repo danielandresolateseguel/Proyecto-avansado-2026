@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db
 from app.utils import is_authed, check_csrf
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import re
 import unicodedata
 import io
@@ -9,6 +10,10 @@ import csv
 import json
 
 bp = Blueprint('archive', __name__, url_prefix='/api')
+try:
+    ANALYTICS_TZ = ZoneInfo('America/Argentina/Buenos_Aires')
+except Exception:
+    ANALYTICS_TZ = timezone(timedelta(hours=-3))
 
 def _parse_perms_json(raw):
     if not raw:
@@ -43,6 +48,38 @@ def _parse_iso_dt(value):
     except Exception:
         return None
 
+def _utc_naive_to_local(dt):
+    try:
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            dt = dt.astimezone(timezone.utc)
+        return dt.astimezone(ANALYTICS_TZ)
+    except Exception:
+        return None
+
+def _local_date_boundary_to_utc_naive(value, end=False):
+    try:
+        dt_local = datetime.strptime(str(value or '').strip(), '%Y-%m-%d')
+        dt_local = dt_local.replace(
+            hour=23 if end else 0,
+            minute=59 if end else 0,
+            second=59 if end else 0,
+            microsecond=0,
+            tzinfo=ANALYTICS_TZ,
+        )
+        return dt_local.astimezone(timezone.utc).replace(tzinfo=None)
+    except Exception:
+        return None
+
+def _format_dt_for_client(dt):
+    try:
+        return dt.isoformat() if dt is not None else ''
+    except Exception:
+        return ''
+
 def _money(value):
     try:
         return int(round(float(value or 0)))
@@ -51,13 +88,21 @@ def _money(value):
 
 def _resolve_sales_range(from_raw, to_raw):
     now_dt = datetime.utcnow().replace(microsecond=0)
-    from_dt = _parse_iso_dt(_norm_date(from_raw, end=False))
-    to_dt = _parse_iso_dt(_norm_date(to_raw, end=True))
+    now_local = _utc_naive_to_local(now_dt)
+    default_from = now_local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).replace(tzinfo=None)
+    from_raw_str = str(from_raw or '').strip()
+    to_raw_str = str(to_raw or '').strip()
+    from_dt = _local_date_boundary_to_utc_naive(from_raw_str, end=False) if len(from_raw_str) == 10 else _parse_iso_dt(_norm_date(from_raw, end=False))
+    to_dt = _local_date_boundary_to_utc_naive(to_raw_str, end=True) if len(to_raw_str) == 10 else _parse_iso_dt(_norm_date(to_raw, end=True))
     if from_dt is None and to_dt is None:
-        from_dt = now_dt.replace(hour=0, minute=0, second=0)
+        from_dt = default_from
         to_dt = now_dt
     elif from_dt is None:
-        from_dt = to_dt.replace(hour=0, minute=0, second=0) if to_dt else now_dt.replace(hour=0, minute=0, second=0)
+        if to_dt:
+            local_to = _utc_naive_to_local(to_dt)
+            from_dt = local_to.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).replace(tzinfo=None)
+        else:
+            from_dt = default_from
     elif to_dt is None:
         to_dt = now_dt
     if to_dt < from_dt:
@@ -84,13 +129,20 @@ def _norm_channel(order_type):
     return 'otros', 'Otros'
 
 def _norm_payment_method(payment_method):
-    value = str(payment_method or '').strip().lower()
-    if value in ('efectivo', 'cash'):
+    raw_value = str(payment_method or '').strip().lower()
+    value = ''.join(
+        c for c in unicodedata.normalize('NFKD', raw_value)
+        if not unicodedata.combining(c)
+    )
+    value = re.sub(r'[\s_\-]+', ' ', value).strip()
+    if value in ('efectivo', 'cash', 'contado', 'efvo'):
         return 'efectivo', 'Efectivo'
-    if value in ('pos', 'pos/qr', 'qr', 'tarjeta', 'card'):
+    if value in ('pos', 'pos/qr', 'qr', 'tarjeta', 'card', 'debito', 'credito', 'mercado pago', 'mercadopago'):
         return 'pos', 'POS/QR'
-    if value in ('transferencia', 'transfer', 'trans'):
+    if value in ('transferencia', 'transfer', 'trans', 'transferencia bancaria'):
         return 'transferencia', 'Transferencia'
+    if value in ('mixed', 'mixto', 'pago mixto'):
+        return 'mixto', 'Mixto'
     return 'otros', 'Otros'
 
 def _percent(part, total):
@@ -756,7 +808,8 @@ def sales_analytics():
             pay_bucket['total'] += total
 
             if delivered_at is not None:
-                hour_bucket = by_hour.get(delivered_at.hour)
+                delivered_local = _utc_naive_to_local(delivered_at)
+                hour_bucket = by_hour.get(delivered_local.hour if delivered_local is not None else delivered_at.hour)
                 if hour_bucket is not None:
                     hour_bucket['count'] += 1
                     hour_bucket['total'] += total
@@ -805,10 +858,18 @@ def sales_analytics():
                 'share_percent': _percent(revenue, current_net_sales),
             })
 
+        current_from_local = _utc_naive_to_local(from_dt)
+        current_to_local = _utc_naive_to_local(to_dt)
+        prev_from_local = _utc_naive_to_local(prev_from_dt)
+        prev_to_local = _utc_naive_to_local(prev_to_dt)
+        top_hour = max(by_hour_list, key=lambda item: (item.get('total', 0), item.get('count', 0), -item.get('hour', 0))) if by_hour_list else None
+
         response = jsonify({
             'range': {
                 'from': from_iso,
                 'to': to_iso,
+                'from_local': _format_dt_for_client(current_from_local),
+                'to_local': _format_dt_for_client(current_to_local),
             },
             'summary': {
                 'net_sales': current_net_sales,
@@ -823,6 +884,8 @@ def sales_analytics():
             'comparison': {
                 'previous_from': prev_from_iso,
                 'previous_to': prev_to_iso,
+                'previous_from_local': _format_dt_for_client(prev_from_local),
+                'previous_to_local': _format_dt_for_client(prev_to_local),
                 'previous_net_sales': prev_summary['delivered_total'],
                 'previous_delivered_orders': prev_summary['delivered_count'],
                 'previous_canceled_orders': prev_summary['canceled_count'],
@@ -832,6 +895,8 @@ def sales_analytics():
             'leaders': {
                 'channel': by_channel_list[0]['label'] if by_channel_list else '',
                 'payment_method': by_payment_list[0]['label'] if by_payment_list else '',
+                'top_hour': top_hour['label'] if top_hour else '',
+                'top_product': top_products[0]['name'] if top_products else '',
             },
             'by_channel': by_channel_list,
             'by_payment_method': by_payment_list,
