@@ -10,6 +10,109 @@ import json
 
 bp = Blueprint('archive', __name__, url_prefix='/api')
 
+def _parse_perms_json(raw):
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _norm_date(s, end=False):
+    try:
+        if s and len(s) == 10:
+            return s + ('T23:59:59' if end else 'T00:00:00')
+    except Exception:
+        pass
+    return s
+
+def _parse_iso_dt(value):
+    try:
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            dt = value
+        else:
+            dt = datetime.fromisoformat(str(value))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+    except Exception:
+        return None
+
+def _money(value):
+    try:
+        return int(round(float(value or 0)))
+    except Exception:
+        return 0
+
+def _resolve_sales_range(from_raw, to_raw):
+    now_dt = datetime.utcnow().replace(microsecond=0)
+    from_dt = _parse_iso_dt(_norm_date(from_raw, end=False))
+    to_dt = _parse_iso_dt(_norm_date(to_raw, end=True))
+    if from_dt is None and to_dt is None:
+        from_dt = now_dt.replace(hour=0, minute=0, second=0)
+        to_dt = now_dt
+    elif from_dt is None:
+        from_dt = to_dt.replace(hour=0, minute=0, second=0) if to_dt else now_dt.replace(hour=0, minute=0, second=0)
+    elif to_dt is None:
+        to_dt = now_dt
+    if to_dt < from_dt:
+        to_dt = from_dt
+    return from_dt, to_dt, from_dt.isoformat(), to_dt.isoformat()
+
+def _has_reports_access():
+    role = str(session.get('admin_role') or '').strip().lower()
+    if bool(session.get('admin_owner')) or role == 'admin':
+        return True
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    return bool(perms.get('reports_view'))
+
+def _norm_channel(order_type):
+    value = str(order_type or '').strip().lower()
+    if value == 'mesa':
+        return 'mesa', 'Mesa'
+    if value in ('direccion', 'delivery'):
+        return 'delivery', 'Delivery'
+    if value == 'retiro':
+        return 'retiro', 'Retiro'
+    if value == 'espera':
+        return 'espera', 'Espera'
+    return 'otros', 'Otros'
+
+def _norm_payment_method(payment_method):
+    value = str(payment_method or '').strip().lower()
+    if value in ('efectivo', 'cash'):
+        return 'efectivo', 'Efectivo'
+    if value in ('pos', 'pos/qr', 'qr', 'tarjeta', 'card'):
+        return 'pos', 'POS/QR'
+    if value in ('transferencia', 'transfer', 'trans'):
+        return 'transferencia', 'Transferencia'
+    return 'otros', 'Otros'
+
+def _percent(part, total):
+    try:
+        part_val = float(part or 0)
+        total_val = float(total or 0)
+        if total_val <= 0:
+            return 0.0
+        return round((part_val / total_val) * 100.0, 2)
+    except Exception:
+        return 0.0
+
+def _delta_percent(current, previous):
+    try:
+        current_val = float(current or 0)
+        previous_val = float(previous or 0)
+        if previous_val == 0:
+            return 100.0 if current_val > 0 else 0.0
+        return round(((current_val - previous_val) / previous_val) * 100.0, 2)
+    except Exception:
+        return 0.0
+
 @bp.route('/archive', methods=['GET'])
 def get_archive():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
@@ -521,5 +624,226 @@ def metrics():
             })
         except Exception:
             return jsonify({'error': 'metrics unavailable'}), 500
+
+@bp.route('/sales/analytics', methods=['GET'])
+def sales_analytics():
+    try:
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+        session_tenant = str(session.get('tenant_slug') or '').strip()
+        if session_tenant and tenant_slug and session_tenant != tenant_slug:
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        if not _has_reports_access():
+            return jsonify({'error': 'sin permisos'}), 403
+
+        from_dt, to_dt, from_iso, to_iso = _resolve_sales_range(
+            request.args.get('from'),
+            request.args.get('to'),
+        )
+        prev_to_dt = from_dt - timedelta(seconds=1)
+        prev_from_dt = prev_to_dt - (to_dt - from_dt)
+        prev_from_iso = prev_from_dt.isoformat()
+        prev_to_iso = prev_to_dt.isoformat()
+
+        conn = get_db()
+        cur = conn.cursor()
+
+        delivered_sql = """
+            SELECT o.id, o.order_type, COALESCE(o.payment_method, '') AS payment_method,
+                   COALESCE(o.total, 0) AS total, COALESCE(o.tip_amount, 0) AS tip_amount,
+                   COALESCE(o.shipping_cost, 0) AS shipping_cost, o.created_at, h.last_change AS delivered_at
+            FROM orders o
+            JOIN (
+                SELECT order_id, MAX(changed_at) AS last_change
+                FROM order_status_history
+                WHERE status = 'entregado'
+                GROUP BY order_id
+            ) h ON h.order_id = o.id
+            WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ?
+            ORDER BY h.last_change DESC
+        """
+        cur.execute(delivered_sql, (tenant_slug, from_iso, to_iso))
+        delivered_rows = cur.fetchall()
+
+        canceled_sql = """
+            SELECT COALESCE(COUNT(*), 0) AS canceled_count, COALESCE(SUM(o.total), 0) AS canceled_total
+            FROM orders o
+            JOIN (
+                SELECT order_id, MAX(changed_at) AS last_change
+                FROM order_status_history
+                WHERE status = 'cancelado'
+                GROUP BY order_id
+            ) h ON h.order_id = o.id
+            WHERE o.tenant_slug = ? AND o.status = 'cancelado' AND h.last_change >= ? AND h.last_change <= ?
+        """
+        cur.execute(canceled_sql, (tenant_slug, from_iso, to_iso))
+        canceled_row = cur.fetchone()
+        canceled_count = _money(canceled_row[0] if canceled_row else 0)
+        canceled_total = _money(canceled_row[1] if canceled_row else 0)
+
+        def _summary_for_range(range_from_iso, range_to_iso):
+            cur.execute(
+                """
+                SELECT COALESCE(COUNT(*), 0) AS delivered_count, COALESCE(SUM(o.total), 0) AS delivered_total
+                FROM orders o
+                JOIN (
+                    SELECT order_id, MAX(changed_at) AS last_change
+                    FROM order_status_history
+                    WHERE status = 'entregado'
+                    GROUP BY order_id
+                ) h ON h.order_id = o.id
+                WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ?
+                """,
+                (tenant_slug, range_from_iso, range_to_iso),
+            )
+            delivered_row = cur.fetchone()
+            cur.execute(canceled_sql, (tenant_slug, range_from_iso, range_to_iso))
+            canceled_range_row = cur.fetchone()
+            delivered_count = _money(delivered_row[0] if delivered_row else 0)
+            delivered_total = _money(delivered_row[1] if delivered_row else 0)
+            canceled_count_range = _money(canceled_range_row[0] if canceled_range_row else 0)
+            return {
+                'delivered_count': delivered_count,
+                'delivered_total': delivered_total,
+                'canceled_count': canceled_count_range,
+            }
+
+        current_delivered_count = len(delivered_rows)
+        current_net_sales = sum(_money(r[3]) for r in delivered_rows)
+        current_tip_total = sum(_money(r[4]) for r in delivered_rows)
+        current_shipping_total = sum(_money(r[5]) for r in delivered_rows)
+        avg_ticket = _money(current_net_sales / current_delivered_count) if current_delivered_count else 0
+        cancellation_rate = _percent(canceled_count, current_delivered_count + canceled_count)
+
+        prev_summary = _summary_for_range(prev_from_iso, prev_to_iso)
+
+        by_channel = {}
+        by_payment = {}
+        by_hour = {}
+        for hour in range(24):
+            by_hour[hour] = {
+                'hour': hour,
+                'label': f'{hour:02d}:00',
+                'count': 0,
+                'total': 0,
+            }
+
+        for row in delivered_rows:
+            order_type = row[1]
+            payment_method = row[2]
+            total = _money(row[3])
+            delivered_at = _parse_iso_dt(row[7])
+
+            channel_key, channel_label = _norm_channel(order_type)
+            bucket = by_channel.setdefault(channel_key, {
+                'key': channel_key,
+                'label': channel_label,
+                'count': 0,
+                'total': 0,
+            })
+            bucket['count'] += 1
+            bucket['total'] += total
+
+            pay_key, pay_label = _norm_payment_method(payment_method)
+            pay_bucket = by_payment.setdefault(pay_key, {
+                'key': pay_key,
+                'label': pay_label,
+                'count': 0,
+                'total': 0,
+            })
+            pay_bucket['count'] += 1
+            pay_bucket['total'] += total
+
+            if delivered_at is not None:
+                hour_bucket = by_hour.get(delivered_at.hour)
+                if hour_bucket is not None:
+                    hour_bucket['count'] += 1
+                    hour_bucket['total'] += total
+
+        by_channel_list = sorted(by_channel.values(), key=lambda item: (-item['total'], -item['count'], item['label']))
+        for item in by_channel_list:
+            item['avg_ticket'] = _money(item['total'] / item['count']) if item['count'] else 0
+            item['share_percent'] = _percent(item['total'], current_net_sales)
+
+        by_payment_list = sorted(by_payment.values(), key=lambda item: (-item['total'], -item['count'], item['label']))
+        for item in by_payment_list:
+            item['avg_ticket'] = _money(item['total'] / item['count']) if item['count'] else 0
+            item['share_percent'] = _percent(item['total'], current_net_sales)
+
+        by_hour_list = [bucket for bucket in by_hour.values() if bucket['count'] > 0 or bucket['total'] > 0]
+        if not by_hour_list:
+            by_hour_list = list(by_hour.values())
+
+        cur.execute(
+            """
+            SELECT COALESCE(NULLIF(TRIM(oi.name), ''), '(Sin nombre)') AS product_name,
+                   COALESCE(SUM(oi.qty), 0) AS qty_total,
+                   COALESCE(SUM(oi.qty * oi.unit_price), 0) AS revenue_total
+            FROM order_items oi
+            JOIN orders o ON o.id = oi.order_id
+            JOIN (
+                SELECT order_id, MAX(changed_at) AS last_change
+                FROM order_status_history
+                WHERE status = 'entregado'
+                GROUP BY order_id
+            ) h ON h.order_id = o.id
+            WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ?
+            GROUP BY COALESCE(NULLIF(TRIM(oi.name), ''), '(Sin nombre)')
+            ORDER BY revenue_total DESC, qty_total DESC, product_name ASC
+            LIMIT 10
+            """,
+            (tenant_slug, from_iso, to_iso),
+        )
+        top_products = []
+        for row in cur.fetchall():
+            revenue = _money(row[2])
+            top_products.append({
+                'name': str(row[0] or '(Sin nombre)'),
+                'qty': _money(row[1]),
+                'revenue': revenue,
+                'share_percent': _percent(revenue, current_net_sales),
+            })
+
+        response = jsonify({
+            'range': {
+                'from': from_iso,
+                'to': to_iso,
+            },
+            'summary': {
+                'net_sales': current_net_sales,
+                'delivered_orders': current_delivered_count,
+                'average_ticket': avg_ticket,
+                'canceled_orders': canceled_count,
+                'canceled_amount': canceled_total,
+                'cancellation_rate': cancellation_rate,
+                'tips_total': current_tip_total,
+                'shipping_total': current_shipping_total,
+            },
+            'comparison': {
+                'previous_from': prev_from_iso,
+                'previous_to': prev_to_iso,
+                'previous_net_sales': prev_summary['delivered_total'],
+                'previous_delivered_orders': prev_summary['delivered_count'],
+                'previous_canceled_orders': prev_summary['canceled_count'],
+                'delta_amount': current_net_sales - prev_summary['delivered_total'],
+                'delta_percent': _delta_percent(current_net_sales, prev_summary['delivered_total']),
+            },
+            'leaders': {
+                'channel': by_channel_list[0]['label'] if by_channel_list else '',
+                'payment_method': by_payment_list[0]['label'] if by_payment_list else '',
+            },
+            'by_channel': by_channel_list,
+            'by_payment_method': by_payment_list,
+            'top_products': top_products,
+            'by_hour': by_hour_list,
+        })
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    except Exception as exc:
+        print(f"Error in sales_analytics: {exc}")
+        return jsonify({'error': 'analytics unavailable'}), 500
 
 
