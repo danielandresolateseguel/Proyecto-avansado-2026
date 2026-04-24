@@ -836,8 +836,6 @@ def sales_analytics():
             item['share_percent'] = _percent(item['total'], current_net_sales)
 
         by_hour_list = [bucket for bucket in by_hour.values() if bucket['count'] > 0 or bucket['total'] > 0]
-        if not by_hour_list:
-            by_hour_list = list(by_hour.values())
         by_day_list = sorted(by_day.values(), key=lambda item: item['date'])
 
         cur.execute(
