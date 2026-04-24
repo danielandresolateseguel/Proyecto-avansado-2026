@@ -267,7 +267,7 @@
     .analytics-card.accent-volume { background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-color:#ddd6fe; }
     .analytics-card.accent-extra { background: linear-gradient(135deg, #effdf7 0%, #ffffff 100%); border-color:#a7f3d0; }
     .analytics-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; align-items:start; }
-    .analytics-block { background:#fff; border:1px solid var(--kds-border); border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:8px; }
+    .analytics-block { background:#fff; border:1px solid var(--kds-border); border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:8px; height:320px; }
     .analytics-block h3 { margin:0; color:#425b76; font-size:15px; }
     .analytics-table { width:100%; border-collapse: collapse; }
     .analytics-table th, .analytics-table td { border-bottom:1px solid #e8edf3; padding:6px 4px; font-size:12px; text-align:left; }
@@ -295,7 +295,7 @@
     .analytics-trend-label { font-size:12px; font-weight:700; color:#425b76; }
     .analytics-trend-value { font-size:12px; color:#334155; font-variant-numeric:tabular-nums; }
     .analytics-insight { margin-top:6px; font-size:12px; color:#64748b; }
-    .analytics-scroll-body, .analytics-comparison-body { max-height: 260px; overflow-y: auto; padding-right: 4px; }
+    .analytics-scroll-body, .analytics-comparison-body { flex:1; min-height:0; overflow-y: auto; padding-right: 4px; }
     .analytics-scroll-body::-webkit-scrollbar, .analytics-comparison-body::-webkit-scrollbar { width: 8px; }
     .analytics-scroll-body::-webkit-scrollbar-thumb, .analytics-comparison-body::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:999px; }
     .analytics-scroll-body::-webkit-scrollbar-track, .analytics-comparison-body::-webkit-scrollbar-track { background:#f1f5f9; border-radius:999px; }
@@ -303,6 +303,7 @@
       .analytics-toolbar { align-items:stretch; }
       .analytics-toolbar label { width:100%; }
       .analytics-toolbar input, .analytics-toolbar select { min-width: 0; width:100%; }
+      .analytics-block { height:auto; min-height:0; }
       .analytics-kpi-grid { grid-template-columns:1fr; }
       .analytics-trend-row { grid-template-columns: 48px 1fr auto; }
       .analytics-scroll-body, .analytics-comparison-body { max-height: 220px; }
