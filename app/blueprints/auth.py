@@ -8,12 +8,62 @@ from datetime import datetime, timezone, timedelta
 import time
 
 bp = Blueprint('auth', __name__, url_prefix='/api')
+_LOGIN_RATE_LIMIT = {}
+_LOGIN_WINDOW_S = 300
+_LOGIN_LOCKOUT_S = 900
+_LOGIN_MAX_ATTEMPTS = 5
+_BOOTSTRAP_MAX_ATTEMPTS = 3
 
 def _norm_slug(v):
     return str(v or '').strip().lower()
 
 def _norm_user(v):
     return str(v or '').strip()
+
+def _is_local_dev_request():
+    remote_addr = str(request.remote_addr or '').strip().lower()
+    host = str(request.host or '').strip().lower()
+    return remote_addr in ('127.0.0.1', '::1', '::ffff:127.0.0.1') or host.startswith('localhost:') or host.startswith('127.0.0.1:')
+
+def _client_ip():
+    forwarded = str(request.headers.get('X-Forwarded-For') or '').split(',', 1)[0].strip().lower()
+    if forwarded:
+        return forwarded
+    return str(request.remote_addr or '').strip().lower()
+
+def _rate_limit_key(scope, identity=''):
+    return f"{scope}:{_client_ip()}:{str(identity or '').strip().lower()}"
+
+def _rate_limit_remaining(scope, identity='', max_attempts=_LOGIN_MAX_ATTEMPTS, window_s=_LOGIN_WINDOW_S, lockout_s=_LOGIN_LOCKOUT_S):
+    now = time.time()
+    key = _rate_limit_key(scope, identity)
+    state = _LOGIN_RATE_LIMIT.get(key) or {}
+    blocked_until = float(state.get('blocked_until') or 0)
+    if blocked_until > now:
+        return max(1, int(blocked_until - now))
+    attempts = [ts for ts in (state.get('attempts') or []) if (now - float(ts)) < window_s]
+    _LOGIN_RATE_LIMIT[key] = {'attempts': attempts, 'blocked_until': 0}
+    if len(attempts) >= max_attempts:
+        blocked_until = now + lockout_s
+        _LOGIN_RATE_LIMIT[key] = {'attempts': attempts, 'blocked_until': blocked_until}
+        return max(1, int(lockout_s))
+    return 0
+
+def _rate_limit_fail(scope, identity='', max_attempts=_LOGIN_MAX_ATTEMPTS, window_s=_LOGIN_WINDOW_S, lockout_s=_LOGIN_LOCKOUT_S):
+    now = time.time()
+    key = _rate_limit_key(scope, identity)
+    attempts = [ts for ts in (_LOGIN_RATE_LIMIT.get(key, {}).get('attempts') or []) if (now - float(ts)) < window_s]
+    attempts.append(now)
+    blocked_until = 0
+    if len(attempts) >= max_attempts:
+        blocked_until = now + lockout_s
+    _LOGIN_RATE_LIMIT[key] = {'attempts': attempts, 'blocked_until': blocked_until}
+    if blocked_until > now:
+        return max(1, int(blocked_until - now))
+    return 0
+
+def _rate_limit_reset(scope, identity=''):
+    _LOGIN_RATE_LIMIT.pop(_rate_limit_key(scope, identity), None)
 
 def ensure_master_users_table(db, cur):
     if is_postgres():
@@ -338,6 +388,10 @@ def auth_login():
     tenant_slug = _norm_slug(payload.get('tenant_slug'))
     if not username or not password or not tenant_slug:
         return jsonify({'error': 'credenciales incompletas'}), 400
+    identity = f"{tenant_slug}:{username}"
+    retry_after = _rate_limit_remaining('admin_login', identity)
+    if retry_after > 0:
+        return jsonify({'error': 'demasiados intentos, probá más tarde', 'retry_after_seconds': retry_after}), 429
     
     db = get_db()
     cur = db.cursor()
@@ -352,6 +406,9 @@ def auth_login():
     row = cur.fetchone()
     
     if not row or not check_password_hash(row[1], password):
+        retry_after = _rate_limit_fail('admin_login', identity)
+        if retry_after > 0:
+            return jsonify({'error': 'demasiados intentos, probá más tarde', 'retry_after_seconds': retry_after}), 429
         return jsonify({'error': 'usuario o contraseña inválidos'}), 401
     
     tenant_status = 'active'
@@ -394,6 +451,8 @@ def auth_login():
     except Exception:
         perms_json = ''
     touch_admin_user_last_seen(db, cur, tenant_slug, real_username)
+    _rate_limit_reset('admin_login', identity)
+    session.clear()
     session['admin_auth'] = True
     session['admin_user'] = real_username
     session['tenant_slug'] = tenant_slug
@@ -406,11 +465,20 @@ def auth_login():
 @bp.route('/auth/login_dev', methods=['POST'])
 def auth_login_dev():
     allow_dev = str(os.environ.get('ALLOW_DEV_LOGIN') or '').strip().lower() in ('1', 'true', 'yes')
-    if not session.get('master_auth') and not allow_dev:
+    env_name = str(os.environ.get('FLASK_ENV') or '').strip().lower()
+    can_use_dev_login = allow_dev and env_name != 'production' and _is_local_dev_request()
+    if not session.get('master_auth') and not can_use_dev_login:
         return jsonify({'error': 'no autorizado'}), 401
     payload = request.get_json(silent=True) or {}
     u = _norm_user(payload.get('username'))
     t = _norm_slug(payload.get('tenant_slug'))
+    session.pop('admin_auth', None)
+    session.pop('admin_user', None)
+    session.pop('tenant_slug', None)
+    session.pop('_last_seen_touch_s', None)
+    session.pop('admin_role', None)
+    session.pop('admin_perms', None)
+    session.pop('admin_owner', None)
     session['admin_auth'] = True
     session['admin_user'] = u or 'admin'
     if t:
@@ -423,6 +491,8 @@ def auth_login_dev():
 
 @bp.route('/auth/logout', methods=['POST'])
 def auth_logout():
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
     if session.get('master_auth'):
         session.pop('admin_auth', None)
         session.pop('admin_user', None)
@@ -508,11 +578,19 @@ def master_status():
 @bp.route('/auth/master_bootstrap', methods=['POST'])
 def master_bootstrap():
     # Allows creating the first master user if none exists
+    allow_remote_bootstrap = str(os.environ.get('ALLOW_MASTER_BOOTSTRAP') or '').strip().lower() in ('1', 'true', 'yes')
+    if not _is_local_dev_request() and not allow_remote_bootstrap:
+        return jsonify({'error': 'bootstrap solo permitido en local o con ALLOW_MASTER_BOOTSTRAP'}), 403
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
     username = (payload.get('username') or '').strip()
     password = str(payload.get('password') or '')
     if not username or not password:
         return jsonify({'error': 'datos incompletos'}), 400
+    retry_after = _rate_limit_remaining('master_bootstrap', username, max_attempts=_BOOTSTRAP_MAX_ATTEMPTS)
+    if retry_after > 0:
+        return jsonify({'error': 'demasiados intentos, probá más tarde', 'retry_after_seconds': retry_after}), 429
     db = get_db()
     cur = db.cursor()
     try:
@@ -543,11 +621,13 @@ def master_bootstrap():
             )
         db.commit()
     except Exception:
+        _rate_limit_fail('master_bootstrap', username, max_attempts=_BOOTSTRAP_MAX_ATTEMPTS)
         try:
             db.rollback()
         except Exception:
             pass
         return jsonify({'error': 'base de datos no disponible'}), 503
+    _rate_limit_reset('master_bootstrap', username)
     return jsonify({'ok': True, 'username': username})
 
 @bp.route('/auth/master_login', methods=['POST'])
@@ -557,6 +637,9 @@ def master_login():
     password = str(payload.get('password') or '')
     if not username or not password:
         return jsonify({'error': 'datos incompletos'}), 400
+    retry_after = _rate_limit_remaining('master_login', username)
+    if retry_after > 0:
+        return jsonify({'error': 'demasiados intentos, probá más tarde', 'retry_after_seconds': retry_after}), 429
     db = get_db()
     cur = db.cursor()
     try:
@@ -571,10 +654,16 @@ def master_login():
             cur.execute("SELECT password_hash FROM master_users WHERE username = ?", (username,))
         row = cur.fetchone()
     except Exception:
+        _rate_limit_fail('master_login', username)
         return jsonify({'error': 'base de datos no disponible'}), 503
     if not row or not check_password_hash(row[0], password):
+        retry_after = _rate_limit_fail('master_login', username)
+        if retry_after > 0:
+            return jsonify({'error': 'demasiados intentos, probá más tarde', 'retry_after_seconds': retry_after}), 429
         return jsonify({'error': 'usuario o contraseña inválidos'}), 401
     import secrets as _secrets
+    _rate_limit_reset('master_login', username)
+    session.clear()
     session['master_auth'] = True
     session['master_user'] = username
     session['csrf_token'] = _secrets.token_urlsafe(32)
@@ -582,6 +671,8 @@ def master_login():
 
 @bp.route('/auth/master_logout', methods=['POST'])
 def master_logout():
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
     if session.get('admin_auth'):
         session.pop('master_auth', None)
         session.pop('master_user', None)

@@ -304,8 +304,9 @@
     }
     async function masterLogin(u,p){
       try{
+        if (!csrfToken) await fetchCsrfToken();
         const r = await fetch(new URL('/api/auth/master_login', API_BASE).toString(), {
-          method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username:u, password:p })
+          method:'POST', headers: headersJSON(), body: JSON.stringify({ username:u, password:p })
         });
         if (r.ok){ await fetchCsrfToken(); showToast('Sesión master iniciada','success'); return true; }
         let msg='No se pudo iniciar sesión'; try{ const j=await r.json(); if(j.error) msg=j.error; }catch(_){}
@@ -314,8 +315,9 @@
     }
     async function masterBootstrap(u,p){
       try{
+        if (!csrfToken) await fetchCsrfToken();
         const r = await fetch(new URL('/api/auth/master_bootstrap', API_BASE).toString(), {
-          method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ username:u, password:p })
+          method:'POST', headers: headersJSON(), body: JSON.stringify({ username:u, password:p })
         });
         if (r.ok){ showToast('Usuario master creado','success'); return true; }
         let msg='No se pudo crear usuario'; try{ const j=await r.json(); if(j.error) msg=j.error; }catch(_){}
@@ -324,7 +326,11 @@
     }
     async function masterLogout(){
       try{
-        const r = await fetch(new URL('/api/auth/master_logout', API_BASE).toString(), { method:'POST' });
+        const r = await fetch(new URL('/api/auth/master_logout', API_BASE).toString(), {
+          method:'POST',
+          credentials:'include',
+          headers:{ 'X-CSRF-Token': csrfToken || '' }
+        });
         if (r.ok){ showToast('Sesión cerrada','info'); }
       }catch(e){}
     }
@@ -352,6 +358,17 @@
       const v = String(s||'').trim();
       if (!v) return '';
       return v.replace('T',' ').replace('Z','');
+    }
+    function escapeMasterHtml(v){
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function escapeMasterAttr(v){
+      return escapeMasterHtml(v).replace(/`/g, '&#96;');
     }
 
     function roleDefaults(role){
@@ -390,7 +407,7 @@
         if (!r.ok){
           let msg = 'No se pudo cargar usuarios';
           try{ const j = await r.json(); if (j.error) msg = j.error; }catch(_){}
-          body.innerHTML = `<tr><td colspan="5" class="hint" style="color:var(--danger);">${msg}</td></tr>`;
+          body.innerHTML = `<tr><td colspan="5" class="hint" style="color:var(--danger);">${escapeMasterHtml(msg)}</td></tr>`;
           return;
         }
         const j = await r.json();
@@ -433,10 +450,13 @@
           const owner = !!u.is_owner;
           const ownerBadge = owner ? `<span class="badge on" style="margin-left:8px;">Owner</span>` : '';
           const ownerBtnDisabled = (!owner && (role !== 'admin' || SETTINGS_OWNERS_COUNT >= 2));
+          const safeUser = escapeMasterHtml(uname);
+          const safeUserAttr = escapeMasterAttr(uname);
+          const safeLastSeen = escapeMasterHtml(formatLastSeen(u.last_seen_at));
           tr.innerHTML = `
-            <td>${uname}${ownerBadge}</td>
+            <td>${safeUser}${ownerBadge}</td>
             <td>
-              <select class="user-role" data-user="${uname}" style="padding:8px 10px; border:1px solid var(--bd); border-radius:6px;">
+              <select class="user-role" data-user="${safeUserAttr}" style="padding:8px 10px; border:1px solid var(--bd); border-radius:6px;">
                 <option value="mozo" ${role==='mozo'?'selected':''}>Mozo</option>
                 <option value="cocina" ${role==='cocina'?'selected':''}>Cocina</option>
                 <option value="caja" ${role==='caja'?'selected':''}>Caja</option>
@@ -445,11 +465,11 @@
               </select>
             </td>
             <td><span class="badge ${on}">${onText}</span></td>
-            <td>${formatLastSeen(u.last_seen_at)}</td>
+            <td>${safeLastSeen}</td>
             <td>
-              <button class="btn muted" data-pass="${uname}">Cambiar clave</button>
-              <button class="btn muted" data-rename="${uname}">Renombrar</button>
-              <button class="btn muted" data-owner="${uname}" data-role="${role}" ${ownerBtnDisabled?'disabled':''}>${owner ? 'Quitar owner' : 'Hacer owner'}</button>
+              <button class="btn muted" data-pass="${safeUserAttr}">Cambiar clave</button>
+              <button class="btn muted" data-rename="${safeUserAttr}">Renombrar</button>
+              <button class="btn muted" data-owner="${safeUserAttr}" data-role="${escapeMasterAttr(role)}" ${ownerBtnDisabled?'disabled':''}>${owner ? 'Quitar owner' : 'Hacer owner'}</button>
             </td>
           `;
           body.appendChild(tr);
@@ -648,24 +668,29 @@
         const el = document.createElement('div');
         el.className = 'tenant';
         const name = t.name || t.slug;
+        const slug = String(t.slug || '').trim();
         const st = String(t.status || 'active').toLowerCase();
         const badge = st === 'warning'
           ? `<span class="badge warn">Aviso</span>`
           : (st === 'suspended' ? `<span class="badge susp">Suspendido</span>` : ``);
+        const safeName = escapeMasterHtml(name);
+        const safeSlug = escapeMasterHtml(slug);
+        const safeSlugAttr = escapeMasterAttr(slug);
+        const encodedSlug = encodeURIComponent(slug);
         el.innerHTML = `
           <div class="t-head">
             <div style="display:flex; align-items:center; gap:8px;">
-              <strong>${name}</strong>
+              <strong>${safeName}</strong>
               ${badge}
             </div>
-            <span class="slug">${t.slug}</span>
+            <span class="slug">${safeSlug}</span>
           </div>
           <div class="actions">
-            <a class="btn muted" href="/gastronomia-local1.html?slug=${t.slug}" target="_blank" rel="noopener">Abrir público</a>
-            <button class="btn ok" data-login="${t.slug}">Login Dev en tenant</button>
-            <button class="btn primary" data-admin="${t.slug}">Abrir Admin de tenant</button>
-            <button class="btn primary" data-copy="${t.slug}">Copiar slug</button>
-            <button class="btn muted icon" data-settings="${t.slug}" title="Configuración del comercio">
+            <a class="btn muted" href="/gastronomia-local1.html?slug=${encodedSlug}" target="_blank" rel="noopener">Abrir público</a>
+            <button class="btn ok" data-login="${safeSlugAttr}">Login Dev en tenant</button>
+            <button class="btn primary" data-admin="${safeSlugAttr}">Abrir Admin de tenant</button>
+            <button class="btn primary" data-copy="${safeSlugAttr}">Copiar slug</button>
+            <button class="btn muted icon" data-settings="${safeSlugAttr}" title="Configuración del comercio">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.32-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.5.5 0 0 0 14.9 1h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.6.22L2.72 7.5a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.62-.07.94 0 .31.02.63.06.94L2.84 14.5a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.04.24.25.42.49.42h3.8c.24 0 .45-.18.49-.42l.36-2.54c.59-.24 1.12-.56 1.62-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.56zM12 15.6A3.6 3.6 0 1 1 12 8.4a3.6 3.6 0 0 1 0 7.2z"/></svg>
               Config
             </button>
@@ -687,7 +712,7 @@
         b.addEventListener('click', async ()=>{
           const slug = b.getAttribute('data-admin')||'';
           await loginDevTenant(slug);
-          window.open(`/admin.html?slug=${slug}`,'_blank','noopener');
+          window.open(`/admin.html?slug=${encodeURIComponent(slug)}`,'_blank','noopener');
         });
       });
       cont.querySelectorAll('button[data-settings]').forEach(b=>{

@@ -10,6 +10,11 @@ import cloudinary.uploader
 
 bp = Blueprint('products', __name__, url_prefix='/api')
 
+def _session_tenant_matches(slug):
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    slug = str(slug or '').strip()
+    return (not session_tenant) or (not slug) or session_tenant == slug
+
 @bp.route('/products', methods=['GET'])
 def list_products():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
@@ -52,11 +57,12 @@ def list_products():
 @bp.route('/products', methods=['POST'])
 def create_product():
     if not is_authed(): return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     
     data = request.get_json(silent=True) or {}
     tenant_slug = data.get('tenant_slug')
     # En entorno multi-tenant, si la sesión tiene tenant_slug, debe coincidir
-    if session.get('tenant_slug') and session.get('tenant_slug') != tenant_slug:
+    if not _session_tenant_matches(tenant_slug):
         return jsonify({'error': 'acceso denegado al tenant'}), 403
     product_id = data.get('id')
     name = data.get('name')
@@ -213,8 +219,11 @@ def update_product(product_id):
 @bp.route('/products/<product_id>', methods=['DELETE'])
 def delete_product(product_id):
     if not is_authed(): return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     tenant_slug = request.args.get('tenant_slug')
     if not tenant_slug: return jsonify({'error': 'Falta tenant_slug'}), 400
+    if not _session_tenant_matches(tenant_slug):
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
     try:
         conn = get_db()
         cur = conn.cursor()
@@ -232,6 +241,7 @@ def delete_product(product_id):
 @bp.route('/upload', methods=['POST'])
 def upload_file():
     if not is_authed(): return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     if 'file' not in request.files: return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
     if file.filename == '': return jsonify({'error': 'No selected file'}), 400
@@ -275,6 +285,8 @@ def upload_file():
 
         # Check for tenant_slug to organize images by tenant
         tenant_slug = request.args.get('tenant_slug') or request.form.get('tenant_slug')
+        if not _session_tenant_matches(tenant_slug):
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
         if tenant_slug:
             # Sanitize slug (alphanumeric + hyphens/underscores)
             safe_slug = "".join([c for c in tenant_slug if c.isalnum() or c in ('-','_')])
@@ -295,6 +307,7 @@ def upload_file():
 @bp.route('/delete_file', methods=['DELETE'])
 def delete_file():
     if not is_authed(): return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     path = request.args.get('path')
     if not path:
         payload = request.get_json(silent=True) or {}
@@ -304,6 +317,13 @@ def delete_file():
     path = str(path).strip()
     if '..' in path or not path.replace('\\', '/').startswith('Imagenes/uploads/'):
         return jsonify({'error': 'ruta inválida o prohibida'}), 400
+    normalized = path.replace('\\', '/')
+    prefix = 'Imagenes/uploads/'
+    relative_path = normalized[len(prefix):] if normalized.startswith(prefix) else ''
+    tenant_part = relative_path.split('/', 1)[0].strip() if relative_path else ''
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    if session_tenant and tenant_part and tenant_part != session_tenant:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
     
     project_root = os.path.dirname(current_app.root_path)
     full_path = os.path.join(project_root, path)

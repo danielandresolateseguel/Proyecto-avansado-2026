@@ -410,8 +410,12 @@ def get_tenant_config():
 @bp.route('/config', methods=['POST'])
 def update_tenant_config():
     if not is_authed(): return jsonify({'error': 'unauthorized'}), 401
+    if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
     slug = payload.get('slug') or 'gastronomia-local1'
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    if session_tenant and slug and session_tenant != slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
     
     conn = get_db()
     cur = conn.cursor()
@@ -1499,6 +1503,8 @@ def list_order_events(order_id):
 def update_order_content(order_id):
     if not is_authed():
         return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
     
     payload = request.get_json(silent=True) or {}
     new_items = payload.get('items')
@@ -1516,6 +1522,9 @@ def update_order_content(order_id):
         return jsonify({'error': 'orden no encontrada'}), 404
     
     status, tenant_slug, _ = row
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
     if status in ('entregado', 'cancelado'):
         return jsonify({'error': 'no se puede editar una orden finalizada'}), 400
 

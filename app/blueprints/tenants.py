@@ -27,6 +27,17 @@ def _parse_perms_json(s):
         return {}
     return {}
 
+def _can_manage_tenant_slug(slug, require_owner_or_admin=True):
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    role = str(session.get('admin_role') or '').strip().lower()
+    owner = bool(session.get('admin_owner'))
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    if session_tenant and slug and session_tenant != slug:
+        return False
+    if not require_owner_or_admin:
+        return owner or role == 'admin' or bool(perms)
+    return owner or role == 'admin'
+
 def ensure_tenants_status_message_column(conn, cur):
     if is_postgres():
         try:
@@ -337,6 +348,8 @@ def tenant_checkout():
             return jsonify({'error': 'no autorizado'}), 401
         if not check_csrf():
             return jsonify({'error': 'csrf inválido'}), 403
+        if not _can_manage_tenant_slug(slug):
+            return jsonify({'error': 'no autorizado'}), 403
 
         payload = request.get_json(silent=True) or {}
         val_enabled = payload.get('whatsapp_enabled', None)
@@ -730,6 +743,8 @@ def update_tenant_prefs():
     payload = request.get_json(silent=True) or {}
     section = payload.get('section')
     data = payload.get('data')
+    if not _can_manage_tenant_slug(slug):
+        return jsonify({'error': 'no autorizado'}), 403
     
     if not section or data is None:
         return jsonify({'error': 'datos incompletos'}), 400

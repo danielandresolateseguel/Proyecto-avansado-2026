@@ -1,12 +1,18 @@
-from flask import Blueprint, jsonify, current_app, request
+from flask import Blueprint, jsonify, current_app, request, session
 import os
 import sys
 import json
 import urllib.request
 import urllib.parse
 from datetime import datetime, timezone
+from app.utils import check_csrf
 
 bp = Blueprint('system', __name__)
+
+def _is_local_request():
+    remote_addr = str(request.remote_addr or '').strip().lower()
+    host = str(request.host or '').strip().lower()
+    return remote_addr in ('127.0.0.1', '::1', '::ffff:127.0.0.1') or host.startswith('localhost:') or host.startswith('127.0.0.1:')
 
 @bp.route('/favicon.ico')
 def favicon():
@@ -151,11 +157,19 @@ def db_check():
         
     return jsonify(status)
 
-@bp.route('/api/init_db_force')
+@bp.route('/api/init_db_force', methods=['GET', 'POST'])
 def init_db_force():
     """Forza la inicialización de la base de datos y creación de tablas."""
     from app.database import init_db, seed_admin_users_from_env, seed_products_from_config
     import os
+
+    if request.method == 'POST':
+        if not session.get('master_auth'):
+            return jsonify({'error': 'no autorizado'}), 401
+        if not check_csrf():
+            return jsonify({'error': 'csrf inválido'}), 403
+    elif not _is_local_request():
+        return jsonify({'error': 'no autorizado'}), 401
     
     log = []
     try:

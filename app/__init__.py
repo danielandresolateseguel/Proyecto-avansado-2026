@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, request
 from dotenv import load_dotenv
 from . import database
 from werkzeug.exceptions import HTTPException
@@ -92,6 +92,20 @@ def create_app(test_config=None):
 
     # Register public last to avoid catching API routes
     app.register_blueprint(public.bp)
+
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        response.headers.setdefault('Content-Security-Policy', "base-uri 'self'; frame-ancestors 'self'; object-src 'none'")
+        if request.path.startswith('/api/auth/'):
+            response.headers.setdefault('Cache-Control', 'no-store, max-age=0')
+            response.headers.setdefault('Pragma', 'no-cache')
+        if request.is_secure:
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return response
 
     @app.route('/')
     def root():
