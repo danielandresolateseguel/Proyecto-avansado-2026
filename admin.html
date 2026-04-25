@@ -914,7 +914,7 @@
       <input id="login-pass" type="password" style="width:100%; height:32px;" />
     </label>
     <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-show" type="checkbox" /> Ver clave</label>
-    <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-remember" type="checkbox" /> Recordar</label>
+    <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-remember" type="checkbox" /> Recordar usuario</label>
     <button id="login-btn" style="height:32px;">Entrar</button>
     <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
   </div>
@@ -2268,6 +2268,9 @@
 
                     const resp = await fetch(url.toString(), {
                         method: 'POST',
+                        headers: {
+                            'X-CSRF-Token': csrfToken || ''
+                        },
                         body: formData
                     });
                     
@@ -2748,7 +2751,6 @@
     let isOwnerUser = false;
     const ORDER_DETAIL_CACHE = new Map();
     const LOGIN_KEY_USER = 'kds_login_user';
-    const LOGIN_KEY_PASS = 'kds_login_pass';
     const LOGIN_KEY_REM = 'kds_login_rem';
     let currentSlaThresholds = { warning: 15, critical: 30 };
     let currentTipPercent = 10;
@@ -2783,12 +2785,12 @@
     const loginPassEl = document.getElementById('login-pass');
     const loginRemEl = document.getElementById('login-remember');
     const loginShowEl = document.getElementById('login-show');
+    try { localStorage.removeItem('kds_login_pass'); } catch (_) {}
     const _rem = (localStorage.getItem(LOGIN_KEY_REM) === '1');
     if (loginRemEl) loginRemEl.checked = _rem;
     const _lu = localStorage.getItem(LOGIN_KEY_USER) || '';
-    const _lp = _rem ? (localStorage.getItem(LOGIN_KEY_PASS) || '') : '';
     if (loginUserEl) loginUserEl.value = _lu;
-    if (loginPassEl) loginPassEl.value = _lp;
+    if (loginPassEl) loginPassEl.value = '';
     if (loginShowEl && loginPassEl) loginShowEl.onchange = function(){ loginPassEl.type = loginShowEl.checked ? 'text' : 'password'; };
     function setAuthUI(){
       if (authBadge) {
@@ -3030,6 +3032,32 @@
         return `$${v.toLocaleString('es-AR')}`;
       } catch (_) {
         return `$${v}`;
+      }
+    }
+    function escapeAdminHtml(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function escapeAdminAttr(v) {
+      return escapeAdminHtml(v).replace(/`/g, '&#96;');
+    }
+    function safeAdminInt(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? Math.trunc(n) : 0;
+    }
+    function safeWhatsAppHref(url) {
+      try {
+        const parsed = new URL(String(url || '').trim(), window.location.origin);
+        const host = String(parsed.hostname || '').toLowerCase();
+        if (parsed.protocol !== 'https:') return '';
+        if (!['wa.me', 'api.whatsapp.com', 'web.whatsapp.com'].includes(host)) return '';
+        return parsed.toString();
+      } catch (_) {
+        return '';
       }
     }
     function getTenantOrderNumber(o) {
@@ -3706,20 +3734,24 @@
           const unit = Number(it.unit_price || 0);
           const subtotal = qty * unit;
           const notes = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
+          const safeName = escapeHtml(it.name);
+          const safeNotes = escapeHtml(notes);
           
           // Logic to detect new items
           const isNew = it.created_at && order.created_at && (new Date(it.created_at).getTime() > new Date(order.created_at).getTime() + 60000);
           const newBadge = isNew ? '<span style="background:#4caf50; color:white; padding:2px 6px; border-radius:4px; font-size:0.75em; margin-left:5px;">NUEVO</span>' : '';
           const rowStyle = isNew ? 'style="background-color: #f0fdf4;"' : '';
 
-          return `<tr ${rowStyle}><td>${qty}</td><td>${it.name}${newBadge}</td><td>$${unit}</td><td>$${subtotal}</td></tr>${notes ? `<tr><td colspan=4 class="small" style="color:#e65100; font-style:italic;">Nota: ${notes}</td></tr>` : ''}`;
+          return `<tr ${rowStyle}><td>${qty}</td><td>${safeName}${newBadge}</td><td>$${unit}</td><td>$${subtotal}</td></tr>${notes ? `<tr><td colspan=4 class="small" style="color:#e65100; font-style:italic;">Nota: ${safeNotes}</td></tr>` : ''}`;
         }).join('');
         const itemsMobileRows = items.map(it => {
           const qty = Number(it.qty || 0);
           const unit = Number(it.unit_price || 0);
           const subtotal = qty * unit;
           const notes = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
-          return `<div class="row"><div class="left"><span class="qty">${qty}×</span><span class="name">${it.name}</span></div><div class="subtotal">$${subtotal}</div></div>${notes ? `<div class="note">Nota: ${notes}</div>` : ''}`;
+          const safeName = escapeHtml(it.name);
+          const safeNotes = escapeHtml(notes);
+          return `<div class="row"><div class="left"><span class="qty">${qty}×</span><span class="name">${safeName}</span></div><div class="subtotal">$${subtotal}</div></div>${notes ? `<div class="note">Nota: ${safeNotes}</div>` : ''}`;
         }).join('');
         const itemsHtml = items.length ? `
           <div class="detail-items-mobile">
@@ -3785,17 +3817,25 @@
         }
         
         const statusLabelText = (order.order_type === 'mesa' && order.status === 'en_camino') ? 'mesa' : order.status;
+        const safeOrderNumber = escapeHtml(displayOrderNumber(order));
+        const safeOrderId = escapeHtml(order.id);
+        const safeTenantSlug = escapeHtml(order.tenant_slug);
+        const safeOrderType = escapeHtml(order.order_type);
+        const safeDestino = escapeHtml(destino);
+        const safeTelefono = escapeHtml(telefono);
+        const safeStatusLabel = escapeHtml(statusLabelText);
+        const safeOrderNotes = order.order_notes ? escapeHtml(order.order_notes) : '';
 
         box.innerHTML = `
-          <p class="d-id"><strong>Pedido #${displayOrderNumber(order)}</strong></p>
-          <span id="detail-order-id" style="display:none;">${order.id}</span>
-          <p class="d-tenant">Establecimiento: ${order.tenant_slug}</p>
+          <p class="d-id"><strong>Pedido #${safeOrderNumber}</strong></p>
+          <span id="detail-order-id" style="display:none;">${safeOrderId}</span>
+          <p class="d-tenant">Establecimiento: ${safeTenantSlug}</p>
           <p class="d-date">Fecha: ${formatARDate(order.created_at)}</p>
-          <p class="d-type">Tipo: ${order.order_type}</p>
-          <p class="d-dest">Destino: ${(order.order_type === 'mesa' || order.order_type === 'espera') ? `<span class="pill pill-mesa">${destino}</span>` : destino}</p>
-          ${telefono ? `<p class="d-phone">Teléfono de contacto: ${telefono}</p>` : ''}
-          <p class="d-status">Estado: ${statusLabelText}</p>
-          ${order.order_notes ? `<p class="d-notes">Detalle adicional: ${order.order_notes}</p>` : ''}
+          <p class="d-type">Tipo: ${safeOrderType}</p>
+          <p class="d-dest">Destino: ${(order.order_type === 'mesa' || order.order_type === 'espera') ? `<span class="pill pill-mesa">${safeDestino}</span>` : safeDestino}</p>
+          ${telefono ? `<p class="d-phone">Teléfono de contacto: ${safeTelefono}</p>` : ''}
+          <p class="d-status">Estado: ${safeStatusLabel}</p>
+          ${order.order_notes ? `<p class="d-notes">Detalle adicional: ${safeOrderNotes}</p>` : ''}
           ${itemsHtml}
           ${tipBlock}
           ${timeline}
@@ -4299,27 +4339,37 @@
           : '';
 
         const baseTotal = Number(o.total || 0);
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safePhoneAttr = escapeAdminAttr(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeStatusLabel = escapeAdminHtml(statusLabelText);
+        const safeTableArg = escapeAdminAttr(JSON.stringify(String(o.table_number || '')));
+        const safeOrderId = safeAdminInt(o.id);
+        const safeTotal = Number(o.total || 0);
 
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class="pill">${o.order_type}</span></td>
-          <td>${(isMesa || isEspera) ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
+          <td><span class="pill">${safeOrderType}</span></td>
+          <td>${(isMesa || isEspera) ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</td>
           <td>
             <div class="phone-row">
-              ${phoneRaw ? `<span class="small">${phoneRaw}</span>` : '<span class="small">-</span>'}
-              ${phoneDigits ? `<button class="copy-phone phone-action" data-phone="${phoneRaw}" aria-label="Copiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm4 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h12v14z"/></svg></button>` : ''}
-              ${waUrl ? `<a class="phone-action" href="${waUrl}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.5 3 3.9 5.4 6.9 6.9l2.3-2.3c.3-.3.8-.4 1.2-.2 1 .4 2 .6 3.1.6.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.3-1.3 1.3C9.7 22 2 14.3 2 4.3 2 3.6 2.6 3 3.3 3h3.6c.7 0 1.3.6 1.3 1.3 0 1.1.2 2.1.6 3.1.1.4 0 .9-.3 1.2l-2.9 2.2z"/></svg></a>` : ''}
+              ${phoneRaw ? `<span class="small">${safePhoneText}</span>` : '<span class="small">-</span>'}
+              ${phoneDigits ? `<button class="copy-phone phone-action" data-phone="${safePhoneAttr}" aria-label="Copiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm4 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h12v14z"/></svg></button>` : ''}
+              ${safeWaUrl ? `<a class="phone-action" href="${safeWaUrl}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.5 3 3.9 5.4 6.9 6.9l2.3-2.3c.3-.3.8-.4 1.2-.2 1 .4 2 .6 3.1.6.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.3-1.3 1.3C9.7 22 2 14.3 2 4.3 2 3.6 2.6 3 3.3 3h3.6c.7 0 1.3.6 1.3 1.3 0 1.1.2 2.1.6 3.1.1.4 0 .9-.3 1.2l-2.9 2.2z"/></svg></a>` : ''}
             </div>
           </td>
           <td>
             <div style="display:flex; flex-direction:column;">
-                <span class="order-total" data-orderid="${o.id}" data-total="${o.total}">$${o.total}</span>
+                <span class="order-total" data-orderid="${safeOrderId}" data-total="${safeTotal}">$${safeTotal}</span>
                 ${(isDireccion && o.shipping_cost) ? `<span class="small" style="color:#666; font-size:0.85em;">Envío: ${formatMoney(o.shipping_cost)}</span>` : ''}
             </div>
           </td>
           <td class="items-preview"><span class="small"></span></td>
-          <td class="status-cell"><span class="status-badge ${statusClass}">${statusLabelText}</span>${renderSLA(o)}</td>
+          <td class="status-cell"><span class="status-badge ${statusClass}">${safeStatusLabel}</span>${renderSLA(o)}</td>
           <td class="actions">
             <div class="status-quick">
               ${aprobarBtn}
@@ -4327,10 +4377,10 @@
               ${listoBtn}
               ${enCaminoBtn}
               ${entregadoBtn}
-              <button class="status-action" onclick="window.showPrintOptions(${o.id})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
+              <button class="status-action" onclick="window.showPrintOptions(${safeOrderId})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
                 <svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg>
               </button>
-              <button class="status-action" onclick="EditOrder.openWithFetch(${o.id}, '${o.table_number||''}')" style="background:#f3f4f6; color:#374151; width:auto; padding:0 8px; margin-right:4px;" title="Editar Items" aria-label="Editar">
+              <button class="status-action" onclick="EditOrder.openWithFetch(${safeOrderId}, ${safeTableArg})" style="background:#f3f4f6; color:#374151; width:auto; padding:0 8px; margin-right:4px;" title="Editar Items" aria-label="Editar">
                 <svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               </button>
               <button class="status-action cancelado" data-status="cancelado" aria-label="Cancelado" data-tip="Cancelado">X</button>
@@ -4373,19 +4423,21 @@
           const phoneDigits2 = phoneRaw2.replace(/\D/g, '');
           const waUrl2 = getWaLink(o, phoneDigits2);
           const baseTotal2 = Number(o.total || 0);
+          const safePhoneText2 = escapeAdminHtml(phoneRaw2);
+          const safeWaUrl2 = escapeAdminAttr(safeWhatsAppHref(waUrl2));
           card.className = 'card';
           card.innerHTML = `
               <div class="card-content">
-              <div class="title">Pedido #${displayOrderNumber(o)} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
-              <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
-              <div class="meta">${phoneRaw2 ? `Tel: ${phoneRaw2}` : ''} ${waUrl2 ? `<a href='${waUrl2}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
+              <div class="title">Pedido #${safeOrderNumber} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+              <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+              <div class="meta">${phoneRaw2 ? `Tel: ${safePhoneText2}` : ''} ${safeWaUrl2 ? `<a href='${safeWaUrl2}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">
                 <div>Total: $${baseTotal2}</div>
                 ${(isDireccion && o.shipping_cost) ? `<div class="total-tip" style="color:#666;">Envío: ${formatMoney(o.shipping_cost)}</div>` : ''}
               </div>
               <div class="items-preview"><span class="small"></span></div>
             </div>
-            <div class="state-line"><span class="status-badge ${statusClass}">${statusLabelText}</span>${renderSLA(o)}</div>
+            <div class="state-line"><span class="status-badge ${statusClass}">${safeStatusLabel}</span>${renderSLA(o)}</div>
             <div class="actions">
               <div class="status-quick">
                 ${aprobarBtn}
@@ -4393,13 +4445,13 @@
               ${listoBtn}
                 ${enCaminoBtn}
                 ${entregadoBtn}
-                <button class="status-action" onclick="window.showPrintOptions(${o.id})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
+                <button class="status-action" onclick="window.showPrintOptions(${safeOrderId})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
                   <svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg>
                 </button>
-                <button class="status-action" onclick="EditOrder.openWithFetch(${o.id}, '${o.table_number||''}')" style="background:#f3f4f6; color:#374151; width:auto; padding:0 10px;" title="Editar Items"><svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                <button class="status-action" onclick="EditOrder.openWithFetch(${safeOrderId}, ${safeTableArg})" style="background:#f3f4f6; color:#374151; width:auto; padding:0 10px;" title="Editar Items"><svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
                 <button class="status-action cancelado" data-status="cancelado" aria-label="Cancelado" data-tip="Cancelado">X</button>
               </div>
-              <button class="ver-detalle" data-id="${o.id}">Ver</button>
+              <button class="ver-detalle" data-id="${safeOrderId}">Ver</button>
             </div>
           `;
           fragCards.appendChild(card);
@@ -5097,45 +5149,52 @@
         const who = assigned ? `Asignado: ${assigned}` : 'Sin asignar';
         const seqText = seq ? `Ruta: ${seq}` : '';
         const metaBits = [who, seqText, payText].filter(Boolean).join(' · ');
+        const safeDeliveryId = safeAdminInt(o.id);
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeDeliveryStatus = escapeAdminHtml(dStatusLabel);
+        const safeAddrOneLine = escapeAdminHtml(addrOneLine.slice(0,120) || '-');
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeMetaBits = escapeAdminHtml(metaBits || '');
 
-        const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${o.id}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
-        const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
-        const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
+        const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${safeDeliveryId}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
+        const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
+        const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
         const canEnRoute = (role === 'repartidor') ? _deliveryMine(o) : returned;
         const enRouteAlready = dStatus === 'en_route';
         const canEnRouteClick = !!canEnRoute && !enRouteAlready && dStatus !== 'delivered';
         const canFinishDelivery = dStatus === 'en_route' && (role !== 'repartidor' || _deliveryMine(o));
         const enRouteBtn = enRouteAlready
-          ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.55; background:#607d8b; color:#fff; cursor:default;">En camino</button>`
+          ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.55; background:#607d8b; color:#fff; cursor:default;">En camino</button>`
           : (canEnRouteClick
-            ? `<button class="delivery-status" data-id="${o.id}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
-            : `<button class="delivery-status" data-id="${o.id}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`);
+            ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
+            : `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`);
         const deliveredBtn = canFinishDelivery
-          ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>`
-          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="delivered" disabled style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Entregado</button>` : '');
+          ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>`
+          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="delivered" disabled style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Entregado</button>` : '');
         const failedBtn = canFinishDelivery
-          ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>`
-          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${o.id}" data-st="failed" disabled style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Falló</button>` : '');
+          ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>`
+          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="failed" disabled style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Falló</button>` : '');
         const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
         const payBtn = isPaid
-          ? `<button class="delivery-pay" data-id="${o.id}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:4px 8px; border-radius:4px;">Pagado</button>`
-          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${o.id}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
+          ? `<button class="delivery-pay" data-id="${safeDeliveryId}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:4px 8px; border-radius:4px;">Pagado</button>`
+          : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${safeDeliveryId}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
         const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim();
         const destOneLine = getOrderAddressOneLine(o);
-        const mapBtn = destOneLine ? `<button class="delivery-map" data-id="${o.id}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
+        const mapBtn = destOneLine ? `<button class="delivery-map" data-id="${safeDeliveryId}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
         const unassignBtn = (role === 'repartidor' && _deliveryMine(o) && _effectiveDeliveryStatus(o) !== 'delivered')
-          ? `<button class="delivery-unassign" data-id="${o.id}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
+          ? `<button class="delivery-unassign" data-id="${safeDeliveryId}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
           : '';
-        const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${o.id}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
-        const viewBtn = `<button class="delivery-view" data-id="${o.id}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
+        const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${safeDeliveryId}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
+        const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
 
         card.innerHTML = `
           <div class="card-content">
-            <div class="title">Pedido #${displayOrderNumber(o)} <span class="pill" style="margin-left:6px;">${dStatusLabel}</span>${kStatusPill}${stopPill}</div>
+            <div class="title">Pedido #${safeOrderNumber} <span class="pill" style="margin-left:6px;">${safeDeliveryStatus}</span>${kStatusPill}${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
-            <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${addrOneLine.slice(0,120) || '-'}</span></div>
-            <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href="${waUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
-            <div class="meta">${metaBits || ''}</div>
+            <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${safeAddrOneLine}</span></div>
+            <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href="${safeWaUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
+            <div class="meta">${safeMetaBits}</div>
           </div>
           <div class="actions" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
             ${assignBtn}
@@ -5515,19 +5574,24 @@
           `;
         }).join('') : `<div class="small" style="color:#666;">Sin items</div>`;
         const orderNotes = orderDetail && orderDetail.order_notes ? String(orderDetail.order_notes) : '';
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safeStatusLabel = escapeAdminHtml(statusLabelText);
+        const safeOrderNotes = orderNotes ? escapeAdminHtml(orderNotes) : '';
         card.innerHTML = `
           <div class="k-head">
             <div>
-              <div class="k-title">Pedido #${displayOrderNumber(o)}${newBadge}</div>
-              <div class="k-meta">${formatARDate(o.created_at || '')} · ${o.order_type}</div>
-              <div class="k-dest">Destino: ${(isMesa || isEspera) ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</div>
+              <div class="k-title">Pedido #${safeOrderNumber}${newBadge}</div>
+              <div class="k-meta">${formatARDate(o.created_at || '')} · ${safeOrderType}</div>
+              <div class="k-dest">Destino: ${(isMesa || isEspera) ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</div>
             </div>
             <div style="display:flex; align-items:center; gap:8px;">
-              <span class="status-badge ${statusClass}">${statusLabelText}</span>
+              <span class="status-badge ${statusClass}">${safeStatusLabel}</span>
               ${renderSLA(o)}
             </div>
           </div>
-          ${orderNotes ? `<div class="small" style="color:#374151;"><span style="font-weight:700;">Detalle:</span> ${orderNotes}</div>` : ''}
+          ${orderNotes ? `<div class="small" style="color:#374151;"><span style="font-weight:700;">Detalle:</span> ${safeOrderNotes}</div>` : ''}
           <div class="kitchen-items">${itemsHtml}</div>
           <div class="k-actions">
             ${prepBtn}
@@ -5602,20 +5666,27 @@
         const statusClass = statusClasses[o.status] || 'status-entregado';
         const baseTotal = Number(o.total || 0);
         const totalWithTip = baseTotal + (Number(o.tip_amount) || 0);
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safePhoneAttr = escapeAdminAttr(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeStatusText = escapeAdminHtml(o.status);
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class="pill">${o.order_type}</span></td>
-          <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
+          <td><span class="pill">${safeOrderType}</span></td>
+          <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</td>
           <td>
             <div class="phone-row">
-              ${phoneRaw ? `<span class="small">${phoneRaw}</span>` : '<span class="small">-</span>'}
-              ${phoneDigits ? `<button class="copy-phone phone-action" data-phone="${phoneRaw}" aria-label="Copiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm4 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h12v14z"/></svg></button>` : ''}
-              ${waUrl ? `<a class="phone-action" href="${waUrl}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.5 3 3.9 5.4 6.9 6.9l2.3-2.3c.3-.3.8-.4 1.2-.2 1 .4 2 .6 3.1.6.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.3-1.3 1.3C9.7 22 2 14.3 2 4.3 2 3.6 2.6 3 3.3 3h3.6c.7 0 1.3.6 1.3 1.3 0 1.1.2 2.1.6 3.1.1.4 0 .9-.3 1.2l-2.9 2.2z"/></svg></a>` : ''}
+              ${phoneRaw ? `<span class="small">${safePhoneText}</span>` : '<span class="small">-</span>'}
+              ${phoneDigits ? `<button class="copy-phone phone-action" data-phone="${safePhoneAttr}" aria-label="Copiar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 1H4a2 2 0 0 0-2 2v12h2V3h12V1zm4 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h12v14z"/></svg></button>` : ''}
+              ${safeWaUrl ? `<a class="phone-action" href="${safeWaUrl}" target="_blank" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8c1.5 3 3.9 5.4 6.9 6.9l2.3-2.3c.3-.3.8-.4 1.2-.2 1 .4 2 .6 3.1.6.7 0 1.3.6 1.3 1.3v3.6c0 .7-.6 1.3-1.3 1.3C9.7 22 2 14.3 2 4.3 2 3.6 2.6 3 3.3 3h3.6c.7 0 1.3.6 1.3 1.3 0 1.1.2 2.1.6 3.1.1.4 0 .9-.3 1.2l-2.9 2.2z"/></svg></a>` : ''}
             </div>
           </td>
           <td>${formatMoney(totalWithTip)}</td>
-          <td><span class="status-badge ${statusClass}">${o.status}</span></td>
+          <td><span class="status-badge ${statusClass}">${safeStatusText}</span></td>
           <td class="actions">
             <button class="ver-detalle">Ver</button>
             ${canArchive ? '<button class="archivar">Archivar</button>' : ''}
@@ -5748,13 +5819,17 @@
         const tr = document.createElement('tr');
         const destLabel = destinoLabelFor(o);
         const statusClass = statusClasses[o.status] || 'status-cancelado';
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safeStatus = escapeAdminHtml(o.status);
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class="pill">${o.order_type}</span></td>
-          <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${destLabel}</span>` : destLabel}</td>
+          <td><span class="pill">${safeOrderType}</span></td>
+          <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</td>
           <td>$${o.total}</td>
-          <td><span class="status-badge ${statusClass}">${o.status}</span></td>
+          <td><span class="status-badge ${statusClass}">${safeStatus}</span></td>
           <td class="actions">
             <button class="ver-detalle">Ver</button>
             <button class="archivar">Archivar</button>
@@ -5779,20 +5854,25 @@
             }
           } catch(_) { destTextC = String(o.address_json || '').trim(); }
           const destLabel = destinoLabelFor(o);
+          const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+          const safeOrderType = escapeAdminHtml(o.order_type);
+          const safeDestLabel = escapeAdminHtml(destLabel);
+          const safeStatus = escapeAdminHtml(o.status);
+          const safeOrderId = safeAdminInt(o.id);
           card.className = 'card';
           card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${displayOrderNumber(o)}</div>
-              <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
-              <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
+              <div class="title">Pedido #${safeOrderNumber}</div>
+              <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+              <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
               <div class="grid">
                 <div>Total: $${o.total}</div>
               </div>
             </div>
-            <div class="state-line"><span class="status-badge ${statusClass}">${o.status}</span></div>
+            <div class="state-line"><span class="status-badge ${statusClass}">${safeStatus}</span></div>
             <div class="actions">
-              <button class="ver-detalle" data-id="${o.id}">Ver</button>
-              <button class="archivar" data-id="${o.id}">Archivar</button>
+              <button class="ver-detalle" data-id="${safeOrderId}">Ver</button>
+              <button class="archivar" data-id="${safeOrderId}">Archivar</button>
             </div>
           `;
           fragCards.appendChild(card);
@@ -5873,10 +5953,12 @@
       }
       for (const p of items) {
         const tr = document.createElement('tr');
+        const safeProductName = escapeAdminHtml(p.name);
+        const safeDetails = escapeAdminHtml(p.details || '-');
         tr.innerHTML = `
           <td>${p.id}</td>
-          <td>${p.name}</td>
-          <td><div class="small" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${p.details || '-'}</div></td>
+          <td>${safeProductName}</td>
+          <td><div class="small" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeDetails}</div></td>
           <td>$${p.price}</td>
           <td>${p.stock}</td>
           <td>${p.active ? '<span class="status-badge status-listo">Activo</span>' : '<span class="status-badge status-pendiente">Inactivo</span>'}</td>
@@ -5925,7 +6007,10 @@
                 if (!confirm(`¿Estás seguro de eliminar el producto "${p.name}"?`)) return;
                 try {
                     const slug = tenantInput.value.trim() || defaultSlug();
-                    const resp = await wFetch(`/api/products/${p.id}?tenant_slug=${slug}`, { method: 'DELETE' });
+                    const resp = await wFetch(`/api/products/${p.id}?tenant_slug=${slug}`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRF-Token': csrfToken || '' }
+                    });
                     if (resp.ok) {
                         await renderInventory();
                     } else {
@@ -5956,8 +6041,12 @@
             if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
             if (!confirm(`¿Estás seguro de eliminar el producto "${p.name}"?`)) return;
             try {
+                if (!csrfToken) await fetchCSRF();
                 const slug = tenantInput.value.trim() || defaultSlug();
-                const resp = await wFetch(`/api/products/${p.id}?tenant_slug=${slug}`, { method: 'DELETE' });
+                const resp = await wFetch(`/api/products/${p.id}?tenant_slug=${slug}`, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRF-Token': csrfToken || '' }
+                });
                 if (resp.ok) {
                     await renderInventory();
                 } else {
@@ -6050,20 +6139,27 @@
         const phoneDigits = phoneRaw.replace(/\D+/g, '');
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDest = escapeAdminHtml(dest);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safePhoneAttr = escapeAdminAttr(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class=\"pill\">${o.order_type}</span></td>
-          <td>${dest}</td>
+          <td><span class=\"pill\">${safeOrderType}</span></td>
+          <td>${safeDest}</td>
           <td>
-            ${phoneRaw ? `<span class=\"small\">${phoneRaw}</span>` : '<span class=\"small\">-</span>'}
-            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${phoneRaw}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
-            ${waUrl ? `<a class=\"small\" href=\"${waUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
+            ${phoneRaw ? `<span class=\"small\">${safePhoneText}</span>` : '<span class=\"small\">-</span>'}
+            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
+            ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge ${statusClasses['entregado']}\">entregado</span>
-            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${(o.last_status||'').trim()||'-'} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
+            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${safeLastStatus} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
             <button class=\"view-detail small\" style=\"margin-left:8px;\">Ver</button>
           </td>
         `;
@@ -6073,14 +6169,14 @@
           card.className = 'card';
           card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${displayOrderNumber(o)}</div>
-              <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
-              <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${dest}</span>`:dest}</div>
-              <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
+              <div class="title">Pedido #${safeOrderNumber}</div>
+              <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+              <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDest}</span>`:safeDest}</div>
+              <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid"><div>Total: $${o.total}</div></div>
             </div>
             <div class="state-line"><span class="status-badge ${statusClasses['entregado']}">entregado</span></div>
-            <div class="actions"><button class="view-detail" data-id="${o.id}">Ver</button></div>
+            <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
           `;
           mDel.appendChild(card);
           const viewBtnCard = card.querySelector('.view-detail');
@@ -6111,20 +6207,27 @@
         const phoneDigits = phoneRaw.replace(/\D+/g, '');
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safePhoneAttr = escapeAdminAttr(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class=\"pill\">${o.order_type}</span></td>
-          <td>${destLabel}</td>
+          <td><span class=\"pill\">${safeOrderType}</span></td>
+          <td>${safeDestLabel}</td>
           <td>
-            ${phoneRaw ? `<span class=\"small\">${phoneRaw}</span>` : '<span class=\"small\">-</span>'}
-            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${phoneRaw}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
-            ${waUrl ? `<a class=\"small\" href=\"${waUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
+            ${phoneRaw ? `<span class=\"small\">${safePhoneText}</span>` : '<span class=\"small\">-</span>'}
+            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
+            ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge ${statusClasses['cancelado']}\">cancelado</span>
-            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${(o.last_status||'').trim()||'-'} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
+            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${safeLastStatus} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
             <button class=\"view-detail small\" style=\"margin-left:8px;\">Ver</button>
           </td>
         `;
@@ -6133,12 +6236,12 @@
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <div class="title">Pedido #${displayOrderNumber(o)}</div>
-            <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
-            <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
-            <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
+            <div class="title">Pedido #${safeOrderNumber}</div>
+            <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+            <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+            <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
             <div class="grid"><div>Total: $${o.total}</div><div>Estado: cancelado</div></div>
-            <div class="actions"><button class="view-detail" data-id="${o.id}">Ver</button></div>
+            <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
           `;
           mCan.appendChild(card);
           const viewBtnCard2 = card.querySelector('.view-detail');
@@ -6163,20 +6266,27 @@
         const phoneDigits = phoneRaw.replace(/\D+/g, '');
         const waUrl = getWaLink(o, phoneDigits);
         const tr = document.createElement('tr');
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safePhoneAttr = escapeAdminAttr(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         tr.innerHTML = `
-          <td>${displayOrderNumber(o)}</td>
+          <td>${safeOrderNumber}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
-          <td><span class=\"pill\">${o.order_type}</span></td>
-          <td>${destLabel}</td>
+          <td><span class=\"pill\">${safeOrderType}</span></td>
+          <td>${safeDestLabel}</td>
           <td>
-            ${phoneRaw ? `<span class=\"small\">${phoneRaw}</span>` : '<span class=\"small\">-</span>'}
-            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${phoneRaw}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
-            ${waUrl ? `<a class=\"small\" href=\"${waUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
+            ${phoneRaw ? `<span class=\"small\">${safePhoneText}</span>` : '<span class=\"small\">-</span>'}
+            ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
+            ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge\" style=\"background:#607d8b;color:#fff;\">limpiado</span>
-            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${(o.last_status||'').trim()||'-'} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
+            <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${safeLastStatus} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
             <button class=\"view-detail small\" style=\"margin-left:8px;\">Ver</button>
           </td>
         `;
@@ -6185,12 +6295,12 @@
           const card = document.createElement('div');
           card.className = 'card';
           card.innerHTML = `
-            <div class="title">Pedido #${displayOrderNumber(o)}</div>
-            <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
-            <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
-            <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
+            <div class="title">Pedido #${safeOrderNumber}</div>
+            <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+            <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+            <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
             <div class="grid"><div>Total: $${o.total}</div><div>Estado: limpiado</div></div>
-            <div class="actions"><button class="view-detail" data-id="${o.id}">Ver</button></div>
+            <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
           `;
           mReset.appendChild(card);
           const viewBtnCard3 = card.querySelector('.view-detail');
@@ -6532,11 +6642,14 @@
       currentCarouselSlides.forEach(slide => {
         // Table Row
         const tr = document.createElement('tr');
+        const safeSlideUrl = escapeAdminAttr(slide.image_url);
+        const safeSlideTitle = escapeAdminHtml(slide.title || '');
+        const safeSlideText = escapeAdminHtml((slide.text || '').slice(0, 50));
         tr.innerHTML = `
           <td>${slide.id}</td>
-          <td><img src="${slide.image_url}" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
-          <td>${slide.title || ''}</td>
-          <td>${(slide.text || '').slice(0, 50)}...</td>
+          <td><img src="${safeSlideUrl}" style="width:60px; height:40px; object-fit:cover; border-radius:4px;"></td>
+          <td>${safeSlideTitle}</td>
+          <td>${safeSlideText}...</td>
           <td>${slide.position}</td>
           <td>
             <div class="actions">
@@ -6551,12 +6664,15 @@
         if (carouselMobile) {
           const card = document.createElement('div');
           card.className = 'card';
+          const safeSlideUrl = escapeAdminAttr(slide.image_url);
+          const safeSlideTitle = escapeAdminHtml(slide.title || '(Sin título)');
+          const safeSlideText = escapeAdminHtml(slide.text || '');
           card.innerHTML = `
             <div class="card-content">
-               <img src="${slide.image_url}" style="width:100%; height:120px; object-fit:cover; border-radius:4px; margin-bottom:8px;">
-               <div class="title">${slide.title || '(Sin título)'}</div>
+               <img src="${safeSlideUrl}" style="width:100%; height:120px; object-fit:cover; border-radius:4px; margin-bottom:8px;">
+               <div class="title">${safeSlideTitle}</div>
                <div class="meta">Pos: ${slide.position}</div>
-               <p class="small">${slide.text || ''}</p>
+               <p class="small">${safeSlideText}</p>
             </div>
             <div class="actions">
               <button class="edit-slide" data-id="${slide.id}" style="background:#2196F3;">Editar</button>
@@ -7137,7 +7253,7 @@
         if (data && data.authenticated) {
           updateServiceBanner(String(data.tenant_status || ''), String(data.tenant_message || ''));
           if (data.suspended) {
-            try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST' }); } catch (_) {}
+            try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
             isAuthed = false;
             currentUserName = '';
             currentTenantSlug = '';
@@ -7218,7 +7334,7 @@
         const url = new URL(href);
         const forceLogout = url.searchParams.get('logout') || url.searchParams.get('forceLogin');
         if (forceLogout) {
-          try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST' }); } catch (_) {}
+          try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
           isAuthed = false;
           csrfToken = '';
           const box = document.getElementById('login-box');
@@ -7289,13 +7405,13 @@
         if (remEl && remEl.checked) {
           try {
             localStorage.setItem(LOGIN_KEY_USER, u);
-            localStorage.setItem(LOGIN_KEY_PASS, p);
             localStorage.setItem(LOGIN_KEY_REM, '1');
+            localStorage.removeItem('kds_login_pass');
           } catch (_) {}
         } else {
           try {
-            localStorage.removeItem(LOGIN_KEY_PASS);
             localStorage.removeItem(LOGIN_KEY_USER);
+            localStorage.removeItem('kds_login_pass');
             localStorage.setItem(LOGIN_KEY_REM, '0');
           } catch (_) {}
         }
@@ -7323,7 +7439,7 @@
 
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
-        try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST' }); } catch (_) {}
+        try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
         isAuthed = false;
         csrfToken = '';
         updateServiceBanner('', '');
@@ -9404,6 +9520,7 @@
       html += '<div id="cash-history-body"><table class="history-table"><thead><tr><th>Apertura</th><th>Cierre</th><th>Inicial</th><th>Contado</th><th>Ventas</th><th>Entradas</th><th>Salidas</th><th>Teórica</th><th>Diferencia</th><th>Cerró</th><th>Acciones</th></tr></thead><tbody id="history-latest-body">';
       for (const s of latestRows) {
         const sum = s.summary || {};
+        const safeClosedBy = escapeAdminHtml(s.closed_by || '');
         html += `<tr>
           <td>${formatARDate(s.opened_at||'')}</td>
           <td>${formatARDate(s.closed_at||'')}</td>
@@ -9414,7 +9531,7 @@
           <td>$${sum.salidas||0}</td>
           <td>$${sum.theoretical_cash||0}</td>
           <td>$${sum.closing_diff||0}</td>
-          <td>${s.closed_by||''}</td>
+          <td>${safeClosedBy}</td>
           <td>
             <button class="hist-view" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">
               Ver
@@ -9729,7 +9846,7 @@
                 </table>
               </div>
               <div class="section"><strong>Pedidos entregados</strong><table><thead><tr><th>ID</th><th>Creado</th><th style="text-align:right;">Total</th></tr></thead><tbody>
-              ${orders.map(r => `<tr><td>${r.id}</td><td>${formatARDate(r.created_at||'')}</td><td style="text-align:right;">${fmt(r.total||0)}</td></tr>`).join('')}
+              ${orders.map(r => `<tr><td>${escapeAdminHtml(r.id)}</td><td>${formatARDate(r.created_at||'')}</td><td style="text-align:right;">${fmt(r.total||0)}</td></tr>`).join('')}
               </tbody></table></div>
               <div class="section"><strong>Ingresos y salidas de dinero</strong>
               <table><thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right;">Monto</th><th>Nota</th><th>Actor</th></tr></thead><tbody>
@@ -9738,7 +9855,7 @@
                 const label = isIn ? 'Ingreso' : 'Salida';
                 const sign = isIn ? '+' : '-';
                 const amt = Number(m.amount||0);
-                return `<tr><td>${formatARDate(m.created_at||'')}</td><td>${label}</td><td style="text-align:right;">${sign}${fmt(amt).replace('$','')}</td><td>${m.note||''}</td><td>${m.actor||''}</td></tr>`;
+                return `<tr><td>${formatARDate(m.created_at||'')}</td><td>${label}</td><td style="text-align:right;">${sign}${fmt(amt).replace('$','')}</td><td>${escapeAdminHtml(m.note||'')}</td><td>${escapeAdminHtml(m.actor||'')}</td></tr>`;
               }).join('')}
               </tbody></table></div>
 
@@ -10276,7 +10393,7 @@
         const r = await wFetch(url.toString());
         const j = await r.json().catch(()=>({}));
         if (!r.ok){
-          tbody.innerHTML = `<tr><td colspan="4" class="small" style="color:#c62828;">${String(j.error||'No se pudo cargar')}</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="4" class="small" style="color:#c62828;">${escapeAdminHtml(String(j.error||'No se pudo cargar'))}</td></tr>`;
           return;
         }
         try{
@@ -10310,10 +10427,13 @@
           const role = String(u.role||'admin').toLowerCase();
           const owner = !!u.is_owner;
           const ownerDisabled = (!isOwnerUser) || (String(role).toLowerCase() !== 'admin') || (!owner && USERS_OWNERS_COUNT >= 2);
+          const safeUser = escapeAdminHtml(uname);
+          const safeUserAttr = escapeAdminAttr(uname);
+          const safeRoleAttr = escapeAdminAttr(role);
           tr.innerHTML = `
-            <td>${uname}</td>
+            <td>${safeUser}</td>
             <td>
-              <select class="u-role" data-user="${uname}" style="height:32px; padding:0 10px;">
+              <select class="u-role" data-user="${safeUserAttr}" style="height:32px; padding:0 10px;">
                 <option value="mozo" ${role==='mozo'?'selected':''}>Mozo</option>
                 <option value="cocina" ${role==='cocina'?'selected':''}>Cocina</option>
                 <option value="caja" ${role==='caja'?'selected':''}>Caja</option>
@@ -10322,12 +10442,12 @@
               </select>
             </td>
             <td>
-              <input type="checkbox" class="u-owner" data-user="${uname}" data-role="${role}" ${owner?'checked':''} ${ownerDisabled?'disabled':''} />
+              <input type="checkbox" class="u-owner" data-user="${safeUserAttr}" data-role="${safeRoleAttr}" ${owner?'checked':''} ${ownerDisabled?'disabled':''} />
             </td>
             <td style="display:flex; gap:8px; flex-wrap:wrap;">
-              <button class="u-pass" data-user="${uname}" style="height:30px;">Clave</button>
-              <button class="u-rename" data-user="${uname}" style="height:30px;">Renombrar</button>
-              <button class="u-perms" data-user="${uname}" data-perms="${encodeURIComponent(String(u.permissions_json||''))}" style="height:30px;">Permisos</button>
+              <button class="u-pass" data-user="${safeUserAttr}" style="height:30px;">Clave</button>
+              <button class="u-rename" data-user="${safeUserAttr}" style="height:30px;">Renombrar</button>
+              <button class="u-perms" data-user="${safeUserAttr}" data-perms="${encodeURIComponent(String(u.permissions_json||''))}" style="height:30px;">Permisos</button>
             </td>
           `;
           tbody.appendChild(tr);
@@ -12122,10 +12242,11 @@
             itemsHtml += '<tr style="border-bottom:1px solid #000;"><th>Cant</th><th style="text-align:left;">Desc</th><th style="text-align:right;">Tot</th></tr>';
             
             items.forEach(item => {
+                const safeItemName = escapeAdminHtml(item.name);
                 itemsHtml += `
                     <tr>
                         <td style="text-align:center;">${item.qty}</td>
-                        <td>${item.name}</td>
+                        <td>${safeItemName}</td>
                         <td style="text-align:right;">$${item.qty * item.unit_price}</td>
                     </tr>
                 `;
@@ -12456,15 +12577,26 @@
          const card = document.createElement('div');
          card.className = 'card';
          
-         const itemsHtml = (detail.items || []).map(it => 
-             `<div class="small" style="display:flex; justify-content:space-between;"><span>${it.qty} x ${it.name}</span><span>$${it.qty*it.unit_price}</span></div>`
-         ).join('');
+        const itemsHtml = (detail.items || []).map(it => {
+            const qty = Number(it.qty || 0);
+            const unitPrice = Number(it.unit_price || 0);
+            return `<div class="small" style="display:flex; justify-content:space-between;"><span>${qty} x ${escapeAdminHtml(it.name)}</span><span>$${qty * unitPrice}</span></div>`;
+        }).join('');
+        const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
+        const safeDestLabel = escapeAdminHtml(destLabel);
+        const safeOrderType = escapeAdminHtml(o.order_type);
+        const safePhoneText = escapeAdminHtml(phoneRaw);
+        const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const safeStatusLabel = escapeAdminHtml(statusLabelText);
+        const safeEditOrderId = safeAdminInt(o.id);
+        const safeEditTableArg = escapeAdminAttr(JSON.stringify(String(o.table_number || '')));
+        const safeEditItemsArg = escapeAdminAttr(JSON.stringify(detail.items || []));
 
          card.innerHTML = `
             <div class="card-content">
-              <div class="title">Pedido #${displayOrderNumber(o)} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
-              <div class="meta">${new Date(o.created_at).toLocaleString()} · ${o.order_type}</div>
-              <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
+              <div class="title">Pedido #${safeOrderNumber} · Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+              <div class="meta">${new Date(o.created_at).toLocaleString()} · ${safeOrderType}</div>
+              <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">
                 <div>Total: $${o.total}</div>
                 ${(isDireccion && o.shipping_cost) ? `<div class="total-tip" style="color:#666;">Envío: ${o.shipping_cost}</div>` : ''}
@@ -12473,18 +12605,18 @@
                   ${itemsHtml}
               </div>
             </div>
-            <div class="state-line"><span class="status-badge ${statusClass}">${statusLabelText}</span>${(typeof renderSLA === 'function')?renderSLA(o):''}</div>
+            <div class="state-line"><span class="status-badge ${statusClass}">${safeStatusLabel}</span>${(typeof renderSLA === 'function')?renderSLA(o):''}</div>
             <div class="actions">
               <div class="status-quick">
                 ${prepBtn}
                 ${listoBtn}
                 ${enCaminoBtn}
                 ${entregadoBtn}
-                <button class="status-action" onclick="EditOrder.open({id:${o.id}, table_number:'${o.table_number||''}'}, ${JSON.stringify(detail.items || []).replace(/"/g, '&quot;')})" style="background:#f3f4f6; color:#374151; width:auto; padding:0 10px;" title="Editar Items"><svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+                <button class="status-action" onclick="EditOrder.open({id:${safeEditOrderId}, table_number:${safeEditTableArg}}, ${safeEditItemsArg})" style="background:#f3f4f6; color:#374151; width:auto; padding:0 10px;" title="Editar Items"><svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
                 <button class="status-action cancelado" data-status="cancelado" aria-label="Cancelado" data-tip="Cancelado">X</button>
               </div>
               <div class="print-actions" style="margin-top: 10px; border-top: 1px dashed #eee; padding-top: 10px;">
-                <button class="status-action" onclick="window.showPrintOptions(${o.id})" style="width: 100%; padding: 10px; background: #607d8b; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;" title="Imprimir">
+                <button class="status-action" onclick="window.showPrintOptions(${safeEditOrderId})" style="width: 100%; padding: 10px; background: #607d8b; color: white; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;" title="Imprimir">
                     <svg style="width:18px;height:18px;margin-right:6px;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg>
                     Imprimir
                 </button>
@@ -13373,6 +13505,7 @@ window.EditOrder = {
         this.saveBtn.disabled = true;
         
         try {
+            if (!csrfToken) await fetchCSRF();
             const payload = {
                 items: this.items,
                 order_notes: this.notesEl ? this.notesEl.value : ''
@@ -13380,7 +13513,7 @@ window.EditOrder = {
 
             const resp = await wFetch('/api/orders/' + this.currentOrder.id, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
                 body: JSON.stringify(payload)
             });
             
@@ -13573,8 +13706,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (statusEl) statusEl.textContent = 'Subiendo imagen...';
       
       try {
+        if (!csrfToken) await fetchCSRF();
         const resp = await fetch('/api/upload', {
           method: 'POST',
+          headers: { 'X-CSRF-Token': csrfToken || '' },
           body: formData
         });
         if (resp.ok) {
@@ -13652,9 +13787,10 @@ document.addEventListener('DOMContentLoaded', () => {
       doCreateBtn.textContent = 'Guardando...';
       
       try {
+        if (!csrfToken) await fetchCSRF();
         const resp = await fetch('/api/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
           body: JSON.stringify(payload)
         });
         
