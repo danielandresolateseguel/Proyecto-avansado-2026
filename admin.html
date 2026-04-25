@@ -8138,6 +8138,13 @@
       const value = Number(n || 0);
       return `${Number.isInteger(value) ? value : value.toFixed(1)}%`;
     }
+    function formatAnalyticsNumber(n, maxFractionDigits = 1) {
+      const value = Number(n || 0);
+      return new Intl.NumberFormat('es-AR', {
+        minimumFractionDigits: Number.isInteger(value) ? 0 : Math.min(1, maxFractionDigits),
+        maximumFractionDigits: maxFractionDigits,
+      }).format(value);
+    }
     function toInputDateValue(date) {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -8269,6 +8276,10 @@
           analyticsRangeLabelEl.innerHTML = `<span class="analytics-badge">${analyticsEscapeHtml(formatARDateShort(range.from_local || range.from || analyticsFromInput.value || ''))} al ${analyticsEscapeHtml(formatARDateShort(range.to_local || range.to || analyticsToInput.value || ''))}</span>`;
         }
         if (analyticsSummaryEl) {
+          const extrasTotal = Number(summary.extras_total || ((summary.tips_total || 0) + (summary.shipping_total || 0)));
+          const extrasSharePercent = summary.extras_share_percent == null
+            ? (Number(summary.net_sales || 0) > 0 ? (extrasTotal / Number(summary.net_sales || 0)) * 100 : 0)
+            : Number(summary.extras_share_percent || 0);
           analyticsSummaryEl.innerHTML = `
             <div class="analytics-card accent-sales">
               <div class="label">Ventas Netas</div>
@@ -8288,12 +8299,12 @@
             <div class="analytics-card accent-volume">
               <div class="label">Volumen</div>
               <div class="value">${Number(summary.items_sold_total || 0)}</div>
-              <div class="sub">Promedio por pedido: ${Number(summary.avg_items_per_order || 0)} ítems · Día pico: ${analyticsEscapeHtml(leaders.top_day || 'Sin datos')}</div>
+              <div class="sub">Promedio por pedido: ${formatAnalyticsNumber(summary.avg_items_per_order || 0)} ítems · Día pico: ${analyticsEscapeHtml(leaders.top_day || 'Sin datos')}</div>
             </div>
             <div class="analytics-card accent-extra">
               <div class="label">Propinas y Envíos</div>
-              <div class="value">${formatMoney((summary.tips_total || 0) + (summary.shipping_total || 0))}</div>
-              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Top: ${analyticsEscapeHtml(leaders.top_product || 'Sin datos')}</div>
+              <div class="value">${formatMoney(extrasTotal)}</div>
+              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Peso: ${formatPercent(extrasSharePercent)}</div>
             </div>
           `;
         }
@@ -8303,7 +8314,7 @@
           const deltaTicket = Number(comparison.delta_avg_ticket || 0);
           const previousNetSales = Number(comparison.previous_net_sales || 0);
           const previousDeliveredOrders = Number(comparison.previous_delivered_orders || 0);
-          const previousAvgTicket = Number(comparison.previous_avg_ticket || 0);
+          const previousAvgTicket = Number(comparison.previous_average_ticket || comparison.previous_avg_ticket || 0);
           const currentNetSales = Number(summary.net_sales || 0);
           const currentDeliveredOrders = Number(summary.delivered_orders || 0);
           const currentAvgTicket = Number(summary.average_ticket || 0);

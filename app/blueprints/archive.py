@@ -86,6 +86,12 @@ def _money(value):
     except Exception:
         return 0
 
+def _round_metric(value, digits=1):
+    try:
+        return round(float(value or 0), digits)
+    except Exception:
+        return 0.0
+
 def _resolve_sales_range(from_raw, to_raw):
     now_dt = datetime.utcnow().replace(microsecond=0)
     now_local = _utc_naive_to_local(now_dt)
@@ -159,11 +165,11 @@ def _delta_percent(current, previous):
     try:
         current_val = float(current or 0)
         previous_val = float(previous or 0)
-        if previous_val == 0:
-            return 100.0 if current_val > 0 else 0.0
+        if previous_val <= 0:
+            return None if current_val > 0 else 0.0
         return round(((current_val - previous_val) / previous_val) * 100.0, 2)
     except Exception:
-        return 0.0
+        return None
 
 @bp.route('/archive', methods=['GET'])
 def get_archive():
@@ -853,33 +859,35 @@ def sales_analytics():
             ) h ON h.order_id = o.id
             WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ?
             GROUP BY COALESCE(NULLIF(TRIM(oi.name), ''), '(Sin nombre)')
-            ORDER BY revenue_total DESC, qty_total DESC, product_name ASC
-            LIMIT 10
             """,
             (tenant_slug, from_iso, to_iso),
         )
-        top_products = []
-        top_products_by_qty = []
+        product_totals = []
         total_items_sold = 0
         for row in cur.fetchall():
             revenue = _money(row[2])
             qty_total = _money(row[1])
             total_items_sold += qty_total
-            top_products.append({
+            product_totals.append({
                 'name': str(row[0] or '(Sin nombre)'),
                 'qty': qty_total,
                 'revenue': revenue,
-                'share_percent': _percent(revenue, current_net_sales),
             })
-            top_products_by_qty.append({
-                'name': str(row[0] or '(Sin nombre)'),
-                'qty': qty_total,
-                'revenue': revenue,
-                'share_percent': 0.0,
-            })
-        top_products_by_qty = sorted(top_products_by_qty, key=lambda item: (-item['qty'], -item['revenue'], item['name']))[:10]
-        for item in top_products_by_qty:
-            item['share_percent'] = _percent(item['qty'], total_items_sold)
+
+        top_products = [
+            {
+                **item,
+                'share_percent': _percent(item['revenue'], current_net_sales),
+            }
+            for item in sorted(product_totals, key=lambda item: (-item['revenue'], -item['qty'], item['name']))[:10]
+        ]
+        top_products_by_qty = [
+            {
+                **item,
+                'share_percent': _percent(item['qty'], total_items_sold),
+            }
+            for item in sorted(product_totals, key=lambda item: (-item['qty'], -item['revenue'], item['name']))[:10]
+        ]
 
         current_from_local = _utc_naive_to_local(from_dt)
         current_to_local = _utc_naive_to_local(to_dt)
@@ -887,8 +895,10 @@ def sales_analytics():
         prev_to_local = _utc_naive_to_local(prev_to_dt)
         top_hour = max(by_hour_list, key=lambda item: (item.get('total', 0), item.get('count', 0), -item.get('hour', 0))) if by_hour_list else None
         top_day = max(by_day_list, key=lambda item: (item.get('total', 0), item.get('count', 0), item.get('date', ''))) if by_day_list else None
-        avg_items_per_order = _money(total_items_sold / current_delivered_count) if current_delivered_count else 0
+        avg_items_per_order = _round_metric(total_items_sold / current_delivered_count, 1) if current_delivered_count else 0.0
         previous_avg_ticket = _money(prev_summary['delivered_total'] / prev_summary['delivered_count']) if prev_summary['delivered_count'] else 0
+        extras_total = current_tip_total + current_shipping_total
+        extras_share_percent = _percent(extras_total, current_net_sales)
 
         response = jsonify({
             'range': {
@@ -906,6 +916,8 @@ def sales_analytics():
                 'cancellation_rate': cancellation_rate,
                 'tips_total': current_tip_total,
                 'shipping_total': current_shipping_total,
+                'extras_total': extras_total,
+                'extras_share_percent': extras_share_percent,
                 'items_sold_total': total_items_sold,
                 'avg_items_per_order': avg_items_per_order,
             },
@@ -918,6 +930,10 @@ def sales_analytics():
                 'previous_delivered_orders': prev_summary['delivered_count'],
                 'previous_canceled_orders': prev_summary['canceled_count'],
                 'previous_average_ticket': previous_avg_ticket,
+                'previous_avg_ticket': previous_avg_ticket,
+                'has_previous_sales_base': prev_summary['delivered_total'] > 0,
+                'has_previous_orders_base': prev_summary['delivered_count'] > 0,
+                'has_previous_ticket_base': previous_avg_ticket > 0,
                 'delta_amount': current_net_sales - prev_summary['delivered_total'],
                 'delta_percent': _delta_percent(current_net_sales, prev_summary['delivered_total']),
                 'delta_orders': current_delivered_count - prev_summary['delivered_count'],
@@ -946,5 +962,4 @@ def sales_analytics():
     except Exception as exc:
         print(f"Error in sales_analytics: {exc}")
         return jsonify({'error': 'analytics unavailable'}), 500
-
 
