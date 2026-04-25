@@ -195,6 +195,13 @@ def get_tenant_header():
             return jsonify({'error': 'no autorizado'}), 401
         if not check_csrf():
             return jsonify({'error': 'csrf inválido'}), 403
+        session_tenant = str(session.get('tenant_slug') or '').strip()
+        role = str(session.get('admin_role') or '').strip().lower()
+        owner = bool(session.get('admin_owner'))
+        if session_tenant and slug and session_tenant != slug:
+            return jsonify({'error': 'tenant inválido'}), 403
+        if not (owner or role == 'admin'):
+            return jsonify({'error': 'no autorizado'}), 403
             
         payload = request.get_json(silent=True) or {}
         
