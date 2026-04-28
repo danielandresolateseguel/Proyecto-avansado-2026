@@ -38,6 +38,19 @@ def _can_manage_tenant_slug(slug, require_owner_or_admin=True):
         return owner or role == 'admin' or bool(perms)
     return owner or role == 'admin'
 
+def _can_view_tenant_slug(slug, required_perm=None):
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    role = str(session.get('admin_role') or '').strip().lower()
+    owner = bool(session.get('admin_owner'))
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    if session_tenant and slug and session_tenant != slug:
+        return False
+    if owner or role == 'admin':
+        return True
+    if required_perm:
+        return bool(perms.get(required_perm))
+    return bool(perms)
+
 def ensure_tenants_status_message_column(conn, cur):
     if is_postgres():
         try:
@@ -343,6 +356,12 @@ def get_tenant_header():
 def tenant_checkout():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
 
+    if request.method == 'GET':
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        if not _can_manage_tenant_slug(slug):
+            return jsonify({'error': 'no autorizado'}), 403
+
     if request.method == 'PATCH':
         if not is_authed():
             return jsonify({'error': 'no autorizado'}), 401
@@ -637,6 +656,10 @@ def create_demo_tenant():
 @bp.route('/tenant_tables', methods=['GET'])
 def get_tenant_tables():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not _can_view_tenant_slug(slug, required_perm='tables_manage'):
+        return jsonify({'error': 'no autorizado'}), 403
     j = get_cached_tenant_config(slug)
     tables = []
     if j:
@@ -702,6 +725,10 @@ def update_tenant_tables():
 @bp.route('/tenant_sla', methods=['GET'])
 def get_tenant_sla():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not _can_view_tenant_slug(slug, required_perm='reports_view'):
+        return jsonify({'error': 'no autorizado'}), 403
     
     # 1. Get Configured SLA
     j = get_cached_tenant_config(slug)
@@ -721,6 +748,10 @@ def get_tenant_sla():
 @bp.route('/tenant_prefs', methods=['GET'])
 def get_tenant_prefs():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not _can_manage_tenant_slug(slug):
+        return jsonify({'error': 'no autorizado'}), 403
     conn = get_db()
     cur = conn.cursor()
     cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
