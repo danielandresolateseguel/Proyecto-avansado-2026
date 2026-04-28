@@ -1,0 +1,26 @@
+* text=auto
+
+# Keep source files normalized with LF across environments.
+*.py text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+Procfile text eol=lf
+
+# Windows-specific scripts keep CRLF.
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Common binary assets should never be normalized.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.db binary
