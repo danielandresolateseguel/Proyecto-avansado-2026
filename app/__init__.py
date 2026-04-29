@@ -98,7 +98,7 @@ def create_app(test_config=None):
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
-        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=()')
+        response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)')
         response.headers.setdefault('Content-Security-Policy', "base-uri 'self'; frame-ancestors 'self'; object-src 'none'")
         if request.path.startswith('/api/auth/'):
             response.headers.setdefault('Cache-Control', 'no-store, max-age=0')
