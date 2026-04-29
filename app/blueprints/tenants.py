@@ -9,6 +9,26 @@ from werkzeug.security import generate_password_hash
 # Force reload check
 bp = Blueprint('tenants', __name__, url_prefix='/api')
 
+_SLUG_ALLOWED = set("abcdefghijklmnopqrstuvwxyz0123456789-_")
+
+def _norm_slug(v):
+    return str(v or '').strip().lower()
+
+def _is_valid_slug(v, max_len=64):
+    slug = _norm_slug(v)
+    if not slug or len(slug) > max_len:
+        return False
+    return all(ch in _SLUG_ALLOWED for ch in slug)
+
+def _bounded_int(value, default, min_value, max_value):
+    try:
+        n = int(value)
+    except Exception:
+        n = int(default)
+    if n < min_value or n > max_value:
+        raise ValueError()
+    return n
+
 def _parse_perms_json(s):
     if not s:
         return {}
@@ -464,15 +484,19 @@ def master_get_tenants():
         if not check_csrf():
             return jsonify({'error': 'csrf inválido'}), 403
         payload = request.get_json(silent=True) or {}
-        slug = str(payload.get('tenant_slug') or payload.get('slug') or '').strip().lower()
+        slug = _norm_slug(payload.get('tenant_slug') or payload.get('slug'))
         status = str(payload.get('status') or '').strip().lower()
         status_message = str(payload.get('status_message') or payload.get('message') or '').strip()
         plan = str(payload.get('plan') or '').strip().lower()
         max_users = payload.get('max_users')
         if not slug:
             return jsonify({'error': 'tenant_slug requerido'}), 400
+        if not _is_valid_slug(slug):
+            return jsonify({'error': 'tenant_slug inválido. Usa letras, números, - y _.'}), 400
         if status not in ('active', 'warning', 'suspended'):
             return jsonify({'error': 'estado inválido'}), 400
+        if len(status_message) > 300:
+            return jsonify({'error': 'mensaje demasiado largo'}), 400
         if plan and plan not in ('standard', 'pro'):
             return jsonify({'error': 'plan inválido'}), 400
         if max_users is not None:
@@ -561,7 +585,7 @@ def create_demo_tenant():
         return jsonify({'error': 'csrf inválido'}), 403
     
     payload = request.get_json(silent=True) or {}
-    slug = str(payload.get('tenant_slug') or payload.get('slug') or '').strip()
+    slug = _norm_slug(payload.get('tenant_slug') or payload.get('slug'))
     name = str(payload.get('name') or '').strip()
     contact_email = str(payload.get('contact_email') or '').strip() or None
     contact_phone = str(payload.get('contact_phone') or '').strip() or None
@@ -572,12 +596,31 @@ def create_demo_tenant():
         return jsonify({'error': 'tenant_slug requerido'}), 400
     if not admin_username or not admin_password:
         return jsonify({'error': 'usuario y clave requeridos'}), 400
-    slug = slug.lower()
-    allowed = "abcdefghijklmnopqrstuvwxyz0123456789-_"
-    if any(ch not in allowed for ch in slug):
+    if not _is_valid_slug(slug):
         return jsonify({'error': 'tenant_slug inválido. Usa letras, números, - y _.'}), 400
+    if len(name) > 120:
+        return jsonify({'error': 'nombre demasiado largo'}), 400
+    if contact_email and len(contact_email) > 160:
+        return jsonify({'error': 'email demasiado largo'}), 400
+    if contact_phone and len(contact_phone) > 40:
+        return jsonify({'error': 'teléfono demasiado largo'}), 400
+    if len(admin_username) > 64:
+        return jsonify({'error': 'usuario demasiado largo'}), 400
+    if len(admin_password) < 6 or len(admin_password) > 256:
+        return jsonify({'error': 'clave inválida'}), 400
     if not name:
         name = slug.replace('-', ' ').replace('_', ' ').title()
+    try:
+        shipping_cost = _bounded_int(payload.get('shipping_cost', 0), 0, 0, 1000000)
+        time_mesa = _bounded_int(payload.get('time_mesa', 0), 0, 0, 300)
+        time_espera = _bounded_int(payload.get('time_espera', 0), 0, 0, 300)
+        time_delivery = _bounded_int(payload.get('time_delivery', 0), 0, 0, 300)
+        warning_minutes = _bounded_int(payload.get('warning_minutes', 15), 15, 1, 240)
+        critical_minutes = _bounded_int(payload.get('critical_minutes', 30), 30, 2, 480)
+    except ValueError:
+        return jsonify({'error': 'valores numéricos inválidos'}), 400
+    if critical_minutes <= warning_minutes:
+        return jsonify({'error': 'sla inválido'}), 400
     
     now = datetime.utcnow().isoformat()
     conn = get_db()
@@ -597,14 +640,14 @@ def create_demo_tenant():
     )
     
     default_cfg = {
-        'shipping_cost': int(payload.get('shipping_cost') or 0),
-        'time_mesa': int(payload.get('time_mesa') or 0),
-        'time_espera': int(payload.get('time_espera') or 0),
-        'time_delivery': int(payload.get('time_delivery') or 0),
+        'shipping_cost': shipping_cost,
+        'time_mesa': time_mesa,
+        'time_espera': time_espera,
+        'time_delivery': time_delivery,
         'time_auto': bool(payload.get('time_auto') or False),
         'sla': {
-            'warning_minutes': int(payload.get('warning_minutes') or 15),
-            'critical_minutes': int(payload.get('critical_minutes') or 30)
+            'warning_minutes': warning_minutes,
+            'critical_minutes': critical_minutes
         }
     }
     cur.execute(
