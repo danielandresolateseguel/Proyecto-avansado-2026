@@ -5152,6 +5152,8 @@
         const safeDeliveryId = safeAdminInt(o.id);
         const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
         const safeDeliveryStatus = escapeAdminHtml(dStatusLabel);
+        const destOneLine = getOrderAddressOneLine(o);
+        const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim() || destOneLine;
         const safeAddrOneLine = escapeAdminHtml(addrOneLine.slice(0,120) || '-');
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
@@ -5179,8 +5181,6 @@
         const payBtn = isPaid
           ? `<button class="delivery-pay" data-id="${safeDeliveryId}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:4px 8px; border-radius:4px;">Pagado</button>`
           : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${safeDeliveryId}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
-        const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim();
-        const destOneLine = getOrderAddressOneLine(o);
         const mapBtn = destOneLine ? `<button class="delivery-map" data-id="${safeDeliveryId}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
         const unassignBtn = (role === 'repartidor' && _deliveryMine(o) && _effectiveDeliveryStatus(o) !== 'delivered')
           ? `<button class="delivery-unassign" data-id="${safeDeliveryId}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
