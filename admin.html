@@ -2865,7 +2865,7 @@
       setRoleVisibilityById('users-admin-open', !isKitchen && canUsers);
       setRoleVisibilityById('delivery-open', !isKitchen && canDelivery);
 
-      setRoleVisibilityById('orders-header-row', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
+      setRoleVisibilityById('orders-header-row', !isKitchen && !isRepartidor && ((!mozoTablesOnly && canOrdersView) || (mozoTablesOnly && canTables)));
       setRoleVisibilityById('orders-table', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       setRoleVisibilityById('orders-mobile', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       setRoleVisibilityById('orders-count', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
