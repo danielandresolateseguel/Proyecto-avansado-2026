@@ -7282,6 +7282,11 @@
           await fetchCsrfToken(); // Uses the global function defined at the top
           if (typeof csrfToken !== 'undefined') csrfToken = CSRF_TOKEN;
           document.getElementById('login-box').style.display = 'none';
+          try {
+            if (typeof window.__kdsReloadTables === 'function') {
+              await window.__kdsReloadTables();
+            }
+          } catch (_) {}
           updateKitchenVisibility();
           applyRoleUI();
           return true;
@@ -11491,6 +11496,20 @@
     const tmSection = document.getElementById('table-management');
     const tmBtn = document.getElementById('tables-open');
     const mapContainer = document.getElementById('restaurant-map');
+
+    function getTablesTenantSlug() {
+      const fromCurrent = (typeof currentTenantSlug !== 'undefined') ? String(currentTenantSlug || '').trim() : '';
+      const fromInput = String(document.getElementById('tenant-input')?.value || '').trim();
+      let fromSession = '';
+      try { fromSession = String(sessionStorage.getItem('current_tenant_slug') || '').trim(); } catch (_) {}
+      let fallback = 'gastronomia-local1';
+      try {
+        if (typeof defaultSlug === 'function') {
+          fallback = String(defaultSlug() || '').trim() || fallback;
+        }
+      } catch (_) {}
+      return fromCurrent || fromInput || fromSession || fallback;
+    }
     
     // Controls
     const addTableBtn = document.getElementById('tm-add-table');
@@ -11973,7 +11992,7 @@
     }
 
     async function loadData() {
-      const slug = document.getElementById('tenant-input')?.value || 'gastronomia-local1';
+      const slug = getTablesTenantSlug();
       
       // 1. Try to fetch from Server
       try {
@@ -12047,7 +12066,7 @@
     }
 
     async function saveData() {
-      const slug = document.getElementById('tenant-input')?.value || 'gastronomia-local1';
+      const slug = getTablesTenantSlug();
       const btn = document.getElementById('tm-save-layout');
       const originalText = btn ? btn.innerText : 'Guardar Distribución';
       
@@ -13177,6 +13196,7 @@
     } else {
       initTableManagement();
     }
+    window.__kdsReloadTables = loadData;
   })();
 </script>
 <!-- Table Details Modal -->
