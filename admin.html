@@ -607,7 +607,7 @@
     .map-wrapper {
       width: 100%;
       height: auto;
-      overflow: visible;
+      overflow: hidden;
       border: 1px solid var(--kds-border);
       border-radius: 12px;
       background-color: #f0f3f8;
@@ -619,7 +619,7 @@
       }
       .map-wrapper {
         max-height: 520px;
-        overflow: auto;
+        overflow: hidden;
         border: 1px solid var(--kds-border);
         border-radius: 12px;
       }
@@ -11496,6 +11496,11 @@
     const tmSection = document.getElementById('table-management');
     const tmBtn = document.getElementById('tables-open');
     const mapContainer = document.getElementById('restaurant-map');
+    const mapCanvas = document.createElement('div');
+    const snapGuideEl = document.createElement('div');
+    mapCanvas.id = 'restaurant-map-canvas';
+    snapGuideEl.id = 'tm-snap-guide';
+    snapGuideEl.style.cssText = 'display:none; position:absolute; border:2px dashed #673ab7; background:rgba(103,58,183,0.12); border-radius:12px; pointer-events:none; z-index:999;';
 
     function getTablesTenantSlug() {
       const fromCurrent = (typeof currentTenantSlug !== 'undefined') ? String(currentTenantSlug || '').trim() : '';
@@ -11539,6 +11544,53 @@
     let currentZoneId = 1;
     let selectedTableId = null;
     let mergeState = { active: false, selectedIds: [] };
+    let tablesLoadPromise = Promise.resolve();
+    let tablesLocalRevision = 0;
+
+    function zoneIdKey(value) {
+      return String(value == null ? '' : value).trim();
+    }
+
+    function getCurrentZone() {
+      const targetId = zoneIdKey(currentZoneId);
+      let zone = data.zones.find(z => zoneIdKey(z.id) === targetId);
+      if (!zone && data.zones.length > 0) {
+        zone = data.zones[0];
+        currentZoneId = zone.id;
+      }
+      return zone || null;
+    }
+
+    function queueLoadData() {
+      tablesLoadPromise = loadData().catch((err) => {
+        console.error('Error loading table layout:', err);
+      });
+      return tablesLoadPromise;
+    }
+
+    function applyMapCanvasMode() {
+      if (!mapContainer) return;
+      const isMobile = window.matchMedia('(max-width: 768px)').matches;
+      mapContainer.innerHTML = '';
+      if (!isMobile) {
+        mapCanvas.style.cssText = 'position:relative; min-width:1200px; width:1200px; height:800px; background-color:#f0f3f8; background-image:radial-gradient(#d1d5db 1px, transparent 1px); background-size:20px 20px;';
+      } else {
+        mapCanvas.style.cssText = 'position:relative; width:100%; min-width:0; height:auto; display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; padding:8px; box-sizing:border-box; background:none;';
+      }
+      mapContainer.appendChild(mapCanvas);
+    }
+
+    function persistTablesLocalSnapshot() {
+      try {
+        const slug = getTablesTenantSlug();
+        localStorage.setItem('kds_tables_' + slug, JSON.stringify(data));
+      } catch (_) {}
+    }
+
+    function markTablesLocalChange() {
+      tablesLocalRevision += 1;
+      persistTablesLocalSnapshot();
+    }
 
     const syncTmOpenState = () => {
       try {
@@ -11567,16 +11619,18 @@
     function initTableManagement() {
       if (!tmBtn || !tmSection) return;
 
-      loadData();
+      applyMapCanvasMode();
+      queueLoadData();
 
       const snapGridPx = 20;
       const snapVal = (n) => Math.round((Number(n) || 0) / snapGridPx) * snapGridPx;
       const clampVal = (v, min, max) => Math.max(min, Math.min(max, v));
+      let pendingTablesRender = false;
+      mapCanvas.appendChild(snapGuideEl);
       
       // Listen for external updates
       window.addEventListener('kds-tables-changed', () => {
-        loadData();
-        renderTables();
+        queueLoadData();
       });
 
       window.addEventListener('kds-orders-updated', async () => {
@@ -11586,6 +11640,10 @@
              await (typeof fetchOrdersForTables === 'function' ? fetchOrdersForTables(true) : Promise.resolve());
            }
          } catch(_) {}
+         if (dragState.active || dragState.timer) {
+             pendingTablesRender = true;
+             return;
+         }
          if (tmSection.style.display !== 'none') {
              renderTables();
          }
@@ -11608,6 +11666,7 @@
 
         // Force mobile mode UI clean-up
         const isMobile = window.matchMedia('(max-width: 768px)').matches;
+        applyMapCanvasMode();
         if (isMobile) {
           tmSection.classList.add('mobile-mode');
           const hideSelectors = [
@@ -11622,13 +11681,6 @@
           hideSelectors.forEach(sel => {
             document.querySelectorAll(sel).forEach(el => { el.style.display = 'none'; });
           });
-          if (mapContainer) {
-            mapContainer.style.display = 'grid';
-            mapContainer.style.gridTemplateColumns = 'repeat(3, 1fr)';
-            mapContainer.style.gap = '8px';
-            mapContainer.style.padding = '8px';
-            mapContainer.style.width = '100%';
-          }
         }
 
         try {
@@ -11638,6 +11690,7 @@
           }
         } catch(_) {}
 
+        await tablesLoadPromise;
         renderZones();
         renderTables();
       });
@@ -11663,7 +11716,7 @@
       
       // Zone Events
       zoneSelect.addEventListener('change', (e) => {
-        currentZoneId = parseInt(e.target.value);
+        currentZoneId = e.target.value;
         selectedTableId = null;
         updateToolbarState();
         renderTables();
@@ -11682,7 +11735,7 @@
       });
 
       editZoneBtn.addEventListener('click', () => {
-        const zone = data.zones.find(z => z.id === currentZoneId);
+        const zone = getCurrentZone();
         if (zone) {
           const newName = prompt('Nuevo nombre del salón:', zone.name);
           if (newName) {
@@ -11699,7 +11752,7 @@
           return;
         }
         if (confirm('¿Estás seguro de eliminar este salón y todas sus mesas?')) {
-          data.zones = data.zones.filter(z => z.id !== currentZoneId);
+          data.zones = data.zones.filter(z => zoneIdKey(z.id) !== zoneIdKey(currentZoneId));
           currentZoneId = data.zones[0].id;
           selectedTableId = null;
           saveData();
@@ -11738,7 +11791,7 @@
                   alert('Selecciona al menos 2 mesas para unir.');
                   return;
               }
-              const zone = data.zones.find(z => z.id === currentZoneId);
+              const zone = getCurrentZone();
               if (!zone) return;
 
               const tablesToMerge = zone.tables.filter(t => mergeState.selectedIds.includes(t.id));
@@ -11783,9 +11836,11 @@
       }
 
       // Table Events
-      addTableBtn.addEventListener('click', () => {
-        const zone = data.zones.find(z => z.id === currentZoneId);
+      addTableBtn.addEventListener('click', async () => {
+        await tablesLoadPromise;
+        const zone = getCurrentZone();
         if (!zone) return;
+        if (!Array.isArray(zone.tables)) zone.tables = [];
         
         const newId = Date.now(); // Simple unique ID
         const shape = shapeSelect.value;
@@ -11818,7 +11873,7 @@
         
         if (!label) return; // User cancelled
 
-        zone.tables.push({
+        const newTable = {
           id: newId,
           label: label,
           type: shape,
@@ -11827,16 +11882,25 @@
           y: snapVal(60),
           status: 'free',
           rotation: 0
-        });
+        };
+        zone.tables = zone.tables.concat([newTable]);
         
         selectedTableId = newId;
+        markTablesLocalChange();
+        renderZones();
         renderTables();
-        saveData();
+        const ok = await saveData({ showErrorAlert: false });
+        if (ok) {
+          await queueLoadData();
+        } else {
+          renderTables();
+        }
       });
 
       rotateBtn.addEventListener('click', () => {
         if (!selectedTableId) return;
-        const zone = data.zones.find(z => z.id === currentZoneId);
+        const zone = getCurrentZone();
+        if (!zone) return;
         const table = zone.tables.find(t => t.id === selectedTableId);
         if (table) {
           table.rotation = (table.rotation || 0) + 90;
@@ -11849,7 +11913,8 @@
       delBtn.addEventListener('click', () => {
         if (!selectedTableId) return;
         if (confirm('¿Eliminar esta mesa?')) {
-          const zone = data.zones.find(z => z.id === currentZoneId);
+          const zone = getCurrentZone();
+          if (!zone) return;
           zone.tables = zone.tables.filter(t => t.id !== selectedTableId);
           selectedTableId = null;
           renderTables();
@@ -11857,14 +11922,14 @@
         }
       });
 
-      saveLayoutBtn.addEventListener('click', () => {
-        saveData();
-        alert('Distribución guardada');
+      saveLayoutBtn.addEventListener('click', async () => {
+        const ok = await saveData({ showSuccessNotice: true, showErrorAlert: true });
+        if (ok) alert('Distribución guardada');
       });
       
       // Click outside to deselect
-      mapContainer.addEventListener('click', (e) => {
-        if (e.target === mapContainer) {
+      mapCanvas.addEventListener('click', (e) => {
+        if (e.target === mapCanvas) {
           selectedTableId = null;
           renderTables();
         }
@@ -11893,7 +11958,7 @@
         // Update model
         if (dragState.table) {
           // Boundary Checks
-          const map = document.getElementById('restaurant-map');
+          const map = mapCanvas;
           const mapWidth = map.offsetWidth || 1000;
           const mapHeight = map.offsetHeight || 800;
           const elWidth = dragState.el.offsetWidth;
@@ -11914,6 +11979,16 @@
           // Update DOM
           dragState.el.style.left = dragState.table.x + 'px';
           dragState.el.style.top = dragState.table.y + 'px';
+          if (snapGuideEl && dragState.el) {
+            const snapX = clampVal(snapVal(newX), 0, Math.max(0, mapWidth - elWidth));
+            const snapY = clampVal(snapVal(newY), 0, Math.max(0, mapHeight - elHeight));
+            snapGuideEl.style.display = 'block';
+            snapGuideEl.style.left = snapX + 'px';
+            snapGuideEl.style.top = snapY + 'px';
+            snapGuideEl.style.width = elWidth + 'px';
+            snapGuideEl.style.height = elHeight + 'px';
+            snapGuideEl.style.borderRadius = window.getComputedStyle(dragState.el).borderRadius || '12px';
+          }
         }
       };
 
@@ -11929,7 +12004,7 @@
           if (dragState.hasMoved && dragState.el) {
              try {
                if (dragState.table) {
-                 const map = document.getElementById('restaurant-map');
+                 const map = mapCanvas;
                  const mapWidth = map ? (map.offsetWidth || 0) : 0;
                  const mapHeight = map ? (map.offsetHeight || 0) : 0;
                  const elWidth = dragState.el.offsetWidth || 0;
@@ -11945,7 +12020,7 @@
                }
              } catch (_) {}
              dragState.el.dataset.wasDragging = 'true';
-             saveData();
+             saveData({ showErrorAlert: false });
           }
 
           // Remove visual feedback
@@ -11954,12 +12029,17 @@
               dragState.el.style.zIndex = '';
           }
         }
+        if (snapGuideEl) snapGuideEl.style.display = 'none';
         
         // Always reset state
         dragState.active = false;
         dragState.el = null;
         dragState.table = null;
         dragState.hasMoved = false;
+        if (pendingTablesRender && tmSection.style.display !== 'none') {
+          pendingTablesRender = false;
+          renderTables();
+        }
       };
 
       window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
@@ -11993,6 +12073,7 @@
 
     async function loadData() {
       const slug = getTablesTenantSlug();
+      const loadRevision = tablesLocalRevision;
       
       // 1. Try to fetch from Server
       try {
@@ -12007,6 +12088,11 @@
                const isDefault = serverData.zones.length === 1 && serverData.zones[0].tables.length === 0 && serverData.zones[0].name === 'Salón Principal';
                
                if (!isDefault) {
+                   if (loadRevision !== tablesLocalRevision) {
+                       renderZones();
+                       renderTables();
+                       return;
+                   }
                    data = serverData;
                    // Sync to local storage so populateTableSelect can see it
                    localStorage.setItem('kds_tables_' + slug, JSON.stringify(data));
@@ -12037,6 +12123,11 @@
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
+          if (loadRevision !== tablesLocalRevision) {
+            renderZones();
+            renderTables();
+            return;
+          }
           if (Array.isArray(parsed)) {
             data.zones[0].tables = parsed;
           } else if (parsed.zones) {
@@ -12060,12 +12151,15 @@
     }
     
     function ensureCurrentZone() {
-        if (!data.zones.find(z => z.id === currentZoneId)) {
+        if (!getCurrentZone()) {
           currentZoneId = data.zones[0]?.id || 1;
         }
     }
 
-    async function saveData() {
+    async function saveData(options) {
+      const opts = (options && typeof options === 'object') ? options : {};
+      const showSuccessNotice = !!opts.showSuccessNotice;
+      const showErrorAlert = !!opts.showErrorAlert;
       const slug = getTablesTenantSlug();
       const btn = document.getElementById('tm-save-layout');
       const originalText = btn ? btn.innerText : 'Guardar Distribución';
@@ -12125,6 +12219,10 @@
                  btn.style.opacity = '1';
              }, 1500);
          }
+         if (showSuccessNotice) {
+            console.info('Distribución guardada en servidor para', slug);
+         }
+         return true;
       } catch(e) {
           console.error('Error saving tables to server:', e);
           if (btn) {
@@ -12137,7 +12235,10 @@
                  btn.style.opacity = '1';
              }, 2000);
           }
-          alert('Error al guardar en el servidor. Verifique su conexión.');
+          if (showErrorAlert) {
+            alert('Error al guardar en el servidor. Verifique su conexión.');
+          }
+          return false;
       }
     }
 
@@ -12147,7 +12248,7 @@
         const opt = document.createElement('option');
         opt.value = z.id;
         opt.textContent = z.name;
-        if (z.id === currentZoneId) opt.selected = true;
+        if (zoneIdKey(z.id) === zoneIdKey(currentZoneId)) opt.selected = true;
         zoneSelect.appendChild(opt);
       });
     }
@@ -12566,6 +12667,7 @@
          if (isMesa || isEspera) {
              const isPrepOrLater = ['preparacion', 'listo', 'en_camino', 'entregado'].includes(s);
              const isListoOrLater = ['listo', 'en_camino', 'entregado'].includes(s);
+             if (s === 'por_aprobar') pDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (!isPrepOrLater) lDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (!isListoOrLater) eDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (isEspera && !isPaid) eDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;" title="Debe cobrar antes de entregar"';
@@ -12573,6 +12675,7 @@
              const isPrepOrLater = ['preparacion', 'listo', 'en_camino', 'entregado'].includes(s);
              const isListoOrLater = ['listo', 'en_camino', 'entregado'].includes(s);
              const isEnCaminoOrLater = ['en_camino', 'entregado'].includes(s);
+             if (s === 'por_aprobar') pDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (!isPrepOrLater) lDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (!isListoOrLater) cDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
              if (!isEnCaminoOrLater) eDisabled = 'disabled style="opacity:0.3;cursor:not-allowed;"';
@@ -12592,6 +12695,9 @@
          const entregadoBtn = `<button class="status-action entregado" data-status="entregado" aria-label="Entregado" data-tip="Entregado" ${eDisabled}>E</button>`;
          const prepBtn = `<button class="status-action preparacion" data-status="preparacion" aria-label="Preparación" data-tip="Preparación" ${pDisabled}>P</button>`;
          const listoBtn = `<button class="status-action listo" data-status="listo" aria-label="Listo" data-tip="Listo" ${lDisabled}>L</button>`;
+         const aprobarBtn = (String(o.status || '').toLowerCase() === 'por_aprobar')
+             ? `<button class="status-action approve" data-status="pendiente" aria-label="Aprobar" data-tip="Aprobar">A</button>`
+             : '';
          
          const card = document.createElement('div');
          card.className = 'card';
@@ -12627,6 +12733,7 @@
             <div class="state-line"><span class="status-badge ${statusClass}">${safeStatusLabel}</span>${(typeof renderSLA === 'function')?renderSLA(o):''}</div>
             <div class="actions">
               <div class="status-quick">
+                ${aprobarBtn}
                 ${prepBtn}
                 ${listoBtn}
                 ${enCaminoBtn}
@@ -12702,6 +12809,10 @@
                       if (typeof askConfirm === 'function') {
                           if (!await askConfirm('¿Confirma entrega?')) return;
                       }
+                 } else if (newStatus === 'pendiente' && String(o.status || '').toLowerCase() === 'por_aprobar') {
+                      if (typeof askConfirm === 'function') {
+                          if (!await askConfirm('¿Aprobar pedido?')) return;
+                      }
                  } else if (newStatus !== 'entregado') {
                       if (typeof askConfirm === 'function') {
                           if (!await askConfirm(`¿Cambiar estado a ${newStatus}?`)) return;
@@ -12760,7 +12871,7 @@
              sepBtn.style.cssText = 'background: #f57c00; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 12px;';
              sepBtn.onclick = () => {
                  if (confirm('¿Separar las mesas y restaurar las originales?')) {
-                     const zone = data.zones.find(z => z.id === currentZoneId);
+                    const zone = getCurrentZone();
                      if (zone) {
                          // Remove merged table
                          zone.tables = zone.tables.filter(t => t.id !== table.id);
@@ -12928,15 +13039,20 @@
 
     function renderTables() {
       if (!mapContainer) return;
-      mapContainer.innerHTML = '';
+      applyMapCanvasMode();
+      mapCanvas.innerHTML = '';
+      mapCanvas.appendChild(snapGuideEl);
       
-      const zone = data.zones.find(z => z.id === currentZoneId);
+      const zone = getCurrentZone();
       if (!zone) return;
 
-      const activeOrders = window.currentOrdersForTables || window.currentOrders || [];
+      const activeOrders = Array.isArray(window.currentOrdersForTables)
+        ? window.currentOrdersForTables
+        : (Array.isArray(window.currentOrders) ? window.currentOrders : []);
       const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
       zone.tables.forEach(table => {
+        try {
         const el = document.createElement('div');
         
         // --- Logic to check for active order ---
@@ -12986,8 +13102,13 @@
 
         el.className = `table-item ${table.type} status-${displayStatus}`;
         if (table.id === selectedTableId) el.classList.add('selected');
+        el.style.display = 'flex';
+        el.style.visibility = 'visible';
+        el.style.opacity = '1';
+        el.style.pointerEvents = 'auto';
         
         if (!isMobile) {
+          el.style.position = 'absolute';
           el.style.left = table.x + 'px';
           el.style.top = table.y + 'px';
           el.style.transform = `rotate(${table.rotation || 0}deg)`;
@@ -13167,7 +13288,10 @@
           openTableDetails(table);
         };
 
-        mapContainer.appendChild(el);
+        mapCanvas.appendChild(el);
+        } catch (err) {
+          console.error('Error rendering table on map:', table, err);
+        }
       });
       
       updateToolbarState();
@@ -13196,7 +13320,7 @@
     } else {
       initTableManagement();
     }
-    window.__kdsReloadTables = loadData;
+    window.__kdsReloadTables = queueLoadData;
   })();
 </script>
 <!-- Table Details Modal -->
