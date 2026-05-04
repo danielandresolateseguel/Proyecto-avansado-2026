@@ -3072,10 +3072,28 @@
       const n = Number(raw);
       return (Number.isFinite(n) && n > 0) ? Math.trunc(n) : null;
     }
+    function formatTenantOrderSeries(index) {
+      let n = Math.max(0, Math.trunc(Number(index) || 0));
+      let out = '';
+      do {
+        out = String.fromCharCode(65 + (n % 26)) + out;
+        n = Math.floor(n / 26) - 1;
+      } while (n >= 0);
+      return out;
+    }
     function formatTenantOrderNumber(n) {
       if (!n) return '';
-      const s = String(Math.trunc(Number(n)));
-      return s.length >= 3 ? s : s.padStart(3, '0');
+      const raw = Math.trunc(Number(n));
+      if (!Number.isFinite(raw) || raw <= 0) return '';
+      if (raw <= 9999) {
+        const s = String(raw);
+        return s.length >= 3 ? s : s.padStart(3, '0');
+      }
+      const offset = raw - 10000;
+      const series = formatTenantOrderSeries(Math.floor(offset / 9999));
+      const withinSeries = (offset % 9999) + 1;
+      const s = String(withinSeries);
+      return `${series}${s.length >= 3 ? s : s.padStart(3, '0')}`;
     }
     function displayOrderNumber(o) {
       const n = getTenantOrderNumber(o);
@@ -13374,7 +13392,7 @@
   <div class="kds-modal-content" style="width: 95vw; max-width: 800px; height: 85vh; display: flex; flex-direction: column; padding: 0;">
     <div class="kds-modal-header" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
         <h2 style="margin: 0;">Editar Pedido #<span id="eom-id"></span></h2>
-        <button id="eom-close" style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
+        <button id="eom-close" style="width:38px; height:38px; background:#1f2937; color:#fff; border:1px solid #111827; border-radius:10px; font-size:24px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,0.18);">&times;</button>
     </div>
     <div class="kds-modal-body" style="flex: 1; display: flex; overflow: hidden;">
         <!-- Products Column -->
@@ -13502,6 +13520,7 @@
 window.EditOrder = {
     currentOrder: null,
     items: [],
+    availableProducts: [],
     
     init: function() {
         this.modal = document.getElementById('edit-order-modal');
@@ -13528,7 +13547,9 @@ window.EditOrder = {
             this.open({
                 id: orderId, 
                 table_number: tableNumber,
-                order_notes: detail.order ? detail.order.order_notes : '' // Access via detail.order
+                order_notes: detail.order ? detail.order.order_notes : '', // Access via detail.order
+                tenant_slug: detail.order ? detail.order.tenant_slug : '',
+                display_order_number: detail.order ? displayOrderNumber(detail.order) : String(orderId)
             }, detail.items || []);
         } catch(e) {
             console.error(e);
@@ -13540,6 +13561,7 @@ window.EditOrder = {
         if (!this.modal) this.init();
         
         this.currentOrder = order;
+        this.availableProducts = [];
         // Clone items
         this.items = initialItems.map(i => ({
             id: i.product_id || i.id, 
@@ -13552,7 +13574,7 @@ window.EditOrder = {
         }));
         
         const idEl = document.getElementById('eom-id');
-        if(idEl) idEl.textContent = order.id;
+        if(idEl) idEl.textContent = order.display_order_number || order.id;
         
         if (this.notesEl) {
             this.notesEl.value = order.order_notes || '';
@@ -13560,8 +13582,7 @@ window.EditOrder = {
         
         this.modal.style.display = 'flex';
         this.modal.classList.add('active');
-        
-        this.renderProducts('');
+        this.loadProductsForOrder().then(() => this.renderProducts(''));
         this.renderItems();
     },
     
@@ -13571,14 +13592,50 @@ window.EditOrder = {
         this.modal.classList.remove('active');
         this.currentOrder = null;
         this.items = [];
+        this.availableProducts = [];
+    },
+
+    loadProductsForOrder: async function() {
+        const order = this.currentOrder || {};
+        const tenantInputEl = document.getElementById('tenant-input');
+        const tenantSlug = String(
+            order.tenant_slug ||
+            currentTenantSlug ||
+            (tenantInputEl && tenantInputEl.value ? tenantInputEl.value.trim() : '') ||
+            defaultSlug()
+        ).trim();
+        if (!tenantSlug) {
+            this.availableProducts = Array.isArray(window.products) ? window.products.slice() : [];
+            return;
+        }
+        try {
+            const url = new URL('/api/products', API_BASE);
+            url.searchParams.set('tenant_slug', tenantSlug);
+            url.searchParams.set('include_inactive', 'true');
+            const resp = await wFetch(url.toString());
+            if (!resp.ok) throw new Error('Error al obtener productos');
+            const data = await resp.json();
+            const raw = Array.isArray(data && data.products) ? data.products : [];
+            const seen = new Set();
+            const unique = [];
+            for (const p of raw) {
+                const pid = String((p && p.id) || '').trim();
+                if (!pid || seen.has(pid)) continue;
+                seen.add(pid);
+                unique.push(p);
+            }
+            this.availableProducts = unique;
+        } catch (e) {
+            console.warn('EditOrder.loadProductsForOrder fallback:', e);
+            this.availableProducts = Array.isArray(window.products) ? window.products.slice() : [];
+        }
     },
     
     renderProducts: function(term) {
         if (!this.productsContainer) return;
-        const t = term.toLowerCase();
-        // Use global products array if available
-        const allProducts = window.products || []; 
-        const filtered = allProducts.filter(p => p.name.toLowerCase().includes(t) || p.id.toLowerCase().includes(t));
+        const t = String(term || '').toLowerCase();
+        const allProducts = Array.isArray(this.availableProducts) ? this.availableProducts : [];
+        const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(t) || String(p.id || '').toLowerCase().includes(t));
         
         this.productsContainer.innerHTML = filtered.map(p => `
             <div onclick="EditOrder.addItem('${p.id}')" style="border:1px solid #eee; padding:8px; border-radius:6px; cursor:pointer; background:white; font-size:0.9rem; display:flex; flex-direction:column; justify-content:space-between;">
@@ -13589,7 +13646,7 @@ window.EditOrder = {
     },
     
     addItem: function(prodId) {
-        const prod = (window.products || []).find(p => p.id === prodId);
+        const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => p.id === prodId);
         if (!prod) return;
         
         const existing = this.items.find(i => i.id === prod.id);
@@ -13635,9 +13692,9 @@ window.EditOrder = {
                             <div style="font-size:0.8rem; color:#666;">$${item.price} x ${item.qty}</div>
                         </div>
                         <div style="display:flex; gap:5px; align-items:center;">
-                            <button onclick="EditOrder.updateQty(${idx}, -1)" style="width:24px; height:24px; background:#eee; border:none; border-radius:4px; cursor:pointer;">-</button>
+                            <button onclick="EditOrder.updateQty(${idx}, -1)" style="width:28px; height:28px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">-</button>
                             <span style="width:20px; text-align:center; font-size:0.9rem;">${item.qty}</span>
-                            <button onclick="EditOrder.updateQty(${idx}, 1)" style="width:24px; height:24px; background:#eee; border:none; border-radius:4px; cursor:pointer;">+</button>
+                            <button onclick="EditOrder.updateQty(${idx}, 1)" style="width:28px; height:28px; background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">+</button>
                         </div>
                     </div>
                     <div>

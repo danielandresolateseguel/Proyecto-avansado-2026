@@ -63,10 +63,29 @@ function _getTenantOrderNumber(order) {
   return (Number.isFinite(n) && n > 0) ? Math.trunc(n) : null;
 }
 
+function _formatTenantOrderSeries(index) {
+  let n = Math.max(0, Math.trunc(Number(index) || 0));
+  let out = '';
+  do {
+    out = String.fromCharCode(65 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
+
 function _formatTenantOrderNumber(n) {
   if (!n) return '';
-  const s = String(Math.trunc(Number(n)));
-  return s.length >= 3 ? s : s.padStart(3, '0');
+  const raw = Math.trunc(Number(n));
+  if (!Number.isFinite(raw) || raw <= 0) return '';
+  if (raw <= 9999) {
+    const s = String(raw);
+    return s.length >= 3 ? s : s.padStart(3, '0');
+  }
+  const offset = raw - 10000;
+  const series = _formatTenantOrderSeries(Math.floor(offset / 9999));
+  const withinSeries = (offset % 9999) + 1;
+  const s = String(withinSeries);
+  return `${series}${s.length >= 3 ? s : s.padStart(3, '0')}`;
 }
 
 function _displayOrderNumber(order) {

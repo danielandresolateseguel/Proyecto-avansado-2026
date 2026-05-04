@@ -534,9 +534,31 @@ function renderStatus(order, config = {}) {
     const whatsappNumber = '5492615893590'; 
     const tenantOrderNumberRaw = (order && (order.tenant_order_number ?? order.tenant_order_number)) ?? null;
     let displayOrderNumber = String(order.id || '');
+    const formatTenantOrderSeries = (index) => {
+        let n = Math.max(0, Math.trunc(Number(index) || 0));
+        let out = '';
+        do {
+            out = String.fromCharCode(65 + (n % 26)) + out;
+            n = Math.floor(n / 26) - 1;
+        } while (n >= 0);
+        return out;
+    };
+    const formatTenantOrderNumber = (value) => {
+        const raw = Math.trunc(Number(value));
+        if (!Number.isFinite(raw) || raw <= 0) return String(value || '').trim();
+        if (raw <= 9999) {
+            const s = String(raw);
+            return s.length >= 3 ? s : s.padStart(3, '0');
+        }
+        const offset = raw - 10000;
+        const series = formatTenantOrderSeries(Math.floor(offset / 9999));
+        const withinSeries = (offset % 9999) + 1;
+        const s = String(withinSeries);
+        return `${series}${s.length >= 3 ? s : s.padStart(3, '0')}`;
+    };
     if (tenantOrderNumberRaw !== null && tenantOrderNumberRaw !== undefined && String(tenantOrderNumberRaw).trim() !== '') {
         const n = parseInt(tenantOrderNumberRaw, 10);
-        displayOrderNumber = (isFinite(n) && n > 0) ? String(n).padStart(3, '0') : String(tenantOrderNumberRaw);
+        displayOrderNumber = (isFinite(n) && n > 0) ? formatTenantOrderNumber(n) : String(tenantOrderNumberRaw);
     }
 
     const whatsappMsg = encodeURIComponent(`Hola, tengo una consulta sobre mi pedido #${displayOrderNumber}.`);
