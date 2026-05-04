@@ -4495,9 +4495,9 @@
                   qb.disabled = true;
                   qb.style.opacity = '0.6';
                   qb.style.cursor = 'wait';
-                  const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
-                  if (!methodData) return;
                   try {
+                      const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
+                      if (!methodData) return;
                       await payOrder(o.id, methodData);
 
                       // Check if print was requested in confirmation
@@ -4675,9 +4675,9 @@
                 qb.disabled = true;
                 qb.style.opacity = '0.6';
                 qb.style.cursor = 'wait';
-                const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
-                if (!methodData) return;
                 try {
+                    const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
+                    if (!methodData) return;
                     await payOrder(o.id, methodData);
 
                     // Check if print was requested in confirmation
@@ -12762,9 +12762,9 @@
                           qb.disabled = true;
                           qb.style.opacity = '0.6';
                           qb.style.cursor = 'wait';
-                          const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
-                          if (!methodData) return;
                           try {
+                              const methodData = await askPaymentMethod(o.total, (o.order_type || '').toLowerCase() === 'mesa', o.shipping_cost || 0);
+                              if (!methodData) return;
                               await payOrder(o.id, methodData);
 
                               // Check if print was requested in confirmation
