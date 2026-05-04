@@ -255,6 +255,7 @@ def _role_defaults(role):
             'orders_view': True,
             'orders_update_status': True,
             'orders_create': True,
+            'tables_manage': True,
             'cash_view': True,
             'cash_manage': True
         }

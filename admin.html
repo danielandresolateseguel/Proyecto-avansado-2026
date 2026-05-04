@@ -2775,6 +2775,14 @@
     let dailyResetFrom = '';
     let dailyResetOverride = false;
     let cashHistoryCollapsed = true;
+    function shouldSyncOrdersForTables() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const perms = currentUserPerms || {};
+      const isKitchen = !!isAuthed && role === 'cocina';
+      const isRepartidor = !!isAuthed && role === 'repartidor';
+      const isAdmin = !!isAuthed && (role === 'admin' || !!isOwnerUser);
+      return !!isAuthed && !isKitchen && !isRepartidor && (isAdmin || !!perms.tables_manage);
+    }
     try { setDailyVisible(dailyVisible); } catch (_) {}
     const logoutBtn = document.getElementById('logout-btn');
     const loginOpenBtn = document.getElementById('login-open-btn');
@@ -3924,8 +3932,7 @@
         const data = await fetchOrders();
         await renderOrders(data);
         try {
-          const r = String(currentUserRole || '').trim().toLowerCase();
-          if (r === 'mozo') {
+          if (shouldSyncOrdersForTables()) {
             await fetchOrdersForTables(false);
           } else {
             window.currentOrdersForTables = null;
@@ -7120,8 +7127,7 @@
         const data = await fetchOrders();
         await renderOrders(data);
         try {
-          const r = String(currentUserRole || '').trim().toLowerCase();
-          if (r === 'mozo') {
+          if (shouldSyncOrdersForTables()) {
             await fetchOrdersForTables(true);
           } else {
             window.currentOrdersForTables = null;
@@ -10367,7 +10373,7 @@
         return { orders_view:true, orders_update_status:true };
       }
       if (r === 'caja'){
-        return { orders_view:true, orders_update_status:true, orders_create:true, cash_view:true, cash_manage:true };
+        return { orders_view:true, orders_update_status:true, orders_create:true, tables_manage:true, cash_view:true, cash_manage:true };
       }
       if (r === 'repartidor'){
         return { orders_view:true, orders_update_status:true };
@@ -11088,7 +11094,12 @@
 
             closeModal();
             alert('Pedido creado exitosamente');
-            if (typeof load === 'function') load(); // Reload orders
+            if (typeof load === 'function') await load();
+            if (shouldSyncOrdersForTables() && typeof fetchOrdersForTables === 'function') {
+              await fetchOrdersForTables(true);
+            }
+            try { window.dispatchEvent(new CustomEvent('kds-orders-updated')); } catch (_) {}
+            try { if (typeof renderTables === 'function') renderTables(); } catch (_) {}
           } else {
             const err = await resp.json().catch(()=>({}));
             alert('Error al crear pedido: ' + (err.error || 'Desconocido'));
@@ -11635,8 +11646,7 @@
 
       window.addEventListener('kds-orders-updated', async () => {
          try {
-           const r = String(currentUserRole || '').trim().toLowerCase();
-           if (r === 'mozo') {
+          if (shouldSyncOrdersForTables()) {
              await (typeof fetchOrdersForTables === 'function' ? fetchOrdersForTables(true) : Promise.resolve());
            }
          } catch(_) {}
@@ -11681,8 +11691,7 @@
         }
 
         try {
-          const r = String(currentUserRole || '').trim().toLowerCase();
-          if (r === 'mozo' && typeof fetchOrdersForTables === 'function') {
+          if (shouldSyncOrdersForTables() && typeof fetchOrdersForTables === 'function') {
             await fetchOrdersForTables(true);
           }
         } catch(_) {}
