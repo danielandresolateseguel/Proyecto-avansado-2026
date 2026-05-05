@@ -220,10 +220,22 @@
     .closed-summary-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
     .closed-summary-head { grid-column:1 / -1; background:#eef3fb; border:1px solid var(--kds-border); border-radius:10px; padding:10px 12px; color:#415a77; }
     .closed-summary-card { background:var(--kds-card-bg); border:1px solid var(--kds-border); border-radius:10px; padding:12px; box-shadow:0 4px 14px rgba(0,0,0,0.04); }
+    .closed-summary-card.attention { border-color:#f3d48a; background:linear-gradient(180deg, #fffaf0 0%, #ffffff 100%); }
+    .closed-summary-card.is-link { cursor:pointer; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease; }
+    .closed-summary-card.is-link:hover,
+    .closed-summary-card.is-link:focus { transform: translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,0.08); border-color:#93b0dc; outline:none; }
     .closed-summary-card .label { font-size:12px; font-weight:700; color:#415a77; text-transform:uppercase; letter-spacing:.02em; }
     .closed-summary-card .value { margin-top:6px; font-size:24px; font-weight:700; color:#243447; }
     .closed-summary-card .money { margin-top:4px; font-size:14px; font-weight:600; color:#2e7d32; }
     .closed-summary-card .meta { margin-top:4px; font-size:12px; color:#667085; }
+    .bulk-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .bulk-actions button { min-height:30px; padding:0 10px; font-size:12px; }
+    .bulk-actions .secondary { background:#fff; color:#415a77; border:1px solid var(--kds-border); box-shadow:none; }
+    .bulk-actions .danger-soft { background:#fff4f4; color:#a52828; border:1px solid #efc7c7; box-shadow:none; }
+    .bulk-actions .success-soft { background:#eef9f0; color:#1f6b39; border:1px solid #cde7d2; box-shadow:none; }
+    .row-selector, .row-selector-mobile { width:16px; height:16px; accent-color:#4a6fa5; }
+    .select-col { width:36px; text-align:center; }
+    .mobile-select-line { display:flex; justify-content:flex-end; margin-bottom:6px; }
     .actions button, .pager button { border-radius: 8px; }
     button { touch-action: manipulation; }
     .archived .copy-phone { background:#0f766e; color:#fff; }
@@ -1310,6 +1322,9 @@
                   <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
                   Exportar Archivados
                </button>
+               <button id="arch-clear-btn" style="background: #fff; color: #6c757d; border: 1px solid #ced4da; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                  Limpiar filtros
+               </button>
                <button id="arch-filter-btn" style="background: #007bff; color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
                   <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
                   Aplicar Filtros
@@ -1332,11 +1347,18 @@
               <button id="del-next">Siguiente</button>
               <span id="del-page-info" class="small" style="color:#666;"></span>
             </div>
+            <div class="bulk-actions">
+              <button id="del-select-visible" class="secondary">Seleccionar filtrados</button>
+              <button id="del-clear-selection" class="secondary">Limpiar seleccion</button>
+              <button id="del-archive-selected" class="success-soft">Archivar seleccionados</button>
+              <button id="del-archive-visible" class="success-soft">Archivar filtrados</button>
+            </div>
             <button id="close-delivered-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
           </div>
           <table>
             <thead>
               <tr>
+                <th class="select-col">Sel</th>
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Tipo</th>
@@ -1366,11 +1388,18 @@
               <button id="can-next">Siguiente</button>
               <span id="can-page-info" class="small" style="color:#666;"></span>
             </div>
+            <div class="bulk-actions">
+              <button id="can-select-visible" class="secondary">Seleccionar filtrados</button>
+              <button id="can-clear-selection" class="secondary">Limpiar seleccion</button>
+              <button id="can-archive-selected" class="danger-soft">Archivar seleccionados</button>
+              <button id="can-archive-visible" class="danger-soft">Archivar filtrados</button>
+            </div>
             <button id="close-canceled-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
           </div>
           <table>
             <thead>
               <tr>
+                <th class="select-col">Sel</th>
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Tipo</th>
@@ -1403,7 +1432,7 @@
             <button id="close-archived-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
           </div>
           <div id="archived-metrics" class="small" style="margin:6px 0;color:#444;"></div>
-          <h3 class="small">Entregados archivados <span id="arch-del-count"></span></h3>
+          <h3 class="small" id="arch-del-heading">Entregados archivados <span id="arch-del-count"></span></h3>
           <table>
             <thead>
               <tr>
@@ -1418,7 +1447,7 @@
             <tbody id="archived-delivered-tbody"></tbody>
           </table>
           <div id="archived-mobile-del" class="archived-mobile"></div>
-          <h3 class="small" style="margin-top:12px;">Cancelados archivados <span id="arch-can-count"></span></h3>
+          <h3 class="small" id="arch-can-heading" style="margin-top:12px;">Cancelados archivados <span id="arch-can-count"></span></h3>
           <table>
             <thead>
               <tr>
@@ -1433,7 +1462,7 @@
             <tbody id="archived-canceled-tbody"></tbody>
           </table>
           <div id="archived-mobile-can" class="archived-mobile"></div>
-          <h3 class="small" style="margin-top:12px;">Limpiados archivados <span id="arch-reset-count"></span></h3>
+          <h3 class="small" id="arch-reset-heading" style="margin-top:12px;">Limpiados archivados <span id="arch-reset-count"></span></h3>
           <table>
             <thead>
               <tr>
@@ -2726,6 +2755,7 @@
     const archOrderTypeSelect = document.getElementById('arch-order-type');
     const archFilterBtn = document.getElementById('arch-filter-btn');
     const archExportBtn = document.getElementById('arch-export-btn');
+    const archClearBtn = document.getElementById('arch-clear-btn');
     const archDateModeSelect = document.getElementById('arch-date-mode');
     const archivedMetricsEl = document.getElementById('archived-metrics');
     const closedOverviewEl = document.getElementById('closed-overview');
@@ -2751,10 +2781,18 @@
     const delPrevBtn = document.getElementById('del-prev');
     const delNextBtn = document.getElementById('del-next');
     const delPageInfoEl = document.getElementById('del-page-info');
+    const delSelectVisibleBtn = document.getElementById('del-select-visible');
+    const delClearSelectionBtn = document.getElementById('del-clear-selection');
+    const delArchiveSelectedBtn = document.getElementById('del-archive-selected');
+    const delArchiveVisibleBtn = document.getElementById('del-archive-visible');
     const canPageSizeSelect = document.getElementById('can-page-size');
     const canPrevBtn = document.getElementById('can-prev');
     const canNextBtn = document.getElementById('can-next');
     const canPageInfoEl = document.getElementById('can-page-info');
+    const canSelectVisibleBtn = document.getElementById('can-select-visible');
+    const canClearSelectionBtn = document.getElementById('can-clear-selection');
+    const canArchiveSelectedBtn = document.getElementById('can-archive-selected');
+    const canArchiveVisibleBtn = document.getElementById('can-archive-visible');
     const invReloadBtn = document.getElementById('inv-reload');
     const invTbody = document.getElementById('inventory-tbody');
     const ordersHistoryGroup = document.getElementById('orders-history-group');
@@ -2814,6 +2852,9 @@
       window.closedArchivedMetrics = null;
       window.closedDeliveredVisible = [];
       window.closedCanceledVisible = [];
+      window.closedEligibleCounts = null;
+      window.closedSelectedDelivered = new Set();
+      window.closedSelectedCanceled = new Set();
     })();
     [archSearchInput, archFromInput, archToInput].forEach(el => {
       if (el) el.addEventListener('keydown', (e) => {
@@ -3308,17 +3349,169 @@
       if (includeArchived) {
         try { await renderArchived(); } catch (_) {}
         try { await renderArchivedMetrics(); } catch (_) {}
+        try { await renderClosedArchiveSuggestions(); } catch (_) {}
       }
     }
-    function buildClosedOverviewCard(label, count, totalText, metaText) {
+    function getClosedSelectionSet(type) {
+      if (type === 'delivered') return window.closedSelectedDelivered || (window.closedSelectedDelivered = new Set());
+      return window.closedSelectedCanceled || (window.closedSelectedCanceled = new Set());
+    }
+    function canSelectClosedOrder(type, order) {
+      if (type === 'delivered') return String(order && order.payment_status || '').trim().toLowerCase() === 'paid';
+      return true;
+    }
+    function getClosedVisibleList(type) {
+      return type === 'delivered'
+        ? (Array.isArray(window.closedDeliveredVisible) ? window.closedDeliveredVisible : [])
+        : (Array.isArray(window.closedCanceledVisible) ? window.closedCanceledVisible : []);
+    }
+    function getArchivableClosedOrders(type, list) {
+      return (Array.isArray(list) ? list : []).filter(order => canSelectClosedOrder(type, order));
+    }
+    function pruneClosedSelection(type) {
+      const selected = getClosedSelectionSet(type);
+      const visibleIds = new Set(getArchivableClosedOrders(type, getClosedVisibleList(type)).map(order => Number(order.id)));
+      for (const id of Array.from(selected)) {
+        if (!visibleIds.has(Number(id))) selected.delete(id);
+      }
+    }
+    function setClosedSelection(type, ids, checked) {
+      const selected = getClosedSelectionSet(type);
+      (Array.isArray(ids) ? ids : []).forEach(id => {
+        const safeId = Number(id);
+        if (!Number.isFinite(safeId)) return;
+        if (checked) selected.add(safeId);
+        else selected.delete(safeId);
+      });
+    }
+    function getSelectedClosedOrders(type) {
+      const selected = getClosedSelectionSet(type);
+      return getClosedVisibleList(type).filter(order => selected.has(Number(order && order.id)));
+    }
+    async function archiveClosedOrdersBatch(type, orders, modeLabel) {
+      const list = getArchivableClosedOrders(type, orders);
+      if (!list.length) {
+        alert(type === 'delivered'
+          ? 'No hay pedidos entregados aptos para archivar en esta vista.'
+          : 'No hay pedidos cancelados aptos para archivar en esta vista.');
+        return;
+      }
+      const label = type === 'delivered' ? 'entregados' : 'cancelados';
+      if (!confirm(`Se archivarán ${list.length} pedidos ${label} (${modeLabel}). ¿Deseas continuar?`)) return;
+      let okCount = 0;
+      for (const order of list) {
+        try {
+          await archiveSnapshot(order, type);
+          okCount += 1;
+        } catch (_) {}
+      }
+      const selected = getClosedSelectionSet(type);
+      list.forEach(order => selected.delete(Number(order && order.id)));
+      await refreshClosedViews();
+      try { await renderMetricsBox(); } catch (_) {}
+      if (okCount !== list.length) {
+        alert(`Se archivaron ${okCount} de ${list.length} pedidos ${label}.`);
+      }
+    }
+    function updateClosedBulkButtons() {
+      const deliveredArchivable = getArchivableClosedOrders('delivered', getClosedVisibleList('delivered'));
+      const canceledArchivable = getArchivableClosedOrders('canceled', getClosedVisibleList('canceled'));
+      const deliveredSelected = getSelectedClosedOrders('delivered').length;
+      const canceledSelected = getSelectedClosedOrders('canceled').length;
+      if (delSelectVisibleBtn) delSelectVisibleBtn.disabled = deliveredArchivable.length === 0;
+      if (delClearSelectionBtn) delClearSelectionBtn.disabled = getClosedSelectionSet('delivered').size === 0;
+      if (delArchiveSelectedBtn) delArchiveSelectedBtn.disabled = deliveredSelected === 0;
+      if (delArchiveVisibleBtn) delArchiveVisibleBtn.disabled = deliveredArchivable.length === 0;
+      if (canSelectVisibleBtn) canSelectVisibleBtn.disabled = canceledArchivable.length === 0;
+      if (canClearSelectionBtn) canClearSelectionBtn.disabled = getClosedSelectionSet('canceled').size === 0;
+      if (canArchiveSelectedBtn) canArchiveSelectedBtn.disabled = canceledSelected === 0;
+      if (canArchiveVisibleBtn) canArchiveVisibleBtn.disabled = canceledArchivable.length === 0;
+    }
+    async function openClosedSummaryTarget(target) {
+      const kind = String(target || '').trim().toLowerCase();
+      if (!kind) return;
+      openOrdersHistoryGroup();
+      const scrollToEl = (el) => {
+        if (!el) return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.style.transition = 'background 0.5s ease';
+        el.style.background = '#fff9c4';
+        setTimeout(() => { el.style.background = ''; }, 1800);
+      };
+      if (kind === 'delivered' || kind === 'eligible-delivered') {
+        const box = document.getElementById('delivered-box');
+        if (box) box.open = true;
+        scrollToEl(box);
+        return;
+      }
+      if (kind === 'canceled' || kind === 'eligible-canceled') {
+        const box = document.getElementById('canceled-box');
+        if (box) box.open = true;
+        scrollToEl(box);
+        return;
+      }
+      const archivedBoxLocal = document.getElementById('archived-box');
+      if (archivedBoxLocal) archivedBoxLocal.open = true;
+      try { await renderArchived(); } catch (_) {}
+      try { await renderArchivedMetrics(); } catch (_) {}
+      const headingMap = {
+        'archived-delivered': document.getElementById('arch-del-heading'),
+        'archived-canceled': document.getElementById('arch-can-heading'),
+        'archived-reset': document.getElementById('arch-reset-heading'),
+        'archived': archivedBoxLocal,
+      };
+      scrollToEl(headingMap[kind] || archivedBoxLocal);
+    }
+    function buildClosedOverviewCard(label, count, totalText, metaText, options = {}) {
+      const className = String(options.className || '').trim();
+      const target = String(options.target || '').trim();
+      const extraAttrs = target
+        ? ` data-target="${escapeAdminAttr(target)}" tabindex="0" role="button"`
+        : '';
+      const classes = ['closed-summary-card'];
+      if (className) classes.push(className);
+      if (target) classes.push('is-link');
       return `
-        <div class="closed-summary-card">
+        <div class="${escapeAdminAttr(classes.join(' '))}"${extraAttrs}>
           <div class="label">${escapeAdminHtml(label)}</div>
           <div class="value">${escapeAdminHtml(String(count))}</div>
           <div class="money">${escapeAdminHtml(totalText)}</div>
           <div class="meta">${escapeAdminHtml(metaText)}</div>
         </div>
       `;
+    }
+    async function fetchArchiveEligibleCount(type, hours = 24) {
+      const slug = tenantInput.value.trim() || defaultSlug();
+      const url = new URL('/api/archive/eligible_count', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      url.searchParams.set('type', type);
+      url.searchParams.set('hours', String(hours));
+      const resp = await wFetch(url.toString());
+      if (!resp.ok) return null;
+      return resp.json();
+    }
+    async function renderClosedArchiveSuggestions() {
+      try {
+        const [deliveredInfo, canceledInfo] = await Promise.all([
+          fetchArchiveEligibleCount('delivered', 24),
+          fetchArchiveEligibleCount('canceled', 24),
+        ]);
+        window.closedEligibleCounts = {
+          delivered: Number(deliveredInfo && deliveredInfo.count || 0),
+          canceled: Number(canceledInfo && canceledInfo.count || 0),
+          hours: 24,
+        };
+      } catch (_) {
+        window.closedEligibleCounts = null;
+      }
+      renderClosedOverview();
+    }
+    function syncClosedFilterInputsToState() {
+      window.archivedSearch = archSearchInput ? archSearchInput.value.trim() : '';
+      window.archivedFrom = archFromInput ? archFromInput.value : '';
+      window.archivedTo = archToInput ? archToInput.value : '';
+      window.archOrderType = archOrderTypeSelect ? archOrderTypeSelect.value : '';
+      window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'archived';
     }
     function getClosedFilterSummaryText() {
       const parts = [];
@@ -3353,40 +3546,71 @@
       const deliveredVisible = Array.isArray(window.closedDeliveredVisible) ? window.closedDeliveredVisible : [];
       const canceledVisible = Array.isArray(window.closedCanceledVisible) ? window.closedCanceledVisible : [];
       const archivedMetrics = window.closedArchivedMetrics || {};
+      const eligibleCounts = window.closedEligibleCounts || {};
       const filterSummary = getClosedFilterSummaryText();
       const cards = [
         buildClosedOverviewCard(
           'Entregados recientes',
           deliveredVisible.length,
           `Visible: ${formatMoney(sumClosedVisibleTotal(deliveredVisible, true))}`,
-          'Pendientes de archivar con el filtro actual'
+          'Pendientes de archivar con el filtro actual',
+          { target: 'delivered' }
         ),
         buildClosedOverviewCard(
           'Cancelados recientes',
           canceledVisible.length,
           `Visible: ${formatMoney(sumClosedVisibleTotal(canceledVisible, false))}`,
-          'Cancelados aun no archivados'
+          'Cancelados aun no archivados',
+          { target: 'canceled' }
         ),
         buildClosedOverviewCard(
           'Entregados archivados',
           Number(archivedMetrics.delivered_count || 0),
           `Archivado: ${formatMoney(archivedMetrics.delivered_total_with_tip || 0)}`,
-          `Propinas reales: ${formatMoney(archivedMetrics.delivered_tip_total || 0)}`
+          `Propinas reales: ${formatMoney(archivedMetrics.delivered_tip_total || 0)}`,
+          { target: 'archived-delivered' }
         ),
         buildClosedOverviewCard(
           'Cancelados archivados',
           Number(archivedMetrics.canceled_count || 0),
           `Archivado: ${formatMoney(archivedMetrics.canceled_total || 0)}`,
-          'Coinciden con el filtro actual'
+          'Coinciden con el filtro actual',
+          { target: 'archived-canceled' }
         ),
         buildClosedOverviewCard(
           'Limpiados archivados',
           Number(archivedMetrics.reset_count || 0),
           `Archivado: ${formatMoney(archivedMetrics.reset_total || 0)}`,
-          'Pedidos reiniciados y archivados'
+          'Pedidos reiniciados y archivados',
+          { target: 'archived-reset' }
+        ),
+        buildClosedOverviewCard(
+          'Entregados listos para archivar',
+          Number(eligibleCounts.delivered || 0),
+          'Antiguedad: 24h o mas',
+          'No dependen del filtro actual',
+          { className: 'attention', target: 'eligible-delivered' }
+        ),
+        buildClosedOverviewCard(
+          'Cancelados listos para archivar',
+          Number(eligibleCounts.canceled || 0),
+          'Antiguedad: 24h o mas',
+          'Pendientes de archivado automatico o manual',
+          { className: 'attention', target: 'eligible-canceled' }
         ),
       ];
       closedOverviewEl.innerHTML = `<div class="closed-summary-head"><strong>Resumen del filtro actual</strong><br>${escapeAdminHtml(filterSummary)}</div>${cards.join('')}`;
+      closedOverviewEl.querySelectorAll('[data-target]').forEach(el => {
+        const run = () => openClosedSummaryTarget(el.getAttribute('data-target'));
+        el.addEventListener('click', run);
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            run();
+          }
+        });
+      });
+      updateClosedBulkButtons();
     }
     function getOrderAddressOneLine(o) {
       let a = '';
@@ -5252,7 +5476,7 @@
          // We need to iterate rows to match ID text
          const allActiveRows = Array.from(document.querySelectorAll('#orders-tbody tr'));
          for (const r of allActiveRows) {
-            const idCell = r.querySelector('td:first-child');
+            const idCell = r.querySelector('td:nth-child(2)');
             if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
                 r.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 r.style.transition = 'background 0.5s';
@@ -5265,7 +5489,7 @@
          // Check delivered
          const allDeliveredRows = Array.from(document.querySelectorAll('#delivered-tbody tr'));
          for (const r of allDeliveredRows) {
-            const idCell = r.querySelector('td:first-child');
+            const idCell = r.querySelector('td:nth-child(2)');
             if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
                 openOrdersHistoryGroup();
                 const box = document.getElementById('delivered-box');
@@ -6004,6 +6228,7 @@
       const archDeliveredIds = new Set(archDelList.map(x => x.id));
       const filtered = getVisibleClosedRecentOrders(list, archDeliveredIds);
       window.closedDeliveredVisible = filtered;
+      pruneClosedSelection('delivered');
       const total = filtered.length;
       deliveredOffset = clampClosedOffset(total, deliveredOffset, deliveredLimit);
       const pageList = filtered.slice(deliveredOffset, deliveredOffset + deliveredLimit);
@@ -6012,7 +6237,7 @@
       const fragCards = document.createDocumentFragment();
       if (!pageList.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="9" class="small">Sin resultados</td>`;
+        tr.innerHTML = `<td colspan="10" class="small">Sin resultados</td>`;
         fragRows.appendChild(tr);
       }
       for (const o of pageList) {
@@ -6034,6 +6259,11 @@
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
         const safeStatusText = escapeAdminHtml(closedStatusText);
         tr.innerHTML = `
+          <td class="select-col">
+            ${canArchive && isPaidClosed
+              ? `<input type="checkbox" class="row-selector" data-id="${safeAdminInt(o.id)}" ${getClosedSelectionSet('delivered').has(Number(o.id)) ? 'checked' : ''} aria-label="Seleccionar pedido ${safeOrderNumber}" />`
+              : '<span class="small" style="color:#9aa4b2;">-</span>'}
+          </td>
           <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
           <td><span class="pill">${safeOrderType}</span></td>
@@ -6079,6 +6309,11 @@
           card.className = 'card';
           const statusClass = statusClasses[o.status] || 'status-entregado';
           card.innerHTML = `
+            <div class="mobile-select-line">
+              ${canArchive && isPaidClosed
+                ? `<input type="checkbox" class="row-selector-mobile" data-id="${o.id}" ${getClosedSelectionSet('delivered').has(Number(o.id)) ? 'checked' : ''} aria-label="Seleccionar pedido ${safeOrderNumber}" />`
+                : ''}
+            </div>
             <div class="card-content">
               <div class="title">Pedido #${displayOrderNumber(o)}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
@@ -6095,6 +6330,13 @@
             </div>
           `;
           fragCards.appendChild(card);
+        }
+        const selectBox = tr.querySelector('.row-selector');
+        if (selectBox) {
+          selectBox.addEventListener('change', () => {
+            setClosedSelection('delivered', [o.id], !!selectBox.checked);
+            updateClosedBulkButtons();
+          });
         }
         const copyBtn = tr.querySelector('.copy-phone');
         if (copyBtn) {
@@ -6129,6 +6371,13 @@
           });
         });
         if (canArchive) {
+          dmobile.querySelectorAll('.row-selector-mobile').forEach(input => {
+            input.addEventListener('change', () => {
+              const id = Number(input.getAttribute('data-id') || '0');
+              setClosedSelection('delivered', [id], !!input.checked);
+              updateClosedBulkButtons();
+            });
+          });
           dmobile.querySelectorAll('.archivar').forEach(btn => {
             btn.addEventListener('click', async () => {
               const id = parseInt(btn.getAttribute('data-id')||'0',10);
@@ -6159,6 +6408,7 @@
       const archCanceledIds = new Set(archCanList.map(x => x.id));
       const filtered = getVisibleClosedRecentOrders(list, archCanceledIds);
       window.closedCanceledVisible = filtered;
+      pruneClosedSelection('canceled');
       const total = filtered.length;
       canceledOffset = clampClosedOffset(total, canceledOffset, canceledLimit);
       const pageList = filtered.slice(canceledOffset, canceledOffset + canceledLimit);
@@ -6167,7 +6417,7 @@
       const fragCards = document.createDocumentFragment();
       if (!pageList.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="7" class="small">Sin resultados</td>`;
+        tr.innerHTML = `<td colspan="8" class="small">Sin resultados</td>`;
         fragRows.appendChild(tr);
       }
       for (const o of pageList) {
@@ -6179,6 +6429,9 @@
         const safeDestLabel = escapeAdminHtml(destLabel);
         const safeStatus = escapeAdminHtml(o.status);
         tr.innerHTML = `
+          <td class="select-col">
+            <input type="checkbox" class="row-selector" data-id="${safeAdminInt(o.id)}" ${getClosedSelectionSet('canceled').has(Number(o.id)) ? 'checked' : ''} aria-label="Seleccionar pedido ${safeOrderNumber}" />
+          </td>
           <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
           <td><span class="pill">${safeOrderType}</span></td>
@@ -6216,6 +6469,9 @@
           const safeOrderId = safeAdminInt(o.id);
           card.className = 'card';
           card.innerHTML = `
+            <div class="mobile-select-line">
+              <input type="checkbox" class="row-selector-mobile" data-id="${safeOrderId}" ${getClosedSelectionSet('canceled').has(Number(o.id)) ? 'checked' : ''} aria-label="Seleccionar pedido ${safeOrderNumber}" />
+            </div>
             <div class="card-content">
               <div class="title">Pedido #${safeOrderNumber}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
@@ -6231,6 +6487,13 @@
             </div>
           `;
           fragCards.appendChild(card);
+        }
+        const selectBox = tr.querySelector('.row-selector');
+        if (selectBox) {
+          selectBox.addEventListener('change', () => {
+            setClosedSelection('canceled', [o.id], !!selectBox.checked);
+            updateClosedBulkButtons();
+          });
         }
       const viewBtn = tr.querySelector('.ver-detalle');
         const archiveBtn = tr.querySelector('.archivar');
@@ -6248,6 +6511,13 @@
       ctbody.replaceChildren(fragRows);
       if (cmobile) {
         cmobile.replaceChildren(fragCards);
+        cmobile.querySelectorAll('.row-selector-mobile').forEach(input => {
+          input.addEventListener('change', () => {
+            const id = Number(input.getAttribute('data-id') || '0');
+            setClosedSelection('canceled', [id], !!input.checked);
+            updateClosedBulkButtons();
+          });
+        });
         cmobile.querySelectorAll('.ver-detalle').forEach(btn => {
           btn.addEventListener('click', () => {
             const id = parseInt(btn.getAttribute('data-id')||'0',10);
@@ -6272,6 +6542,7 @@
       if (canPrevBtn) canPrevBtn.disabled = (canceledOffset === 0);
       const atEndCan = canceledOffset + canceledLimit >= total;
       if (canNextBtn) canNextBtn.disabled = atEndCan;
+      updateClosedBulkButtons();
       renderClosedOverview();
     }
     // INITIAL DATA for gastronomia-local1.html, local2, local3, local4, local5
@@ -8458,20 +8729,35 @@
         if (archivedBox.open) {
           try { await renderArchived(); } catch (_) {}
           try { await renderArchivedMetrics(); } catch (_) {}
+          try { await renderClosedArchiveSuggestions(); } catch (_) {}
         }
       });
     }
     if (archFilterBtn) {
       archFilterBtn.addEventListener('click', async () => {
-        window.archivedSearch = archSearchInput.value.trim();
-        window.archivedFrom = archFromInput.value;
-        window.archivedTo = archToInput.value;
-        window.archOrderType = archOrderTypeSelect ? archOrderTypeSelect.value : '';
-        window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'archived';
+        syncClosedFilterInputsToState();
         archOffset = 0;
         deliveredOffset = 0;
         canceledOffset = 0;
         try { localStorage.setItem('arch_filters', JSON.stringify({ q: window.archivedSearch, from: window.archivedFrom, to: window.archivedTo, order_type: window.archOrderType, mode: window.archDateMode })); } catch (_) {}
+        await refreshClosedViews();
+      });
+    }
+    if (archClearBtn) {
+      archClearBtn.addEventListener('click', async () => {
+        if (archSearchInput) archSearchInput.value = '';
+        if (archOrderTypeSelect) archOrderTypeSelect.value = '';
+        if (archDateModeSelect) archDateModeSelect.value = 'archived';
+        const today = (new Date()).toISOString().slice(0,10);
+        const y = new Date(); y.setDate(y.getDate()-1);
+        const yesterday = y.toISOString().slice(0,10);
+        if (archFromInput) archFromInput.value = yesterday;
+        if (archToInput) archToInput.value = today;
+        syncClosedFilterInputsToState();
+        archOffset = 0;
+        deliveredOffset = 0;
+        canceledOffset = 0;
+        try { localStorage.setItem('arch_filters', JSON.stringify({ q: '', from: window.archivedFrom, to: window.archivedTo, order_type: '', mode: window.archDateMode })); } catch (_) {}
         await refreshClosedViews();
       });
     }
@@ -8519,6 +8805,7 @@
         window.archivedTo = archToInput ? archToInput.value : '';
         window.archOrderType = archOrderTypeSelect ? archOrderTypeSelect.value : '';
         window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'archived';
+        renderClosedOverview();
       }
     } catch (_) {}
     if (archExportBtn) {
@@ -8558,6 +8845,29 @@
         try { await renderDelivered(window.deliveredCurrent || []); } catch (_) {}
       });
     }
+    if (delSelectVisibleBtn) {
+      delSelectVisibleBtn.addEventListener('click', () => {
+        const ids = getArchivableClosedOrders('delivered', getClosedVisibleList('delivered')).map(order => order.id);
+        setClosedSelection('delivered', ids, true);
+        try { renderDelivered(window.deliveredCurrent || []); } catch (_) {}
+      });
+    }
+    if (delClearSelectionBtn) {
+      delClearSelectionBtn.addEventListener('click', () => {
+        getClosedSelectionSet('delivered').clear();
+        try { renderDelivered(window.deliveredCurrent || []); } catch (_) {}
+      });
+    }
+    if (delArchiveSelectedBtn) {
+      delArchiveSelectedBtn.addEventListener('click', async () => {
+        await archiveClosedOrdersBatch('delivered', getSelectedClosedOrders('delivered'), 'seleccionados');
+      });
+    }
+    if (delArchiveVisibleBtn) {
+      delArchiveVisibleBtn.addEventListener('click', async () => {
+        await archiveClosedOrdersBatch('delivered', getClosedVisibleList('delivered'), 'filtrados');
+      });
+    }
     if (canPageSizeSelect) {
       canPageSizeSelect.addEventListener('change', async () => {
         canceledLimit = parseInt(canPageSizeSelect.value, 10) || 50;
@@ -8575,6 +8885,29 @@
       canNextBtn.addEventListener('click', async () => {
         canceledOffset += canceledLimit;
         try { await renderCanceled(window.canceledCurrent || []); } catch (_) {}
+      });
+    }
+    if (canSelectVisibleBtn) {
+      canSelectVisibleBtn.addEventListener('click', () => {
+        const ids = getArchivableClosedOrders('canceled', getClosedVisibleList('canceled')).map(order => order.id);
+        setClosedSelection('canceled', ids, true);
+        try { renderCanceled(window.canceledCurrent || []); } catch (_) {}
+      });
+    }
+    if (canClearSelectionBtn) {
+      canClearSelectionBtn.addEventListener('click', () => {
+        getClosedSelectionSet('canceled').clear();
+        try { renderCanceled(window.canceledCurrent || []); } catch (_) {}
+      });
+    }
+    if (canArchiveSelectedBtn) {
+      canArchiveSelectedBtn.addEventListener('click', async () => {
+        await archiveClosedOrdersBatch('canceled', getSelectedClosedOrders('canceled'), 'seleccionados');
+      });
+    }
+    if (canArchiveVisibleBtn) {
+      canArchiveVisibleBtn.addEventListener('click', async () => {
+        await archiveClosedOrdersBatch('canceled', getClosedVisibleList('canceled'), 'filtrados');
       });
     }
     async function fetchMetrics() {
