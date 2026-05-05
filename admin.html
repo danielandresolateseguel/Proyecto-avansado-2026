@@ -136,7 +136,94 @@
     .delivered summary, .canceled summary, .archived summary, .inventory summary, .carousel summary, .orders-history-group summary { background: #f0f3f8; border-color: var(--kds-border); }
     .orders-history-group { margin: 12px 0; }
     .orders-history-group .orders-history-inner { margin-top: 10px; display: grid; gap: 10px; padding: 0 6px 6px; }
-    .orders-history-group .orders-history-inner > details { margin: 0; }
+    .orders-history-group .orders-history-inner > details {
+      margin: 0;
+      border: 1px solid var(--kds-border);
+      border-radius: 14px;
+      background: var(--kds-card-bg);
+      box-shadow: 0 8px 22px rgba(31, 41, 55, 0.05);
+      overflow: hidden;
+      padding: 0 12px 12px;
+    }
+    .orders-history-group .orders-history-inner > details > summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      padding: 12px 14px;
+      margin: 0 -12px 12px;
+      border-bottom: 1px solid transparent;
+    }
+    .orders-history-group .orders-history-inner > details > summary::-webkit-details-marker { display: none; }
+    .orders-history-group .orders-history-inner > details > summary::before {
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      color: #fff;
+      flex: 0 0 auto;
+    }
+    .orders-history-group .orders-history-inner > details[open] > summary { border-bottom-color: currentColor; }
+    #delivered-box {
+      border-color: #cfe7d6;
+      background: linear-gradient(180deg, #f7fcf8 0%, #ffffff 26%);
+    }
+    #delivered-box > summary {
+      background: linear-gradient(90deg, #e8f5ea 0%, #f7fcf8 100%);
+      color: #1f6b39;
+    }
+    #delivered-box > summary::before {
+      content: 'OK';
+      background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+      box-shadow: 0 4px 10px rgba(46, 125, 50, 0.24);
+    }
+    #delivered-box .pager { background: rgba(46, 125, 50, 0.05); border: 1px solid #d8ecdd; border-radius: 10px; padding: 8px 10px; }
+    #canceled-box {
+      border-color: #f0c3c3;
+      background: linear-gradient(180deg, #fff8f8 0%, #ffffff 26%);
+    }
+    #canceled-box > summary {
+      background: linear-gradient(90deg, #fdecec 0%, #fff8f8 100%);
+      color: #a52828;
+    }
+    #canceled-box > summary::before {
+      content: 'NO';
+      background: linear-gradient(135deg, #c62828 0%, #e53935 100%);
+      box-shadow: 0 4px 10px rgba(198, 40, 40, 0.24);
+    }
+    #canceled-box .pager { background: rgba(198, 40, 40, 0.05); border: 1px solid #f1d6d6; border-radius: 10px; padding: 8px 10px; }
+    #archived-box {
+      border-color: #d8dff0;
+      background: linear-gradient(180deg, #f8faff 0%, #ffffff 26%);
+    }
+    #archived-box > summary {
+      background: linear-gradient(90deg, #edf2ff 0%, #f8faff 100%);
+      color: #365a91;
+    }
+    #archived-box > summary::before {
+      content: 'ARC';
+      background: linear-gradient(135deg, #4a6fa5 0%, #668fc8 100%);
+      box-shadow: 0 4px 10px rgba(74, 111, 165, 0.24);
+    }
+    #archived-box .pager { background: rgba(74, 111, 165, 0.06); border: 1px solid #dbe4f3; border-radius: 10px; padding: 8px 10px; }
+    #archived-box h3 {
+      margin-bottom: 6px;
+      padding-left: 10px;
+      border-left: 4px solid #b9c9e7;
+      color: #3f5f8a;
+    }
+    .closed-summary-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px; }
+    .closed-summary-head { grid-column:1 / -1; background:#eef3fb; border:1px solid var(--kds-border); border-radius:10px; padding:10px 12px; color:#415a77; }
+    .closed-summary-card { background:var(--kds-card-bg); border:1px solid var(--kds-border); border-radius:10px; padding:12px; box-shadow:0 4px 14px rgba(0,0,0,0.04); }
+    .closed-summary-card .label { font-size:12px; font-weight:700; color:#415a77; text-transform:uppercase; letter-spacing:.02em; }
+    .closed-summary-card .value { margin-top:6px; font-size:24px; font-weight:700; color:#243447; }
+    .closed-summary-card .money { margin-top:4px; font-size:14px; font-weight:600; color:#2e7d32; }
+    .closed-summary-card .meta { margin-top:4px; font-size:12px; color:#667085; }
     .actions button, .pager button { border-radius: 8px; }
     button { touch-action: manipulation; }
     .archived .copy-phone { background:#0f766e; color:#fff; }
@@ -1229,6 +1316,7 @@
                </button>
           </div>
         </div>
+        <div id="closed-overview" class="closed-summary-grid" aria-live="polite"></div>
         <details class="delivered" id="delivered-box">
           <summary>Entregados</summary>
           <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -2640,6 +2728,7 @@
     const archExportBtn = document.getElementById('arch-export-btn');
     const archDateModeSelect = document.getElementById('arch-date-mode');
     const archivedMetricsEl = document.getElementById('archived-metrics');
+    const closedOverviewEl = document.getElementById('closed-overview');
     const archPageSizeSelect = document.getElementById('arch-page-size');
     const slaWarnInput = document.getElementById('sla-warning');
     const slaCritInput = document.getElementById('sla-critical');
@@ -2669,6 +2758,9 @@
     const invReloadBtn = document.getElementById('inv-reload');
     const invTbody = document.getElementById('inventory-tbody');
     const ordersHistoryGroup = document.getElementById('orders-history-group');
+    const deliveredSummaryEl = document.querySelector('#delivered-box > summary');
+    const canceledSummaryEl = document.querySelector('#canceled-box > summary');
+    const archivedSummaryEl = document.querySelector('#archived-box > summary');
     const closeDeliveredBtn = document.getElementById('close-delivered-box');
     const closeCanceledBtn = document.getElementById('close-canceled-box');
     const closeInventoryBtn = document.getElementById('close-inventory-box');
@@ -2719,6 +2811,9 @@
       window.archivedFrom = archFromInput ? archFromInput.value : '';
       window.archivedTo = archToInput ? archToInput.value : '';
       window.archivedSearch = '';
+      window.closedArchivedMetrics = null;
+      window.closedDeliveredVisible = [];
+      window.closedCanceledVisible = [];
     })();
     [archSearchInput, archFromInput, archToInput].forEach(el => {
       if (el) el.addEventListener('keydown', (e) => {
@@ -3214,6 +3309,84 @@
         try { await renderArchived(); } catch (_) {}
         try { await renderArchivedMetrics(); } catch (_) {}
       }
+    }
+    function buildClosedOverviewCard(label, count, totalText, metaText) {
+      return `
+        <div class="closed-summary-card">
+          <div class="label">${escapeAdminHtml(label)}</div>
+          <div class="value">${escapeAdminHtml(String(count))}</div>
+          <div class="money">${escapeAdminHtml(totalText)}</div>
+          <div class="meta">${escapeAdminHtml(metaText)}</div>
+        </div>
+      `;
+    }
+    function getClosedFilterSummaryText() {
+      const parts = [];
+      const search = String(window.archivedSearch || '').trim();
+      const from = String(window.archivedFrom || '').trim();
+      const to = String(window.archivedTo || '').trim();
+      const type = normalizeClosedTypeFilter(window.archOrderType || '');
+      if (search) parts.push(`Busqueda: ${search}`);
+      if (from || to) parts.push(`Fecha: ${from || 'inicio'} a ${to || 'hoy'}`);
+      if (type) parts.push(`Tipo: ${type === 'direccion' ? 'delivery' : type}`);
+      return parts.length ? parts.join(' · ') : 'Sin filtros especificos, mostrando el rango actual.';
+    }
+    function sumClosedVisibleTotal(list, includeTip) {
+      return (Array.isArray(list) ? list : []).reduce((acc, order) => {
+        const base = Number(order && order.total || 0);
+        const tip = includeTip ? Number(order && order.tip_amount || 0) : 0;
+        return acc + base + tip;
+      }, 0);
+    }
+    function updateClosedSectionSummaries() {
+      const deliveredCount = Array.isArray(window.closedDeliveredVisible) ? window.closedDeliveredVisible.length : 0;
+      const canceledCount = Array.isArray(window.closedCanceledVisible) ? window.closedCanceledVisible.length : 0;
+      const archivedMetrics = window.closedArchivedMetrics || {};
+      const archivedCount = Number(archivedMetrics.delivered_count || 0) + Number(archivedMetrics.canceled_count || 0) + Number(archivedMetrics.reset_count || 0);
+      if (deliveredSummaryEl) deliveredSummaryEl.textContent = `Entregados (${deliveredCount})`;
+      if (canceledSummaryEl) canceledSummaryEl.textContent = `Cancelados (${canceledCount})`;
+      if (archivedSummaryEl) archivedSummaryEl.textContent = `Archivados (${archivedCount})`;
+    }
+    function renderClosedOverview() {
+      updateClosedSectionSummaries();
+      if (!closedOverviewEl) return;
+      const deliveredVisible = Array.isArray(window.closedDeliveredVisible) ? window.closedDeliveredVisible : [];
+      const canceledVisible = Array.isArray(window.closedCanceledVisible) ? window.closedCanceledVisible : [];
+      const archivedMetrics = window.closedArchivedMetrics || {};
+      const filterSummary = getClosedFilterSummaryText();
+      const cards = [
+        buildClosedOverviewCard(
+          'Entregados recientes',
+          deliveredVisible.length,
+          `Visible: ${formatMoney(sumClosedVisibleTotal(deliveredVisible, true))}`,
+          'Pendientes de archivar con el filtro actual'
+        ),
+        buildClosedOverviewCard(
+          'Cancelados recientes',
+          canceledVisible.length,
+          `Visible: ${formatMoney(sumClosedVisibleTotal(canceledVisible, false))}`,
+          'Cancelados aun no archivados'
+        ),
+        buildClosedOverviewCard(
+          'Entregados archivados',
+          Number(archivedMetrics.delivered_count || 0),
+          `Archivado: ${formatMoney(archivedMetrics.delivered_total_with_tip || 0)}`,
+          `Propinas reales: ${formatMoney(archivedMetrics.delivered_tip_total || 0)}`
+        ),
+        buildClosedOverviewCard(
+          'Cancelados archivados',
+          Number(archivedMetrics.canceled_count || 0),
+          `Archivado: ${formatMoney(archivedMetrics.canceled_total || 0)}`,
+          'Coinciden con el filtro actual'
+        ),
+        buildClosedOverviewCard(
+          'Limpiados archivados',
+          Number(archivedMetrics.reset_count || 0),
+          `Archivado: ${formatMoney(archivedMetrics.reset_total || 0)}`,
+          'Pedidos reiniciados y archivados'
+        ),
+      ];
+      closedOverviewEl.innerHTML = `<div class="closed-summary-head"><strong>Resumen del filtro actual</strong><br>${escapeAdminHtml(filterSummary)}</div>${cards.join('')}`;
     }
     function getOrderAddressOneLine(o) {
       let a = '';
@@ -5830,6 +6003,7 @@
       try { if (canArchive) archDelList = await fetchArchived('delivered'); } catch (_) { archDelList = []; }
       const archDeliveredIds = new Set(archDelList.map(x => x.id));
       const filtered = getVisibleClosedRecentOrders(list, archDeliveredIds);
+      window.closedDeliveredVisible = filtered;
       const total = filtered.length;
       deliveredOffset = clampClosedOffset(total, deliveredOffset, deliveredLimit);
       const pageList = filtered.slice(deliveredOffset, deliveredOffset + deliveredLimit);
@@ -5974,6 +6148,7 @@
       if (delPrevBtn) delPrevBtn.disabled = (deliveredOffset === 0);
       const atEndDel = deliveredOffset + deliveredLimit >= total;
       if (delNextBtn) delNextBtn.disabled = atEndDel;
+      renderClosedOverview();
     }
 
     async function renderCanceled(list) {
@@ -5983,6 +6158,7 @@
       try { archCanList = await fetchArchived('canceled'); } catch (_) { archCanList = []; }
       const archCanceledIds = new Set(archCanList.map(x => x.id));
       const filtered = getVisibleClosedRecentOrders(list, archCanceledIds);
+      window.closedCanceledVisible = filtered;
       const total = filtered.length;
       canceledOffset = clampClosedOffset(total, canceledOffset, canceledLimit);
       const pageList = filtered.slice(canceledOffset, canceledOffset + canceledLimit);
@@ -6096,6 +6272,7 @@
       if (canPrevBtn) canPrevBtn.disabled = (canceledOffset === 0);
       const atEndCan = canceledOffset + canceledLimit >= total;
       if (canNextBtn) canNextBtn.disabled = atEndCan;
+      renderClosedOverview();
     }
     // INITIAL DATA for gastronomia-local1.html, local2, local3, local4, local5
     async function fetchProducts(includeInactive = false) {
@@ -6529,8 +6706,16 @@
     async function renderArchivedMetrics() {
       try {
         const m = await fetchArchivedMetrics();
-        if (!m || !archivedMetricsEl) return;
-        archivedMetricsEl.textContent = `Entregados: ${m.delivered_count} · Total entregados: $${m.delivered_total} · Propina(10%): $${m.delivered_tip_10} · Total c/propina: $${m.delivered_total_with_tip} · Cancelados: ${m.canceled_count} · Total cancelados: $${m.canceled_total}`;
+        window.closedArchivedMetrics = m || null;
+        if (!m) {
+          if (archivedMetricsEl) archivedMetricsEl.textContent = '';
+          renderClosedOverview();
+          return;
+        }
+        if (archivedMetricsEl) {
+          archivedMetricsEl.textContent = `Archivados del filtro actual: entregados ${m.delivered_count} por ${formatMoney(m.delivered_total_with_tip)} · propinas ${formatMoney(m.delivered_tip_total)} · cancelados ${m.canceled_count} por ${formatMoney(m.canceled_total)} · limpiados ${m.reset_count} por ${formatMoney(m.reset_total)}`;
+        }
+        renderClosedOverview();
       } catch (_) {}
     }
 

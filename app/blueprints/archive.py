@@ -117,6 +117,44 @@ def _money(value):
     except Exception:
         return 0
 
+def _apply_archive_filters(base_sql, params, *, a_type=None, from_date=None, to_date=None, order_type=None, q=None, date_field='archived'):
+    sql = str(base_sql or '')
+    out_params = list(params or [])
+    if a_type:
+        sql += " AND a.type = ?"
+        out_params.append(a_type)
+    date_col = 'a.archived_at' if date_field == 'archived' else 'o.created_at'
+    if from_date:
+        sql += f" AND {date_col} >= ?"
+        out_params.append(from_date)
+    if to_date:
+        sql += f" AND {date_col} <= ?"
+        out_params.append(to_date)
+    if order_type:
+        sql += " AND o.order_type = ?"
+        out_params.append(order_type)
+    if q:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                sql += " AND (o.id = ? OR o.tenant_order_number = ?)"
+                out_params.extend([qid, visible_num])
+            except Exception:
+                sql += " AND o.tenant_order_number = ?"
+                out_params.append(visible_num)
+        else:
+            nq = re.sub(r"^(destino|direccion|dir|cliente|tel|telefono)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
+            like = f"%{nq.lower()}%"
+            sql += (
+                " AND (LOWER(COALESCE(o.address_json,'')) LIKE ?"
+                " OR LOWER(COALESCE(o.table_number,'')) LIKE ?"
+                " OR LOWER(COALESCE(o.customer_name,'')) LIKE ?"
+                " OR LOWER(COALESCE(o.customer_phone,'')) LIKE ?)"
+            )
+            out_params.extend([like, like, like, like])
+    return sql, out_params
+
 def _round_metric(value, digits=1):
     try:
         return round(float(value or 0), digits)
@@ -240,34 +278,16 @@ def get_archive():
         WHERE a.tenant_slug = ?
     """
     params = [tenant_slug]
-    if a_type:
-        base += " AND a.type = ?"
-        params.append(a_type)
-    date_col = 'a.archived_at' if date_field == 'archived' else 'o.created_at'
-    if from_date:
-        base += f" AND {date_col} >= ?"
-        params.append(from_date)
-    if to_date:
-        base += f" AND {date_col} <= ?"
-        params.append(to_date)
-    if order_type:
-        base += " AND o.order_type = ?"
-        params.append(order_type)
-    if q:
-        visible_num = _parse_visible_order_number(q)
-        if visible_num is not None:
-            try:
-                qid = int(str(q).strip())
-                base += " AND (o.id = ? OR o.tenant_order_number = ?)"
-                params.extend([qid, visible_num])
-            except Exception:
-                base += " AND o.tenant_order_number = ?"
-                params.append(visible_num)
-        else:
-            nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
-            like = f"%{nq.lower()}%"
-            base += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
-            params.extend([like, like, like])
+    base, params = _apply_archive_filters(
+        base,
+        params,
+        a_type=a_type,
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
     base += " ORDER BY o.id DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     cur.execute(base, params)
@@ -287,34 +307,16 @@ def get_archive():
         WHERE a.tenant_slug = ?
     """
     count_params = [tenant_slug]
-    if a_type:
-        count_sql += " AND a.type = ?"
-        count_params.append(a_type)
-    date_col = 'a.archived_at' if date_field == 'archived' else 'o.created_at'
-    if from_date:
-        count_sql += f" AND {date_col} >= ?"
-        count_params.append(from_date)
-    if to_date:
-        count_sql += f" AND {date_col} <= ?"
-        count_params.append(to_date)
-    if order_type:
-        count_sql += " AND o.order_type = ?"
-        count_params.append(order_type)
-    if q:
-        visible_num = _parse_visible_order_number(q)
-        if visible_num is not None:
-            try:
-                qid = int(str(q).strip())
-                count_sql += " AND (o.id = ? OR o.tenant_order_number = ?)"
-                count_params.extend([qid, visible_num])
-            except Exception:
-                count_sql += " AND o.tenant_order_number = ?"
-                count_params.append(visible_num)
-        else:
-            nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
-            like = f"%{nq.lower()}%"
-            count_sql += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
-            count_params.extend([like, like, like])
+    count_sql, count_params = _apply_archive_filters(
+        count_sql,
+        count_params,
+        a_type=a_type,
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
     cur.execute(count_sql, count_params)
     total_count = int(cur.fetchone()[0])
     data = [dict(r) for r in rows]
@@ -325,9 +327,14 @@ def get_archive():
             def _norm(s):
                 s = str(s or '').lower()
                 return ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
-            nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
+            nq = re.sub(r"^(destino|direccion|dir|cliente|tel|telefono)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
             nq = _norm(nq)
-            data = [r for r in data if (nq in _norm(r.get('address_json')) or nq in _norm(r.get('table_number')) or nq in _norm(r.get('customer_name')))]
+            data = [r for r in data if (
+                nq in _norm(r.get('address_json')) or
+                nq in _norm(r.get('table_number')) or
+                nq in _norm(r.get('customer_name')) or
+                nq in _norm(r.get('customer_phone'))
+            )]
     return jsonify({'archives': data, 'count': len(data), 'limit': limit, 'offset': offset, 'total_count': total_count})
 
 @bp.route('/archive/eligible_count', methods=['GET'])
@@ -396,34 +403,16 @@ def archive_export():
         WHERE a.tenant_slug = ?
     """
     params = [tenant_slug]
-    if a_type:
-        base += " AND a.type = ?"
-        params.append(a_type)
-    date_col = 'a.archived_at' if date_field == 'archived' else 'o.created_at'
-    if from_date:
-        base += f" AND {date_col} >= ?"
-        params.append(from_date)
-    if to_date:
-        base += f" AND {date_col} <= ?"
-        params.append(to_date)
-    if order_type:
-        base += " AND o.order_type = ?"
-        params.append(order_type)
-    if q:
-        visible_num = _parse_visible_order_number(q)
-        if visible_num is not None:
-            try:
-                qid = int(str(q).strip())
-                base += " AND (o.id = ? OR o.tenant_order_number = ?)"
-                params.extend([qid, visible_num])
-            except Exception:
-                base += " AND o.tenant_order_number = ?"
-                params.append(visible_num)
-        else:
-            nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
-            like = f"%{nq.lower()}%"
-            base += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
-            params.extend([like, like, like])
+    base, params = _apply_archive_filters(
+        base,
+        params,
+        a_type=a_type,
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
     base += " ORDER BY o.id DESC"
     cur.execute(base, params)
     rows = cur.fetchall()
@@ -451,6 +440,7 @@ def archive_export():
 @bp.route('/archive/metrics', methods=['GET'])
 def archive_metrics():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    q = request.args.get('q')
     from_date = request.args.get('from')
     to_date = request.args.get('to')
     order_type = request.args.get('order_type')
@@ -468,36 +458,70 @@ def archive_metrics():
     to_date = _norm_date(to_date, end=True)
     conn = get_db()
     cur = conn.cursor()
-    date_col = 'a.archived_at' if date_field == 'archived' else 'o.created_at'
-    base = f"""
-        SELECT o.total
+    base = """
+        SELECT o.total, COALESCE(o.tip_amount, 0) AS tip_amount
         FROM archived_orders a JOIN orders o ON o.id = a.order_id
-        WHERE a.tenant_slug = ? AND a.type = ?
-        {" AND " + date_col + " >= ?" if from_date else ''}
-        {" AND " + date_col + " <= ?" if to_date else ''}
-        {" AND o.order_type = ?" if order_type else ''}
+        WHERE a.tenant_slug = ?
     """
+    params_del = [tenant_slug]
+    sql_del, params_del = _apply_archive_filters(
+        base,
+        params_del,
+        a_type='delivered',
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
+    params_can = [tenant_slug]
+    sql_can, params_can = _apply_archive_filters(
+        base,
+        params_can,
+        a_type='canceled',
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
+    params_reset = [tenant_slug]
+    sql_reset, params_reset = _apply_archive_filters(
+        base,
+        params_reset,
+        a_type='reset',
+        from_date=from_date,
+        to_date=to_date,
+        order_type=order_type,
+        q=q,
+        date_field=date_field,
+    )
     # Delivered metrics
-    params_del = [tenant_slug, 'delivered'] + ([from_date] if from_date else []) + ([to_date] if to_date else []) + ([order_type] if order_type else [])
-    cur.execute(base, params_del)
+    cur.execute(sql_del, params_del)
     rows_del = cur.fetchall()
     delivered_count = len(rows_del)
     delivered_total = int(sum(int(r[0] or 0) for r in rows_del))
-    tip = (delivered_total + 5) // 10
-    delivered_total_with_tip = delivered_total + tip
+    delivered_tip_total = int(sum(int(r[1] or 0) for r in rows_del))
+    delivered_total_with_tip = delivered_total + delivered_tip_total
     # Canceled metrics
-    params_can = [tenant_slug, 'canceled'] + ([from_date] if from_date else []) + ([to_date] if to_date else []) + ([order_type] if order_type else [])
-    cur.execute(base, params_can)
+    cur.execute(sql_can, params_can)
     rows_can = cur.fetchall()
     canceled_count = len(rows_can)
     canceled_total = int(sum(int(r[0] or 0) for r in rows_can))
+    # Reset metrics
+    cur.execute(sql_reset, params_reset)
+    rows_reset = cur.fetchall()
+    reset_count = len(rows_reset)
+    reset_total = int(sum(int(r[0] or 0) for r in rows_reset))
     return jsonify({
         'delivered_count': delivered_count,
         'delivered_total': delivered_total,
-        'delivered_tip_10': tip,
+        'delivered_tip_total': delivered_tip_total,
         'delivered_total_with_tip': delivered_total_with_tip,
         'canceled_count': canceled_count,
-        'canceled_total': canceled_total
+        'canceled_total': canceled_total,
+        'reset_count': reset_count,
+        'reset_total': reset_total,
     })
 
 @bp.route('/archive', methods=['POST'])
