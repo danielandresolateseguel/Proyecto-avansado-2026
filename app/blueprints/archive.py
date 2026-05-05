@@ -34,6 +34,37 @@ def _norm_date(s, end=False):
         pass
     return s
 
+def _series_letters_to_index(series):
+    letters = re.sub(r'[^A-Z]', '', str(series or '').upper())
+    if not letters:
+        return 0
+    idx = 0
+    for ch in letters:
+        idx = (idx * 26) + (ord(ch) - 64)
+    return max(0, idx - 1)
+
+def _parse_visible_order_number(value):
+    raw = str(value or '').strip().upper()
+    if not raw:
+        return None
+    raw = re.sub(r'^\s*PEDIDO\s*#?\s*', '', raw, flags=re.IGNORECASE)
+    raw = raw.replace(' ', '').replace('-', '')
+    m = re.fullmatch(r'([A-Z]*)(\d+)', raw)
+    if not m:
+        return None
+    series = str(m.group(1) or '').strip().upper()
+    try:
+        number = int(m.group(2) or '0')
+    except Exception:
+        return None
+    if number <= 0:
+        return None
+    if not series:
+        return number
+    if number > 9999:
+        return None
+    return 10000 + (_series_letters_to_index(series) * 9999) + (number - 1)
+
 def _parse_iso_dt(value):
     try:
         if not value:
@@ -223,11 +254,16 @@ def get_archive():
         base += " AND o.order_type = ?"
         params.append(order_type)
     if q:
-        try:
-            qid = int(q)
-            base += " AND o.id = ?"
-            params.append(qid)
-        except Exception:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                base += " AND (o.id = ? OR o.tenant_order_number = ?)"
+                params.extend([qid, visible_num])
+            except Exception:
+                base += " AND o.tenant_order_number = ?"
+                params.append(visible_num)
+        else:
             nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
             like = f"%{nq.lower()}%"
             base += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
@@ -265,11 +301,16 @@ def get_archive():
         count_sql += " AND o.order_type = ?"
         count_params.append(order_type)
     if q:
-        try:
-            qid = int(q)
-            count_sql += " AND o.id = ?"
-            count_params.append(qid)
-        except Exception:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                count_sql += " AND (o.id = ? OR o.tenant_order_number = ?)"
+                count_params.extend([qid, visible_num])
+            except Exception:
+                count_sql += " AND o.tenant_order_number = ?"
+                count_params.append(visible_num)
+        else:
             nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
             like = f"%{nq.lower()}%"
             count_sql += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
@@ -369,11 +410,16 @@ def archive_export():
         base += " AND o.order_type = ?"
         params.append(order_type)
     if q:
-        try:
-            qid = int(q)
-            base += " AND o.id = ?"
-            params.append(qid)
-        except Exception:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                base += " AND (o.id = ? OR o.tenant_order_number = ?)"
+                params.extend([qid, visible_num])
+            except Exception:
+                base += " AND o.tenant_order_number = ?"
+                params.append(visible_num)
+        else:
             nq = re.sub(r"^(destino|direccion|dir)\s*:\s*", "", str(q), flags=re.IGNORECASE).strip()
             like = f"%{nq.lower()}%"
             base += " AND (LOWER(COALESCE(o.address_json,'')) LIKE ? OR LOWER(COALESCE(o.table_number,'')) LIKE ? OR LOWER(COALESCE(o.customer_name,'')) LIKE ?)"
@@ -472,11 +518,20 @@ def post_archive():
         return jsonify({'error': 'type inválido'}), 400
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, tenant_slug, status FROM orders WHERE id = ?", (order_id,))
+    cur.execute("SELECT id, tenant_slug, status, COALESCE(payment_status,'') FROM orders WHERE id = ?", (order_id,))
     r = cur.fetchone()
     if not r:
         return jsonify({'error': 'orden no encontrada'}), 404
     tenant_slug = r[1]
+    status = str(r[2] or '').strip().lower()
+    payment_status = str(r[3] or '').strip().lower()
+    if a_type == 'delivered':
+        if status != 'entregado':
+            return jsonify({'error': 'solo se pueden archivar como entregados los pedidos en estado entregado'}), 400
+        if payment_status != 'paid':
+            return jsonify({'error': 'no se puede archivar un pedido entregado pendiente de cobro'}), 400
+    elif a_type == 'canceled' and status != 'cancelado':
+        return jsonify({'error': 'solo se pueden archivar como cancelados los pedidos en estado cancelado'}), 400
     cur.execute(
         "INSERT OR IGNORE INTO archived_orders (order_id, tenant_slug, type, archived_at) VALUES (?, ?, ?, ?)",
         (order_id, tenant_slug, a_type, datetime.utcnow().isoformat())
@@ -962,4 +1017,3 @@ def sales_analytics():
     except Exception as exc:
         print(f"Error in sales_analytics: {exc}")
         return jsonify({'error': 'analytics unavailable'}), 500
-

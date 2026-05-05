@@ -1185,6 +1185,50 @@
     <details class="orders-history-group" id="orders-history-group">
       <summary>Pedidos Cerrados</summary>
       <div class="orders-history-inner">
+        <div class="controls" style="margin:12px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+          <div class="small" style="margin-bottom:10px; color:#495057; font-weight:600;">Buscador y filtros unificados para entregados, cancelados y archivados</div>
+          <div style="margin-bottom: 12px;">
+             <input id="arch-search" type="text" placeholder="Buscar por N° pedido, cliente, destino o teléfono..." style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;" />
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 12px; font-weight: 600; color: #495057;">Desde</label>
+                  <input id="arch-from" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 12px; font-weight: 600; color: #495057;">Hasta</label>
+                  <input id="arch-to" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 12px; font-weight: 600; color: #495057;">Tipo de Pedido</label>
+                  <select id="arch-order-type" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                      <option value="">Todos</option>
+                      <option value="mesa">Mesa</option>
+                      <option value="direccion">Delivery</option>
+                      <option value="espera">Espera / retiro</option>
+                  </select>
+              </div>
+               <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <label style="font-size: 12px; font-weight: 600; color: #495057;">Fecha en archivados</label>
+                  <select id="arch-date-mode" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
+                      <option value="archived" selected>Fecha de archivado</option>
+                      <option value="order">Fecha de pedido</option>
+                  </select>
+              </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap:wrap;">
+               <button id="arch-export-btn" style="background: #fff; color: #28a745; border: 1px solid #28a745; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                  <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                  Exportar Archivados
+               </button>
+               <button id="arch-filter-btn" style="background: #007bff; color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                  <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                  Aplicar Filtros
+               </button>
+          </div>
+        </div>
         <details class="delivered" id="delivered-box">
           <summary>Entregados</summary>
           <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
@@ -1253,53 +1297,7 @@
           <div id="canceled-mobile" class="canceled-mobile"></div>
         </details>
         <details class="archived" id="archived-box">
-          <summary>Historial de Pedidos</summary>
-          <div class="controls" style="margin:12px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
-            <!-- Search Bar Row -->
-            <div style="margin-bottom: 12px;">
-               <input id="arch-search" type="text" placeholder="Buscar por ID, Cliente o Dirección..." style="width: 100%; padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px;" />
-            </div>
-
-            <!-- Filters Grid -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 15px;">
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Desde</label>
-                    <input id="arch-from" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Hasta</label>
-                    <input id="arch-to" type="date" style="padding: 6px; border: 1px solid #ced4da; border-radius: 4px;" />
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Tipo de Pedido</label>
-                    <select id="arch-order-type" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                        <option value="">Todos</option>
-                        <option value="mesa">Mesa</option>
-                        <option value="direccion">Delivery</option>
-                        <option value="retiro">Retiro</option>
-                    </select>
-                </div>
-                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <label style="font-size: 12px; font-weight: 600; color: #495057;">Filtrar por fecha</label>
-                    <select id="arch-date-mode" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                        <option value="archived" selected>Fecha de archivado</option>
-                        <option value="order">Fecha de pedido</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Actions Row -->
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                 <button id="arch-export-btn" style="background: #fff; color: #28a745; border: 1px solid #28a745; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 6px;">
-                    <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                    Exportar CSV
-                 </button>
-                 <button id="arch-filter-btn" style="background: #007bff; color: white; border: none; padding: 8px 24px; border-radius: 4px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                    <svg style="width:16px;height:16px;" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    Buscar
-                 </button>
-            </div>
-          </div>
+          <summary>Archivados</summary>
           <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <label>Tamaño
@@ -2980,7 +2978,14 @@
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
         body: JSON.stringify({ order_id: order.id, type })
       });
-      if (!resp.ok) throw new Error('Error al archivar');
+      if (!resp.ok) {
+        let msg = 'Error al archivar';
+        try {
+          const j = await resp.json();
+          if (j && j.error) msg = String(j.error);
+        } catch (_) {}
+        throw new Error(msg);
+      }
       return resp.json();
     }
 
@@ -3099,6 +3104,116 @@
       const n = getTenantOrderNumber(o);
       if (n) return formatTenantOrderNumber(n);
       return String(o && o.id || '').trim();
+    }
+    function normalizeOrderLookupToken(value) {
+      let raw = String(value || '').trim().toUpperCase();
+      if (!raw) return '';
+      raw = raw.replace(/^PEDIDO\s*#?\s*/i, '');
+      raw = raw.replace(/^#/, '').replace(/[\s-]+/g, '');
+      const m = raw.match(/^([A-Z]*)(\d+)$/);
+      if (!m) return raw;
+      const prefix = String(m[1] || '');
+      const num = parseInt(m[2] || '0', 10);
+      if (!Number.isFinite(num) || num <= 0) return '';
+      return prefix ? `${prefix}${num}` : String(num);
+    }
+    function isOrderLookupSearch(value) {
+      return !!normalizeOrderLookupToken(value);
+    }
+    function getPaymentMethodLabel(method) {
+      const key = String(method || '').trim().toLowerCase();
+      if (!key) return '-';
+      if (key === 'contado' || key === 'cash') return 'Efectivo';
+      if (key === 'pos') return 'POS/QR';
+      if (key === 'transferencia') return 'Transferencia';
+      if (key === 'mixed' || key === 'mixto') return 'Pago mixto';
+      return key;
+    }
+    function getClosedOrderStatusLabel(order) {
+      const status = String(order && order.status || '').trim().toLowerCase();
+      if (status === 'entregado') {
+        const isPaid = String(order && order.payment_status || '').trim().toLowerCase() === 'paid';
+        return isPaid ? 'entregado · cobrado' : 'entregado · pendiente de cobro';
+      }
+      if (status === 'cancelado') return 'cancelado';
+      return status || '-';
+    }
+    function normalizeClosedTypeFilter(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw) return '';
+      if (raw === 'retiro') return 'espera';
+      return raw;
+    }
+    function matchesClosedDateFilter(order, dateValue) {
+      const ts = parseDateSafe(dateValue);
+      if (Number.isNaN(ts)) return false;
+      const from = String(window.archivedFrom || '').trim();
+      const to = String(window.archivedTo || '').trim();
+      if (from) {
+        const fromTs = parseDateSafe(`${from}T00:00:00`);
+        if (!Number.isNaN(fromTs) && ts < fromTs) return false;
+      }
+      if (to) {
+        const toTs = parseDateSafe(`${to}T23:59:59`);
+        if (!Number.isNaN(toTs) && ts > toTs) return false;
+      }
+      return true;
+    }
+    function matchesClosedSearchFilter(order) {
+      const search = String(window.archivedSearch || '').trim();
+      if (!search) return true;
+      const normalizedLookup = normalizeOrderLookupToken(search);
+      if (normalizedLookup) {
+        const displayRef = normalizeOrderLookupToken(displayOrderNumber(order));
+        const internalRef = normalizeOrderLookupToken(String(order && order.id || ''));
+        if (displayRef === normalizedLookup || internalRef === normalizedLookup) return true;
+      }
+      const haystack = [
+        displayOrderNumber(order),
+        order && order.id,
+        order && order.customer_name,
+        order && order.customer_phone,
+        destinoLabelFor(order),
+        order && order.table_number,
+        getClosedOrderStatusLabel(order)
+      ].map(v => String(v || '').toLowerCase()).join(' ');
+      return haystack.includes(search.toLowerCase());
+    }
+    function filterClosedRecentOrders(list) {
+      const typeFilter = normalizeClosedTypeFilter(window.archOrderType || '');
+      return (Array.isArray(list) ? list : []).filter(o => {
+        if (!matchesClosedSearchFilter(o)) return false;
+        if (typeFilter) {
+          const orderType = normalizeClosedTypeFilter(o && o.order_type || '');
+          if (orderType !== typeFilter) return false;
+        }
+        if (!matchesClosedDateFilter(o, o && o.created_at)) return false;
+        return true;
+      });
+    }
+    function getVisibleClosedRecentOrders(list, archivedIds) {
+      const hiddenIds = archivedIds instanceof Set ? archivedIds : new Set();
+      return filterClosedRecentOrders(list).filter(o => !hiddenIds.has(o && o.id));
+    }
+    function clampClosedOffset(total, offset, limit) {
+      const safeTotal = Math.max(0, Number(total) || 0);
+      const safeLimit = Math.max(1, Number(limit) || 1);
+      const safeOffset = Math.max(0, Number(offset) || 0);
+      if (safeOffset < safeTotal) return safeOffset;
+      if (!safeTotal) return 0;
+      return Math.floor((safeTotal - 1) / safeLimit) * safeLimit;
+    }
+    async function refreshClosedViews(options = {}) {
+      const includeRecent = options.recent !== false;
+      const includeArchived = options.archived !== false;
+      if (includeRecent) {
+        try { await renderDelivered(window.deliveredCurrent || []); } catch (_) {}
+        try { await renderCanceled(window.canceledCurrent || []); } catch (_) {}
+      }
+      if (includeArchived) {
+        try { await renderArchived(); } catch (_) {}
+        try { await renderArchivedMetrics(); } catch (_) {}
+      }
     }
     function getOrderAddressOneLine(o) {
       let a = '';
@@ -3410,24 +3525,15 @@
       const status = ''; // filterSelect.value.trim();
       const url = new URL('/api/orders', API_BASE);
       url.searchParams.set('tenant_slug', slug);
-      // Handle numeric ID search
       let searchTerm = currentSearch;
-      const isIdSearch = searchTerm && /^\d+$/.test(searchTerm.trim());
+      const isOrderRefSearch = isOrderLookupSearch(searchTerm);
 
-      // Excluir archivados para que la lista principal muestre solo pedidos actuales (salvo búsqueda por ID)
-      if (!isIdSearch) {
+      // Excluir archivados para que la lista principal muestre solo pedidos actuales
+      // salvo cuando se está buscando una referencia puntual de pedido.
+      if (!isOrderRefSearch) {
         url.searchParams.set('exclude_archived', 'true');
       }
-      
-      if (isIdSearch) {
-         url.searchParams.set('id', searchTerm.trim());
-         // Also clear 'q' to avoid conflict if API prioritizes ID
-         // But keeping 'q' is fine if backend handles precedence.
-         // Let's rely on 'q' if backend supports ID search via 'q' OR explicit 'id' param.
-         // If backend only supports 'q' for text, we might need to adjust backend or here.
-         // Assuming backend 'q' searches multiple fields including ID.
-      }
-      
+
       if (status) url.searchParams.set('status', status);
       url.searchParams.set('limit', currentLimit);
       url.searchParams.set('offset', currentOffset);
@@ -3841,7 +3947,12 @@
           }
         }
         
-        const statusLabelText = (order.order_type === 'mesa' && order.status === 'en_camino') ? 'mesa' : order.status;
+        const isDelivered = String(order.status || '').trim().toLowerCase() === 'entregado';
+        const isCanceled = String(order.status || '').trim().toLowerCase() === 'cancelado';
+        const isPaid = String(order.payment_status || '').trim().toLowerCase() === 'paid';
+        const statusLabelText = (order.order_type === 'mesa' && order.status === 'en_camino')
+          ? 'mesa'
+          : ((isDelivered || isCanceled) ? getClosedOrderStatusLabel(order) : order.status);
         const safeOrderNumber = escapeHtml(displayOrderNumber(order));
         const safeOrderId = escapeHtml(order.id);
         const safeTenantSlug = escapeHtml(order.tenant_slug);
@@ -3849,7 +3960,32 @@
         const safeDestino = escapeHtml(destino);
         const safeTelefono = escapeHtml(telefono);
         const safeStatusLabel = escapeHtml(statusLabelText);
-        const safeOrderNotes = order.order_notes ? escapeHtml(order.order_notes) : '';
+        const rawOrderNotes = String(order.order_notes || '');
+        const displayOrderNotes = rawOrderNotes.replace(/\s*\[\s*Cancelado:\s*.*?\s*\]\s*$/i, '').trim();
+        const safeOrderNotes = displayOrderNotes ? escapeHtml(displayOrderNotes) : '';
+        const cancelReason = String(order.cancel_reason || '').trim();
+        const safeCancelReason = cancelReason ? escapeHtml(cancelReason) : '';
+        const closedAt = String(order.closed_at || order.delivered_at || '').trim();
+        const safeClosedAt = closedAt ? formatARDate(closedAt) : '';
+        const closedBy = String(order.closed_by || '').trim();
+        const safeClosedBy = closedBy ? escapeHtml(closedBy) : '';
+        const paidAt = String(order.paid_at || '').trim();
+        const safePaidAt = paidAt ? formatARDate(paidAt) : '';
+        const paymentMethodText = getPaymentMethodLabel(order.payment_method);
+        const safePaymentMethod = escapeHtml(paymentMethodText);
+        const paymentStatusText = isPaid ? 'Pagado' : (isDelivered ? 'Pendiente de cobro' : 'Sin pago');
+        const safePaymentStatus = escapeHtml(paymentStatusText);
+        const closedSummary = (isDelivered || isCanceled) ? `
+          <h3>Cierre</h3>
+          <div class="small">
+            ${safeClosedAt ? `<div><strong>${isCanceled ? 'Cancelado' : 'Cerrado'}:</strong> ${safeClosedAt}</div>` : ''}
+            ${safeClosedBy ? `<div><strong>Usuario:</strong> ${safeClosedBy}</div>` : ''}
+            <div><strong>Cobro:</strong> ${safePaymentStatus}</div>
+            <div><strong>Método de pago:</strong> ${safePaymentMethod}</div>
+            ${safePaidAt ? `<div><strong>Pago registrado:</strong> ${safePaidAt}</div>` : ''}
+            ${safeCancelReason ? `<div><strong>Motivo de cancelación:</strong> ${safeCancelReason}</div>` : ''}
+          </div>
+        ` : '';
 
         box.innerHTML = `
           <p class="d-id"><strong>Pedido #${safeOrderNumber}</strong></p>
@@ -3860,9 +3996,10 @@
           <p class="d-dest">Destino: ${(order.order_type === 'mesa' || order.order_type === 'espera') ? `<span class="pill pill-mesa">${safeDestino}</span>` : safeDestino}</p>
           ${telefono ? `<p class="d-phone">Teléfono de contacto: ${safeTelefono}</p>` : ''}
           <p class="d-status">Estado: ${safeStatusLabel}</p>
-          ${order.order_notes ? `<p class="d-notes">Detalle adicional: ${safeOrderNotes}</p>` : ''}
+          ${displayOrderNotes ? `<p class="d-notes">Detalle adicional: ${safeOrderNotes}</p>` : ''}
           ${itemsHtml}
           ${tipBlock}
+          ${closedSummary}
           ${timeline}
           ${totalTimeHtml}
         `;
@@ -4935,15 +5072,15 @@
       lastActiveIds = activeIdsForNew;
       
       // Auto-scroll to order if search by ID
-      if (currentSearch && /^\d+$/.test(currentSearch.trim())) {
-         const searchedId = currentSearch.trim();
+      const normalizedSearch = normalizeOrderLookupToken(currentSearch);
+      if (normalizedSearch) {
          // Check active orders
          let foundEl = document.querySelector(`#orders-tbody tr td:first-child`);
          // We need to iterate rows to match ID text
          const allActiveRows = Array.from(document.querySelectorAll('#orders-tbody tr'));
          for (const r of allActiveRows) {
             const idCell = r.querySelector('td:first-child');
-            if (idCell && idCell.textContent.trim() === searchedId) {
+            if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
                 r.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 r.style.transition = 'background 0.5s';
                 r.style.background = '#fff9c4'; // highlight
@@ -4956,7 +5093,7 @@
          const allDeliveredRows = Array.from(document.querySelectorAll('#delivered-tbody tr'));
          for (const r of allDeliveredRows) {
             const idCell = r.querySelector('td:first-child');
-            if (idCell && idCell.textContent.trim() === searchedId) {
+            if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
                 openOrdersHistoryGroup();
                 const box = document.getElementById('delivered-box');
                 if (box) box.open = true;
@@ -4972,7 +5109,7 @@
          const allCanceledRows = Array.from(document.querySelectorAll('#canceled-tbody tr'));
          for (const r of allCanceledRows) {
             const idCell = r.querySelector('td:first-child');
-            if (idCell && idCell.textContent.trim() === searchedId) {
+            if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
                 openOrdersHistoryGroup();
                 const box = document.getElementById('canceled-box');
                 if (box) box.open = true;
@@ -4981,6 +5118,28 @@
                 r.style.background = '#fff9c4';
                 setTimeout(() => { r.style.background = ''; }, 2000);
                 return;
+            }
+         }
+
+         const archivedSelectors = [
+           ['#archived-delivered-tbody tr', null],
+           ['#archived-canceled-tbody tr', null],
+           ['#archived-reset-tbody tr', null]
+         ];
+         for (const [selector] of archivedSelectors) {
+            const rows = Array.from(document.querySelectorAll(selector));
+            for (const r of rows) {
+              const idCell = r.querySelector('td:first-child');
+              if (idCell && normalizeOrderLookupToken(idCell.textContent) === normalizedSearch) {
+                openOrdersHistoryGroup();
+                const box = document.getElementById('archived-box');
+                if (box) box.open = true;
+                r.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                r.style.transition = 'background 0.5s';
+                r.style.background = '#fff9c4';
+                setTimeout(() => { r.style.background = ''; }, 2000);
+                return;
+              }
             }
          }
       }
@@ -5670,8 +5829,9 @@
       let archDelList = [];
       try { if (canArchive) archDelList = await fetchArchived('delivered'); } catch (_) { archDelList = []; }
       const archDeliveredIds = new Set(archDelList.map(x => x.id));
-      const filtered = list.filter(x => !archDeliveredIds.has(x.id));
+      const filtered = getVisibleClosedRecentOrders(list, archDeliveredIds);
       const total = filtered.length;
+      deliveredOffset = clampClosedOffset(total, deliveredOffset, deliveredLimit);
       const pageList = filtered.slice(deliveredOffset, deliveredOffset + deliveredLimit);
       // Evitar limpiar inmediatamente para no mostrar vacío
       const fragRows = document.createDocumentFragment();
@@ -5688,6 +5848,8 @@
         const phoneDigits = phoneRaw.replace(/\D/g, '');
         const waUrl = getWaLink(o, phoneDigits);
         const statusClass = statusClasses[o.status] || 'status-entregado';
+        const isPaidClosed = String(o.payment_status || '').trim().toLowerCase() === 'paid';
+        const closedStatusText = getClosedOrderStatusLabel(o);
         const baseTotal = Number(o.total || 0);
         const totalWithTip = baseTotal + (Number(o.tip_amount) || 0);
         const safeOrderNumber = escapeAdminHtml(displayOrderNumber(o));
@@ -5696,7 +5858,7 @@
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safePhoneAttr = escapeAdminAttr(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
-        const safeStatusText = escapeAdminHtml(o.status);
+        const safeStatusText = escapeAdminHtml(closedStatusText);
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
           <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
@@ -5713,7 +5875,7 @@
           <td><span class="status-badge ${statusClass}">${safeStatusText}</span></td>
           <td class="actions">
             <button class="ver-detalle">Ver</button>
-            ${canArchive ? '<button class="archivar">Archivar</button>' : ''}
+            ${canArchive ? (isPaidClosed ? '<button class="archivar">Archivar</button>' : '<span class="small" style="color:#1565c0;">Pendiente de cobro</span>') : ''}
           </td>
         `;
         fragRows.appendChild(tr);
@@ -5752,10 +5914,10 @@
                 <div>Total: ${formatMoney(totalWithTip)}</div>
               </div>
             </div>
-            <div class="state-line"><span class="status-badge ${statusClass}">${o.status}</span></div>
+            <div class="state-line"><span class="status-badge ${statusClass}">${escapeAdminHtml(closedStatusText)}</span></div>
             <div class="actions">
               <button class="ver-detalle" data-id="${o.id}">Ver</button>
-              ${canArchive ? `<button class="archivar" data-id="${o.id}">Archivar</button>` : ''}
+              ${canArchive ? (isPaidClosed ? `<button class="archivar" data-id="${o.id}">Archivar</button>` : `<span class="small" style="color:#1565c0;">Pendiente de cobro</span>`) : ''}
             </div>
           `;
           fragCards.appendChild(card);
@@ -5774,8 +5936,7 @@
           archiveBtn.addEventListener('click', async () => {
             try {
               await archiveSnapshot(o, 'delivered');
-              tr.remove();
-              try { await renderArchived(); } catch (_) {}
+              await refreshClosedViews();
               try { await renderMetricsBox(); } catch (_) {}
             } catch (_) {
               alert('No se pudo archivar el pedido');
@@ -5800,9 +5961,8 @@
               const found = pageList.find(x => x.id === id);
               try {
                 await archiveSnapshot(found, 'delivered');
-                try { await renderArchived(); } catch (_) {}
+                await refreshClosedViews();
                 try { await renderMetricsBox(); } catch (_) {}
-                await renderDelivered(list);
               } catch (_) { alert('No se pudo archivar el pedido'); }
             });
           });
@@ -5822,14 +5982,9 @@
       let archCanList = [];
       try { archCanList = await fetchArchived('canceled'); } catch (_) { archCanList = []; }
       const archCanceledIds = new Set(archCanList.map(x => x.id));
-      const filtered = list.filter(x => {
-        // Si estamos buscando por ID y coincide, mostrarlo aunque esté archivado
-        if (currentSearch && /^\d+$/.test(currentSearch.trim()) && String(x.id) === currentSearch.trim()) {
-            return true;
-        }
-        return !archCanceledIds.has(x.id);
-      });
+      const filtered = getVisibleClosedRecentOrders(list, archCanceledIds);
       const total = filtered.length;
+      canceledOffset = clampClosedOffset(total, canceledOffset, canceledLimit);
       const pageList = filtered.slice(canceledOffset, canceledOffset + canceledLimit);
       // Preparar nuevos nodos sin limpiar de inmediato
       const fragRows = document.createDocumentFragment();
@@ -5907,15 +6062,16 @@
         archiveBtn.addEventListener('click', async () => {
           try {
             await archiveSnapshot(o, 'canceled');
-            tr.remove();
-            try { await renderArchived(); } catch (_) {}
+            await refreshClosedViews();
             try { await renderMetricsBox(); } catch (_) {}
           } catch (_) {
             alert('No se pudo archivar el pedido');
           }
         });
       }
+      ctbody.replaceChildren(fragRows);
       if (cmobile) {
+        cmobile.replaceChildren(fragCards);
         cmobile.querySelectorAll('.ver-detalle').forEach(btn => {
           btn.addEventListener('click', () => {
             const id = parseInt(btn.getAttribute('data-id')||'0',10);
@@ -5928,15 +6084,12 @@
             const found = pageList.find(x => x.id === id);
             try {
               await archiveSnapshot(found, 'canceled');
-              try { await renderArchived(); } catch (_) {}
+              await refreshClosedViews();
               try { await renderMetricsBox(); } catch (_) {}
-              await renderCanceled(list);
             } catch (_) { alert('No se pudo archivar el pedido'); }
           });
         });
       }
-      ctbody.replaceChildren(fragRows);
-      if (cmobile) cmobile.replaceChildren(fragCards);
       const pageNum = Math.floor(canceledOffset / canceledLimit) + 1;
       const totalPages = Math.max(1, Math.ceil(total / canceledLimit));
       if (canPageInfoEl) canPageInfoEl.textContent = `Página ${pageNum} de ${totalPages} · Total: ${total}`;
@@ -6170,6 +6323,7 @@
         const safePhoneAttr = escapeAdminAttr(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
         const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
+        const safeStatusText = escapeAdminHtml(getClosedOrderStatusLabel(o));
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
           <td><span class=\"small\">${formatARDate(o.created_at || '')}</span></td>
@@ -6182,7 +6336,7 @@
           </td>
           <td>$${o.total}</td>
           <td>
-            <span class=\"status-badge ${statusClasses['entregado']}\">entregado</span>
+            <span class=\"status-badge ${statusClasses['entregado']}\">${safeStatusText}</span>
             <span class=\"small\" style=\"margin-left:6px;color:#666;\">último: ${safeLastStatus} ${o.last_change? '('+formatARDate(o.last_change)+')':''}</span>
             <button class=\"view-detail small\" style=\"margin-left:8px;\">Ver</button>
           </td>
@@ -6199,7 +6353,7 @@
               <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid"><div>Total: $${o.total}</div></div>
             </div>
-            <div class="state-line"><span class="status-badge ${statusClasses['entregado']}">entregado</span></div>
+            <div class="state-line"><span class="status-badge ${statusClasses['entregado']}">${safeStatusText}</span></div>
             <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
           `;
           mDel.appendChild(card);
@@ -6351,37 +6505,6 @@
       // I DO NOT see `ctbody` defined inside `renderArchived`.
       // Maybe it's a global variable? Or maybe I missed a line.
       // Wait, if I replace the whole function, I must be careful about `ctbody`.
-      // If `ctbody` is used at the end (line 4011), it might be a copy-paste error in the original code or it refers to something I can't see.
-      // However, `atDel` and `atCan` are used throughout the loop.
-      // Let's look at the `Read` output again carefully.
-      // Lines 3863-3864: `atDel.innerHTML = ''; atCan.innerHTML = '';`
-      // Lines 3915: `atDel.appendChild(tr);`
-      // Lines 3976: `atCan.appendChild(tr);`
-      // Line 4011: `ctbody.replaceChildren(fragRows);` -> This looks suspicious. `fragRows` is not defined in the snippet either!
-      // `fragRows` usually implies a DocumentFragment.
-      // BUT in the loop (e.g., line 3915), it does `atDel.appendChild(tr)`.
-      // So `atDel` is being modified directly.
-      // Then why `ctbody.replaceChildren` at the end?
-      // AND `cmobile` at line 4012.
-      // This suggests the original code I read might have had some fragments logic that was either removed or I'm misinterpreting.
-      // actually, looking at the `Read` output again:
-      // I DO NOT see `const fragRows = ...` anywhere.
-      // I DO see `atDel.appendChild(tr)` inside the loop.
-      // So if `atDel` is modified in place, `ctbody.replaceChildren` at the end would overwrite something else?
-      // `ctbody` usually stands for "Current Table Body" or similar.
-      // IF `ctbody` is undefined, this code would throw an error.
-      // Maybe `ctbody` is global?
-      // User said "Perfecto! ahora funciona correctamente", so the code is working.
-      // This implies `ctbody` IS defined or I missed it.
-      // BUT, `renderArchived` seems to operate on `archived-delivered-tbody` (`atDel`) and `archived-canceled-tbody` (`atCan`).
-      // `ctbody` is usually for the *main* orders table (`orders-tbody`).
-      // Is it possible `renderArchived` was copy-pasted from `renderOrders` and `ctbody` line was left over but is dead code or buggy but ignored?
-      // OR, maybe `ctbody` is `atDel`?
-      // Let's assume `ctbody` lines are trash/legacy and should be removed or replaced with correct logic.
-      // My proposed replacement code uses `atDel`, `atCan`, `atReset` explicitly and clears them at the start.
-      // I will remove the `ctbody.replaceChildren` lines as they seem incorrect for this specific function which updates multiple tbodies.
-      // I will also remove `cmobile`.
-      
       const totalAll = Number(delData.total || 0) + Number(canData.total || 0) + Number(resetData.total || 0);
       const atEnd = (archOffset + archLimit) >= totalAll;
       if (archNextBtn) archNextBtn.disabled = atEnd;
@@ -6394,6 +6517,7 @@
       const slug = tenantInput.value.trim() || defaultSlug();
       const url = new URL('/api/archive/metrics', API_BASE);
       url.searchParams.set('tenant_slug', slug);
+      if (window.archivedSearch) url.searchParams.set('q', window.archivedSearch);
       if (window.archivedFrom) url.searchParams.set('from', window.archivedFrom);
       if (window.archivedTo) url.searchParams.set('to', window.archivedTo);
       if (window.archOrderType) url.searchParams.set('order_type', window.archOrderType);
@@ -8160,9 +8284,17 @@
         window.archOrderType = archOrderTypeSelect ? archOrderTypeSelect.value : '';
         window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'archived';
         archOffset = 0;
+        deliveredOffset = 0;
+        canceledOffset = 0;
         try { localStorage.setItem('arch_filters', JSON.stringify({ q: window.archivedSearch, from: window.archivedFrom, to: window.archivedTo, order_type: window.archOrderType, mode: window.archDateMode })); } catch (_) {}
-        try { await renderArchived(); } catch (_) {}
-        try { await renderArchivedMetrics(); } catch (_) {}
+        await refreshClosedViews();
+      });
+    }
+    if (archSearchInput) {
+      archSearchInput.addEventListener('keydown', async (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        if (archFilterBtn) archFilterBtn.click();
       });
     }
     if (archPageSizeSelect) {

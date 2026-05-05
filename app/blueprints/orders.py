@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
@@ -45,6 +46,54 @@ def _scope_for(role, owner=False):
     if role in ('mozo', 'caja', 'repartidor'):
         return 'user'
     return 'tenant'
+
+def _series_letters_to_index(series):
+    letters = re.sub(r'[^A-Z]', '', str(series or '').upper())
+    if not letters:
+        return 0
+    idx = 0
+    for ch in letters:
+        idx = (idx * 26) + (ord(ch) - 64)
+    return max(0, idx - 1)
+
+def _parse_visible_order_number(value):
+    raw = str(value or '').strip().upper()
+    if not raw:
+        return None
+    raw = re.sub(r'^\s*PEDIDO\s*#?\s*', '', raw, flags=re.IGNORECASE)
+    raw = raw.replace(' ', '').replace('-', '')
+    m = re.fullmatch(r'([A-Z]*)(\d+)', raw)
+    if not m:
+        return None
+    series = str(m.group(1) or '').strip().upper()
+    try:
+        number = int(m.group(2) or '0')
+    except Exception:
+        return None
+    if number <= 0:
+        return None
+    if not series:
+        return number
+    if number > 9999:
+        return None
+    return 10000 + (_series_letters_to_index(series) * 9999) + (number - 1)
+
+def _extract_cancel_reason(order_notes, events=None):
+    for ev in reversed(events or []):
+        if str(ev.get('event_type') or '').strip().lower() != 'canceled':
+            continue
+        try:
+            payload = json.loads(ev.get('payload_json') or '{}') or {}
+        except Exception:
+            payload = {}
+        reason = str(payload.get('reason') or '').strip()
+        if reason:
+            return reason
+    notes = str(order_notes or '')
+    m = re.search(r'\[\s*Cancelado:\s*(.*?)\s*\]\s*$', notes, flags=re.IGNORECASE)
+    if m:
+        return str(m.group(1) or '').strip()
+    return ''
 
 def ensure_orders_delivery_columns(conn, cur):
     try:
@@ -636,16 +685,26 @@ def list_orders():
     if qid_param:
         try:
             exact_id = int(qid_param)
-            base += " AND id = ?"
-            params.append(exact_id)
+            visible_num = _parse_visible_order_number(qid_param)
+            if visible_num:
+                base += " AND (id = ? OR tenant_order_number = ?)"
+                params.extend([exact_id, visible_num])
+            else:
+                base += " AND id = ?"
+                params.append(exact_id)
         except:
             pass
     elif q:
-        try:
-            qid = int(q)
-            base += " AND id = ?"
-            params.append(qid)
-        except Exception:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                base += " AND (id = ? OR tenant_order_number = ?)"
+                params.extend([qid, visible_num])
+            except Exception:
+                base += " AND tenant_order_number = ?"
+                params.append(visible_num)
+        else:
             like = f"%{q}%"
             base += " AND (COALESCE(address_json,'') LIKE ? OR COALESCE(customer_name,'') LIKE ? OR COALESCE(customer_phone,'') LIKE ? OR COALESCE(table_number,'') LIKE ?)"
             params.extend([like, like, like, like])
@@ -664,15 +723,44 @@ def list_orders():
     # Count query (simplified for brevity)
     count_sql = "SELECT COUNT(*) FROM orders WHERE tenant_slug = ?"
     count_params = [tenant_slug]
-    # ... (skipping full count logic for now, using len(data) if no pagination needed, but for modularity I should implement it fully if possible, but let's stick to the main logic)
-    # Re-implementing simplified count logic to match original
+    if exclude_archived == 'true':
+        count_sql += " AND id NOT IN (SELECT order_id FROM archived_orders)"
     if status:
         count_sql += " AND status = ?"
         count_params.append(status)
+    if qid_param:
+        try:
+            exact_id = int(qid_param)
+            visible_num = _parse_visible_order_number(qid_param)
+            if visible_num:
+                count_sql += " AND (id = ? OR tenant_order_number = ?)"
+                count_params.extend([exact_id, visible_num])
+            else:
+                count_sql += " AND id = ?"
+                count_params.append(exact_id)
+        except Exception:
+            pass
+    elif q:
+        visible_num = _parse_visible_order_number(q)
+        if visible_num is not None:
+            try:
+                qid = int(str(q).strip())
+                count_sql += " AND (id = ? OR tenant_order_number = ?)"
+                count_params.extend([qid, visible_num])
+            except Exception:
+                count_sql += " AND tenant_order_number = ?"
+                count_params.append(visible_num)
+        else:
+            like = f"%{q}%"
+            count_sql += " AND (COALESCE(address_json,'') LIKE ? OR COALESCE(customer_name,'') LIKE ? OR COALESCE(customer_phone,'') LIKE ? OR COALESCE(table_number,'') LIKE ?)"
+            count_params.extend([like, like, like, like])
     if from_date:
         count_sql += " AND created_at >= ?"
         count_params.append(from_date)
-        
+    if to_date:
+        count_sql += " AND created_at <= ?"
+        count_params.append(to_date)
+
     cur.execute(count_sql, count_params)
     total_count = cur.fetchone()[0]
     
@@ -723,6 +811,23 @@ def get_order_detail(order_id):
     items = [dict(r) for r in item_rows]
     history = [dict(r) for r in hist_rows]
     events = [dict(r) for r in ev_rows]
+    order['cancel_reason'] = _extract_cancel_reason(order.get('order_notes'), events)
+    try:
+        closing_hist = next((h for h in reversed(history) if str(h.get('status') or '').strip().lower() in ('entregado', 'cancelado')), None)
+    except Exception:
+        closing_hist = None
+    if closing_hist:
+        if not order.get('closed_at'):
+            order['closed_at'] = closing_hist.get('changed_at')
+        order['closed_by'] = closing_hist.get('changed_by') or ''
+    else:
+        order['closed_at'] = order.get('delivered_at') or ''
+        order['closed_by'] = ''
+    try:
+        payment_ev = next((e for e in reversed(events) if str(e.get('event_type') or '').strip().lower() == 'payment'), None)
+    except Exception:
+        payment_ev = None
+    order['paid_at'] = payment_ev.get('created_at') if payment_ev else ''
     
     # Si no es admin, retornar versión sanitizada (seguridad)
     if not is_authed():
