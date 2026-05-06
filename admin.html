@@ -113,6 +113,22 @@
     .status-action.entregado:hover { background:#4a148c; }
     .status-action.cancelado:hover { background:#b71c1c; }
     .status-action.approve:hover { background:#1b5e20; }
+    #orders-header-row h2 { margin: 0; }
+    #orders-config-btn { display:inline-flex; align-items:center; justify-content:center; width:40px; min-width:40px; padding:0; }
+    .orders-secondary-cta { display:inline-flex; align-items:center; justify-content:center; }
+    .section-actions-bar { width: 100%; }
+    .section-actions-main { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+    .section-actions-main .small { min-width: 0; overflow-wrap: anywhere; }
+    .mobile-close-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 0 14px;
+      border-radius: 10px !important;
+      font-weight: 700;
+      box-shadow: 0 6px 14px rgba(244, 67, 54, 0.18);
+    }
     #service-banner{display:none;margin:12px 0 8px;padding:10px 12px;border-radius:8px;border:1px solid #ffeeba;background:#fff3cd;color:#7a5a00;font-weight:600}
     #service-banner.danger{border-color:#f5c6cb;background:#f8d7da;color:#721c24}
 
@@ -559,6 +575,44 @@
 
       #orders-table { display: none !important; }
       #orders-mobile { display: grid; grid-template-columns: 1fr; gap: 12px; }
+      #orders-header-row { align-items: stretch !important; gap: 10px !important; }
+      #orders-config-btn { width: 44px; min-width: 44px; min-height: 44px; align-self: flex-start; }
+      .orders-quick-filters { margin-left: 0; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .orders-quick-filters button { width: 100%; min-height: 40px; justify-content: center; display: inline-flex; }
+      #tables-open.orders-secondary-cta {
+        margin-left: 0 !important;
+        width: 100%;
+        min-height: 44px;
+        font-size: 14px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 18px rgba(103, 58, 183, 0.24);
+      }
+      .section-actions-bar {
+        flex-direction: column;
+        align-items: stretch !important;
+      }
+      .section-actions-main {
+        width: 100%;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px !important;
+        align-items: stretch !important;
+      }
+      .section-actions-main > button,
+      .section-actions-main > a {
+        width: 100%;
+        min-width: 0;
+      }
+      .section-actions-main > .small {
+        grid-column: 1 / -1;
+      }
+      .section-actions-bar > .mobile-close-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+    }
+    @media (max-width: 420px) {
+      .section-actions-main { grid-template-columns: 1fr; }
     }
     @media (min-width: 769px) {
       .product-card-simple .info-icon { display: none !important; }
@@ -872,11 +926,14 @@
       .tm-legend { width: 100%; flex-direction: column; align-items: stretch; gap: 8px; }
       .tm-legend #tm-close-btn {
         display: inline-flex !important;
-        width: auto !important;
-        padding: 8px 16px !important;
-        margin: 0 auto !important;
+        width: 100% !important;
+        min-height: 44px !important;
+        padding: 0 16px !important;
+        margin: 0 !important;
         text-align: center;
-        align-self: center;
+        align-self: stretch;
+        border-radius: 12px !important;
+        box-shadow: 0 8px 18px rgba(244, 67, 54, 0.22) !important;
       }
     }
   </style>
@@ -1031,7 +1088,7 @@
         <button type="button" id="orders-qf-ready" class="qf-ready" title="Listos para entrega" aria-label="Listos para entrega">Listos<span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-en-camino" class="qf-en-camino" title="En camino (Delivery)" aria-label="En camino (Delivery)">En camino<span class="qf-dot" aria-hidden="true"></span></button>
       </div>
-      <button id="tables-open" style="background:#673ab7; color:#fff; border:none; padding:6px 12px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; margin-left:auto;">Gestión Mesas</button>
+      <button id="tables-open" class="orders-secondary-cta" style="background:#673ab7; color:#fff; border:none; padding:6px 12px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; margin-left:auto;">Gestión Mesas</button>
     </div>
 
     <section id="table-management" style="display:none; margin-top:12px;">
@@ -1086,7 +1143,7 @@
             <div class="legend-item"><div class="legend-dot" style="background:#ff9800;"></div> Reservada</div>
             <div class="legend-item"><div class="legend-dot" style="background:#2196f3;"></div> Cuenta</div>
             <button id="tm-save-layout" style="background:#2196F3; color:#fff; margin-left: auto; margin-right: 12px;">Guardar Distribución</button>
-            <button id="tm-close-btn" style="background:#f44336; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar</button>
+            <button id="tm-close-btn" class="mobile-close-btn" style="background:#f44336; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar</button>
           </div>
         </div>
       </div>
@@ -1482,13 +1539,13 @@
     </details>
     <details class="inventory" id="inventory-box">
       <summary>Inventario</summary>
-      <div class="actions" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px;">
+      <div class="actions section-actions-bar" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
           <button id="inv-create-btn" style="background-color:#4caf50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">+ Nuevo Producto</button>
           <button id="inv-reload">Recargar</button>
           <span id="inv-hint" class="small">Editar stock requiere login</span>
         </div>
-        <button id="close-inventory-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+        <button id="close-inventory-box" class="mobile-close-btn" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
       </div>
       <table>
         <thead>
@@ -1509,8 +1566,8 @@
 
     <details class="carousel" id="carousel-box">
       <summary>Carta Online</summary>
-      <div class="actions" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px;">
+      <div class="actions section-actions-bar" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
           <button id="car-create-btn" style="background-color:#4caf50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">+ Nuevo Slide</button>
           <button id="car-reload">Recargar</button>
           <button id="header-config-open" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cabecera</button>
@@ -1520,7 +1577,7 @@
           </button>
           <button id="btn-view-carta" style="background:#009688; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Ver Carta Online</button>
         </div>
-        <button id="close-carousel-box" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
+        <button id="close-carousel-box" class="mobile-close-btn" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
       </div>
       <table>
         <thead>
