@@ -462,9 +462,13 @@ def update_tenant_config():
     if not check_csrf(): return jsonify({'error': 'csrf inválido'}), 403
     payload = request.get_json(silent=True) or {}
     slug = payload.get('slug') or 'gastronomia-local1'
+    _, _, role, _, owner = _ctx()
     session_tenant = str(session.get('tenant_slug') or '').strip()
     if session_tenant and slug and session_tenant != slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
+    can_manage_admin_order_settings = bool(owner or role == 'admin')
+    if 'shipping_cost' in payload and not can_manage_admin_order_settings:
+        return jsonify({'error': 'solo admin puede modificar el costo de envío'}), 403
     
     conn = get_db()
     cur = conn.cursor()

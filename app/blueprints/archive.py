@@ -569,6 +569,9 @@ def reset_active_orders():
         return jsonify({'error': 'no autorizado'}), 401
     if not check_csrf():
         return jsonify({'error': 'csrf inválido'}), 403
+    role = str(session.get('admin_role') or '').strip().lower()
+    if not (bool(session.get('admin_owner')) or role == 'admin'):
+        return jsonify({'error': 'solo admin puede limpiar pedidos activos'}), 403
     
     payload = request.get_json(silent=True) or {}
     tenant_slug = payload.get('tenant_slug')

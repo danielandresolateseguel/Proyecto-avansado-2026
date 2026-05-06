@@ -1963,7 +1963,7 @@
         </label>
       </div>
 
-      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+      <div id="cfg-shipping-section" style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <div style="font-weight:bold; margin-bottom:8px;">Costo de envío (Domicilio):</div>
         <input type="number" id="cfg-shipping-cost" placeholder="0" min="0" step="100" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
       </div>
@@ -10678,6 +10678,20 @@
     // Config events
     window.initOrdersConfigUI = function() {
       try {
+        const canManageAdminOrderSettings = () => {
+          const role = String(currentUserRole || '').trim().toLowerCase();
+          return !!isAuthed && (!!isOwnerUser || role === 'admin');
+        };
+        const applyOrdersConfigAdminVisibility = () => {
+          const allow = canManageAdminOrderSettings();
+          const shippingSection = document.getElementById('cfg-shipping-section');
+          const shippingInput = document.getElementById('cfg-shipping-cost');
+          const resetBtn = document.getElementById('cfg-reset-orders-btn');
+          if (shippingSection) shippingSection.style.display = allow ? '' : 'none';
+          if (shippingInput) shippingInput.disabled = !allow;
+          if (resetBtn) resetBtn.style.display = allow ? 'inline-flex' : 'none';
+          return allow;
+        };
         const saveBtn = document.getElementById('cfg-save-btn');
         if (saveBtn) {
             // Use addEventListener to avoid overwriting
@@ -10685,6 +10699,7 @@
             const newSaveBtn = document.getElementById('cfg-save-btn');
             
             newSaveBtn.addEventListener('click', async () => {
+                 const allowAdminOrderSettings = applyOrdersConfigAdminVisibility();
                  const inp = document.getElementById('cfg-shipping-cost');
                  const val = inp ? (parseInt(inp.value)||0) : 0;
                  const reqApprovalEl = document.getElementById('cfg-require-approval');
@@ -10712,16 +10727,19 @@
                  const valSlaCrit = slaCritIn ? parseInt(slaCritIn.value || '30', 10) : 30;
                  const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
 
-                 const bodyStr = JSON.stringify({
-                       slug: slug, 
-                       shipping_cost: val,
+                 const bodyPayload = {
+                       slug: slug,
                        time_mesa: valMesa,
                        time_espera: valEspera,
                        time_delivery: valDelivery,
                        time_auto: valAuto,
                        delivery_fail_reasons: failReasons,
                        require_order_approval: valRequireApproval
-                 });
+                 };
+                 if (allowAdminOrderSettings) {
+                   bodyPayload.shipping_cost = val;
+                 }
+                 const bodyStr = JSON.stringify(bodyPayload);
 
                  try {
                    // 1. Save General Config
@@ -10809,6 +10827,7 @@
         if (btn && modal) {
           btn.onclick = () => {
             modal.style.display = 'flex';
+            const allowAdminOrderSettings = applyOrdersConfigAdminVisibility();
             
             if (window.loadSlaThresholds) window.loadSlaThresholds();
 
@@ -10854,6 +10873,7 @@
                    const list = Array.isArray(d.delivery_fail_reasons) ? d.delivery_fail_reasons : [];
                    fr.value = list.map(x => String(x || '').trim()).filter(Boolean).join('\n');
                  }
+                 if (inp && !allowAdminOrderSettings) inp.value = d.shipping_cost || 0;
               })
               .catch(err => console.error('Load config error:', err));
             
@@ -10861,6 +10881,7 @@
             const resetInModal = document.getElementById('cfg-reset-orders-btn');
             if (resetInModal) {
               resetInModal.onclick = async () => {
+                if (!canManageAdminOrderSettings()) { alert('Solo admin puede limpiar pedidos activos.'); return; }
                 if (!isAuthed) { alert('Debes iniciar sesión'); return; }
                 const ok = await askConfirm('¿Limpiar TODOS los pedidos activos? Desaparecerán de la lista principal.');
                 if (!ok) return;
