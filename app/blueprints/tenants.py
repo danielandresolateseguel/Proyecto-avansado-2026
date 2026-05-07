@@ -641,6 +641,7 @@ def create_demo_tenant():
     
     default_cfg = {
         'shipping_cost': shipping_cost,
+        'require_order_approval': True,
         'time_mesa': time_mesa,
         'time_espera': time_espera,
         'time_delivery': time_delivery,

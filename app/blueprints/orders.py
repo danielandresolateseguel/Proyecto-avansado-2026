@@ -433,6 +433,9 @@ def get_tenant_config():
     slug = request.args.get('slug') or 'gastronomia-local1'
     
     cfg = get_cached_tenant_config(slug)
+    if 'require_order_approval' not in cfg:
+        cfg = cfg.copy()
+        cfg['require_order_approval'] = True
     default_fail_reasons = [
         "No atiende",
         "Dirección incorrecta",
