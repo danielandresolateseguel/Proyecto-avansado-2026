@@ -129,6 +129,135 @@
       font-weight: 700;
       box-shadow: 0 6px 14px rgba(244, 67, 54, 0.18);
     }
+    .quick-order-shortcuts-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .quick-order-shortcut-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #eef3fb;
+      border: 1px solid #d7e0ef;
+      color: #415a77;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .quick-order-shortcut-chip.inactive {
+      background: #f6f6f6;
+      border-color: #e2e2e2;
+      color: #777;
+    }
+    .quick-order-shortcuts-wrap {
+      margin-bottom: 16px;
+      padding: 12px;
+      border: 1px solid #dbe4f3;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    }
+    .quick-order-shortcuts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .quick-order-shortcut-btn {
+      min-height: 72px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #d0ddf0;
+      background: #fff;
+      color: #243447;
+      box-shadow: 0 8px 18px rgba(74, 111, 165, 0.08);
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .quick-order-shortcut-btn:hover {
+      background: #f5f9ff;
+      border-color: #9bb7df;
+    }
+    .quick-order-shortcut-btn .qo-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: #29486f;
+      line-height: 1.25;
+    }
+    .quick-order-shortcut-btn .qo-meta {
+      font-size: 11px;
+      color: #607086;
+      line-height: 1.3;
+    }
+    .quick-order-shortcut-btn .qo-total {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1f6b39;
+    }
+    .quick-order-shortcut-btn.unavailable,
+    .quick-order-shortcut-btn:disabled {
+      background: #f6f6f6;
+      border-color: #e2e2e2;
+      color: #888;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+    .shortcut-editor-card {
+      border: 1px solid #dbe4f3;
+      border-radius: 12px;
+      background: #fff;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.04);
+    }
+    .shortcut-editor-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+    }
+    .shortcut-editor-main {
+      display: grid;
+      gap: 8px;
+      min-width: 0;
+    }
+    .shortcut-editor-items {
+      display: grid;
+      gap: 8px;
+    }
+    .shortcut-editor-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px 38px;
+      gap: 8px;
+      align-items: center;
+    }
+    .shortcut-editor-empty {
+      padding: 16px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      text-align: center;
+      color: #64748b;
+      background: #f8fafc;
+    }
+    .shortcut-editor-card input[type="text"],
+    .shortcut-editor-card input[type="number"],
+    .shortcut-editor-card select {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 8px 10px;
+      border: 1px solid #d0d7e2;
+      border-radius: 8px;
+      background: #fff;
+    }
     #service-banner{display:none;margin:12px 0 8px;padding:10px 12px;border-radius:8px;border:1px solid #ffeeba;background:#fff3cd;color:#7a5a00;font-weight:600}
     #service-banner.danger{border-color:#f5c6cb;background:#f8d7da;color:#721c24}
 
@@ -579,6 +708,9 @@
       #orders-config-btn { width: 44px; min-width: 44px; min-height: 44px; align-self: flex-start; }
       .orders-quick-filters { margin-left: 0; width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
       .orders-quick-filters button { width: 100%; min-height: 40px; justify-content: center; display: inline-flex; }
+      .shortcut-editor-head { grid-template-columns: 1fr; }
+      .shortcut-editor-row { grid-template-columns: 1fr; }
+      .quick-order-shortcuts-grid { grid-template-columns: 1fr; }
       #tables-open.orders-secondary-cta {
         margin-left: 0 !important;
         width: 100%;
@@ -1963,6 +2095,19 @@
         </label>
       </div>
 
+      <div id="cfg-quick-orders-section" style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:bold; margin-bottom:6px;">Pedidos frecuentes (+ Pedido):</div>
+            <div class="small">Crea atajos como "1 pancho + Coca 500" para cargar productos reales al carrito con un toque.</div>
+          </div>
+          <button type="button" id="cfg-shortcuts-manage-btn" style="padding:8px 12px; background:#4a6fa5; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:700;">Gestionar atajos</button>
+        </div>
+        <div id="cfg-shortcuts-summary" class="quick-order-shortcuts-summary">
+          <span class="quick-order-shortcut-chip">Sin atajos configurados</span>
+        </div>
+      </div>
+
       <div id="cfg-shipping-section" style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <div style="font-weight:bold; margin-bottom:8px;">Costo de envío (Domicilio):</div>
         <input type="number" id="cfg-shipping-cost" placeholder="0" min="0" step="100" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
@@ -2017,6 +2162,26 @@
         <div>
           <button type="button" id="cfg-save-btn" style="padding:8px 16px; background:#2196F3; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Guardar</button>
           <button type="button" id="cfg-close-btn" style="padding:8px 16px; background:#9e9e9e; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="quick-order-shortcuts-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2002; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:92%; max-width:780px; padding:20px; border-radius:10px; box-shadow:0 10px 26px rgba(0,0,0,0.22); max-height:88vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0;">Pedidos frecuentes</h3>
+          <div class="small">Los atajos agregan productos reales al carrito de <code>+ Pedido</code>. Solo el admin puede editarlos.</div>
+        </div>
+        <button type="button" id="quick-order-shortcuts-close-top" style="background:#9e9e9e; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">Cerrar</button>
+      </div>
+      <div id="quick-order-shortcuts-editor-list" style="display:grid; gap:12px;"></div>
+      <div style="margin-top:14px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+        <button type="button" id="quick-order-shortcuts-add-btn" style="background:#2e7d32; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:700;">+ Nuevo atajo</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="quick-order-shortcuts-close-btn" style="background:#9e9e9e; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer;">Cerrar</button>
+          <button type="button" id="quick-order-shortcuts-save-btn" style="background:#2196F3; color:#fff; border:none; border-radius:8px; padding:8px 14px; cursor:pointer; font-weight:700;">Guardar atajos</button>
         </div>
       </div>
     </div>
@@ -2951,6 +3116,11 @@
     let currentSearch = '';
     let currentFrom = '';
     let currentTo = '';
+    let quickOrderShortcuts = [];
+    let quickOrderShortcutsLoadedSlug = '';
+    let quickOrderShortcutDraft = [];
+    let quickOrderShortcutProducts = [];
+    let quickOrderShortcutProductsSlug = '';
     let analyticsLoading = false;
     let analyticsLastSignature = '';
     let metricsFrom = '';
@@ -3254,6 +3424,301 @@
       const n = Number(v);
       return Number.isFinite(n) ? Math.trunc(n) : 0;
     }
+    function getActiveTenantSlug() {
+      const fromCurrent = String(currentTenantSlug || '').trim();
+      const fromInput = String(document.getElementById('tenant-input')?.value || '').trim();
+      let fallback = 'gastronomia-local1';
+      try {
+        if (typeof defaultSlug === 'function') fallback = String(defaultSlug() || fallback).trim() || fallback;
+      } catch (_) {}
+      return fromCurrent || fromInput || fallback;
+    }
+    function canManageQuickOrderShortcuts() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      return !!isAuthed && (!!isOwnerUser || role === 'admin');
+    }
+    function canUseQuickOrderShortcuts() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const perms = currentUserPerms || {};
+      return !!isAuthed && (!!isOwnerUser || role === 'admin' || !!perms.orders_create);
+    }
+    function cloneQuickOrderShortcuts(value) {
+      try { return JSON.parse(JSON.stringify(value || [])); } catch (_) { return []; }
+    }
+    function createEmptyQuickOrderShortcutDraft() {
+      return { id: '', name: '', active: true, items: [{ product_id: '', qty: 1 }] };
+    }
+    function summarizeQuickOrderShortcut(shortcut) {
+      const items = Array.isArray(shortcut && shortcut.items) ? shortcut.items : [];
+      const parts = items.slice(0, 3).map((item) => {
+        const qty = Math.max(1, safeAdminInt(item && item.qty) || 1);
+        const label = String(item && (item.name || item.product_id) || '').trim();
+        return label ? `${qty}x ${label}` : '';
+      }).filter(Boolean);
+      if (items.length > 3) parts.push(`+${items.length - 3} más`);
+      return parts.join(' · ');
+    }
+    function normalizeQuickOrderShortcutsForSave(list) {
+      const seen = new Set();
+      return (Array.isArray(list) ? list : []).map((shortcut, idx) => {
+        const name = String(shortcut && shortcut.name || '').trim();
+        const baseId = String(shortcut && shortcut.id || '').trim().replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || `shortcut-${idx + 1}`;
+        let id = baseId;
+        let suffix = 2;
+        while (seen.has(id)) {
+          id = `${baseId}-${suffix}`;
+          suffix += 1;
+        }
+        seen.add(id);
+        const items = (Array.isArray(shortcut && shortcut.items) ? shortcut.items : []).map((item) => {
+          const productId = String(item && item.product_id || '').trim();
+          const qty = Math.max(1, Math.min(99, safeAdminInt(item && item.qty) || 1));
+          return productId ? { product_id: productId, qty } : null;
+        }).filter(Boolean).slice(0, 20);
+        return { id, name, active: !!(shortcut && shortcut.active), items };
+      }).filter((shortcut) => shortcut.name && shortcut.items.length).slice(0, 50);
+    }
+    async function ensureQuickOrderProductsLoaded(force) {
+      const slug = getActiveTenantSlug();
+      if (!force && quickOrderShortcutProductsSlug === slug && Array.isArray(quickOrderShortcutProducts) && quickOrderShortcutProducts.length) {
+        return quickOrderShortcutProducts;
+      }
+      quickOrderShortcutProducts = await fetchProducts(true);
+      quickOrderShortcutProductsSlug = slug;
+      return quickOrderShortcutProducts;
+    }
+    window.renderQuickOrderShortcutSummary = function() {
+      const summaryEl = document.getElementById('cfg-shortcuts-summary');
+      if (!summaryEl) return;
+      summaryEl.innerHTML = '';
+      const list = Array.isArray(quickOrderShortcuts) ? quickOrderShortcuts : [];
+      if (!list.length) {
+        const empty = document.createElement('span');
+        empty.className = 'quick-order-shortcut-chip';
+        empty.textContent = 'Sin atajos configurados';
+        summaryEl.appendChild(empty);
+        return;
+      }
+      list.forEach((shortcut) => {
+        const chip = document.createElement('span');
+        chip.className = `quick-order-shortcut-chip${shortcut.active ? '' : ' inactive'}`;
+        chip.textContent = `${shortcut.name} · ${shortcut.item_count || 0} item(s)`;
+        chip.title = summarizeQuickOrderShortcut(shortcut);
+        summaryEl.appendChild(chip);
+      });
+    };
+    window.loadQuickOrderShortcuts = async function(force) {
+      const slug = getActiveTenantSlug();
+      if (!canUseQuickOrderShortcuts()) {
+        quickOrderShortcuts = [];
+        quickOrderShortcutsLoadedSlug = slug;
+        if (window.renderQuickOrderShortcutSummary) window.renderQuickOrderShortcutSummary();
+        if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
+        return [];
+      }
+      if (!force && quickOrderShortcutsLoadedSlug === slug) {
+        if (window.renderQuickOrderShortcutSummary) window.renderQuickOrderShortcutSummary();
+        if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
+        return quickOrderShortcuts;
+      }
+      try {
+        const url = new URL('/api/quick_order_shortcuts', API_BASE);
+        url.searchParams.set('slug', slug);
+        const resp = await wFetch(url.toString());
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        quickOrderShortcuts = Array.isArray(data.shortcuts) ? data.shortcuts : [];
+      } catch (e) {
+        console.error('Error cargando pedidos frecuentes:', e);
+        quickOrderShortcuts = [];
+      }
+      quickOrderShortcutsLoadedSlug = slug;
+      if (window.renderQuickOrderShortcutSummary) window.renderQuickOrderShortcutSummary();
+      if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
+      return quickOrderShortcuts;
+    };
+    window.renderQuickOrderShortcutsEditor = function() {
+      const listEl = document.getElementById('quick-order-shortcuts-editor-list');
+      if (!listEl) return;
+      const catalog = Array.isArray(quickOrderShortcutProducts) ? quickOrderShortcutProducts : [];
+      listEl.innerHTML = '';
+      if (!quickOrderShortcutDraft.length) {
+        const empty = document.createElement('div');
+        empty.className = 'shortcut-editor-empty';
+        empty.textContent = 'Todavía no hay atajos. Crea uno y luego selecciónalo desde + Pedido.';
+        listEl.appendChild(empty);
+        return;
+      }
+      const optionsHtml = catalog.map((product) => {
+        const label = `${product.id} · ${product.name}${product.active ? '' : ' [inactivo]'}`;
+        return `<option value="${escapeAdminAttr(product.id)}">${escapeAdminHtml(label)}</option>`;
+      }).join('');
+      quickOrderShortcutDraft.forEach((shortcut, shortcutIndex) => {
+        const card = document.createElement('div');
+        card.className = 'shortcut-editor-card';
+        const items = Array.isArray(shortcut.items) ? shortcut.items : [];
+        const itemsHtml = items.map((item) => `
+          <div class="shortcut-editor-row">
+            <select class="qo-item-product">
+              <option value="">Seleccionar producto...</option>
+              ${optionsHtml}
+            </select>
+            <input class="qo-item-qty" type="number" min="1" max="99" value="${Math.max(1, safeAdminInt(item.qty) || 1)}" />
+            <button type="button" class="qo-item-remove" style="background:#d32f2f; color:#fff; border:none; border-radius:8px; cursor:pointer;">×</button>
+          </div>
+        `).join('');
+        card.innerHTML = `
+          <div class="shortcut-editor-head">
+            <div class="shortcut-editor-main">
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#415a77; margin-bottom:4px;">Nombre del atajo</label>
+                <input type="text" class="qo-shortcut-name" value="${escapeAdminAttr(shortcut.name || '')}" placeholder="Ej: 1 Pancho + Coca 500" />
+              </div>
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#415a77;">
+                <input type="checkbox" class="qo-shortcut-active" ${shortcut.active ? 'checked' : ''}>
+                Atajo activo
+              </label>
+            </div>
+            <div style="display:flex; justify-content:flex-end;">
+              <button type="button" class="qo-shortcut-delete" style="background:#b71c1c; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">Eliminar</button>
+            </div>
+          </div>
+          <div class="shortcut-editor-items">${itemsHtml}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="qo-item-add" style="background:#2e7d32; color:#fff; border:none; border-radius:8px; padding:8px 12px; cursor:pointer;">+ Agregar producto</button>
+            <div class="small">Vista rápida: ${escapeAdminHtml(summarizeQuickOrderShortcut(shortcut) || 'Sin productos seleccionados')}</div>
+          </div>
+        `;
+        listEl.appendChild(card);
+        const nameInput = card.querySelector('.qo-shortcut-name');
+        const activeInput = card.querySelector('.qo-shortcut-active');
+        const deleteBtn = card.querySelector('.qo-shortcut-delete');
+        if (nameInput) {
+          nameInput.addEventListener('input', () => {
+            quickOrderShortcutDraft[shortcutIndex].name = nameInput.value;
+          });
+        }
+        if (activeInput) {
+          activeInput.addEventListener('change', () => {
+            quickOrderShortcutDraft[shortcutIndex].active = !!activeInput.checked;
+          });
+        }
+        if (deleteBtn) {
+          deleteBtn.addEventListener('click', async () => {
+            const ok = await askConfirm('¿Eliminar este atajo de pedido frecuente?');
+            if (!ok) return;
+            quickOrderShortcutDraft.splice(shortcutIndex, 1);
+            window.renderQuickOrderShortcutsEditor();
+          });
+        }
+        card.querySelectorAll('.shortcut-editor-row').forEach((rowEl, itemIndex) => {
+          const selectEl = rowEl.querySelector('.qo-item-product');
+          const qtyEl = rowEl.querySelector('.qo-item-qty');
+          const removeBtn = rowEl.querySelector('.qo-item-remove');
+          if (selectEl) {
+            selectEl.value = String(items[itemIndex] && items[itemIndex].product_id || '');
+            selectEl.addEventListener('change', () => {
+              quickOrderShortcutDraft[shortcutIndex].items[itemIndex].product_id = selectEl.value;
+            });
+          }
+          if (qtyEl) {
+            qtyEl.addEventListener('input', () => {
+              quickOrderShortcutDraft[shortcutIndex].items[itemIndex].qty = Math.max(1, Math.min(99, safeAdminInt(qtyEl.value) || 1));
+            });
+          }
+          if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+              quickOrderShortcutDraft[shortcutIndex].items.splice(itemIndex, 1);
+              if (!quickOrderShortcutDraft[shortcutIndex].items.length) {
+                quickOrderShortcutDraft[shortcutIndex].items.push({ product_id: '', qty: 1 });
+              }
+              window.renderQuickOrderShortcutsEditor();
+            });
+          }
+        });
+        const addItemBtn = card.querySelector('.qo-item-add');
+        if (addItemBtn) {
+          addItemBtn.addEventListener('click', () => {
+            quickOrderShortcutDraft[shortcutIndex].items.push({ product_id: '', qty: 1 });
+            window.renderQuickOrderShortcutsEditor();
+          });
+        }
+      });
+    };
+    window.openQuickOrderShortcutsManager = async function() {
+      if (!canManageQuickOrderShortcuts()) {
+        alert('Solo admin puede gestionar pedidos frecuentes.');
+        return;
+      }
+      const modal = document.getElementById('quick-order-shortcuts-modal');
+      if (!modal) return;
+      try {
+        await ensureQuickOrderProductsLoaded(true);
+        await window.loadQuickOrderShortcuts(true);
+        quickOrderShortcutDraft = cloneQuickOrderShortcuts(quickOrderShortcuts);
+        modal.style.display = 'flex';
+        window.renderQuickOrderShortcutsEditor();
+      } catch (e) {
+        console.error(e);
+        alert('No se pudieron cargar los atajos.');
+      }
+    };
+    window.saveQuickOrderShortcuts = async function() {
+      if (!canManageQuickOrderShortcuts()) {
+        alert('Solo admin puede guardar pedidos frecuentes.');
+        return;
+      }
+      const modal = document.getElementById('quick-order-shortcuts-modal');
+      const slug = getActiveTenantSlug();
+      const shortcuts = normalizeQuickOrderShortcutsForSave(quickOrderShortcutDraft);
+      try {
+        if (!CSRF_TOKEN || CSRF_TOKEN === '') {
+          try { await fetchCsrfToken(); } catch (_) {}
+        }
+        if (typeof csrfToken !== 'undefined' && (!csrfToken || csrfToken === '')) {
+          try { csrfToken = CSRF_TOKEN || csrfToken; } catch (_) {}
+        }
+        const headers = { 'Content-Type': 'application/json' };
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+        if (CSRF_TOKEN) headers['X-CSRFToken'] = CSRF_TOKEN;
+        const endpoint = new URL('/api/quick_order_shortcuts', API_BASE).toString();
+        let resp = await wFetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ slug, shortcuts })
+        });
+        if (resp.status === 403) {
+          try { await fetchCsrfToken(); } catch (_) {}
+          if (typeof csrfToken !== 'undefined') {
+            try { csrfToken = CSRF_TOKEN || csrfToken; } catch (_) {}
+          }
+          if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+          if (CSRF_TOKEN) headers['X-CSRFToken'] = CSRF_TOKEN;
+          resp = await wFetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ slug, shortcuts })
+          });
+        }
+        let data = {};
+        try {
+          data = await resp.json();
+        } catch (_) {
+          const text = await resp.text().catch(() => '');
+          data = text ? { error: text } : {};
+        }
+        if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+        quickOrderShortcuts = Array.isArray(data.shortcuts) ? data.shortcuts : [];
+        quickOrderShortcutsLoadedSlug = slug;
+        if (window.renderQuickOrderShortcutSummary) window.renderQuickOrderShortcutSummary();
+        if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
+        if (modal) modal.style.display = 'none';
+        alert('Pedidos frecuentes guardados correctamente.');
+      } catch (e) {
+        console.error(e);
+        alert('Error al guardar atajos: ' + e.message);
+      }
+    };
     function safeWhatsAppHref(url) {
       try {
         const parsed = new URL(String(url || '').trim(), window.location.origin);
@@ -10687,11 +11152,40 @@
           const shippingSection = document.getElementById('cfg-shipping-section');
           const shippingInput = document.getElementById('cfg-shipping-cost');
           const resetBtn = document.getElementById('cfg-reset-orders-btn');
+          const shortcutsSection = document.getElementById('cfg-quick-orders-section');
+          const shortcutsManageBtn = document.getElementById('cfg-shortcuts-manage-btn');
           if (shippingSection) shippingSection.style.display = allow ? '' : 'none';
           if (shippingInput) shippingInput.disabled = !allow;
           if (resetBtn) resetBtn.style.display = allow ? 'inline-flex' : 'none';
+          if (shortcutsSection) shortcutsSection.style.display = allow ? '' : 'none';
+          if (shortcutsManageBtn) shortcutsManageBtn.disabled = !allow;
           return allow;
         };
+        const shortcutsManageBtn = document.getElementById('cfg-shortcuts-manage-btn');
+        if (shortcutsManageBtn) {
+          shortcutsManageBtn.onclick = () => {
+            window.openQuickOrderShortcutsManager();
+          };
+        }
+        const shortcutsModal = document.getElementById('quick-order-shortcuts-modal');
+        const shortcutsCloseTop = document.getElementById('quick-order-shortcuts-close-top');
+        const shortcutsCloseBtn = document.getElementById('quick-order-shortcuts-close-btn');
+        const shortcutsAddBtn = document.getElementById('quick-order-shortcuts-add-btn');
+        const shortcutsSaveBtn = document.getElementById('quick-order-shortcuts-save-btn');
+        if (shortcutsCloseTop && shortcutsModal) shortcutsCloseTop.onclick = () => { shortcutsModal.style.display = 'none'; };
+        if (shortcutsCloseBtn && shortcutsModal) shortcutsCloseBtn.onclick = () => { shortcutsModal.style.display = 'none'; };
+        if (shortcutsModal) shortcutsModal.onclick = (e) => { if (e.target === shortcutsModal) shortcutsModal.style.display = 'none'; };
+        if (shortcutsAddBtn) {
+          shortcutsAddBtn.onclick = () => {
+            quickOrderShortcutDraft.push(createEmptyQuickOrderShortcutDraft());
+            window.renderQuickOrderShortcutsEditor();
+          };
+        }
+        if (shortcutsSaveBtn) {
+          shortcutsSaveBtn.onclick = () => {
+            window.saveQuickOrderShortcuts();
+          };
+        }
         const saveBtn = document.getElementById('cfg-save-btn');
         if (saveBtn) {
             // Use addEventListener to avoid overwriting
@@ -10828,6 +11322,7 @@
           btn.onclick = () => {
             modal.style.display = 'flex';
             const allowAdminOrderSettings = applyOrdersConfigAdminVisibility();
+            window.loadQuickOrderShortcuts(true);
             
             if (window.loadSlaThresholds) window.loadSlaThresholds();
 
@@ -11410,8 +11905,8 @@
           const btnView = document.getElementById('btn-view-carta');
           if (btnView) {
             btnView.onclick = () => {
-              const s = (document.getElementById('tenant-input')?.value || 'gastronomia-local1');
-              window.open('/gastronomia-local1.html?slug=' + s, '_blank');
+              const s = String(document.getElementById('tenant-input')?.value || 'gastronomia-local1').trim() || 'gastronomia-local1';
+              window.open('/' + encodeURIComponent(s) + '.html', '_blank');
             };
           }
         });
@@ -11424,8 +11919,8 @@
           const btnView = document.getElementById('btn-view-carta');
           if (btnView) {
             btnView.onclick = () => {
-              const s = (document.getElementById('tenant-input')?.value || 'gastronomia-local1');
-              window.open('/gastronomia-local1.html?slug=' + s, '_blank');
+              const s = String(document.getElementById('tenant-input')?.value || 'gastronomia-local1').trim() || 'gastronomia-local1';
+              window.open('/' + encodeURIComponent(s) + '.html', '_blank');
             };
           }
         })();
@@ -11444,6 +11939,8 @@
       const totalEl = document.getElementById('new-order-total');
       const confirmBtn = document.getElementById('btn-create-order-confirm');
       const typeSelect = document.getElementById('new-order-type');
+      const shortcutsWrap = document.getElementById('new-order-shortcuts-wrap');
+      const shortcutsGrid = document.getElementById('new-order-shortcuts');
       
       // Fields
       const fieldMesa = document.getElementById('field-mesa');
@@ -11481,7 +11978,8 @@
         modal.classList.add('active');
         modal.style.display = 'flex'; // Ensure display flex
         await populateTableSelect(undefined, true);
-        loadProducts();
+        await loadProducts();
+        await window.loadQuickOrderShortcuts(true);
         renderCart();
       });
       
@@ -11626,6 +12124,7 @@
           products = allProducts;
           
           renderProducts();
+          if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
         } catch (e) {
           productsGrid.innerHTML = '<div class="small error">Error al cargar productos</div>';
         }
@@ -11665,15 +12164,69 @@
         });
       }
       
-      function addToCart(p) {
+      function addToCart(p, qty = 1, skipRender = false) {
+        const addQty = Math.max(1, safeAdminInt(qty) || 1);
         const existing = cart.find(i => i.id === p.id);
         if (existing) {
-          existing.qty++;
+          existing.qty += addQty;
         } else {
-          cart.push({ ...p, qty: 1 });
+          cart.push({ ...p, qty: addQty });
         }
-        renderCart();
+        if (!skipRender) renderCart();
       }
+      function applyQuickOrderShortcut(shortcutId) {
+        const shortcut = (Array.isArray(quickOrderShortcuts) ? quickOrderShortcuts : []).find((item) => String(item.id) === String(shortcutId));
+        if (!shortcut) return;
+        const unavailable = [];
+        (shortcut.items || []).forEach((item) => {
+          const liveProduct = products.find((p) => String(p.id) === String(item.product_id));
+          if (!liveProduct && (item.missing || !item.active)) {
+            unavailable.push(item.name || item.product_id);
+            return;
+          }
+          const productData = liveProduct || {
+            id: item.product_id,
+            name: item.name || item.product_id,
+            price: safeAdminInt(item.price) || 0,
+            details: item.details || ''
+          };
+          addToCart(productData, item.qty, true);
+        });
+        renderCart();
+        if (unavailable.length) {
+          alert(`El atajo se cargó parcialmente. Revisa estos productos: ${unavailable.join(', ')}`);
+        }
+      }
+      window.renderCreateOrderShortcuts = function() {
+        if (!shortcutsWrap || !shortcutsGrid) return;
+        if (!canUseQuickOrderShortcuts()) {
+          shortcutsWrap.style.display = 'none';
+          shortcutsGrid.innerHTML = '';
+          return;
+        }
+        const activeShortcuts = (Array.isArray(quickOrderShortcuts) ? quickOrderShortcuts : []).filter((shortcut) => !!shortcut.active);
+        if (!activeShortcuts.length) {
+          shortcutsWrap.style.display = 'none';
+          shortcutsGrid.innerHTML = '';
+          return;
+        }
+        shortcutsWrap.style.display = '';
+        shortcutsGrid.innerHTML = '';
+        activeShortcuts.forEach((shortcut) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = `quick-order-shortcut-btn${shortcut.available ? '' : ' unavailable'}`;
+          btn.disabled = !shortcut.available;
+          btn.innerHTML = `
+            <span class="qo-name">${escapeAdminHtml(shortcut.name)}</span>
+            <span class="qo-meta">${escapeAdminHtml(summarizeQuickOrderShortcut(shortcut) || 'Sin detalle')}</span>
+            <span class="qo-total">${formatMoney(shortcut.total || 0)}</span>
+          `;
+          btn.title = shortcut.available ? 'Agregar atajo al carrito' : 'Este atajo tiene productos faltantes o inactivos';
+          btn.addEventListener('click', () => applyQuickOrderShortcut(shortcut.id));
+          shortcutsGrid.appendChild(btn);
+        });
+      };
       
       window.updateCartQty = (id, delta) => {
         const idx = cart.findIndex(i => i.id === id);
@@ -12221,6 +12774,12 @@
                <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Notas</label>
                <textarea id="new-order-notes" placeholder="Notas del pedido..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical;"></textarea>
             </div>
+          </div>
+
+          <div id="new-order-shortcuts-wrap" class="quick-order-shortcuts-wrap" style="display:none;">
+            <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #4a6fa5; letter-spacing: .03em;">Pedidos frecuentes</div>
+            <div class="small" style="margin-top:4px;">Toca un atajo para cargar productos reales al carrito de forma rápida.</div>
+            <div id="new-order-shortcuts" class="quick-order-shortcuts-grid"></div>
           </div>
 
           <!-- Cart Items -->

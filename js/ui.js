@@ -5,6 +5,63 @@ import { addToCart, updateCartDisplay, updateCartCount } from './cart.js?v=8';
 import { getBusinessSlug, formatMoneyWithCode } from './config.js?v=8';
 import { refreshSearchableItems } from './search.js?v=8';
 
+function parseStockValue(value) {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+}
+
+function getStockBadgeMeta(stock) {
+    if (!Number.isFinite(stock)) return null;
+    if (stock <= 0) return { text: 'Sin stock', className: 'stock-badge out' };
+    if (stock <= 5) return { text: 'Ultimas unidades', className: 'stock-badge low' };
+    return null;
+}
+
+function upsertStockBadge(card, stock) {
+    if (!card) return;
+    const info = card.querySelector('.product-info');
+    if (!info) return;
+    let badge = info.querySelector('.stock-badge');
+    const meta = getStockBadgeMeta(stock);
+    if (!meta) {
+        if (badge) badge.remove();
+        return;
+    }
+    if (!badge) {
+        badge = document.createElement('span');
+        const priceContainer = info.querySelector('.price-container');
+        if (priceContainer && priceContainer.parentNode === info) {
+            info.insertBefore(badge, priceContainer);
+        } else {
+            info.appendChild(badge);
+        }
+    }
+    badge.className = meta.className;
+    badge.textContent = meta.text;
+}
+
+function applyStockStateToButton(button, stock) {
+    if (!button) return;
+    const isOut = Number.isFinite(stock) && stock <= 0;
+    button.toggleAttribute('disabled', isOut);
+    if (isOut) {
+        button.setAttribute('aria-disabled', 'true');
+        button.setAttribute('title', 'Producto sin stock');
+    } else {
+        button.removeAttribute('aria-disabled');
+        button.removeAttribute('title');
+    }
+}
+
+function applyCardStockState(card, product) {
+    if (!card || !product) return;
+    const stock = parseStockValue(product.stock);
+    card.dataset.stock = Number.isFinite(stock) ? String(stock) : '';
+    const button = card.querySelector('.add-to-cart-btn');
+    upsertStockBadge(card, stock);
+    applyStockStateToButton(button, stock);
+}
+
 // Animación de añadir al carrito
 export function showAddToCartAnimation(event) {
     const animationElement = document.createElement('div');
@@ -68,6 +125,10 @@ export function highlightElement(element) {
 // Handler de click "Añadir al carrito"
 export function onAddToCartClick(event) {
     const button = event.currentTarget;
+    if (button.disabled || button.getAttribute('aria-disabled') === 'true') {
+        event.preventDefault();
+        return;
+    }
     const productCard = button.closest('.product-card');
     const productImage = productCard ? productCard.querySelector('.product-image img') : null;
     const titleEl = productCard ? productCard.querySelector('h3') : null;
@@ -311,9 +372,11 @@ export function initProductModals() {
             modalAddBtn.setAttribute('data-id', addBtn.getAttribute('data-id'));
             modalAddBtn.setAttribute('data-name', addBtn.getAttribute('data-name'));
             modalAddBtn.setAttribute('data-price', addBtn.getAttribute('data-price'));
+            const stock = parseStockValue(card && card.dataset ? card.dataset.stock : '');
+            applyStockStateToButton(modalAddBtn, stock);
             
             // Reset button state
-            modalAddBtn.textContent = 'Añadir al carrito';
+            modalAddBtn.textContent = (Number.isFinite(stock) && stock <= 0) ? 'Sin stock' : 'Añadir al carrito';
             modalAddBtn.classList.remove('added-to-cart');
         }
 
@@ -466,6 +529,7 @@ export async function initDynamicProducts() {
                 btn.setAttribute('data-price', String(priceVal));
                 btn.setAttribute('data-name', String(prod.name || ''));
             }
+            applyCardStockState(card, prod);
             const img = card.querySelector('.product-image img');
             if (img && prod.image_url) {
                 img.src = prod.image_url;
@@ -581,6 +645,7 @@ export async function initDynamicProducts() {
                     '</div>' +
                     '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '">Añadir al carrito</button>' +
                     '</div>';
+                applyCardStockState(card, p);
                 return card;
             };
 

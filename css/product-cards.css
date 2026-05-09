@@ -10,6 +10,29 @@ body.sector-gastronomia .product-card {
 body.sector-gastronomia .product-card .product-price {
   color: #111111;
 }
+body.sector-gastronomia .product-card .stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 4px 0 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+body.sector-gastronomia .product-card .stock-badge.low {
+  background: #fff4cc;
+  color: #8a5b00;
+  border: 1px solid #f3d36b;
+}
+body.sector-gastronomia .product-card .stock-badge.out {
+  background: #fde0e0;
+  color: #a32222;
+  border: 1px solid #efb0b0;
+}
 body.sector-gastronomia .product-card .add-to-cart-btn {
   background: linear-gradient(180deg, var(--gastro-accent) 0%, var(--gastro-accent-dark) 100%);
   color: #121212;
@@ -17,4 +40,12 @@ body.sector-gastronomia .product-card .add-to-cart-btn {
 }
 body.sector-gastronomia .product-card .add-to-cart-btn:hover {
   filter: brightness(1.06);
+}
+body.sector-gastronomia .product-card .add-to-cart-btn:disabled,
+body.sector-gastronomia .product-card .add-to-cart-btn[aria-disabled="true"] {
+  background: #d4d8df;
+  color: #6f7782;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
 }

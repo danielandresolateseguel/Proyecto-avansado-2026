@@ -47,6 +47,144 @@ def _scope_for(role, owner=False):
         return 'user'
     return 'tenant'
 
+def _load_tenant_config_row(cur, slug):
+    cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
+    row = cur.fetchone()
+    current_cfg = {}
+    if row and row[0]:
+        try:
+            current_cfg = json.loads(row[0])
+        except Exception:
+            current_cfg = {}
+    if not isinstance(current_cfg, dict):
+        current_cfg = {}
+    return current_cfg
+
+def _normalize_quick_order_shortcuts(raw):
+    out = []
+    seen_ids = set()
+    if not isinstance(raw, list):
+        return out
+    for idx, shortcut in enumerate(raw):
+        if not isinstance(shortcut, dict):
+            continue
+        name = str(shortcut.get('name') or '').strip()
+        if not name:
+            continue
+        raw_id = str(shortcut.get('id') or '').strip()
+        raw_id = re.sub(r'[^a-zA-Z0-9_-]+', '-', raw_id).strip('-_')[:48]
+        if not raw_id:
+            raw_id = f"shortcut-{idx + 1}"
+        shortcut_id = raw_id
+        suffix = 2
+        while shortcut_id in seen_ids:
+            shortcut_id = f"{raw_id}-{suffix}"
+            suffix += 1
+        seen_ids.add(shortcut_id)
+
+        items = []
+        total_qty = 0
+        for item in (shortcut.get('items') or []):
+            if not isinstance(item, dict):
+                continue
+            product_id = str(item.get('product_id') or item.get('id') or '').strip()
+            if not product_id:
+                continue
+            try:
+                qty = int(item.get('qty') or item.get('quantity') or 0)
+            except Exception:
+                qty = 0
+            if qty <= 0:
+                continue
+            qty = max(1, min(99, qty))
+            items.append({
+                'product_id': product_id[:64],
+                'qty': qty
+            })
+            total_qty += qty
+            if total_qty >= 200:
+                break
+        if not items:
+            continue
+        out.append({
+            'id': shortcut_id,
+            'name': name[:80],
+            'active': bool(shortcut.get('active', True)),
+            'items': items[:20]
+        })
+        if len(out) >= 50:
+            break
+    return out
+
+def _enrich_quick_order_shortcuts(cur, tenant_slug, shortcuts):
+    shortcuts = _normalize_quick_order_shortcuts(shortcuts)
+    product_ids = []
+    seen = set()
+    for shortcut in shortcuts:
+        for item in shortcut.get('items') or []:
+            pid = str(item.get('product_id') or '').strip()
+            if pid and pid not in seen:
+                seen.add(pid)
+                product_ids.append(pid)
+    product_map = {}
+    if product_ids:
+        placeholders = ",".join(["?"] * len(product_ids))
+        cur.execute(
+            f"""
+            SELECT product_id, name, price, stock, active, COALESCE(details,'') AS details
+            FROM products
+            WHERE tenant_slug = ? AND product_id IN ({placeholders})
+            """,
+            [tenant_slug] + product_ids
+        )
+        for row in (cur.fetchall() or []):
+            product_map[str(row[0])] = {
+                'product_id': str(row[0]),
+                'name': str(row[1] or row[0]),
+                'price': int(row[2] or 0),
+                'stock': int(row[3] or 0),
+                'active': bool(row[4]),
+                'details': str(row[5] or '')
+            }
+
+    enriched = []
+    for shortcut in shortcuts:
+        items = []
+        total = 0
+        total_qty = 0
+        available = True
+        for item in shortcut.get('items') or []:
+            pid = str(item.get('product_id') or '').strip()
+            qty = int(item.get('qty') or 0)
+            product = product_map.get(pid)
+            unit_price = int(product.get('price') or 0) if product else 0
+            item_active = bool(product.get('active')) if product else False
+            missing = product is None
+            if missing or not item_active:
+                available = False
+            total += unit_price * qty
+            total_qty += qty
+            items.append({
+                'product_id': pid,
+                'qty': qty,
+                'name': product.get('name') if product else pid,
+                'price': unit_price,
+                'stock': int(product.get('stock') or 0) if product else 0,
+                'details': product.get('details') if product else '',
+                'active': item_active,
+                'missing': missing
+            })
+        enriched.append({
+            'id': shortcut.get('id'),
+            'name': shortcut.get('name'),
+            'active': bool(shortcut.get('active', True)),
+            'available': available,
+            'total': total,
+            'item_count': total_qty,
+            'items': items
+        })
+    return enriched
+
 def _series_letters_to_index(series):
     letters = re.sub(r'[^A-Z]', '', str(series or '').upper())
     if not letters:
@@ -475,14 +613,7 @@ def update_tenant_config():
     
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
-    row = cur.fetchone()
-    current_cfg = {}
-    if row and row[0]:
-        try:
-            current_cfg = json.loads(row[0])
-        except:
-            pass
+    current_cfg = _load_tenant_config_row(cur, slug)
     
     for key in ['shipping_cost', 'time_mesa', 'time_espera', 'time_delivery']:
         if key in payload:
@@ -511,6 +642,52 @@ def update_tenant_config():
     conn.commit()
     invalidate_tenant_config(slug)
     return jsonify(current_cfg)
+
+@bp.route('/quick_order_shortcuts', methods=['GET'])
+def get_quick_order_shortcuts():
+    if not is_authed():
+        return jsonify({'error': 'unauthorized'}), 401
+    slug = request.args.get('slug') or request.args.get('tenant_slug') or 'gastronomia-local1'
+    session_tenant, _, role, perms, owner = _ctx()
+    if session_tenant and slug and session_tenant != slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    if not _has_perm(perms, owner, role, 'orders_create'):
+        return jsonify({'error': 'sin permisos para usar pedidos frecuentes'}), 403
+    conn = get_db()
+    cur = conn.cursor()
+    cfg = get_cached_tenant_config(slug) or {}
+    shortcuts = _normalize_quick_order_shortcuts(cfg.get('quick_order_shortcuts') or [])
+    return jsonify({
+        'tenant_slug': slug,
+        'shortcuts': _enrich_quick_order_shortcuts(cur, slug, shortcuts)
+    })
+
+@bp.route('/quick_order_shortcuts', methods=['POST'])
+def save_quick_order_shortcuts():
+    if not is_authed():
+        return jsonify({'error': 'unauthorized'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    payload = request.get_json(silent=True) or {}
+    slug = payload.get('slug') or payload.get('tenant_slug') or 'gastronomia-local1'
+    session_tenant, _, role, _, owner = _ctx()
+    if session_tenant and slug and session_tenant != slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    if not (owner or role == 'admin'):
+        return jsonify({'error': 'solo admin puede modificar pedidos frecuentes'}), 403
+    shortcuts = _normalize_quick_order_shortcuts(payload.get('shortcuts') or [])
+    conn = get_db()
+    cur = conn.cursor()
+    current_cfg = _load_tenant_config_row(cur, slug)
+    current_cfg['quick_order_shortcuts'] = shortcuts
+    cur.execute("INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)", (slug, json.dumps(current_cfg, ensure_ascii=False)))
+    conn.commit()
+    invalidate_tenant_config(slug)
+    return jsonify({
+        'ok': True,
+        'tenant_slug': slug,
+        'shortcuts': _enrich_quick_order_shortcuts(cur, slug, shortcuts)
+    })
 
 @bp.route('/orders', methods=['POST'])
 def create_order():
