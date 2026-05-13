@@ -20,12 +20,17 @@ body.sector-gastronomia .carousel-section {
 body.sector-gastronomia .carousel-btn {
   background: linear-gradient(180deg, var(--gastro-accent) 0%, var(--gastro-accent-dark) 100%);
   border: none;
-  color: #121212;
+  color: var(--gastro-accent-contrast, #121212);
   box-shadow: 0 8px 22px var(--gastro-accent-35);
 }
 body.sector-gastronomia .carousel-btn:hover {
   filter: brightness(1.05);
   box-shadow: 0 12px 28px var(--gastro-accent-42);
+}
+body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .carousel-btn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 body.sector-gastronomia .carousel-indicators .indicator,
 body.sector-gastronomia .carousel-indicators button.indicator {

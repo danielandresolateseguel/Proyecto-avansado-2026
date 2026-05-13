@@ -199,6 +199,13 @@ function buildOpeningHoursText(openingHours) {
     return lines.join('\n');
 }
 
+function applyMainMenuViewMode(enabled) {
+    const isCompact = enabled === true || String(enabled || '').trim().toLowerCase() === 'compact';
+    if (!document.body) return;
+    document.body.classList.toggle('main-menu-view-compact', isCompact);
+    document.body.dataset.mainMenuView = isCompact ? 'compact' : 'default';
+}
+
 function initHeaderContact() {
     const headerContact = document.querySelector('.header-contact');
     const slug = getBusinessSlug() || 'gastronomia-local1';
@@ -208,7 +215,10 @@ function initHeaderContact() {
         if (!res.ok) return null;
         return res.json();
     }).then(data => {
-        if (!data) return;
+        if (!data) {
+            if (document.body) document.body.setAttribute('data-tenant-theme-loaded', 'true');
+            return;
+        }
         const tenantName = (data.name || '').trim();
         if (tenantName) {
             document.title = tenantName;
@@ -291,8 +301,13 @@ function initHeaderContact() {
         // Apply Theme Color
         const themeColor = data.theme_color || '#ff6a00';
         if (themeColor) {
+            const accentContrast = getContrastColor(themeColor);
             // Use document.body to override CSS definitions on body.sector-gastronomia
             document.body.style.setProperty('--gastro-accent', themeColor);
+            document.body.style.setProperty('--gastro-accent-contrast', accentContrast);
+            try {
+                localStorage.setItem('cached_theme_color_' + slug, themeColor);
+            } catch (e) {}
             
             document.body.style.setProperty('--gastro-accent-dark', darken(themeColor, -40));
             
@@ -307,6 +322,7 @@ function initHeaderContact() {
             // Set light background tint
             document.body.style.setProperty('--gastro-bg', hexToRgba(themeColor, 0.04));
         }
+        if (document.body) document.body.setAttribute('data-tenant-theme-loaded', 'true');
 
         // Apply Section Background Colors
         const applySectionGradient = (variableName, textVarName, color) => {
@@ -327,6 +343,12 @@ function initHeaderContact() {
         applySectionGradient('--gastro-special-discounts-bg', '--gastro-special-discounts-text', data.featured_bg_color);
         applySectionGradient('--gastro-products-bg', '--gastro-products-text', data.menu_bg_color);
         applySectionGradient('--gastro-interest-bg', '--gastro-interest-text', data.interest_bg_color);
+        applyMainMenuViewMode(data.main_menu_compact_view);
+        try {
+            window.BusinessConfig = Object.assign({}, window.BusinessConfig || {}, {
+                main_menu_compact_view: !!data.main_menu_compact_view
+            });
+        } catch (_) {}
 
         const logoImg = document.querySelector('.site-logo img');
         if (logoImg) {
@@ -703,6 +725,8 @@ function initHeaderContact() {
         }
     }).catch(() => {
         // Fallback or error handling
+    }).catch(() => {
+        if (document.body) document.body.setAttribute('data-tenant-theme-loaded', 'true');
     });
 }
 

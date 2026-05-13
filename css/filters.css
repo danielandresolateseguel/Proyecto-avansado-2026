@@ -28,7 +28,13 @@ body.sector-gastronomia .category-filter .filter-btn:hover {
 }
 body.sector-gastronomia .category-filter .filter-btn.active {
   background: var(--gastro-accent);
-  color: #1a1a1a;
+  color: var(--gastro-accent-contrast, #1a1a1a);
   border-color: var(--gastro-accent-dark);
   box-shadow: 0 4px 12px var(--gastro-accent-35);
+}
+
+/* Evita el flash del color por defecto hasta que cargue el tema real del tenant */
+body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .category-filter .filter-btn {
+  opacity: 0;
+  pointer-events: none;
 }

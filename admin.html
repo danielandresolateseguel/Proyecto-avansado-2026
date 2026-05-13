@@ -2334,6 +2334,13 @@
         </div>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:8px; font-weight:bold;">Vista Menú Principal</label>
+        <label style="display:flex; align-items:flex-start; gap:10px; font-size:12px; color:#333; cursor:pointer;">
+          <input type="checkbox" id="main-menu-compact-view" style="margin-top:2px;">
+          <span>Activar vista compacta horizontal solo para el Menú principal. Los platos destacados y recomendados no se modifican.</span>
+        </label>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Fondo Recomendados</label>
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="color" id="interest-bg-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#121212">
@@ -7929,6 +7936,7 @@
     const headerBgColor = document.getElementById('header-bg-color');
     const featuredBgColor = document.getElementById('featured-bg-color');
     const menuBgColor = document.getElementById('menu-bg-color');
+    const mainMenuCompactViewInput = document.getElementById('main-menu-compact-view');
     const interestBgColor = document.getElementById('interest-bg-color');
     const headerAnnouncementActive = document.getElementById('header-announcement-active');
     const headerAnnouncementText = document.getElementById('header-announcement-text');
@@ -8030,6 +8038,7 @@
         if (headerBgColor) headerBgColor.value = data.header_bg_color || '#667eea';
         if (featuredBgColor) featuredBgColor.value = data.featured_bg_color || '#0c0c0c';
         if (menuBgColor) menuBgColor.value = data.menu_bg_color || '#0f0f0f';
+        if (mainMenuCompactViewInput) mainMenuCompactViewInput.checked = !!data.main_menu_compact_view;
         if (interestBgColor) interestBgColor.value = data.interest_bg_color || '#121212';
         if (headerAnnouncementActive) headerAnnouncementActive.checked = data.announcement_active || false;
         if (headerAnnouncementText) headerAnnouncementText.value = data.announcement_text || '';
@@ -8081,6 +8090,7 @@
             header_bg_color: headerBgColor ? headerBgColor.value : '#667eea',
             featured_bg_color: featuredBgColor ? featuredBgColor.value : '#0c0c0c',
             menu_bg_color: menuBgColor ? menuBgColor.value : '#0f0f0f',
+            main_menu_compact_view: mainMenuCompactViewInput ? !!mainMenuCompactViewInput.checked : false,
             interest_bg_color: interestBgColor ? interestBgColor.value : '#121212',
             announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
             announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''

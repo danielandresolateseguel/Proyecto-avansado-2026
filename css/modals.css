@@ -9,7 +9,7 @@
   width: 56px;
   height: 56px;
   background-color: var(--gastro-accent);
-  color: white;
+  color: var(--gastro-accent-contrast, #ffffff);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -23,6 +23,12 @@
   /* Ensure it's visible */
   opacity: 1;
   visibility: visible;
+}
+
+body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-float {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* Adjust position on mobile if needed */
@@ -104,6 +110,12 @@
   border: none !important; /* Remove white border */
 }
 
+/* Modal de producto alineado al color de marca del tenant */
+#product-modal .modal-content {
+  border-top: 4px solid var(--gastro-accent);
+  box-shadow: 0 28px 60px rgba(0, 0, 0, 0.32), 0 10px 24px var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
+}
+
 /* Ensure modal body flows correctly */
 #product-modal .modal-body {
     display: flex;
@@ -119,7 +131,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: linear-gradient(180deg, rgba(255,255,255,1) 0%, var(--gastro-accent-08, rgba(255,106,0,0.08)) 100%);
     border-radius: 0; /* Remove radius to flush with edges */
     padding: 0;
     width: 100%;
@@ -155,11 +167,18 @@
     padding: 20px; /* Added padding here for text content */
 }
 
-#product-modal .modal-details h3 {
+#product-modal .modal-details h3,
+#product-modal .modal-info h3,
+#modal-product-title {
     color: #2c3e50;
     font-size: 1.5rem;
     margin: 0;
     font-weight: 600;
+}
+
+#product-modal .modal-info p,
+#modal-product-description {
+    color: #4b5563;
 }
 
 #product-modal .modal-price-section {
@@ -168,9 +187,15 @@
     color: var(--gastro-accent, #ff6a00);
 }
 
+#product-modal .modal-price,
+#modal-product-price {
+    color: var(--gastro-accent, #ff6a00);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.35);
+}
+
 #product-modal .modal-add-to-cart {
     background-color: var(--gastro-accent, #ff6a00);
-    color: white;
+    color: var(--gastro-accent-contrast, #ffffff);
     border: none;
     padding: 12px;
     border-radius: 8px;
@@ -183,6 +208,62 @@
 
 #product-modal .modal-add-to-cart:hover {
     background-color: var(--gastro-accent-dark);
+}
+
+#product-modal .close-modal {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--gastro-accent-dark, #c45500);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.14);
+    transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#product-modal .close-modal:hover {
+    transform: scale(1.04);
+    background: var(--gastro-accent-08, rgba(255,106,0,0.08));
+    color: var(--gastro-accent-dark, #c45500);
+    box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+
+#product-modal .styled-textarea {
+    border: 1px solid var(--gastro-accent-18, rgba(255,106,0,0.18));
+    background: linear-gradient(180deg, #fafafa 0%, var(--gastro-accent-08, rgba(255,106,0,0.08)) 100%);
+}
+
+#product-modal .styled-textarea:focus {
+    outline: none;
+    border-color: var(--gastro-accent, #ff6a00);
+    background: white;
+    box-shadow: 0 0 0 3px var(--gastro-accent-18, rgba(255,106,0,0.18));
+}
+
+#product-modal #modal-add-to-cart-btn {
+    background: linear-gradient(180deg, var(--gastro-accent) 0%, var(--gastro-accent-dark) 100%);
+    color: var(--gastro-accent-contrast, #121212);
+    border: none;
+    box-shadow: 0 10px 22px var(--gastro-accent-22, rgba(255,106,0,0.22));
+}
+
+#product-modal #modal-add-to-cart-btn:hover {
+    filter: brightness(1.04);
+}
+
+#product-modal #modal-add-to-cart-btn:disabled,
+#product-modal #modal-add-to-cart-btn[aria-disabled="true"] {
+    background: #d4d8df;
+    color: #6f7782;
+    box-shadow: none;
+    filter: none;
 }
 
 .status-header {

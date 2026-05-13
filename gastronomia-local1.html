@@ -18,6 +18,73 @@
     <meta name="twitter:description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
     <meta name="twitter:image" content="Imagenes/lomo a lo pobre.webp">
     <link rel="icon" href="Imagenes/Epalogo.png" type="image/png">
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          var slug = (params.get('slug') || params.get('tenant') || params.get('tenant_slug') || '').trim();
+          if (!slug) {
+            var file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').trim();
+            if (file && file !== 'index') slug = file;
+          }
+          if (!slug) slug = 'gastronomia-local1';
+
+          var cachedThemeColor = localStorage.getItem('cached_theme_color_' + slug);
+          if (!cachedThemeColor) return;
+
+          function normalizeHex(hex) {
+            var value = String(hex || '').trim().replace(/^#/, '');
+            if (value.length === 3) value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
+            return /^([0-9a-fA-F]{6})$/.test(value) ? ('#' + value) : '';
+          }
+
+          function getContrastColor(hex) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return '#121212';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return yiq >= 140 ? '#121212' : '#ffffff';
+          }
+
+          function shiftHex(hex, amount) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return hex;
+            var num = parseInt(clean, 16);
+            var clamp = function (value) { return Math.max(0, Math.min(255, value)); };
+            var r = clamp((num >> 16) + amount);
+            var g = clamp(((num >> 8) & 255) + amount);
+            var b = clamp((num & 255) + amount);
+            return '#' + [r, g, b].map(function (part) { return part.toString(16).padStart(2, '0'); }).join('');
+          }
+
+          function hexToRgba(hex, alpha) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return 'rgba(255, 106, 0, ' + alpha + ')';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+          }
+
+          var root = document.documentElement;
+          var accent = normalizeHex(cachedThemeColor);
+          var contrast = getContrastColor(accent);
+          root.style.setProperty('--gastro-accent', accent);
+          root.style.setProperty('--gastro-accent-dark', shiftHex(accent, -40));
+          root.style.setProperty('--gastro-accent-contrast', contrast);
+          [0.08, 0.18, 0.22, 0.25, 0.28, 0.35, 0.42, 0.55, 0.85].forEach(function (alpha) {
+            root.style.setProperty('--gastro-accent-' + String(alpha).replace('.', ''), hexToRgba(accent, alpha));
+          });
+
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', accent);
+        } catch (_) {}
+      })();
+    </script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="image-optimizations.css">
     <link rel="stylesheet" href="gastronomia.css">

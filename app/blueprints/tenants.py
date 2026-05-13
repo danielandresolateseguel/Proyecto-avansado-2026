@@ -261,7 +261,7 @@ def get_tenant_header():
             except:
                 pass
                 
-        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color']
+        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color', 'main_menu_compact_view']
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
@@ -369,7 +369,8 @@ def get_tenant_header():
         'header_bg_color': cfg.get('header_bg_color', '#2c1e36'),
         'featured_bg_color': cfg.get('featured_bg_color', '#0c0c0c'),
         'menu_bg_color': cfg.get('menu_bg_color', '#0f0f0f'),
-        'interest_bg_color': cfg.get('interest_bg_color', '#121212')
+        'interest_bg_color': cfg.get('interest_bg_color', '#121212'),
+        'main_menu_compact_view': bool(cfg.get('main_menu_compact_view', False))
     })
 
 @bp.route('/tenant_checkout', methods=['GET', 'PATCH'])
