@@ -154,11 +154,36 @@ export function updateCartDisplay() {
         const itemImage = document.createElement('div');
         itemImage.className = 'cart-item-image';
         if (item.image) {
+            itemImage.classList.add('is-loading');
             const img = document.createElement('img');
             img.src = item.image;
             img.alt = item.name;
-            img.loading = 'lazy';
+            img.loading = 'eager';
+            img.decoding = 'async';
+            try { img.fetchPriority = 'high'; } catch (_) {}
+            const markLoaded = () => itemImage.classList.remove('is-loading');
+            const markError = () => {
+                itemImage.classList.remove('is-loading');
+                itemImage.classList.add('has-error');
+            };
+            img.addEventListener('load', markLoaded, { once: true });
+            img.addEventListener('error', markError, { once: true });
+            if (img.complete && img.naturalWidth > 0) {
+                markLoaded();
+            }
             itemImage.appendChild(img);
+            const placeholder = document.createElement('span');
+            placeholder.className = 'cart-item-image-placeholder';
+            placeholder.setAttribute('aria-hidden', 'true');
+            placeholder.innerHTML = '&#128247;';
+            itemImage.appendChild(placeholder);
+        } else {
+            itemImage.classList.add('has-error');
+            const placeholder = document.createElement('span');
+            placeholder.className = 'cart-item-image-placeholder';
+            placeholder.setAttribute('aria-hidden', 'true');
+            placeholder.innerHTML = '&#128247;';
+            itemImage.appendChild(placeholder);
         }
         
         // Info
