@@ -8224,19 +8224,28 @@
            upBtn.textContent = 'Subiendo...';
            upBtn.disabled = true;
            try {
+             if (!csrfToken) await fetchCSRF();
              const slug = tenantInput.value.trim() || defaultSlug();
              const url = new URL('/api/upload', API_BASE);
              url.searchParams.set('tenant_slug', slug);
 
              const resp = await wFetch(url.toString(), {
                method: 'POST',
+               headers: {
+                 'X-CSRF-Token': csrfToken || ''
+               },
                body: formData
              });
              if (resp.ok) {
                const data = await resp.json();
                carEditImage.value = data.url;
              } else {
-               alert('Error al subir imagen');
+               let msg = 'Error al subir imagen';
+               try {
+                 const data = await resp.json();
+                 if (data && data.error) msg = 'Error al subir imagen: ' + data.error;
+               } catch (_) {}
+               alert(msg);
              }
            } catch(e) { console.error(e); alert('Error de red'); }
            upBtn.textContent = 'Subir';
