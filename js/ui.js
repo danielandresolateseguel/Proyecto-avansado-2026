@@ -83,7 +83,7 @@ export function showAddToCartAnimation(event) {
     animationElement.style.top = clientY + 'px';
     document.body.appendChild(animationElement);
     
-    const cartIcon = document.querySelector('.cart-icon');
+    const cartIcon = document.getElementById('floating-cart') || document.querySelector('.cart-icon');
     const cartIconRect = cartIcon ? cartIcon.getBoundingClientRect() : null;
     const cartIconX = cartIconRect ? (cartIconRect.left + cartIconRect.width / 2) : clientX;
     const cartIconY = cartIconRect ? (cartIconRect.top + cartIconRect.height / 2) : clientY;
