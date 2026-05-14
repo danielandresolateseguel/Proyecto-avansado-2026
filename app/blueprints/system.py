@@ -69,21 +69,60 @@ def geocode_reverse():
     if not isinstance(addr, dict):
         addr = {}
 
-    road = str(addr.get('road') or addr.get('pedestrian') or addr.get('footway') or addr.get('path') or '').strip()
+    road = str(
+        addr.get('road')
+        or addr.get('pedestrian')
+        or addr.get('footway')
+        or addr.get('path')
+        or addr.get('residential')
+        or addr.get('quarter')
+        or addr.get('neighbourhood')
+        or addr.get('suburb')
+        or addr.get('hamlet')
+        or addr.get('city_district')
+        or addr.get('municipality')
+        or ''
+    ).strip()
     house = str(addr.get('house_number') or '').strip()
     display_name = str(data.get('display_name') or '').strip()
+    display_parts = [str(x).strip() for x in display_name.split(',') if str(x).strip()]
 
     address_line = ''
     if road and house:
         address_line = f"{road} {house}".strip()
     elif road:
         address_line = road
-    elif display_name:
-        address_line = display_name.split(',')[0].strip()
+    elif display_parts:
+        address_line = display_parts[0]
 
-    city = str(addr.get('city') or addr.get('town') or addr.get('village') or addr.get('municipality') or addr.get('county') or '').strip()
+    city = str(
+        addr.get('city')
+        or addr.get('town')
+        or addr.get('village')
+        or addr.get('hamlet')
+        or addr.get('municipality')
+        or addr.get('county')
+        or ''
+    ).strip()
+    district = str(
+        addr.get('suburb')
+        or addr.get('neighbourhood')
+        or addr.get('quarter')
+        or addr.get('city_district')
+        or ''
+    ).strip()
     state = str(addr.get('state') or '').strip()
-    locality = ', '.join([x for x in [city, state] if x])
+    locality = ', '.join([x for x in [district, city, state] if x])
+
+    if not address_line and display_parts:
+        address_line = display_parts[0]
+
+    if not locality and len(display_parts) > 1:
+        fallback_parts = []
+        for part in display_parts[1:4]:
+            if part and part not in fallback_parts and part != address_line:
+                fallback_parts.append(part)
+        locality = ', '.join(fallback_parts)
 
     resp = jsonify({
         'lat': lat,

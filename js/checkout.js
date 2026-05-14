@@ -481,11 +481,7 @@ function initDeliveryGeoUI() {
                             if (Number.isFinite(lat2) && Number.isFinite(lng2)) {
                                 const url2 = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat2},${lng2}`)}`;
                                 const accTxt2 = Number.isFinite(accuracy2) ? ` (precisión aprox. ${Math.round(accuracy2)}m)` : '';
-                                const parts = [];
-                                if (res.address) parts.push(res.address);
-                                if (res.locality) parts.push(res.locality);
-                                const txt = parts.length ? ` · ${parts.join(', ')}` : '';
-                                setPreview(`Ubicación lista${accTxt2}: <a href="${url2}" target="_blank" rel="noopener">ver en mapa</a>${txt}`);
+                                setPreview(`Ubicación lista${accTxt2}: <a href="${url2}" target="_blank" rel="noopener">ver en mapa</a>`);
                             }
                         }
                     })();
