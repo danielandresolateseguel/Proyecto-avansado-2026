@@ -3,14 +3,20 @@
 /* Fondos oscuros con aclarado lateral */
 body.sector-gastronomia .special-discounts {
   background: var(--gastro-special-discounts-bg, linear-gradient(90deg, rgba(12, 12, 12, 0.95) 0%, rgba(22, 22, 22, 0.88) 40%, rgba(55, 55, 55, 0.72) 100%));
+  margin-bottom: 0;
 }
 body.sector-gastronomia .special-discounts .section-title,
 body.sector-gastronomia .special-discounts h2 {
   color: var(--gastro-special-discounts-text, #f5f5f5);
 }
 
+body.sector-gastronomia .interest-section#interest-index {
+  margin-bottom: 0;
+}
+
 body.sector-gastronomia #menu-gastronomia.products.searchable-section {
   background: var(--gastro-products-bg, linear-gradient(90deg, rgba(15, 15, 15, 0.95) 0%, rgba(28, 28, 28, 0.88) 45%, rgba(58, 58, 58, 0.72) 100%));
+  margin-bottom: 0;
 }
 body.sector-gastronomia #menu-gastronomia .section-title {
   color: var(--gastro-products-text, #f5f5f5);
