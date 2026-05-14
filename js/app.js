@@ -206,6 +206,50 @@ function applyMainMenuViewMode(enabled) {
     document.body.dataset.mainMenuView = isCompact ? 'compact' : 'default';
 }
 
+function initScrollableHint(container, storageKey) {
+    if (!container) return;
+
+    const updateState = () => {
+        const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+        const atStart = container.scrollLeft <= 1;
+        const atEnd = container.scrollLeft >= (maxScroll - 1);
+        container.classList.toggle('has-left', !atStart);
+        container.classList.toggle('has-right', !atEnd);
+        return { maxScroll, atStart, atEnd };
+    };
+
+    const state = updateState();
+    container.addEventListener('scroll', updateState, { passive: true });
+
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(updateState, 120);
+    });
+
+    if (!window.matchMedia('(max-width: 768px)').matches) return;
+    if (!state.maxScroll) return;
+
+    let shown = false;
+    try {
+        shown = sessionStorage.getItem(storageKey) === '1';
+    } catch (_) {}
+    if (shown) return;
+
+    setTimeout(() => {
+        const latest = updateState();
+        if (!latest.maxScroll || !latest.atStart) return;
+        container.scrollTo({ left: Math.min(28, latest.maxScroll), behavior: 'smooth' });
+        setTimeout(() => {
+            container.scrollTo({ left: 0, behavior: 'smooth' });
+            updateState();
+        }, 480);
+        try {
+            sessionStorage.setItem(storageKey, '1');
+        } catch (_) {}
+    }, 650);
+}
+
 function initHeaderContact() {
     const headerContact = document.querySelector('.header-contact');
     const slug = getBusinessSlug() || 'gastronomia-local1';
@@ -868,6 +912,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.addEventListener('click', () => {
                     btns.forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                    try {
+                        btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+                    } catch (_) {}
                     const selected = btn.getAttribute('data-filter');
                     
                     const menuSection = document.getElementById('menu-gastronomia');
@@ -886,6 +933,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
             });
+            const hintSlug = (window.BUSINESS_SLUG || getBusinessSlug() || 'gastronomia').trim();
+            initScrollableHint(categoryFilter, 'scrollHint_category_' + hintSlug);
         }
     }
     

@@ -414,6 +414,7 @@ export function initInterestNav() {
         nextBtn.classList.toggle('disabled', atEnd);
         section.classList.toggle('has-left', !atStart);
         section.classList.toggle('has-right', !atEnd);
+        return { atStart, atEnd, maxScroll: Math.max(0, strip.scrollWidth - strip.clientWidth) };
     }
 
     window.scrollInterest = function(direction) {
@@ -441,6 +442,29 @@ export function initInterestNav() {
     });
 
     syncVisibility();
+
+    if (window.matchMedia('(max-width: 768px)').matches) {
+        let shown = false;
+        try {
+            const slug = String(window.BUSINESS_SLUG || window.location.pathname || 'interest').trim();
+            shown = sessionStorage.getItem('scrollHint_interest_' + slug) === '1';
+            if (!shown) {
+                const state = updateState();
+                if (state.maxScroll && state.atStart) {
+                    setTimeout(() => {
+                        const latest = updateState();
+                        if (!latest.maxScroll || !latest.atStart) return;
+                        strip.scrollTo({ left: Math.min(26, latest.maxScroll), behavior: 'smooth' });
+                        setTimeout(() => {
+                            strip.scrollTo({ left: 0, behavior: 'smooth' });
+                            updateState();
+                        }, 480);
+                    }, 850);
+                }
+                sessionStorage.setItem('scrollHint_interest_' + slug, '1');
+            }
+        } catch (_) {}
+    }
 }
 
 // Focus effect for interest section
