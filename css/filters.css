@@ -45,8 +45,11 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .category-filter 
     justify-content: flex-start;
     flex-wrap: nowrap;
     gap: 0.55rem;
-    padding: 0.7rem 4px 0.45rem;
-    margin-bottom: 4px;
+    padding: 2px 4px 0.12rem;
+    margin-top: 0;
+    margin-bottom: 6px;
+    min-height: 0;
+    align-items: center;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x proximity;
@@ -80,14 +83,16 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .category-filter 
     scroll-snap-align: start;
     padding: 7px 16px;
     font-size: 0.95rem;
+    line-height: 1.15;
   }
 }
 
 @media (max-width: 480px) {
   body.sector-gastronomia .category-filter {
     gap: 0.45rem;
-    padding: 0.55rem 4px 0.35rem;
-    margin-bottom: 2px;
+    padding: 2px 4px 0.08rem;
+    margin-top: 0;
+    margin-bottom: 5px;
   }
   body.sector-gastronomia .category-filter.has-right:not(.has-left) {
     -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 14px), transparent 100%);
@@ -104,5 +109,6 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .category-filter 
   body.sector-gastronomia .category-filter .filter-btn {
     padding: 6px 14px;
     font-size: 0.9rem;
+    line-height: 1.1;
   }
 }

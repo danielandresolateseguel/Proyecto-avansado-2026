@@ -3640,10 +3640,10 @@ footer {
 }
 /* Index-only mobile: mostrar 3 círculos y permitir scroll lateral */
 @media (max-width: 768px) {
-  .interest-section#interest-index { padding: 8px 8px 10px; }
+  .interest-section#interest-index { padding: 6px 8px 4px; }
   .interest-section#interest-index .section-title {
-    font-size: 0.98rem;
-    margin: 0 8px 4px;
+    font-size: 0.94rem;
+    margin: 0 8px 2px;
     gap: 6px;
   }
   .interest-section#interest-index .section-title::before {
@@ -3655,7 +3655,7 @@ footer {
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     justify-content: flex-start;
-    padding: 2px 2px 0;
+    padding: 2px 8px 0;
     /* Ocultar barra de scroll en móviles (Firefox/IE/Edge legado) */
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -3663,9 +3663,9 @@ footer {
   /* Ocultar barra de scroll en móviles (WebKit: Chrome/Safari) */
   .interest-section#interest-index .interest-strip::-webkit-scrollbar { display: none; }
   .interest-section#interest-index .interest-item {
-    flex: 0 0 calc((100% - 16px) / 3);
-    min-width: calc((100% - 16px) / 3);
-    gap: 6px;
+    flex: 0 0 calc((100% - 30px) / 3.35);
+    min-width: calc((100% - 30px) / 3.35);
+    gap: 4px;
   }
   .interest-section#interest-index .interest-circle { width: 52px; height: 52px; }
   .interest-section#interest-index .interest-circle i { font-size: 20px; }
@@ -3674,17 +3674,17 @@ footer {
   .interest-section#interest-index .interest-nav-btn.next { right: 8px; }
 }
 @media (max-width: 480px) {
-  .interest-section#interest-index { padding: 7px 6px 8px; }
+  .interest-section#interest-index { padding: 5px 6px 2px; }
   .interest-section#interest-index .section-title {
-    font-size: 0.92rem;
-    margin: 0 6px 4px;
+    font-size: 0.86rem;
+    margin: 0 6px 2px;
   }
   .interest-section#interest-index .interest-strip {
     gap: 6px;
     overflow-x: auto;
     scroll-snap-type: x mandatory;
     justify-content: flex-start;
-    padding: 2px 2px 0;
+    padding: 2px 6px 0;
     /* Ocultar barra de scroll en móviles (Firefox/IE/Edge legado) */
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -3692,9 +3692,9 @@ footer {
   /* Ocultar barra de scroll en móviles (WebKit: Chrome/Safari) */
   .interest-section#interest-index .interest-strip::-webkit-scrollbar { display: none; }
   .interest-section#interest-index .interest-item {
-    flex: 0 0 calc((100% - 12px) / 3);
-    min-width: calc((100% - 12px) / 3);
-    gap: 5px;
+    flex: 0 0 calc((100% - 22px) / 3.28);
+    min-width: calc((100% - 22px) / 3.28);
+    gap: 3px;
   }
   .interest-section#interest-index .interest-circle { width: 46px; height: 46px; }
   .interest-section#interest-index .interest-label { font-size: 0.72rem; }
@@ -3780,7 +3780,7 @@ footer {
     font-size: 0.74rem;
     line-height: 1.1;
     text-align: center;
-    margin-top: 2px;
+    margin-top: 0;
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: normal;
@@ -3799,7 +3799,7 @@ footer {
     font-size: 0.68rem;
     line-height: 1.05;
     text-align: center;
-    margin-top: 2px;
+    margin-top: 0;
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: normal;
@@ -3811,6 +3811,28 @@ footer {
     text-overflow: ellipsis;
   }
   .interest-section#interest-index .interest-item .interest-circle::after { content: none !important; }
+}
+
+@media (max-width: 768px) {
+  body.sector-gastronomia #menu-gastronomia {
+    padding-top: 6px;
+  }
+  body.sector-gastronomia #menu-gastronomia .section-title {
+    font-size: 1.05rem;
+    line-height: 1.15;
+    margin: 0 0 6px;
+    padding-bottom: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  body.sector-gastronomia #menu-gastronomia {
+    padding-top: 4px;
+  }
+  body.sector-gastronomia #menu-gastronomia .section-title {
+    font-size: 0.98rem;
+    margin: 0 0 5px;
+  }
 }
 /* ====== Encabezado en línea para sección de productos ====== */
 .section-header-inline {
