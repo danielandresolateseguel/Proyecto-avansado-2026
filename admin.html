@@ -556,11 +556,16 @@
       .analytics-bar-meta { text-align:left; }
       .analytics-scroll-body, .analytics-comparison-body { max-height: 220px; }
     }
-    body.no-auth header .toolbar, body.no-auth header .subcontrols { display: none !important; }
-    body.no-auth .header-rest, body.no-auth .header-end { display: none !important; }
-    body.no-auth .header-main > :not(h1) { display: none !important; }
-    body.no-auth #top-controls, body.no-auth #metrics, body.no-auth #analytics, body.no-auth #cash-box, body.no-auth #cash-history, body.no-auth section.grid { display: none !important; }
+    body.no-auth header .toolbar, body.no-auth header .subcontrols,
+    body.auth-pending header .toolbar, body.auth-pending header .subcontrols { display: none !important; }
+    body.no-auth .header-rest, body.no-auth .header-end,
+    body.auth-pending .header-rest, body.auth-pending .header-end { display: none !important; }
+    body.no-auth .header-main > :not(h1),
+    body.auth-pending .header-main > :not(h1) { display: none !important; }
+    body.no-auth #top-controls, body.no-auth #metrics, body.no-auth #analytics, body.no-auth #cash-box, body.no-auth #cash-history, body.no-auth section.grid,
+    body.auth-pending #top-controls, body.auth-pending #metrics, body.auth-pending #analytics, body.auth-pending #cash-box, body.auth-pending #cash-history, body.auth-pending section.grid { display: none !important; }
     body.no-auth #login-box { display: block !important; }
+    body.auth-pending #login-box { display: block !important; visibility: hidden !important; }
     #cash-history { display:grid; grid-template-columns: 1fr; gap: 10px; }
     .history-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     .history-table { width: 100%; border-collapse: collapse; }
@@ -1070,7 +1075,7 @@
     }
   </style>
   </head>
-<body>
+<body class="auth-pending no-auth">
   <header>
     <div class="header-main">
       <h1>Panel de Administración (KDS)</h1>
@@ -3168,6 +3173,7 @@
     if (loginPassEl) loginPassEl.value = '';
     if (loginShowEl && loginPassEl) loginShowEl.onchange = function(){ loginPassEl.type = loginShowEl.checked ? 'text' : 'password'; };
     function setAuthUI(){
+      document.body.classList.remove('auth-pending');
       if (authBadge) {
         authBadge.classList.remove('on','off');
         authBadge.classList.add(isAuthed ? 'on' : 'off');
