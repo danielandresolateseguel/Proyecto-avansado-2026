@@ -371,6 +371,30 @@ function initDeliveryGeoUI() {
         else lockAddressInputs();
     });
 
+    const deriveGeoAddress = (payload) => {
+        if (!payload || typeof payload !== 'object') {
+            return { address: '', locality: '' };
+        }
+        let address = String(payload.address || '').trim();
+        let locality = String(payload.locality || '').trim();
+        const displayName = String(payload.display_name || '').trim();
+        const parts = displayName
+            .split(',')
+            .map(part => String(part || '').trim())
+            .filter(Boolean);
+
+        if (!address && parts.length) {
+            address = parts[0];
+        }
+        if (!locality && parts.length > 1) {
+            locality = parts
+                .slice(1, 4)
+                .filter(part => part && part !== address)
+                .join(', ');
+        }
+        return { address, locality };
+    };
+
     const tryAutofillFromGeo = async (lat, lng) => {
         try {
             const url = new URL('/api/geocode/reverse', API_BASE);
@@ -380,10 +404,12 @@ function initDeliveryGeoUI() {
             if (!r.ok) return null;
             const j = await r.json().catch(() => null);
             if (!j) return null;
-            const addr = String(j.address || '').trim();
-            const loc = String(j.locality || '').trim();
+            const { address: addr, locality: loc } = deriveGeoAddress(j);
             if (addressInput && addr && !(addressInput.value || '').trim()) addressInput.value = addr;
             if (localityInput && loc && !(localityInput.value || '').trim()) localityInput.value = loc;
+            if (!addr && !loc) {
+                console.warn('Geolocalización sin dirección utilizable:', j);
+            }
             lockAddressInputs();
             return { address: addr, locality: loc };
         } catch (_) {
