@@ -35,7 +35,7 @@ import {
 import { 
     initSearch
 } from './search.js?v=8';
-import { handleCheckout } from './checkout.js?v=11';
+import { handleCheckout } from './checkout.js?v=12';
 import { 
     initializeCarousel, 
     loadAndInitCarousel,
