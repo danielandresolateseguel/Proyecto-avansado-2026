@@ -71,7 +71,25 @@ async function reverseGeocodeFromCoords(lat, lng) {
             payload
         };
     } catch (_) {
-        return null;
+        try {
+            const fallbackUrl = new URL('https://nominatim.openstreetmap.org/reverse');
+            fallbackUrl.searchParams.set('format', 'jsonv2');
+            fallbackUrl.searchParams.set('lat', String(lat));
+            fallbackUrl.searchParams.set('lon', String(lng));
+            fallbackUrl.searchParams.set('addressdetails', '1');
+            const fallbackResponse = await fetch(fallbackUrl.toString(), { cache: 'no-store' });
+            if (!fallbackResponse.ok) return null;
+            const fallbackPayload = await fallbackResponse.json().catch(() => null);
+            if (!fallbackPayload) return null;
+            const derived = deriveGeoAddress(fallbackPayload);
+            return {
+                address: derived.address,
+                locality: derived.locality,
+                payload: fallbackPayload
+            };
+        } catch (_) {
+            return null;
+        }
     }
 }
 
@@ -117,18 +135,6 @@ export async function handleCheckout() {
     const accRaw = (document.getElementById('delivery-geo-acc')?.value || '').trim();
     const tsRaw = (document.getElementById('delivery-geo-ts')?.value || '').trim();
 
-    // Validaciones
-    if (orderType === 'mesa' && !mesaNumber) { alert('Por favor, ingresa el número de mesa.'); return; }
-    if (orderType === 'direccion') {
-        if (!address) { alert('Por favor, ingresa la dirección de entrega.'); return; }
-        if (!contactPhone) { alert('Por favor, ingresa el teléfono de contacto.'); return; }
-        if (!deliveryName) { alert('Por favor, ingresa tu nombre.'); return; }
-    }
-    if (orderType === 'espera') {
-        if (!esperaName) { alert('Por favor, ingresa tu nombre.'); return; }
-        if (!esperaPhone) { alert('Por favor, ingresa tu teléfono.'); return; }
-    }
-
     let geo = null;
     if (orderType === 'direccion') {
         const lat = parseFloat(latRaw);
@@ -160,6 +166,18 @@ export async function handleCheckout() {
                 } catch (_) {}
             }
         }
+    }
+
+    // Validaciones
+    if (orderType === 'mesa' && !mesaNumber) { alert('Por favor, ingresa el número de mesa.'); return; }
+    if (orderType === 'direccion') {
+        if (!address) { alert('Por favor, ingresa la dirección de entrega.'); return; }
+        if (!contactPhone) { alert('Por favor, ingresa el teléfono de contacto.'); return; }
+        if (!deliveryName) { alert('Por favor, ingresa tu nombre.'); return; }
+    }
+    if (orderType === 'espera') {
+        if (!esperaName) { alert('Por favor, ingresa tu nombre.'); return; }
+        if (!esperaPhone) { alert('Por favor, ingresa tu teléfono.'); return; }
     }
 
     // Construcción del mensaje (Nueva Lógica con Template)
@@ -456,6 +474,27 @@ function initDeliveryGeoUI() {
         editBtn.textContent = 'Editar dirección';
     };
 
+    const refreshGeoFromStoredCoords = async (options = {}) => {
+        const { retry = false } = options || {};
+        const lat = parseFloat((latEl.value || '').trim());
+        const lng = parseFloat((lngEl.value || '').trim());
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+        const appliedNow = applyGeoAutofill('', '');
+        if (appliedNow.address && appliedNow.locality) {
+            lockAddressInputs();
+            return appliedNow;
+        }
+        const resolved = await tryAutofillFromGeo(lat, lng);
+        if ((!resolved || (!resolved.address && !resolved.locality)) && retry) {
+            return new Promise(resolve => {
+                setTimeout(async () => {
+                    resolve(await tryAutofillFromGeo(lat, lng));
+                }, 650);
+            });
+        }
+        return resolved;
+    };
+
     const unlockAddressInputs = () => {
         const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
         if (liveAddressInput) {
@@ -515,10 +554,7 @@ function initDeliveryGeoUI() {
                 const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
                 if ((!a || !l) && ((liveAddressInput && !(liveAddressInput.value || '').trim()) || (liveLocalityInput && !(liveLocalityInput.value || '').trim()))) {
                     (async () => {
-                        const lat = Number(j.lat);
-                        const lng = Number(j.lng);
-                        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-                        const res = await tryAutofillFromGeo(lat, lng);
+                        const res = await refreshGeoFromStoredCoords({ retry: true });
                         if (!res) return;
                         try {
                             const saved2 = sessionStorage.getItem('delivery_geo');
@@ -562,7 +598,7 @@ function initDeliveryGeoUI() {
                     } catch (_) {}
                     renderFromValues();
                     (async () => {
-                        const res = await tryAutofillFromGeo(lat, lng);
+                        const res = await refreshGeoFromStoredCoords({ retry: true });
                         if (res && (res.address || res.locality)) {
                             try {
                                 const saved2 = sessionStorage.getItem('delivery_geo');
@@ -604,6 +640,18 @@ function initDeliveryGeoUI() {
             },
             { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
         );
+    });
+
+    document.querySelectorAll('input[name="orderType"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            if (!radio.checked || radio.value !== 'direccion') return;
+            const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
+            const hasText = Boolean(String(liveAddressInput?.value || '').trim() || String(liveLocalityInput?.value || '').trim());
+            if (hasText) return;
+            (async () => {
+                await refreshGeoFromStoredCoords({ retry: true });
+            })();
+        });
     });
 }
 
