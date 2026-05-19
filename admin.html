@@ -4765,6 +4765,23 @@
         });
         events.forEach(e => {
             let label = e.event_type;
+            if (e.event_type === 'created') {
+                try {
+                    const payload = JSON.parse(e.payload_json || '{}') || {};
+                    const source = String(payload.source || '').trim().toLowerCase();
+                    label = source === 'panel'
+                        ? 'Pedido creado desde panel'
+                        : 'Pedido creado desde carta online';
+                } catch (_) {
+                    label = 'Pedido creado';
+                }
+                combinedHistory.push({
+                    label,
+                    date: e.created_at,
+                    actor: e.actor,
+                    type: 'event'
+                });
+            }
             if (e.event_type === 'payment') {
                 try {
                     const payload = JSON.parse(e.payload_json);

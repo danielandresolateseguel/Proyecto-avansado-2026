@@ -47,6 +47,29 @@ def _scope_for(role, owner=False):
         return 'user'
     return 'tenant'
 
+def _build_order_creation_event(is_admin_origin, actor='', customer_name='', customer_phone=''):
+    actor = str(actor or '').strip()
+    customer_name = str(customer_name or '').strip()
+    customer_phone = str(customer_phone or '').strip()
+    if is_admin_origin:
+        return (
+            actor or 'panel',
+            {
+                'source': 'panel',
+                'source_label': 'Panel admin',
+                'creator_label': actor or 'Panel admin',
+            },
+        )
+    creator_label = customer_name or customer_phone or 'Carta online'
+    return (
+        creator_label,
+        {
+            'source': 'carta_online',
+            'source_label': 'Carta online',
+            'creator_label': creator_label,
+        },
+    )
+
 def _load_tenant_config_row(cur, slug):
     cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
     row = cur.fetchone()
@@ -765,6 +788,12 @@ def create_order():
         
         order_notes = (payload.get('order_notes') or '').strip()
         tenant_order_number = allocate_tenant_order_number(cur, tenant_slug)
+        creation_actor, creation_meta = _build_order_creation_event(
+            is_admin_origin,
+            actor=session.get('admin_user') or '',
+            customer_name=customer_name,
+            customer_phone=customer_phone,
+        )
         
         # Insert Order
         try:
@@ -779,6 +808,18 @@ def create_order():
         except Exception as e:
             print(f"Error executing INSERT orders: {e}")
             raise e
+
+        cur.execute(
+            "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (
+                order_id,
+                'created',
+                creation_actor,
+                0,
+                json.dumps(creation_meta),
+                created_at,
+            ),
+        )
 
         # Process Items
         for it in items:
