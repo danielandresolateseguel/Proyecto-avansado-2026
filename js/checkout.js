@@ -5,7 +5,96 @@ import { cart, clearCart } from './cart.js?v=8';
 import { closeCartUI } from './ui.js?v=8';
 import { getWhatsappNumber, CATEGORY, getCheckoutMode, getWhatsappEnabled, getWhatsappTemplate, getBusinessSlug, formatMoneyWithCode } from './config.js?v=8';
 
-export function handleCheckout() {
+function getGeoApiBase() {
+    const origin = window.location.origin || '';
+    return /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
+}
+
+function getLiveDeliveryAddressInputs() {
+    return {
+        addressInput: document.getElementById('delivery-address'),
+        localityInput: document.getElementById('delivery-locality')
+    };
+}
+
+function setInputValueAndNotify(input, value) {
+    if (!input) return false;
+    const nextValue = String(value || '').trim();
+    if (!nextValue) return false;
+    if (String(input.value || '').trim() === nextValue) return false;
+    input.value = nextValue;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+}
+
+function deriveGeoAddress(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return { address: '', locality: '' };
+    }
+    let address = String(payload.address || '').trim();
+    let locality = String(payload.locality || '').trim();
+    const displayName = String(payload.display_name || '').trim();
+    const parts = displayName
+        .split(',')
+        .map(part => String(part || '').trim())
+        .filter(Boolean);
+
+    if (!address && parts.length) {
+        address = parts[0];
+    }
+    if (!locality && parts.length > 1) {
+        locality = parts
+            .slice(1, 4)
+            .filter(part => part && part !== address)
+            .join(', ');
+    }
+    return { address, locality };
+}
+
+async function reverseGeocodeFromCoords(lat, lng) {
+    try {
+        const url = new URL('/api/geocode/reverse', getGeoApiBase());
+        url.searchParams.set('lat', String(lat));
+        url.searchParams.set('lng', String(lng));
+        const response = await fetch(url.toString(), {
+            cache: 'no-store',
+            credentials: 'same-origin'
+        });
+        if (!response.ok) return null;
+        const payload = await response.json().catch(() => null);
+        if (!payload) return null;
+        const derived = deriveGeoAddress(payload);
+        return {
+            address: derived.address,
+            locality: derived.locality,
+            payload
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+function applyGeoAutofill(address, locality, options = {}) {
+    const { force = false } = options || {};
+    const { addressInput, localityInput } = getLiveDeliveryAddressInputs();
+    const currentAddress = String(addressInput?.value || '').trim();
+    const currentLocality = String(localityInput?.value || '').trim();
+
+    if (addressInput && address && (force || !currentAddress)) {
+        setInputValueAndNotify(addressInput, address);
+    }
+    if (localityInput && locality && (force || !currentLocality)) {
+        setInputValueAndNotify(localityInput, locality);
+    }
+
+    return {
+        address: String(addressInput?.value || address || '').trim(),
+        locality: String(localityInput?.value || locality || '').trim()
+    };
+}
+
+export async function handleCheckout() {
     if (cart.length === 0) {
         alert('Tu carrito está vacío');
         return;
@@ -16,8 +105,8 @@ export function handleCheckout() {
     const orderType = orderTypeEl ? orderTypeEl.value : (CHECKOUT_MODE === 'mesa' ? 'mesa' : 'none');
     
     const mesaNumber = (document.getElementById('mesa-number')?.value || '').trim();
-    const address = (document.getElementById('delivery-address')?.value || '').trim();
-    const locality = (document.getElementById('delivery-locality')?.value || '').trim();
+    let address = (document.getElementById('delivery-address')?.value || '').trim();
+    let locality = (document.getElementById('delivery-locality')?.value || '').trim();
     const contactPhone = (document.getElementById('contact-phone')?.value || '').trim();
     const deliveryName = (document.getElementById('delivery-name')?.value || '').trim();
     const esperaName = (document.getElementById('espera-name')?.value || '').trim();
@@ -53,6 +142,23 @@ export function handleCheckout() {
                 accuracy: Number.isFinite(accuracy) ? accuracy : null,
                 ts: Number.isFinite(ts) ? ts : null
             };
+        }
+
+        if (geo && (!address || !locality)) {
+            const resolved = await reverseGeocodeFromCoords(geo.lat, geo.lng);
+            if (resolved) {
+                const applied = applyGeoAutofill(resolved.address, resolved.locality);
+                address = applied.address;
+                locality = applied.locality;
+                try {
+                    const saved = sessionStorage.getItem('delivery_geo');
+                    const cached = saved ? JSON.parse(saved) : {};
+                    const next = (cached && typeof cached === 'object') ? cached : {};
+                    next.address = address || next.address || '';
+                    next.locality = locality || next.locality || '';
+                    sessionStorage.setItem('delivery_geo', JSON.stringify(next));
+                } catch (_) {}
+            }
         }
     }
 
@@ -332,89 +438,54 @@ function initDeliveryGeoUI() {
         if (!esperaPhoneInput.getAttribute('name')) esperaPhoneInput.setAttribute('name', 'pickup_phone');
     }
 
-    const origin = window.location.origin || '';
-    const API_BASE = /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
-
     const lockAddressInputs = () => {
+        const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
         const hasGeo = Number.isFinite(parseFloat((latEl.value || '').trim())) && Number.isFinite(parseFloat((lngEl.value || '').trim()));
         if (!hasGeo) return;
-        const hasAnyText = Boolean((addressInput && String(addressInput.value || '').trim()) || (localityInput && String(localityInput.value || '').trim()));
+        const hasAnyText = Boolean((liveAddressInput && String(liveAddressInput.value || '').trim()) || (liveLocalityInput && String(liveLocalityInput.value || '').trim()));
         if (!hasAnyText) return;
-        if (addressInput) {
-            addressInput.readOnly = true;
-            addressInput.style.backgroundColor = '#f9fafb';
+        if (liveAddressInput) {
+            liveAddressInput.readOnly = true;
+            liveAddressInput.style.backgroundColor = '#f9fafb';
         }
-        if (localityInput) {
-            localityInput.readOnly = true;
-            localityInput.style.backgroundColor = '#f9fafb';
+        if (liveLocalityInput) {
+            liveLocalityInput.readOnly = true;
+            liveLocalityInput.style.backgroundColor = '#f9fafb';
         }
         editBtn.style.display = '';
         editBtn.textContent = 'Editar dirección';
     };
 
     const unlockAddressInputs = () => {
-        if (addressInput) {
-            addressInput.readOnly = false;
-            addressInput.style.backgroundColor = '';
+        const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
+        if (liveAddressInput) {
+            liveAddressInput.readOnly = false;
+            liveAddressInput.style.backgroundColor = '';
         }
-        if (localityInput) {
-            localityInput.readOnly = false;
-            localityInput.style.backgroundColor = '';
+        if (liveLocalityInput) {
+            liveLocalityInput.readOnly = false;
+            liveLocalityInput.style.backgroundColor = '';
         }
         editBtn.style.display = '';
         editBtn.textContent = 'Bloquear dirección';
     };
 
     editBtn.addEventListener('click', () => {
-        const isLocked = Boolean((addressInput && addressInput.readOnly) || (localityInput && localityInput.readOnly));
+        const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
+        const isLocked = Boolean((liveAddressInput && liveAddressInput.readOnly) || (liveLocalityInput && liveLocalityInput.readOnly));
         if (isLocked) unlockAddressInputs();
         else lockAddressInputs();
     });
 
-    const deriveGeoAddress = (payload) => {
-        if (!payload || typeof payload !== 'object') {
-            return { address: '', locality: '' };
-        }
-        let address = String(payload.address || '').trim();
-        let locality = String(payload.locality || '').trim();
-        const displayName = String(payload.display_name || '').trim();
-        const parts = displayName
-            .split(',')
-            .map(part => String(part || '').trim())
-            .filter(Boolean);
-
-        if (!address && parts.length) {
-            address = parts[0];
-        }
-        if (!locality && parts.length > 1) {
-            locality = parts
-                .slice(1, 4)
-                .filter(part => part && part !== address)
-                .join(', ');
-        }
-        return { address, locality };
-    };
-
     const tryAutofillFromGeo = async (lat, lng) => {
-        try {
-            const url = new URL('/api/geocode/reverse', API_BASE);
-            url.searchParams.set('lat', String(lat));
-            url.searchParams.set('lng', String(lng));
-            const r = await fetch(url.toString(), { cache: 'no-store' });
-            if (!r.ok) return null;
-            const j = await r.json().catch(() => null);
-            if (!j) return null;
-            const { address: addr, locality: loc } = deriveGeoAddress(j);
-            if (addressInput && addr && !(addressInput.value || '').trim()) addressInput.value = addr;
-            if (localityInput && loc && !(localityInput.value || '').trim()) localityInput.value = loc;
-            if (!addr && !loc) {
-                console.warn('Geolocalización sin dirección utilizable:', j);
-            }
-            lockAddressInputs();
-            return { address: addr, locality: loc };
-        } catch (_) {
-            return null;
+        const resolved = await reverseGeocodeFromCoords(lat, lng);
+        if (!resolved) return null;
+        const applied = applyGeoAutofill(resolved.address, resolved.locality);
+        if (!applied.address && !applied.locality) {
+            console.warn('Geolocalización sin dirección utilizable:', resolved.payload);
         }
+        lockAddressInputs();
+        return applied;
     };
 
     const renderFromValues = () => {
@@ -439,10 +510,10 @@ function initDeliveryGeoUI() {
                 renderFromValues();
                 const a = String(j.address || '').trim();
                 const l = String(j.locality || '').trim();
-                if (addressInput && a && !(addressInput.value || '').trim()) addressInput.value = a;
-                if (localityInput && l && !(localityInput.value || '').trim()) localityInput.value = l;
+                applyGeoAutofill(a, l);
                 lockAddressInputs();
-                if ((!a || !l) && ((addressInput && !(addressInput.value || '').trim()) || (localityInput && !(localityInput.value || '').trim()))) {
+                const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
+                if ((!a || !l) && ((liveAddressInput && !(liveAddressInput.value || '').trim()) || (liveLocalityInput && !(liveLocalityInput.value || '').trim()))) {
                     (async () => {
                         const lat = Number(j.lat);
                         const lng = Number(j.lng);
@@ -479,13 +550,14 @@ function initDeliveryGeoUI() {
                     accEl.value = Number.isFinite(acc) ? String(acc) : '';
                     tsEl.value = pos && pos.timestamp ? String(pos.timestamp) : '';
                     try {
+                        const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
                         sessionStorage.setItem('delivery_geo', JSON.stringify({
                             lat,
                             lng,
                             accuracy: Number.isFinite(acc) ? acc : null,
                             ts: pos && pos.timestamp ? pos.timestamp : null,
-                            address: addressInput ? String(addressInput.value || '').trim() : '',
-                            locality: localityInput ? String(localityInput.value || '').trim() : ''
+                            address: liveAddressInput ? String(liveAddressInput.value || '').trim() : '',
+                            locality: liveLocalityInput ? String(liveLocalityInput.value || '').trim() : ''
                         }));
                     } catch (_) {}
                     renderFromValues();
