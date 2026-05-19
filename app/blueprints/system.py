@@ -4,8 +4,10 @@ import sys
 import json
 import urllib.request
 import urllib.parse
+import urllib.error
+import time
 from datetime import datetime, timezone
-from app.utils import check_csrf
+from app.utils import check_csrf, get_cached_tenant_config
 
 bp = Blueprint('system', __name__)
 
@@ -38,31 +40,74 @@ def ping():
 def geocode_reverse():
     lat_raw = request.args.get('lat')
     lng_raw = request.args.get('lng') or request.args.get('lon')
+    slug = str(request.args.get('slug') or request.args.get('tenant_slug') or '').strip()
     try:
         lat = float(str(lat_raw).strip())
         lng = float(str(lng_raw).strip())
     except Exception:
         return jsonify({'error': 'lat/lng inválidos'}), 400
 
-    ua = os.environ.get('GEOCODE_USER_AGENT') or os.environ.get('RENDER_SERVICE_NAME') or 'Proyecto-avansado-2026'
+    cfg = get_cached_tenant_config(slug) if slug else {}
+    contact_email = str(
+        (cfg or {}).get('contact_email')
+        or os.environ.get('GEOCODE_EMAIL')
+        or os.environ.get('SUPPORT_EMAIL')
+        or ''
+    ).strip()
+    ua = str(
+        os.environ.get('GEOCODE_USER_AGENT')
+        or f"qplato-geocoder/1.0 ({os.environ.get('RENDER_SERVICE_NAME') or 'service'}; https://www.qplato.com)"
+    ).strip()
     headers = {
-        'User-Agent': str(ua),
-        'Accept': 'application/json'
+        'User-Agent': ua,
+        'Accept': 'application/json',
+        'Accept-Language': 'es-AR,es;q=0.9,en;q=0.7'
     }
-    query = urllib.parse.urlencode({
+
+    params = {
         'format': 'jsonv2',
         'lat': f"{lat:.7f}",
         'lon': f"{lng:.7f}",
         'addressdetails': '1'
-    })
-    url = f"https://nominatim.openstreetmap.org/reverse?{query}"
+    }
+    if contact_email:
+        params['email'] = contact_email
 
-    try:
-        req = urllib.request.Request(url, headers=headers, method='GET')
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            raw = resp.read().decode('utf-8', errors='replace')
-        data = json.loads(raw or '{}') if raw else {}
-    except Exception:
+    data = None
+    last_error = None
+    for attempt in range(3):
+        query = urllib.parse.urlencode(params)
+        url = f"https://nominatim.openstreetmap.org/reverse?{query}"
+        try:
+            req = urllib.request.Request(url, headers=headers, method='GET')
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                raw = resp.read().decode('utf-8', errors='replace')
+            data = json.loads(raw or '{}') if raw else {}
+            if isinstance(data, dict) and data:
+                break
+        except urllib.error.HTTPError as exc:
+            body = ''
+            try:
+                body = exc.read().decode('utf-8', errors='replace')
+            except Exception:
+                body = ''
+            last_error = f"HTTP {exc.code}: {body[:200]}"
+            print(f"Reverse geocode HTTP error attempt={attempt + 1} slug={slug or '-'} ua={ua!r}: {last_error}")
+            if exc.code in (429, 500, 502, 503, 504) and attempt < 2:
+                time.sleep(0.7 * (attempt + 1))
+                continue
+            data = None
+            break
+        except Exception as exc:
+            last_error = str(exc)
+            print(f"Reverse geocode error attempt={attempt + 1} slug={slug or '-'} ua={ua!r}: {last_error}")
+            if attempt < 2:
+                time.sleep(0.7 * (attempt + 1))
+                continue
+            data = None
+            break
+
+    if not isinstance(data, dict) or not data:
         return jsonify({'error': 'no se pudo resolver la ubicación'}), 502
 
     addr = data.get('address') or {}

@@ -57,6 +57,8 @@ async function reverseGeocodeFromCoords(lat, lng) {
         const url = new URL('/api/geocode/reverse', getGeoApiBase());
         url.searchParams.set('lat', String(lat));
         url.searchParams.set('lng', String(lng));
+        const slug = String(getBusinessSlug() || window.BUSINESS_SLUG || '').trim();
+        if (slug) url.searchParams.set('slug', slug);
         const response = await fetch(url.toString(), {
             cache: 'no-store',
             credentials: 'same-origin'
