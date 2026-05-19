@@ -59,7 +59,7 @@ def _session_where(tenant_slug, scope, actor=None):
         params.append(actor or '')
     return q, params
 
-_BREAKDOWN_KEYS = ('efectivo', 'pos', 'transferencia', 'otros')
+_BREAKDOWN_KEYS = ('efectivo', 'pos', 'qr', 'transferencia', 'otros')
 
 def _safe_int(value, default=0):
     try:
@@ -83,7 +83,7 @@ def _align_breakdown_to_amount(breakdown, target_amount):
         aligned['efectivo'] += delta
         return aligned
     remaining = abs(delta)
-    for key in ('efectivo', 'otros', 'transferencia', 'pos'):
+    for key in ('efectivo', 'otros', 'transferencia', 'qr', 'pos'):
         if remaining <= 0:
             break
         current = aligned[key]
@@ -97,7 +97,8 @@ def _normalize_declared_breakdown(raw_breakdown, fallback_amount=0, prefer_fallb
     source = raw_breakdown if isinstance(raw_breakdown, dict) else {}
     aliases = {
         'efectivo': ('efectivo', 'cash'),
-        'pos': ('pos', 'qr', 'tarjeta'),
+        'pos': ('pos', 'tarjeta'),
+        'qr': ('qr',),
         'transferencia': ('transferencia', 'trans'),
         'otros': ('otros', 'otro'),
     }
@@ -114,6 +115,29 @@ def _normalize_declared_breakdown(raw_breakdown, fallback_amount=0, prefer_fallb
     if prefer_fallback and fallback >= 0 and total != fallback:
         return _align_breakdown_to_amount(normalized, fallback)
     return normalized
+
+def _payment_method_to_breakdown_key(payment_method, note=''):
+    raw = f"{payment_method or ''} {note or ''}".strip().lower()
+    if 'qr' in raw:
+        return 'qr'
+    if 'transferencia' in raw or raw == 'trans':
+        return 'transferencia'
+    if 'pos' in raw or 'tarjeta' in raw:
+        return 'pos'
+    if 'otros' in raw or 'otro' in raw:
+        return 'otros'
+    return 'efectivo'
+
+def _apply_breakdown_movement(breakdown, breakdown_counts, movement_type, payment_method, amount, count, note=''):
+    method_key = _payment_method_to_breakdown_key(payment_method, note=note)
+    delta = int(amount or 0)
+    qty = int(count or 0)
+    if movement_type == 'entrada':
+        breakdown[method_key] += delta
+        breakdown_counts[method_key] += qty
+    elif movement_type == 'salida':
+        breakdown[method_key] -= delta
+        breakdown_counts[method_key] += qty
 
 def _aggregate_sales_by_payments(cur, tenant_slug, actor, start_at, end_at):
     base_total = 0
@@ -207,18 +231,9 @@ def cash_session_get():
     cur.execute("SELECT type, payment_method, SUM(amount), COUNT(*) FROM cash_movements WHERE session_id = ? GROUP BY type, payment_method", (sess['id'],))
     rows_mov = cur.fetchall()
     
-    breakdown = {
-        'efectivo': int(sess['opening_amount']), 
-        'pos': 0, 
-        'transferencia': 0, 
-        'otros': 0
-    }
-    breakdown_counts = {
-        'efectivo': 0, 
-        'pos': 0, 
-        'transferencia': 0, 
-        'otros': 0
-    }
+    breakdown = _empty_breakdown()
+    breakdown['efectivo'] = int(sess['opening_amount'])
+    breakdown_counts = _empty_breakdown()
     entradas = 0
     salidas = 0
     
@@ -230,32 +245,10 @@ def cash_session_get():
         
         if mtype == 'entrada':
             entradas += amt
-            if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                breakdown['pos'] += amt
-                breakdown_counts['pos'] += cnt
-            elif 'transferencia' in pm:
-                breakdown['transferencia'] += amt
-                breakdown_counts['transferencia'] += cnt
-            elif 'otros' in pm:
-                breakdown['otros'] += amt
-                breakdown_counts['otros'] += cnt
-            else:
-                breakdown['efectivo'] += amt
-                breakdown_counts['efectivo'] += cnt
+            _apply_breakdown_movement(breakdown, breakdown_counts, mtype, pm, amt, cnt)
         elif mtype == 'salida':
             salidas += amt
-            if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                breakdown['pos'] -= amt
-                breakdown_counts['pos'] += cnt
-            elif 'transferencia' in pm:
-                breakdown['transferencia'] -= amt
-                breakdown_counts['transferencia'] += cnt
-            elif 'otros' in pm:
-                breakdown['otros'] -= amt
-                breakdown_counts['otros'] += cnt
-            else:
-                breakdown['efectivo'] -= amt
-                breakdown_counts['efectivo'] += cnt
+            _apply_breakdown_movement(breakdown, breakdown_counts, mtype, pm, amt, cnt)
 
     theoretical_cash = int(sess['opening_amount']) + entradas - salidas
     return jsonify({
@@ -360,8 +353,9 @@ def cash_close():
     cur.execute("SELECT type, payment_method, SUM(amount), COUNT(*) FROM cash_movements WHERE session_id = ? GROUP BY type, payment_method", (sid,))
     rows_mov = cur.fetchall()
     
-    breakdown = {'efectivo': opening_amount, 'pos': 0, 'transferencia': 0, 'otros': 0}
-    breakdown_counts = {'efectivo': 0, 'pos': 0, 'transferencia': 0, 'otros': 0}
+    breakdown = _empty_breakdown()
+    breakdown['efectivo'] = opening_amount
+    breakdown_counts = _empty_breakdown()
     entradas = 0
     salidas = 0
     
@@ -373,32 +367,10 @@ def cash_close():
         
         if mtype == 'entrada':
             entradas += amt
-            if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                breakdown['pos'] += amt
-                breakdown_counts['pos'] += cnt
-            elif 'transferencia' in pm:
-                breakdown['transferencia'] += amt
-                breakdown_counts['transferencia'] += cnt
-            elif 'otros' in pm:
-                breakdown['otros'] += amt
-                breakdown_counts['otros'] += cnt
-            else:
-                breakdown['efectivo'] += amt
-                breakdown_counts['efectivo'] += cnt
+            _apply_breakdown_movement(breakdown, breakdown_counts, mtype, pm, amt, cnt)
         elif mtype == 'salida':
             salidas += amt
-            if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                breakdown['pos'] -= amt
-                breakdown_counts['pos'] += cnt
-            elif 'transferencia' in pm:
-                breakdown['transferencia'] -= amt
-                breakdown_counts['transferencia'] += cnt
-            elif 'otros' in pm:
-                breakdown['otros'] -= amt
-                breakdown_counts['otros'] += cnt
-            else:
-                breakdown['efectivo'] -= amt
-                breakdown_counts['efectivo'] += cnt
+            _apply_breakdown_movement(breakdown, breakdown_counts, mtype, pm, amt, cnt)
 
     theoretical_cash = opening_amount + entradas - salidas
     declared_breakdown = _normalize_declared_breakdown(payload.get('breakdown') or {}, fallback_amount=closing_amount)

@@ -1659,7 +1659,7 @@ def pay_order(order_id):
     if method == 'mixed':
         if not details or not isinstance(details, list):
              return jsonify({'error': 'detalles de pago mixto requeridos'}), 400
-    elif method not in ('contado', 'pos', 'transferencia'):
+    elif method not in ('contado', 'pos', 'qr', 'transferencia'):
         return jsonify({'error': 'método de pago inválido'}), 400
 
     conn = get_db()
@@ -1706,7 +1706,7 @@ def pay_order(order_id):
                 except Exception:
                     pm = ''
                     amt = 0
-                if pm not in ('contado', 'pos', 'transferencia') or amt < 0:
+                if pm not in ('contado', 'pos', 'qr', 'transferencia') or amt < 0:
                     try: conn.rollback()
                     except Exception: pass
                     return jsonify({'error': 'detalles de pago mixto inválidos'}), 400

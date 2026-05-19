@@ -624,8 +624,22 @@
     .cash-row input, .cash-row textarea { border: 1px solid var(--kds-border); border-radius: 8px; padding: 6px 10px; }
     .cash-row input { height: 32px; }
     .cash-row textarea { width: 100%; min-height: 56px; }
+    .cash-breakdown-grid { display:grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 10px; width: 100%; }
+    .cash-breakdown-item { border: 1px solid var(--kds-border); border-radius: 10px; padding: 10px; background: #fff; }
+    .cash-breakdown-item label { display:grid; gap: 6px; font-weight: 700; color: #425b76; }
+    .cash-breakdown-item input { width: 100%; min-width: 0; height: 40px; box-sizing: border-box; font-size: 16px; text-align: right; }
+    .cash-breakdown-item .cash-breakdown-hint { color:#64748b; font-size: 12px; font-weight: 500; }
+    .cash-breakdown-item .cash-breakdown-hint strong { color:#425b76; }
+    .cash-row label.cash-close-flag { display:flex; align-items:center; gap:8px; flex-wrap: wrap; }
+    .cash-row label.cash-close-total { display:grid; gap:6px; width: 100%; }
+    .cash-row label.cash-close-total input { width: 100%; min-width: 0; box-sizing: border-box; }
     @media (max-width: 960px) {
       .grid { grid-template-columns: 1fr; grid-template-areas: "orders"; }
+    }
+    @media (max-width: 720px) {
+      .cash-breakdown-grid { grid-template-columns: 1fr; }
+      .cash-breakdown-item { padding: 12px; }
+      .cash-row label.cash-close-flag { align-items: flex-start; }
     }
     /* Panel de detalle */
     #order-detail { background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:12px; }
@@ -1852,7 +1866,11 @@
           <svg style="width:16px;height:16px;opacity:0.5;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
         </button>
         <button class="pay-option-btn" data-method="pos" style="padding:12px; text-align:left; font-size:14px; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-weight:600;">POS / QR</span>
+          <span style="font-weight:600;">POS</span>
+          <svg style="width:16px;height:16px;opacity:0.5;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+        </button>
+        <button class="pay-option-btn" data-method="qr" style="padding:12px; text-align:left; font-size:14px; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-weight:600;">QR</span>
           <svg style="width:16px;height:16px;opacity:0.5;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
         </button>
         <button class="pay-option-btn" data-method="transferencia" style="padding:12px; text-align:left; font-size:14px; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
@@ -1874,8 +1892,13 @@
            </div>
            
            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <label style="font-size:13px; font-weight:600;">POS / QR</label>
+             <label style="font-size:13px; font-weight:600;">POS</label>
              <input type="number" class="mixed-input" data-key="pos" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
+           </div>
+           
+           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+             <label style="font-size:13px; font-weight:600;">QR</label>
+             <input type="number" class="mixed-input" data-key="qr" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
            </div>
            
            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -3141,7 +3164,7 @@
     let isLoading = false;
     let cashCollapsed = true;
     let cashOpenDraft = { amount: 0, notes: '' };
-    let cashCloseDraft = { amount: undefined, notes: '' };
+    let cashCloseDraft = { amount: undefined, notes: '', methods: null, touchedMethods: null };
     let isCashEditing = false;
     let cashKeepModalOpen = false;
     const DAILY_RESET_HOUR = 5;
@@ -3795,7 +3818,8 @@
       const key = String(method || '').trim().toLowerCase();
       if (!key) return '-';
       if (key === 'contado' || key === 'cash') return 'Efectivo';
-      if (key === 'pos') return 'POS/QR';
+      if (key === 'pos') return 'POS';
+      if (key === 'qr') return 'QR';
       if (key === 'transferencia') return 'Transferencia';
       if (key === 'mixed' || key === 'mixto') return 'Pago mixto';
       return key;
@@ -4744,7 +4768,7 @@
             if (e.event_type === 'payment') {
                 try {
                     const payload = JSON.parse(e.payload_json);
-                    const methodMap = { 'contado': 'Efectivo', 'pos': 'POS/QR', 'transferencia': 'Transferencia' };
+                    const methodMap = { 'contado': 'Efectivo', 'pos': 'POS', 'qr': 'QR', 'transferencia': 'Transferencia' };
                     let method = methodMap[payload.method] || payload.method;
                     const totalAmt = payload.amount || 0;
                     const tipAmt = payload.tip || 0;
@@ -9193,7 +9217,8 @@
                     let name = data.method;
                     if(name === 'contado') name = 'Efectivo';
                     else if(name === 'transferencia') name = 'Transferencia';
-                    else if(name === 'pos') name = 'POS / QR';
+                    else if(name === 'pos') name = 'POS';
+                    else if(name === 'qr') name = 'QR';
                     msg = `¿Confirmar pago de ${formatMoney(data.final_total)} con ${name}?`;
                 }
                 if(confirmMsg) confirmMsg.textContent = msg;
@@ -9999,17 +10024,19 @@
       
       const efInput = document.getElementById('arqueo-efectivo');
       const posInput = document.getElementById('arqueo-pos');
+      const qrInput = document.getElementById('arqueo-qr');
       const transInput = document.getElementById('arqueo-trans');
       const otrosInput = document.getElementById('arqueo-otros');
       
       let breakdown = {
           efectivo: parseInt(efInput && efInput.value || '0', 10) || 0,
           pos: parseInt(posInput && posInput.value || '0', 10) || 0,
+          qr: parseInt(qrInput && qrInput.value || '0', 10) || 0,
           transferencia: parseInt(transInput && transInput.value || '0', 10) || 0,
           otros: parseInt(otrosInput && otrosInput.value || '0', 10) || 0
       };
       // Fallback: If breakdown inputs are empty (sum=0) but closing_amount > 0, attribute everything to Efectivo
-      const totalInputs = breakdown.efectivo + breakdown.pos + breakdown.transferencia + breakdown.otros;
+      const totalInputs = breakdown.efectivo + breakdown.pos + breakdown.qr + breakdown.transferencia + breakdown.otros;
       if (totalInputs === 0 && closing_amount > 0) {
         breakdown.efectivo = closing_amount;
       }
@@ -10033,7 +10060,7 @@
         return false;
       }
       const data = await resp.json();
-      cashCloseDraft = { amount: undefined, notes: '' };
+      cashCloseDraft = { amount: undefined, notes: '', methods: null, touchedMethods: null };
       if (!cashKeepModalOpen) { await renderCashBox(); }
       return data;
     }
@@ -10095,6 +10122,7 @@
           const diffEl = document.getElementById('cash-session-diff');
           const efInput = document.getElementById('arqueo-efectivo');
           const posInput = document.getElementById('arqueo-pos');
+          const qrInput = document.getElementById('arqueo-qr');
           const transInput = document.getElementById('arqueo-trans');
           const otrosInput = document.getElementById('arqueo-otros');
           const useToggle = document.getElementById('arqueo-use-toggle');
@@ -10102,9 +10130,10 @@
           const updateArqueoTotal = () => {
             const ef = parseInt(efInput && efInput.value || '0', 10) || 0;
             const pos = parseInt(posInput && posInput.value || '0', 10) || 0;
+            const qr = parseInt(qrInput && qrInput.value || '0', 10) || 0;
             const trn = parseInt(transInput && transInput.value || '0', 10) || 0;
             const otr = parseInt(otrosInput && otrosInput.value || '0', 10) || 0;
-            const total = ef + pos + trn + otr;
+            const total = ef + pos + qr + trn + otr;
             const el = document.getElementById('arqueo-total');
             if (el) el.textContent = `Total contado: $${total}`;
             
@@ -10112,19 +10141,22 @@
             if (closeAmtInput) closeAmtInput.value = total;
 
             // Actualizar diferencias de arqueo
-            const breakdown = sum.theoretical_breakdown || { efectivo: 0, pos: 0, transferencia: 0, otros: 0 };
+            const breakdown = sum.theoretical_breakdown || { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
             const tEf = breakdown.efectivo || 0;
             const tPos = breakdown.pos || 0;
+            const tQr = breakdown.qr || 0;
             const tTrn = breakdown.transferencia || 0;
             const tOtr = breakdown.otros || 0;
 
             if (document.getElementById('theo-efectivo')) document.getElementById('theo-efectivo').textContent = formatMoney(tEf);
             if (document.getElementById('theo-pos')) document.getElementById('theo-pos').textContent = formatMoney(tPos);
+            if (document.getElementById('theo-qr')) document.getElementById('theo-qr').textContent = formatMoney(tQr);
             if (document.getElementById('theo-trans')) document.getElementById('theo-trans').textContent = formatMoney(tTrn);
             if (document.getElementById('theo-otros')) document.getElementById('theo-otros').textContent = formatMoney(tOtr);
 
             const diffEf = ef - tEf;
             const diffPos = pos - tPos;
+            const diffQr = qr - tQr;
             const diffTrn = trn - tTrn;
             const diffOtr = otr - tOtr;
 
@@ -10135,6 +10167,10 @@
             if (document.getElementById('diff-pos')) {
                 document.getElementById('diff-pos').textContent = formatMoney(diffPos);
                 document.getElementById('diff-pos').style.color = diffPos === 0 ? 'inherit' : (diffPos > 0 ? 'green' : 'red');
+            }
+            if (document.getElementById('diff-qr')) {
+                document.getElementById('diff-qr').textContent = formatMoney(diffQr);
+                document.getElementById('diff-qr').style.color = diffQr === 0 ? 'inherit' : (diffQr > 0 ? 'green' : 'red');
             }
             if (document.getElementById('diff-trans')) {
                 document.getElementById('diff-trans').textContent = formatMoney(diffTrn);
@@ -10152,11 +10188,22 @@
           };
           updateArqueoTotal();
           updateSessionTotals();
-          [efInput, posInput, transInput, otrosInput, useToggle, closeAmtInput].forEach(el => { if (el) el.addEventListener('input', () => { updateArqueoTotal(); updateSessionTotals(); }); });
+          [efInput, posInput, qrInput, transInput, otrosInput, useToggle, closeAmtInput].forEach(el => { if (el) el.addEventListener('input', () => { updateArqueoTotal(); updateSessionTotals(); }); });
           return;
         }
         const s = data.session || {};
         const sum = data.summary || {};
+        const theoreticalBreakdown = sum.theoretical_breakdown || { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
+        const currentMethods = cashCloseDraft.methods && typeof cashCloseDraft.methods === 'object' ? cashCloseDraft.methods : {};
+        const touchedMethods = cashCloseDraft.touchedMethods && typeof cashCloseDraft.touchedMethods === 'object' ? cashCloseDraft.touchedMethods : {};
+        cashCloseDraft.methods = {
+          efectivo: parseInt(currentMethods.efectivo, 10) || 0,
+          pos: touchedMethods.pos ? (parseInt(currentMethods.pos, 10) || 0) : (parseInt(theoreticalBreakdown.pos, 10) || 0),
+          qr: touchedMethods.qr ? (parseInt(currentMethods.qr, 10) || 0) : (parseInt(theoreticalBreakdown.qr, 10) || 0),
+          trans: touchedMethods.trans ? (parseInt((currentMethods.transferencia ?? currentMethods.trans), 10) || 0) : (parseInt(theoreticalBreakdown.transferencia, 10) || 0),
+          otros: parseInt(currentMethods.otros, 10) || 0
+        };
+        cashCloseDraft.touchedMethods = touchedMethods;
         box.innerHTML = `
           <div class="cash-card">
             <!-- Hidden inputs to fool browser password managers -->
@@ -10178,53 +10225,53 @@
               <div class="small" style="font-weight:700;">Arqueo rápido</div>
             </div>
             <div class="cash-row">
-              <table style="width:100%; border-collapse:collapse; font-size:0.9em; margin-bottom:8px;">
-                <thead>
-                  <tr style="background:#f5f5f5;">
-                    <th style="text-align:left; padding:4px;">Método</th>
-                    <th style="text-align:right; padding:4px;">Contado</th>
-                    <!-- Blind Close: Hidden theoretical columns -->
-                    <!-- <th style="text-align:right; padding:4px;">Teórico</th> -->
-                    <!-- <th style="text-align:right; padding:4px;">Dif.</th> -->
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td style="padding:4px;">Efectivo</td>
-                    <td style="padding:4px; text-align:right;"><input id="arqueo-efectivo" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.efectivo) || 0}" autocomplete="new-password" name="arqueo_efectivo_field" style="width:100px; text-align:right;" /></td>
-                    <!-- <td style="padding:4px; text-align:right;" id="theo-efectivo">$0</td> -->
-                    <!-- <td style="padding:4px; text-align:right; font-weight:bold;" id="diff-efectivo">$0</td> -->
-                  </tr>
-                  <tr>
-                    <td style="padding:4px;">POS/QR</td>
-                    <td style="padding:4px; text-align:right;"><input id="arqueo-pos" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.pos) || 0}" autocomplete="new-password" name="arqueo_pos_field" style="width:100px; text-align:right;" /></td>
-                    <!-- <td style="padding:4px; text-align:right;" id="theo-pos">$0</td> -->
-                    <!-- <td style="padding:4px; text-align:right; font-weight:bold;" id="diff-pos">$0</td> -->
-                  </tr>
-                  <tr>
-                    <td style="padding:4px;">Transferencias</td>
-                    <td style="padding:4px; text-align:right;"><input id="arqueo-trans" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.trans) || 0}" autocomplete="new-password" name="arqueo_trans_field_v2" style="width:100px; text-align:right;" /></td>
-                    <!-- <td style="padding:4px; text-align:right;" id="theo-trans">$0</td> -->
-                    <!-- <td style="padding:4px; text-align:right; font-weight:bold;" id="diff-trans">$0</td> -->
-                  </tr>
-                  <tr>
-                    <td style="padding:4px;">Otros</td>
-                    <td style="padding:4px; text-align:right;"><input id="arqueo-otros" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.otros) || 0}" autocomplete="new-password" name="arqueo_otros_field_v2" style="width:100px; text-align:right;" /></td>
-                    <!-- <td style="padding:4px; text-align:right;" id="theo-otros">$0</td> -->
-                    <!-- <td style="padding:4px; text-align:right; font-weight:bold;" id="diff-otros">$0</td> -->
-                  </tr>
-                </tbody>
-              </table>
+              <div class="cash-breakdown-grid">
+                <div class="cash-breakdown-item">
+                  <label for="arqueo-efectivo">
+                    <span>Efectivo</span>
+                    <input id="arqueo-efectivo" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.efectivo) || 0}" autocomplete="new-password" name="arqueo_efectivo_field" inputmode="numeric" />
+                    <span class="cash-breakdown-hint">Monto manual contado en caja.</span>
+                  </label>
+                </div>
+                <div class="cash-breakdown-item">
+                  <label for="arqueo-pos">
+                    <span>POS</span>
+                    <input id="arqueo-pos" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.pos) || 0}" autocomplete="new-password" name="arqueo_pos_field" inputmode="numeric" />
+                    <span class="cash-breakdown-hint">Sugerido por sistema: <strong>${formatMoney(theoreticalBreakdown.pos || 0)}</strong></span>
+                  </label>
+                </div>
+                <div class="cash-breakdown-item">
+                  <label for="arqueo-qr">
+                    <span>QR</span>
+                    <input id="arqueo-qr" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.qr) || 0}" autocomplete="new-password" name="arqueo_qr_field" inputmode="numeric" />
+                    <span class="cash-breakdown-hint">Sugerido por sistema: <strong>${formatMoney(theoreticalBreakdown.qr || 0)}</strong></span>
+                  </label>
+                </div>
+                <div class="cash-breakdown-item">
+                  <label for="arqueo-trans">
+                    <span>Transferencia</span>
+                    <input id="arqueo-trans" type="number" min="0" step="1" value="${(cashCloseDraft.methods && (cashCloseDraft.methods.transferencia ?? cashCloseDraft.methods.trans)) || 0}" autocomplete="new-password" name="arqueo_trans_field_v2" inputmode="numeric" />
+                    <span class="cash-breakdown-hint">Sugerido por sistema: <strong>${formatMoney(theoreticalBreakdown.transferencia || 0)}</strong></span>
+                  </label>
+                </div>
+                <div class="cash-breakdown-item">
+                  <label for="arqueo-otros">
+                    <span>Otros</span>
+                    <input id="arqueo-otros" type="number" min="0" step="1" value="${(cashCloseDraft.methods && cashCloseDraft.methods.otros) || 0}" autocomplete="new-password" name="arqueo_otros_field_v2" inputmode="numeric" />
+                    <span class="cash-breakdown-hint">Carga manual si hubo ingresos fuera de efectivo, POS, QR o transferencia.</span>
+                  </label>
+                </div>
+              </div>
             </div>
             <div class="small" id="arqueo-total">Total contado: $0</div>
             <!-- Blind Close: Removed live theoretical feedback (Resumen de totales) -->
             <div class="cash-row">
-              <label style="display:flex; align-items:center; gap:8px;">
+              <label class="cash-close-flag">
                 <input id="arqueo-use-toggle" type="checkbox" checked disabled /> Usar arqueo para monto de cierre (Requerido)
               </label>
             </div>
             <div class="cash-row">
-              <label>Monto de cierre (calculado) <input id="cash-close-amount" type="number" readonly style="background:#f0f0f0; cursor:not-allowed;" min="0" step="1" value="${(cashCloseDraft.amount !== undefined && cashCloseDraft.amount !== null) ? cashCloseDraft.amount : ''}" autocomplete="new-password" name="cash_closing_amount_field_v2" /></label>
+              <label class="cash-close-total">Monto de cierre (calculado) <input id="cash-close-amount" type="number" readonly style="background:#f0f0f0; cursor:not-allowed;" min="0" step="1" value="${(cashCloseDraft.amount !== undefined && cashCloseDraft.amount !== null) ? cashCloseDraft.amount : ''}" autocomplete="new-password" name="cash_closing_amount_field_v2" /></label>
             </div>
             <div class="cash-row">
               <textarea id="cash-close-notes" placeholder="Notas de cierre">${cashCloseDraft.notes || ''}</textarea>
@@ -10301,7 +10348,8 @@
                   <label>Método
                     <select id="cash-mov-method">
                       <option value="efectivo">Efectivo</option>
-                      <option value="pos">POS/QR</option>
+                      <option value="pos">POS</option>
+                      <option value="qr">QR</option>
                       <option value="transferencia">Transferencia</option>
                       <option value="otros">Otros</option>
                     </select>
@@ -10371,21 +10419,23 @@
             if (reviewEs) reviewEs.textContent = `Entradas: ${formatMoney(sin)} · Salidas: ${formatMoney(sout)}`;
             if (reviewTip) reviewTip.textContent = `Suma total de propina: ${formatMoney(stip)}`;
             
-            const breakdown = sum.theoretical_breakdown || { efectivo: 0, pos: 0, transferencia: 0, otros: 0 };
-            const counts = sum.theoretical_breakdown_counts || { efectivo: 0, pos: 0, transferencia: 0, otros: 0 };
+            const breakdown = sum.theoretical_breakdown || { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
+            const counts = sum.theoretical_breakdown_counts || { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
             const bdEl = document.getElementById('cash-close-review-breakdown');
             
             // Get user inputs - Explicitly select elements to ensure we have the latest references
             const elEf = document.getElementById('arqueo-efectivo');
             const elPos = document.getElementById('arqueo-pos');
+            const elQr = document.getElementById('arqueo-qr');
             const elTrans = document.getElementById('arqueo-trans');
             const elOtros = document.getElementById('arqueo-otros');
 
             let uEf = parseInt(elEf && elEf.value || '0', 10) || 0;
             const uPos = parseInt(elPos && elPos.value || '0', 10) || 0;
+            const uQr = parseInt(elQr && elQr.value || '0', 10) || 0;
             const uTrans = parseInt(elTrans && elTrans.value || '0', 10) || 0;
             const uOtros = parseInt(elOtros && elOtros.value || '0', 10) || 0;
-            const uTotal = uEf + uPos + uTrans + uOtros;
+            const uTotal = uEf + uPos + uQr + uTrans + uOtros;
             // Fallback for visual review: if breakdown is empty but total > 0, assume it is Efectivo
             if (uTotal === 0 && v > 0) {
               uEf = v;
@@ -10393,6 +10443,7 @@
 
             const dEf = uEf - breakdown.efectivo;
             const dPos = uPos - breakdown.pos;
+            const dQr = uQr - breakdown.qr;
             const dTrans = uTrans - breakdown.transferencia;
             const dOtros = uOtros - breakdown.otros;
 
@@ -10416,10 +10467,16 @@
                                     <td style="text-align:right; padding:4px; font-weight:bold; color:${dEf === 0 ? 'inherit' : (dEf > 0 ? 'green' : 'red')}">${formatMoney(dEf)}</td>
                                 </tr>
                                 <tr>
-                                    <td style="padding:4px;">POS/QR <small style="color:#666">(${counts.pos})</small></td>
+                                    <td style="padding:4px;">POS <small style="color:#666">(${counts.pos})</small></td>
                                     <td style="text-align:right; padding:4px;">${formatMoney(breakdown.pos)}</td>
                                     <td style="text-align:right; padding:4px;">${formatMoney(uPos)}</td>
                                     <td style="text-align:right; padding:4px; font-weight:bold; color:${dPos === 0 ? 'inherit' : (dPos > 0 ? 'green' : 'red')}">${formatMoney(dPos)}</td>
+                                </tr>
+                                <tr>
+                                    <td style="padding:4px;">QR <small style="color:#666">(${counts.qr})</small></td>
+                                    <td style="text-align:right; padding:4px;">${formatMoney(breakdown.qr)}</td>
+                                    <td style="text-align:right; padding:4px;">${formatMoney(uQr)}</td>
+                                    <td style="text-align:right; padding:4px; font-weight:bold; color:${dQr === 0 ? 'inherit' : (dQr > 0 ? 'green' : 'red')}">${formatMoney(dQr)}</td>
                                 </tr>
                                 <tr>
                                     <td style="padding:4px;">Transferencia <small style="color:#666">(${counts.transferencia})</small></td>
@@ -10678,9 +10735,11 @@
           amtInput.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; isCashEditing = ['cash-open-amount','cash-open-notes','cash-close-amount','cash-close-notes'].includes(ae && ae.id); }, 10); });
           syncAmount();
         }
-        cashCloseDraft.methods = cashCloseDraft.methods || { efectivo: 0, pos: 0, trans: 0, otros: 0 };
+        cashCloseDraft.methods = cashCloseDraft.methods || { efectivo: 0, pos: 0, qr: 0, trans: 0, otros: 0 };
+        cashCloseDraft.touchedMethods = cashCloseDraft.touchedMethods || {};
         const efInput = document.getElementById('arqueo-efectivo');
         const posInput = document.getElementById('arqueo-pos');
+        const qrInput = document.getElementById('arqueo-qr');
         const transInput = document.getElementById('arqueo-trans');
         const otrosInput = document.getElementById('arqueo-otros');
         const totalEl = document.getElementById('arqueo-total');
@@ -10688,20 +10747,29 @@
         function computeArqueo() {
           const efectivo = parseInt(efInput && efInput.value || '0', 10) || 0;
           const pos = parseInt(posInput && posInput.value || '0', 10) || 0;
+          const qr = parseInt(qrInput && qrInput.value || '0', 10) || 0;
           const trans = parseInt(transInput && transInput.value || '0', 10) || 0;
           const otros = parseInt(otrosInput && otrosInput.value || '0', 10) || 0;
           cashCloseDraft.methods.efectivo = efectivo;
           cashCloseDraft.methods.pos = pos;
+          cashCloseDraft.methods.qr = qr;
           cashCloseDraft.methods.trans = trans;
+          cashCloseDraft.methods.transferencia = trans;
           cashCloseDraft.methods.otros = otros;
-          const total = efectivo + pos + trans + otros;
+          const total = efectivo + pos + qr + trans + otros;
           if (totalEl) totalEl.textContent = `Total contado: ${formatMoney(total)}`;
           const use = !!(useToggle && useToggle.checked);
           cashCloseDraft.useArqueo = use;
           if (use && amtInput) { amtInput.value = String(total); const event = new Event('input'); amtInput.dispatchEvent(event); }
         }
+        if (efInput) efInput.addEventListener('input', () => { cashCloseDraft.touchedMethods.efectivo = true; });
+        if (posInput) posInput.addEventListener('input', () => { cashCloseDraft.touchedMethods.pos = true; });
+        if (qrInput) qrInput.addEventListener('input', () => { cashCloseDraft.touchedMethods.qr = true; });
+        if (transInput) transInput.addEventListener('input', () => { cashCloseDraft.touchedMethods.trans = true; });
+        if (otrosInput) otrosInput.addEventListener('input', () => { cashCloseDraft.touchedMethods.otros = true; });
         if (efInput) efInput.addEventListener('input', computeArqueo);
         if (posInput) posInput.addEventListener('input', computeArqueo);
+        if (qrInput) qrInput.addEventListener('input', computeArqueo);
         if (transInput) transInput.addEventListener('input', computeArqueo);
         if (otrosInput) otrosInput.addEventListener('input', computeArqueo);
         if (useToggle) useToggle.addEventListener('change', computeArqueo);
@@ -10893,7 +10961,7 @@
           const sumSalidas = movements.reduce((a,m)=>a + (m.type==='salida' ? Number(m.amount||0) : 0), 0);
           const sumOrders = orders.reduce((a,r)=>a + Number(r.total||0), 0);
           const openAmt = parseInt(openAmtStr||'0',10)||0;
-          const declaredTotal = (Number(declared.efectivo)||0) + (Number(declared.pos)||0) + (Number(declared.transferencia)||0) + (Number(declared.otros)||0);
+          const declaredTotal = (Number(declared.efectivo)||0) + (Number(declared.pos)||0) + (Number(declared.qr)||0) + (Number(declared.transferencia)||0) + (Number(declared.otros)||0);
           const rawCloseAmt = parseInt(closeAmtStr||'0',10)||0;
           const closeAmt = (rawCloseAmt === 0 && declaredTotal !== 0) ? declaredTotal : rawCloseAmt;
           const tipTotal = parseInt(tipTotalStr||'0',10)||0;
@@ -10902,8 +10970,8 @@
           const systemTotal = openAmt + sumEntradas - sumSalidas;
           const diffTotal = closeAmt - systemTotal;
           
-          const breakdown = { efectivo: openAmt, pos: 0, transferencia: 0, otros: 0 };
-          const breakdownCounts = { efectivo: 0, pos: 0, transferencia: 0, otros: 0 };
+          const breakdown = { efectivo: openAmt, pos: 0, qr: 0, transferencia: 0, otros: 0 };
+          const breakdownCounts = { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
           movements.forEach(m => {
               const mt = (m.type||'').toLowerCase();
               const note = (m.note||'').toLowerCase();
@@ -10911,20 +10979,24 @@
               const amt = Number(m.amount||0);
               let method = 'efectivo';
               if (pm) {
-                   if (pm.includes('pos') || pm.includes('qr') || pm.includes('tarjeta')) method = 'pos';
+                   if (pm.includes('qr')) method = 'qr';
+                   else if (pm.includes('pos') || pm.includes('tarjeta')) method = 'pos';
                    else if (pm.includes('transferencia')) method = 'transferencia';
                    else if (pm.includes('otros')) method = 'otros';
               } else {
-                   if (note.includes('pos') || note.includes('qr')) method = 'pos';
+                   if (note.includes('qr')) method = 'qr';
+                   else if (note.includes('pos')) method = 'pos';
                    else if (note.includes('transferencia')) method = 'transferencia';
               }
               if (mt === 'entrada' || mt === 'ingreso') {
                   if (method === 'pos') { breakdown.pos += amt; breakdownCounts.pos++; }
+                  else if (method === 'qr') { breakdown.qr += amt; breakdownCounts.qr++; }
                   else if (method === 'transferencia') { breakdown.transferencia += amt; breakdownCounts.transferencia++; }
                   else if (method === 'otros') { breakdown.otros += amt; breakdownCounts.otros++; }
                   else { breakdown.efectivo += amt; breakdownCounts.efectivo++; }
               } else if (mt === 'salida') {
                   if (method === 'pos') { breakdown.pos -= amt; breakdownCounts.pos++; }
+                  else if (method === 'qr') { breakdown.qr -= amt; breakdownCounts.qr++; }
                   else if (method === 'transferencia') { breakdown.transferencia -= amt; breakdownCounts.transferencia++; }
                   else if (method === 'otros') { breakdown.otros -= amt; breakdownCounts.otros++; }
                   else { breakdown.efectivo -= amt; breakdownCounts.efectivo++; }
@@ -10969,13 +11041,13 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${['efectivo','pos','transferencia','otros'].map(k => {
+                    ${['efectivo','pos','qr','transferencia','otros'].map(k => {
                        const theo = breakdown[k] || 0;
                        const decl = declared[k] || 0;
                        const diff = decl - theo;
                        const color = diff === 0 ? 'green' : (diff > 0 ? 'green' : 'red');
                        const label = k.charAt(0).toUpperCase() + k.slice(1);
-                       const displayLabel = k==='pos' ? 'POS/QR' : (k==='transferencia' ? 'Transf.' : label);
+                       const displayLabel = k==='pos' ? 'POS' : (k==='qr' ? 'QR' : (k==='transferencia' ? 'Transf.' : label));
                        const count = breakdownCounts[k] || 0;
                        return `<tr>
                          <td style="padding:6px; border-bottom:1px solid #eee;">${displayLabel} <small style="color:#666">(${count})</small></td>
@@ -10993,7 +11065,7 @@
                 <table style="width:100%; border-collapse:collapse;">
                   <thead><tr style="background:#f5f5f5;"><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">ID</th><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">Creado</th><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">Método</th><th style="text-align:right; padding:6px; border-bottom:1px solid #ddd;">Total</th></tr></thead>
                   <tbody>
-                    ${orders.map(r => `<tr><td style="padding:6px; border-bottom:1px solid #eee;">${r.id}</td><td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate(r.created_at||'')}</td><td style="padding:6px; border-bottom:1px solid #eee;">${r.payment_method||'-'}</td><td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">$${r.total||0}</td></tr>`).join('')}
+                    ${orders.map(r => `<tr><td style="padding:6px; border-bottom:1px solid #eee;">${r.id}</td><td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate(r.created_at||'')}</td><td style="padding:6px; border-bottom:1px solid #eee;">${getPaymentMethodLabel(r.payment_method)}</td><td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">$${r.total||0}</td></tr>`).join('')}
                   </tbody>
                 </table>
               </div>
@@ -11059,12 +11131,12 @@
                 <table>
                   <thead><tr><th>Método</th><th style="text-align:right;">Teórico</th><th style="text-align:right;">Contado</th><th style="text-align:right;">Diferencia</th></tr></thead>
                   <tbody>
-                    ${['efectivo','pos','transferencia','otros'].map(k => {
+                    ${['efectivo','pos','qr','transferencia','otros'].map(k => {
                        const theo = breakdown[k] || 0;
                        const decl = declared[k] || 0;
                        const diff = decl - theo;
                        const label = k.charAt(0).toUpperCase() + k.slice(1);
-                       const displayLabel = k==='pos' ? 'POS/QR' : (k==='transferencia' ? 'Transf.' : label);
+                       const displayLabel = k==='pos' ? 'POS' : (k==='qr' ? 'QR' : (k==='transferencia' ? 'Transf.' : label));
                        const count = breakdownCounts[k] || 0;
                        return `<tr><td>${displayLabel} <small>(${count})</small></td><td style="text-align:right;">${fmt(theo)}</td><td style="text-align:right;">${fmt(decl)}</td><td style="text-align:right;">${fmt(diff)}</td></tr>`;
                     }).join('')}
@@ -15334,7 +15406,7 @@ document.addEventListener('DOMContentLoaded', () => {
 })();
 </script>
 <style>
-  .kds-toast-container{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:9999}
+  .kds-toast-container{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:20050}
   .kds-toast{min-width:220px;max-width:380px;padding:10px 14px;border-radius:6px;color:#fff;background:#333;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:opacity .3s ease}
   .kds-toast.success{background:#2e7d32}
   .kds-toast.error{background:#c62828}
