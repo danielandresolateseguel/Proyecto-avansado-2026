@@ -1357,6 +1357,10 @@ def update_delivery_status(order_id):
     if str(st or '').strip().lower() == 'entregado' and new_status != 'delivered':
         return jsonify({'error': 'no se puede cambiar el estado de una orden entregada'}), 400
 
+    st_norm = str(st or '').strip().lower()
+    if new_status == 'en_route' and st_norm not in ('listo', 'en_camino'):
+        return jsonify({'error': 'la orden debe estar lista antes de salir a reparto'}), 400
+
     current_delivery_status_norm = str(current_delivery_status or '').strip().lower() or 'pending'
     if new_status in ('delivered', 'failed') and current_delivery_status_norm != 'en_route':
         return jsonify({'error': 'la orden debe estar en camino antes de marcarse como entregada o fallida'}), 400
@@ -1384,7 +1388,6 @@ def update_delivery_status(order_id):
     cur.execute(f"UPDATE orders SET {', '.join(sets)} WHERE id = ?", params)
 
     new_main = None
-    st_norm = str(st or '').strip().lower()
     if new_status == 'en_route' and st_norm not in ('cancelado', 'entregado'):
         new_main = 'en_camino'
     if new_status == 'delivered' and st_norm != 'entregado':

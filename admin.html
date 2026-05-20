@@ -680,6 +680,144 @@
     .orders-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
     .orders-quick-filters .qf-dot { position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:999px; background:#ff1744; box-shadow:0 0 0 2px #ffffff, 0 2px 6px rgba(0,0,0,0.2); display:none; }
     .orders-quick-filters button.has-dot .qf-dot { display:block; }
+    .delivery-compact-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #d5dbe3;
+      background: #f8fafc;
+      color: #4b5563;
+      font-weight: 600;
+    }
+    .delivery-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .delivery-summary-card {
+      border: 1px solid #dbe4f3;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+      padding: 10px 12px;
+      box-shadow: 0 8px 18px rgba(74, 111, 165, 0.08);
+    }
+    .delivery-summary-card .label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .delivery-summary-card .value {
+      display: block;
+      margin-top: 4px;
+      font-size: 22px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.1;
+    }
+    .delivery-summary-card .hint {
+      display: block;
+      margin-top: 3px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    #delivery-list.compact-view .card {
+      border: 1px solid #dbe4f3;
+      border-left: 4px solid #4f46e5;
+      border-radius: 14px;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    }
+    #delivery-list.compact-view .card-content {
+      display: grid;
+      gap: 6px;
+    }
+    .delivery-inline-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .delivery-primary-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .delivery-primary-actions button,
+    .delivery-secondary-actions button {
+      width: 100%;
+      min-width: 0;
+    }
+    .delivery-more {
+      margin-top: 8px;
+    }
+    .delivery-more summary {
+      cursor: pointer;
+      list-style: none;
+      font-size: 12px;
+      font-weight: 700;
+      color: #475569;
+    }
+    .delivery-more summary::-webkit-details-marker { display: none; }
+    .delivery-secondary-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .delivery-money-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .delivery-money-pill.pending {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+    .delivery-money-pill.paid {
+      background: #ecfdf5;
+      color: #047857;
+    }
+    .delivery-bulk-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0 12px;
+    }
+    .delivery-bulk-bar button {
+      min-height: 34px;
+    }
+    .delivery-bulk-status {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .delivery-select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .delivery-select-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #2563eb;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+    #delivery-list .card.delivery-selected {
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18), 0 12px 24px rgba(15, 23, 42, 0.1);
+    }
     @media (max-width: 720px) {
       .archived .controls { flex-direction: row !important; align-items: center !important; flex-wrap: wrap !important; }
       .archived .controls > * { width: auto !important; }
@@ -714,12 +852,16 @@
       #delivery-list .actions button { width: auto; }
       #delivery-list .actions .delivery-status { flex: 1 1 calc(50% - 6px); }
       #delivery-list .actions .delivery-pay,
+      #delivery-list .actions .delivery-pay-delivered,
       #delivery-list .actions .delivery-map,
       #delivery-list .actions .delivery-notes,
       #delivery-list .actions .delivery-view,
       #delivery-list .actions .delivery-take-route { flex: 1 1 calc(33.333% - 6px); }
       #delivery-list .actions .delivery-up,
       #delivery-list .actions .delivery-down { width: 44px; padding: 0; flex: 0 0 auto; }
+      .delivery-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .delivery-primary-actions,
+      .delivery-secondary-actions { grid-template-columns: 1fr; }
 
       #orders-table { display: none !important; }
       #orders-mobile { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -1474,6 +1616,8 @@
           </label>
           <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mis pedidos</button>
           <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Sin asignar</button>
+          <button id="delivery-select-visible" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; border-radius:4px; cursor:pointer;">Seleccionar visibles</button>
+          <button id="delivery-take-selected" style="background:#1d4ed8; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar seleccionados</button>
           <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Empezar ruta</button>
           <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
           <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
@@ -1483,10 +1627,18 @@
             <input type="checkbox" id="delivery-auto-next" />
             Auto siguiente
           </label>
+          <label class="small delivery-compact-toggle">
+            <input type="checkbox" id="delivery-compact-mode" />
+            Salida simple
+          </label>
           <span id="delivery-count" class="small" style="color:#666;"></span>
           <span id="delivery-run-label" class="small" style="color:#666;"></span>
         </div>
       </div>
+      <div class="delivery-bulk-bar">
+        <span id="delivery-selection-count" class="delivery-bulk-status"></span>
+      </div>
+      <div id="delivery-summary" class="delivery-summary" style="display:none;"></div>
       <div id="delivery-list" class="orders-mobile"></div>
     </details>
     <details class="orders-history-group" id="orders-history-group">
@@ -4207,10 +4359,10 @@
     function buildGoogleRouteUrl(stops) {
       const arr = Array.isArray(stops) ? stops.map(s => String(s || '').trim()).filter(Boolean) : [];
       if (!arr.length) return '';
-      const origin = 'My Location';
       if (arr.length === 1) {
-        return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origin) + '&destination=' + encodeURIComponent(arr[0]) + '&travelmode=driving&dir_action=navigate';
+        return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(arr[0]) + '&travelmode=driving&dir_action=navigate';
       }
+      const origin = 'My Location';
       const parts = [origin].concat(arr).map(s => encodeURIComponent(s));
       return 'https://www.google.com/maps/dir/' + parts.join('/') + '/?travelmode=driving&dir_action=navigate';
     }
@@ -4219,6 +4371,18 @@
     }
     function _isIOS() {
       try { return /iPad|iPhone|iPod/i.test(String(navigator.userAgent || '')); } catch (_) { return false; }
+    }
+    function _shouldPreopenMapsWindow() {
+      try {
+        const ua = String(navigator.userAgent || '');
+        const mobileUa = /Android|iPad|iPhone|iPod/i.test(ua);
+        if (!mobileUa) return false;
+        const touchPoints = Number(navigator.maxTouchPoints || 0);
+        const touchCapable = touchPoints > 0 || ('ontouchstart' in window);
+        return !!touchCapable;
+      } catch (_) {
+        return false;
+      }
     }
     function openGoogleMapsDestination(destination, preOpenedWindow) {
       const dest = String(destination || '').trim();
@@ -4241,10 +4405,15 @@
         window.open(webUrl, '_blank', 'noopener');
       };
 
+      // When a tab was pre-opened to avoid popup blockers, prefer the web URL directly.
+      // Some mobile browsers keep the tab on about:blank if a custom app scheme fails.
+      if (w) {
+        openWebFallback();
+        return true;
+      }
+
       if (appUrl) {
-        if (w) {
-          try { w.location.href = appUrl; } catch (_) { openWebFallback(); return true; }
-        } else {
+        if (!w) {
           try { window.location.href = appUrl; } catch (_) { openWebFallback(); return true; }
         }
         if (webUrl) {
@@ -4395,8 +4564,9 @@
       if (role !== 'repartidor') return;
       const me = String(currentUserName || '').trim().toLowerCase();
       if (!me) return;
-      const w = window.open('about:blank', '_blank');
-      if (!w) { alert('No se pudo abrir la ventana (bloqueador de popups)'); return; }
+      const shouldPreopen = _shouldPreopenMapsWindow();
+      const w = shouldPreopen ? window.open('about:blank', '_blank') : null;
+      if (shouldPreopen && !w) { alert('No se pudo abrir la ventana (bloqueador de popups)'); return; }
       (async () => {
         try {
           let routeOrders = [];
@@ -6122,6 +6292,8 @@
     let deliveryFilter = 'unassigned';
     let deliveryStatusFilter = '';
     let lastDeliverySignature = '';
+    let deliveryCompactMode = false;
+    const selectedDeliveryIds = new Set();
 
     async function fetchDeliveryOrders() {
       const slug = tenantInput.value.trim() || defaultSlug();
@@ -6225,6 +6397,131 @@
       return await resp.json();
     }
 
+    function getBulkSelectableDeliveryIds(orders) {
+      return (Array.isArray(orders) ? orders : [])
+        .filter(o => {
+          const assigned = String(o && o.delivery_assigned_to || '').trim();
+          return !assigned;
+        })
+        .map(o => Number(o && o.id || 0))
+        .filter(Boolean);
+    }
+
+    function updateDeliverySelectionUI(orders) {
+      const statusEl = document.getElementById('delivery-selection-count');
+      const takeBtn = document.getElementById('delivery-take-selected');
+      const selectBtn = document.getElementById('delivery-select-visible');
+      const visibleIds = getBulkSelectableDeliveryIds(orders);
+      const selectedVisible = visibleIds.filter(id => selectedDeliveryIds.has(id));
+      if (statusEl) {
+        if (!visibleIds.length) statusEl.textContent = '';
+        else statusEl.textContent = `${selectedVisible.length} seleccionado(s) de ${visibleIds.length} sin asignar`;
+      }
+      if (takeBtn) {
+        takeBtn.disabled = selectedVisible.length === 0;
+        takeBtn.style.opacity = selectedVisible.length === 0 ? '0.55' : '';
+        takeBtn.style.cursor = selectedVisible.length === 0 ? 'not-allowed' : 'pointer';
+      }
+      if (selectBtn) {
+        selectBtn.disabled = visibleIds.length === 0;
+        selectBtn.style.opacity = visibleIds.length === 0 ? '0.55' : '';
+        selectBtn.textContent = visibleIds.length && selectedVisible.length === visibleIds.length
+          ? 'Quitar visibles'
+          : 'Seleccionar visibles';
+      }
+    }
+
+    async function fetchMineDeliveryOrders() {
+      const slug = tenantInput.value.trim() || defaultSlug();
+      const url = new URL('/api/delivery/orders', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      url.searchParams.set('exclude_archived', 'true');
+      url.searchParams.set('exclude_canceled', 'true');
+      url.searchParams.set('filter', 'mine');
+      url.searchParams.set('limit', '200');
+      url.searchParams.set('offset', '0');
+      const r = await wFetch(url.toString());
+      const j = await r.json().catch(() => ({}));
+      let mine = Array.isArray(j && j.orders) ? j.orders : [];
+      mine = mine.filter(x => _effectiveDeliveryStatus(x) !== 'delivered');
+      mine.sort((a, b) => {
+        const sa = (a.delivery_sequence === null || typeof a.delivery_sequence === 'undefined') ? 999999 : Number(a.delivery_sequence);
+        const sb = (b.delivery_sequence === null || typeof b.delivery_sequence === 'undefined') ? 999999 : Number(b.delivery_sequence);
+        if (sa !== sb) return sa - sb;
+        return Number(a.id) - Number(b.id);
+      });
+      return mine;
+    }
+
+    async function assignDeliveriesAndOpenMineRoute(orderIds) {
+      const ids = Array.isArray(orderIds) ? orderIds.map(x => Number(x || 0)).filter(Boolean) : [];
+      if (!ids.length) return;
+      for (let i = 0; i < ids.length; i++) {
+        await assignDelivery(ids[i]);
+      }
+      let mine = await fetchMineDeliveryOrders();
+      const moved = [];
+      const remaining = [];
+      const selectedSet = new Set(ids);
+      mine.forEach(order => {
+        if (selectedSet.has(Number(order && order.id || 0))) moved.push(order);
+        else remaining.push(order);
+      });
+      mine = remaining.concat(moved);
+      try { await saveDeliveryRoute(mine); } catch (_) {}
+      try {
+        const filterSel = document.getElementById('delivery-filter');
+        if (filterSel) filterSel.value = 'mine';
+      } catch (_) {}
+      deliveryFilter = 'mine';
+      deliveryStatusFilter = '';
+      ids.forEach(id => selectedDeliveryIds.delete(id));
+      lastDeliverySignature = '';
+      await loadOrdersSafe();
+    }
+
+    function renderDeliverySummary(orders) {
+      const summaryEl = document.getElementById('delivery-summary');
+      if (!summaryEl) return;
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const visibleOrders = Array.isArray(orders) ? orders : [];
+      if (!visibleOrders.length || role !== 'repartidor') {
+        summaryEl.style.display = 'none';
+        summaryEl.innerHTML = '';
+        return;
+      }
+      const enRuta = visibleOrders.filter(o => _effectiveDeliveryStatus(o) === 'en_route').length;
+      const porCobrar = visibleOrders.filter(o => String(o && o.payment_status || '').trim().toLowerCase() !== 'paid').length;
+      const totalCobro = visibleOrders.reduce((sum, o) => {
+        if (String(o && o.payment_status || '').trim().toLowerCase() === 'paid') return sum;
+        return sum + Number(o && o.total || 0);
+      }, 0);
+      const listos = visibleOrders.filter(o => _normUser(o && o.status || '') === 'listo').length;
+      summaryEl.innerHTML = `
+        <div class="delivery-summary-card">
+          <span class="label">Paradas</span>
+          <span class="value">${visibleOrders.length}</span>
+          <span class="hint">Pedidos visibles en tu salida</span>
+        </div>
+        <div class="delivery-summary-card">
+          <span class="label">En camino</span>
+          <span class="value">${enRuta}</span>
+          <span class="hint">Pedidos ya iniciados</span>
+        </div>
+        <div class="delivery-summary-card">
+          <span class="label">Pendientes de cobro</span>
+          <span class="value">${porCobrar}</span>
+          <span class="hint">Pedidos que faltan cobrar</span>
+        </div>
+        <div class="delivery-summary-card">
+          <span class="label">A cobrar</span>
+          <span class="value">$${Math.round(totalCobro || 0)}</span>
+          <span class="hint">${listos} pedido(s) listos para salir</span>
+        </div>
+      `;
+      summaryEl.style.display = '';
+    }
+
     async function renderDeliveryOrders(data) {
       let orders = (data && data.orders) ? data.orders : [];
       const role = String(currentUserRole || '').trim().toLowerCase();
@@ -6234,9 +6531,19 @@
       window.currentDeliveryOrders = orders;
       const list = document.getElementById('delivery-list');
       const countEl = document.getElementById('delivery-count');
+      const compactMode = !!deliveryCompactMode;
       if (countEl) countEl.textContent = `(${orders.length})`;
+      renderDeliverySummary(orders);
+      const visibleSelectableIds = new Set(getBulkSelectableDeliveryIds(orders));
+      Array.from(selectedDeliveryIds).forEach(id => {
+        if (!visibleSelectableIds.has(id) && !String(deliveryFilter || '').trim().toLowerCase().includes('mine')) {
+          selectedDeliveryIds.delete(id);
+        }
+      });
+      updateDeliverySelectionUI(orders);
       if (!list) return;
-      const sig = JSON.stringify(orders.map(o => ({ id: o.id, ds: o.delivery_status, a: o.delivery_assigned_to, s: o.status, seq: o.delivery_sequence })));
+      list.classList.toggle('compact-view', compactMode);
+      const sig = JSON.stringify({ compactMode, orders: orders.map(o => ({ id: o.id, ds: o.delivery_status, a: o.delivery_assigned_to, s: o.status, seq: o.delivery_sequence, pay: o.payment_status })) });
       if (sig === lastDeliverySignature && list.children.length > 0) return;
       lastDeliverySignature = sig;
       list.innerHTML = '';
@@ -6282,6 +6589,7 @@
         const assigned = String(o.delivery_assigned_to || '').trim();
         const dStatus = _effectiveDeliveryStatus(o);
         const kStatus = _normUser(o && o.status || 'pendiente');
+        const routeReady = kStatus === 'listo' || kStatus === 'en_camino';
         const dStatusLabel = _deliveryStatusLabel(dStatus);
         
         let kStatusPill = '';
@@ -6312,31 +6620,43 @@
         const addrOneLine = String(addr || '').replace(/\n+/g, ' ').trim() || destOneLine;
         const safeAddrOneLine = escapeAdminHtml(addrOneLine.slice(0,120) || '-');
         const safePhoneText = escapeAdminHtml(phoneRaw);
+        const customerName = String(o.customer_name || '').trim();
+        const safeCustomerName = escapeAdminHtml(customerName || 'Cliente');
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
         const safeMetaBits = escapeAdminHtml(metaBits || '');
+        const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
+        const paymentPill = isPaid
+          ? `<span class="delivery-money-pill paid">Pagado</span>`
+          : `<span class="delivery-money-pill pending">Cobro pendiente</span>`;
 
         const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${safeDeliveryId}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
+        const canBulkSelect = role === 'repartidor' && !assigned;
+        const bulkCheck = canBulkSelect
+          ? `<label class="delivery-select-row"><input type="checkbox" class="delivery-select" data-id="${safeDeliveryId}" ${selectedDeliveryIds.has(Number(safeDeliveryId)) ? 'checked' : ''} /><span class="small" style="color:#475569; font-weight:700;">Seleccionar</span></label>`
+          : '';
         const upBtn = (idx > 0 && canReorder(o)) ? `<button class="delivery-up" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">↑</button>` : '';
         const downBtn = (idx < orders.length - 1 && canReorder(o)) ? `<button class="delivery-down" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">↓</button>` : '';
         const canEnRoute = (role === 'repartidor') ? _deliveryMine(o) : returned;
         const enRouteAlready = dStatus === 'en_route';
-        const canEnRouteClick = !!canEnRoute && !enRouteAlready && dStatus !== 'delivered';
+        const canEnRouteClick = !!canEnRoute && !enRouteAlready && dStatus !== 'delivered' && routeReady;
         const canFinishDelivery = dStatus === 'en_route' && (role !== 'repartidor' || _deliveryMine(o));
         const enRouteBtn = enRouteAlready
           ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.55; background:#607d8b; color:#fff; cursor:default;">En camino</button>`
           : (canEnRouteClick
             ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" style="padding:4px 8px; border-radius:4px;">En camino</button>`
-            : `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" disabled style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`);
+            : `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="en_route" disabled title="${routeReady ? 'No disponible' : 'Disponible cuando el pedido esté listo'}" style="padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">En camino</button>`);
         const deliveredBtn = canFinishDelivery
           ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="delivered" style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px;">Entregado</button>`
           : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="delivered" disabled style="background:#2e7d32; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Entregado</button>` : '');
         const failedBtn = canFinishDelivery
           ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="failed" style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px;">Falló</button>`
           : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-status" data-id="${safeDeliveryId}" data-st="failed" disabled style="background:#b71c1c; color:#fff; padding:4px 8px; border-radius:4px; opacity:0.35; cursor:not-allowed;">Falló</button>` : '');
-        const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
         const payBtn = isPaid
           ? `<button class="delivery-pay" data-id="${safeDeliveryId}" disabled style="opacity:0.35; cursor:default; background:#9e9e9e; color:#fff; border:none; padding:4px 8px; border-radius:4px;">Pagado</button>`
           : ((role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-pay" data-id="${safeDeliveryId}" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cobrar</button>` : '');
+        const payDeliveredBtn = (!isPaid && canFinishDelivery)
+          ? `<button class="delivery-pay-delivered" data-id="${safeDeliveryId}" style="background:#0f766e; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-weight:700;">Cobrar + entregar</button>`
+          : '';
         const mapBtn = destOneLine ? `<button class="delivery-map" data-id="${safeDeliveryId}" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mapa</button>` : '';
         const unassignBtn = (role === 'repartidor' && _deliveryMine(o) && _effectiveDeliveryStatus(o) !== 'delivered')
           ? `<button class="delivery-unassign" data-id="${safeDeliveryId}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
@@ -6344,8 +6664,45 @@
         const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${safeDeliveryId}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
         const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
 
+        if (compactMode) {
+          const primaryActions = [assignBtn, enRouteBtn, payDeliveredBtn, deliveredBtn, payBtn, mapBtn].filter(Boolean).join('');
+          const secondaryActions = [failedBtn, unassignBtn, notesBtn, viewBtn, upBtn, downBtn].filter(Boolean).join('');
+          if (selectedDeliveryIds.has(Number(safeDeliveryId))) card.classList.add('delivery-selected');
+          card.innerHTML = `
+            <div class="card-content">
+              ${bulkCheck}
+              <div class="title">Pedido #${safeOrderNumber}${stopPill}</div>
+              <div class="delivery-inline-flags">
+                <span class="pill">${safeDeliveryStatus}</span>
+                ${kStatusPill}
+                ${paymentPill}
+              </div>
+              <div class="meta" style="font-size:15px; font-weight:700; color:#111;">${safeCustomerName}</div>
+              <div class="meta" style="font-size:16px; font-weight:700; color:#111;">${safeAddrOneLine}</div>
+              <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
+              <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href="${safeWaUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
+              <div class="meta">${safeMetaBits}</div>
+            </div>
+            <div class="delivery-primary-actions">
+              ${primaryActions || viewBtn}
+            </div>
+            ${secondaryActions ? `
+              <details class="delivery-more">
+                <summary>Mas opciones</summary>
+                <div class="delivery-secondary-actions">
+                  ${secondaryActions}
+                </div>
+              </details>
+            ` : ''}
+          `;
+          list.appendChild(card);
+          return;
+        }
+
+        if (selectedDeliveryIds.has(Number(safeDeliveryId))) card.classList.add('delivery-selected');
         card.innerHTML = `
           <div class="card-content">
+            ${bulkCheck}
             <div class="title">Pedido #${safeOrderNumber} <span class="pill" style="margin-left:6px;">${safeDeliveryStatus}</span>${kStatusPill}${stopPill}</div>
             <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
             <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${safeAddrOneLine}</span></div>
@@ -6355,6 +6712,7 @@
           <div class="actions" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
             ${assignBtn}
             ${enRouteBtn}
+            ${payDeliveredBtn}
             ${deliveredBtn}
             ${payBtn}
             ${mapBtn}
@@ -6422,6 +6780,17 @@
           if (oid) openOrderDetailModal(oid);
         });
       });
+      list.querySelectorAll('.delivery-select').forEach(input => {
+        input.addEventListener('change', () => {
+          const oid = Number(input.dataset.id || 0);
+          if (!oid) return;
+          if (input.checked) selectedDeliveryIds.add(oid);
+          else selectedDeliveryIds.delete(oid);
+          const card = input.closest('.card');
+          if (card) card.classList.toggle('delivery-selected', input.checked);
+          updateDeliverySelectionUI(orders);
+        });
+      });
       list.querySelectorAll('.delivery-take-route').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
@@ -6435,39 +6804,7 @@
           btn.style.cursor = 'wait';
           btn.textContent = 'Tomando...';
           try {
-            await assignDelivery(oid);
-            const slug = tenantInput.value.trim() || defaultSlug();
-            const url = new URL('/api/delivery/orders', API_BASE);
-            url.searchParams.set('tenant_slug', slug);
-            url.searchParams.set('exclude_archived', 'true');
-            url.searchParams.set('exclude_canceled', 'true');
-            url.searchParams.set('filter', 'mine');
-            url.searchParams.set('limit', '200');
-            url.searchParams.set('offset', '0');
-            const r = await wFetch(url.toString());
-            const j = await r.json().catch(() => ({}));
-            let mine = Array.isArray(j && j.orders) ? j.orders : [];
-            mine = mine.filter(x => _effectiveDeliveryStatus(x) !== 'delivered');
-            mine.sort((a, b) => {
-              const sa = (a.delivery_sequence === null || typeof a.delivery_sequence === 'undefined') ? 999999 : Number(a.delivery_sequence);
-              const sb = (b.delivery_sequence === null || typeof b.delivery_sequence === 'undefined') ? 999999 : Number(b.delivery_sequence);
-              if (sa !== sb) return sa - sb;
-              return Number(a.id) - Number(b.id);
-            });
-            const idx = mine.findIndex(x => Number(x.id) === oid);
-            if (idx >= 0) {
-              const moved = mine.splice(idx, 1)[0];
-              mine.push(moved);
-            }
-            try { await saveDeliveryRoute(mine); } catch (_) {}
-            try {
-              const filterSel = document.getElementById('delivery-filter');
-              if (filterSel) filterSel.value = 'mine';
-            } catch (_) {}
-            deliveryFilter = 'mine';
-            deliveryStatusFilter = '';
-            lastDeliverySignature = '';
-            await loadOrdersSafe();
+            await assignDeliveriesAndOpenMineRoute([oid]);
           } catch (err) {
             alert(String(err && err.message || 'No se pudo asignar'));
           } finally {
@@ -6485,24 +6822,86 @@
           const oid = Number(btn.dataset.id || 0);
           const st = String(btn.dataset.st || '').trim();
           if (!oid || !st) return;
+          const autoNextEnabled = st === 'delivered' && !!document.getElementById('delivery-auto-next')?.checked;
+          const autoNextNeedsPreopen = autoNextEnabled && _shouldPreopenMapsWindow();
+          const autoNextWindow = autoNextNeedsPreopen ? window.open('about:blank', '_blank', 'noopener') : null;
           try {
             if (st === 'delivered') {
               const ok = await ensureCashOpen();
-              if (!ok) return;
+              if (!ok) {
+                if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
+                return;
+              }
             }
             let extras = null;
             if (st === 'failed') {
               const reason = await askDeliveryFailReason();
-              if (!reason) return;
+              if (!reason) {
+                if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
+                return;
+              }
               extras = { delivery_notes: reason };
             }
             const res = await setDeliveryStatus(oid, st, extras);
             await loadOrdersSafe();
+            if (autoNextEnabled) {
+              try { await openNextDeliveryStopInGoogleMaps(autoNextWindow, true); } catch (_) {}
+            }
             if (res && res.run_closed) {
               try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}
             }
           } catch (err) {
+            if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
             alert(String(err && err.message || 'No se pudo actualizar'));
+          }
+        });
+      });
+      list.querySelectorAll('.delivery-pay-delivered').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const oid = Number(btn.dataset.id || 0);
+          if (!oid || btn.disabled) return;
+          const o = (orders || []).find(x => Number(x.id) === oid) || null;
+          if (!o) return;
+          const autoNextEnabled = !!document.getElementById('delivery-auto-next')?.checked;
+          const autoNextNeedsPreopen = autoNextEnabled && _shouldPreopenMapsWindow();
+          const autoNextWindow = autoNextNeedsPreopen ? window.open('about:blank', '_blank', 'noopener') : null;
+          const originalText = btn.textContent;
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.textContent = 'Cobrando...';
+          try {
+            const ok = await ensureCashOpen();
+            if (!ok) {
+              if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
+              return;
+            }
+            const methodData = await askPaymentMethod(Number(o.total || 0), false, Number(o.shipping_cost || 0));
+            if (!methodData) {
+              if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
+              return;
+            }
+            await payOrder(oid, methodData);
+            if (methodData.print) {
+              try { window.printBill(oid); } catch(_) {}
+            }
+            btn.textContent = 'Entregando...';
+            const res = await setDeliveryStatus(oid, 'delivered');
+            lastDeliverySignature = '';
+            await loadOrdersSafe();
+            if (autoNextEnabled) {
+              try { await openNextDeliveryStopInGoogleMaps(autoNextWindow, true); } catch (_) {}
+            }
+            if (res && res.run_closed) {
+              try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}
+            }
+          } catch (err) {
+            if (autoNextWindow) { try { autoNextWindow.close(); } catch (_) {} }
+            alert(String(err && err.message || 'No se pudo cobrar y entregar'));
+          } finally {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.textContent = originalText;
           }
         });
       });
@@ -8682,11 +9081,14 @@
       const statusSel = document.getElementById('delivery-status-filter');
       const mineBtn = document.getElementById('delivery-mine');
       const unassignedBtn = document.getElementById('delivery-unassigned');
+      const selectVisibleBtn = document.getElementById('delivery-select-visible');
+      const takeSelectedBtn = document.getElementById('delivery-take-selected');
       const startRouteBtn = document.getElementById('delivery-start-route');
       const openRouteBtn = document.getElementById('delivery-open-route');
       const nextStopBtn = document.getElementById('delivery-next-stop');
       const closeRunBtn = document.getElementById('delivery-close-run');
       const autoNextChk = document.getElementById('delivery-auto-next');
+      const compactModeChk = document.getElementById('delivery-compact-mode');
       if (btn && box) {
         btn.addEventListener('click', (e) => {
           e.preventDefault();
@@ -8703,6 +9105,23 @@
             try { localStorage.setItem(k, autoNextChk.checked ? '1' : '0'); } catch (_) {}
           });
         } catch (_) {}
+      }
+      if (compactModeChk) {
+        try {
+          const compactKey = 'delivery_compact_mode';
+          const stored = localStorage.getItem(compactKey);
+          deliveryCompactMode = stored === null ? true : stored === '1';
+          compactModeChk.checked = deliveryCompactMode;
+          compactModeChk.addEventListener('change', async () => {
+            deliveryCompactMode = !!compactModeChk.checked;
+            lastDeliverySignature = '';
+            try { localStorage.setItem(compactKey, deliveryCompactMode ? '1' : '0'); } catch (_) {}
+            await loadOrdersSafe();
+          });
+        } catch (_) {
+          deliveryCompactMode = true;
+          compactModeChk.checked = deliveryCompactMode;
+        }
       }
       if (filterSel) {
         filterSel.addEventListener('change', async () => {
@@ -8737,6 +9156,43 @@
           await loadOrdersSafe();
         });
       }
+      if (selectVisibleBtn) {
+        selectVisibleBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const visibleIds = getBulkSelectableDeliveryIds(window.currentDeliveryOrders || []);
+          if (!visibleIds.length) return;
+          const allSelected = visibleIds.every(id => selectedDeliveryIds.has(id));
+          visibleIds.forEach(id => {
+            if (allSelected) selectedDeliveryIds.delete(id);
+            else selectedDeliveryIds.add(id);
+          });
+          lastDeliverySignature = '';
+          await loadOrdersSafe();
+        });
+      }
+      if (takeSelectedBtn) {
+        takeSelectedBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const visibleIds = getBulkSelectableDeliveryIds(window.currentDeliveryOrders || []);
+          const ids = visibleIds.filter(id => selectedDeliveryIds.has(id));
+          if (!ids.length) return;
+          const ok = await askConfirm(`¿Tomar ${ids.length} pedido(s) y sumarlos a tu salida?`);
+          if (!ok) return;
+          const originalText = takeSelectedBtn.textContent;
+          takeSelectedBtn.disabled = true;
+          takeSelectedBtn.style.opacity = '0.6';
+          takeSelectedBtn.textContent = 'Tomando...';
+          try {
+            await assignDeliveriesAndOpenMineRoute(ids);
+          } catch (err) {
+            alert(String(err && err.message || 'No se pudieron tomar los pedidos seleccionados'));
+          } finally {
+            takeSelectedBtn.disabled = false;
+            takeSelectedBtn.style.opacity = '';
+            takeSelectedBtn.textContent = originalText;
+          }
+        });
+      }
       if (startRouteBtn) {
         startRouteBtn.addEventListener('click', async (e) => {
           e.preventDefault();
@@ -8757,10 +9213,11 @@
           }
           const toStart = routeOrders.filter(o => {
             const ds = String(o && o.delivery_status || 'pending').trim().toLowerCase();
-            return ds === 'assigned' || ds === 'pending';
+            const mainSt = _normUser(o && o.status || '');
+            return (ds === 'assigned' || ds === 'pending') && mainSt === 'listo';
           });
           if (!toStart.length) {
-            alert('No hay pedidos asignados para iniciar');
+            alert('No hay pedidos asignados y listos para iniciar');
             return;
           }
           const ok = await askConfirm(`¿Marcar ${toStart.length} pedido(s) como "En camino"?`);
@@ -8798,7 +9255,8 @@
         nextStopBtn.addEventListener('click', async (e) => {
           e.preventDefault();
           if (!isAuthed) return;
-          const w = window.open('about:blank', '_blank', 'noopener');
+          const shouldPreopen = _shouldPreopenMapsWindow();
+          const w = shouldPreopen ? window.open('about:blank', '_blank', 'noopener') : null;
           await openNextDeliveryStopInGoogleMaps(w, false);
           try { refreshDeliveryRunLabel(); } catch (_) {}
         });
