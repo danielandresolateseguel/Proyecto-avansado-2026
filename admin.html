@@ -4372,17 +4372,15 @@
     function _isIOS() {
       try { return /iPad|iPhone|iPod/i.test(String(navigator.userAgent || '')); } catch (_) { return false; }
     }
-    function _shouldPreopenMapsWindow() {
+    function _shouldUseSameWindowMapsNavigation() {
       try {
-        const ua = String(navigator.userAgent || '');
-        const mobileUa = /Android|iPad|iPhone|iPod/i.test(ua);
-        if (!mobileUa) return false;
-        const touchPoints = Number(navigator.maxTouchPoints || 0);
-        const touchCapable = touchPoints > 0 || ('ontouchstart' in window);
-        return !!touchCapable;
+        return _isAndroid() || _isIOS();
       } catch (_) {
         return false;
       }
+    }
+    function _shouldPreopenMapsWindow() {
+      return false;
     }
     function openGoogleMapsDestination(destination, preOpenedWindow) {
       const dest = String(destination || '').trim();
@@ -4401,6 +4399,9 @@
         if (!webUrl) return;
         if (w) {
           try { w.location.href = webUrl; return; } catch (_) { try { w.close(); } catch (_) {} }
+        }
+        if (_shouldUseSameWindowMapsNavigation()) {
+          try { window.location.href = webUrl; return; } catch (_) {}
         }
         window.open(webUrl, '_blank', 'noopener');
       };
@@ -4597,7 +4598,22 @@
           if (stopsAll.length > maxStops) alert(`Google Maps permite un máximo de ${maxStops} paradas. Se abrirán las primeras ${maxStops}.`);
           const url = buildGoogleRouteUrl(stops);
           if (!url) { try { w.close(); } catch (_) {} return; }
-          try { w.location.href = url; } catch (_) { try { w.close(); } catch (_) {} window.open(url, '_blank', 'noopener'); }
+          try {
+            if (w) {
+              w.location.href = url;
+            } else if (_shouldUseSameWindowMapsNavigation()) {
+              window.location.href = url;
+            } else {
+              window.open(url, '_blank', 'noopener');
+            }
+          } catch (_) {
+            try { if (w) w.close(); } catch (_) {}
+            if (_shouldUseSameWindowMapsNavigation()) {
+              try { window.location.href = url; } catch (__) {}
+            } else {
+              window.open(url, '_blank', 'noopener');
+            }
+          }
         } catch (err) {
           try { w.close(); } catch (_) {}
           alert(String(err && err.message || 'No se pudo abrir la ruta'));
