@@ -4339,6 +4339,11 @@
           }
         }
 
+        const textAddress = String((typeof getAddressText === 'function') ? getAddressText(obj || raw) : String(raw || '')).replace(/\n+/g, ' ').trim();
+        if (textAddress) {
+          return textAddress;
+        }
+
         if (obj && typeof obj === 'object') {
           const g = obj.geo || obj.location || obj.gps || null;
           if (g && typeof g === 'object') {
@@ -4350,7 +4355,7 @@
           }
         }
 
-        a = (typeof getAddressText === 'function') ? getAddressText(raw) : String(raw || '');
+        a = String(raw || '');
       } catch (_) {
         a = String((o && o.address_json) || '');
       }
