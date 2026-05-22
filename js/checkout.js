@@ -32,13 +32,54 @@ function deriveGeoAddress(payload) {
     if (!payload || typeof payload !== 'object') {
         return { address: '', locality: '' };
     }
-    let address = String(payload.address || '').trim();
-    let locality = String(payload.locality || '').trim();
+    const addr = (payload.address && typeof payload.address === 'object') ? payload.address : null;
+    let address = (typeof payload.address === 'string') ? String(payload.address || '').trim() : '';
+    let locality = (typeof payload.locality === 'string') ? String(payload.locality || '').trim() : '';
     const displayName = String(payload.display_name || '').trim();
     const parts = displayName
         .split(',')
         .map(part => String(part || '').trim())
         .filter(Boolean);
+
+    if (!address && addr) {
+        const road = String(
+            addr.road
+            || addr.pedestrian
+            || addr.footway
+            || addr.path
+            || addr.residential
+            || addr.quarter
+            || addr.neighbourhood
+            || addr.suburb
+            || addr.hamlet
+            || addr.city_district
+            || addr.municipality
+            || ''
+        ).trim();
+        const house = String(addr.house_number || '').trim();
+        address = road && house ? `${road} ${house}`.trim() : road;
+    }
+
+    if (!locality && addr) {
+        const district = String(
+            addr.suburb
+            || addr.neighbourhood
+            || addr.quarter
+            || addr.city_district
+            || ''
+        ).trim();
+        const city = String(
+            addr.city
+            || addr.town
+            || addr.village
+            || addr.hamlet
+            || addr.municipality
+            || addr.county
+            || ''
+        ).trim();
+        const state = String(addr.state || '').trim();
+        locality = [district, city, state].filter(Boolean).join(', ');
+    }
 
     if (!address && parts.length) {
         address = parts[0];
@@ -53,6 +94,19 @@ function deriveGeoAddress(payload) {
 }
 
 async function reverseGeocodeFromCoords(lat, lng) {
+    const parseResponse = async (response) => {
+        if (!response || !response.ok) return null;
+        const payload = await response.json().catch(() => null);
+        if (!payload) return null;
+        const derived = deriveGeoAddress(payload);
+        if (!derived.address && !derived.locality) return null;
+        return {
+            address: derived.address,
+            locality: derived.locality,
+            payload
+        };
+    };
+
     try {
         const url = new URL('/api/geocode/reverse', getGeoApiBase());
         url.searchParams.set('lat', String(lat));
@@ -63,35 +117,25 @@ async function reverseGeocodeFromCoords(lat, lng) {
             cache: 'no-store',
             credentials: 'same-origin'
         });
-        if (!response.ok) return null;
-        const payload = await response.json().catch(() => null);
-        if (!payload) return null;
-        const derived = deriveGeoAddress(payload);
-        return {
-            address: derived.address,
-            locality: derived.locality,
-            payload
-        };
+        const primary = await parseResponse(response);
+        if (primary) return primary;
     } catch (_) {
-        try {
-            const fallbackUrl = new URL('https://nominatim.openstreetmap.org/reverse');
-            fallbackUrl.searchParams.set('format', 'jsonv2');
-            fallbackUrl.searchParams.set('lat', String(lat));
-            fallbackUrl.searchParams.set('lon', String(lng));
-            fallbackUrl.searchParams.set('addressdetails', '1');
-            const fallbackResponse = await fetch(fallbackUrl.toString(), { cache: 'no-store' });
-            if (!fallbackResponse.ok) return null;
-            const fallbackPayload = await fallbackResponse.json().catch(() => null);
-            if (!fallbackPayload) return null;
-            const derived = deriveGeoAddress(fallbackPayload);
-            return {
-                address: derived.address,
-                locality: derived.locality,
-                payload: fallbackPayload
-            };
-        } catch (_) {
-            return null;
-        }
+        // Intenta el fallback igual más abajo.
+    }
+
+    try {
+        const fallbackUrl = new URL('https://nominatim.openstreetmap.org/reverse');
+        fallbackUrl.searchParams.set('format', 'jsonv2');
+        fallbackUrl.searchParams.set('lat', String(lat));
+        fallbackUrl.searchParams.set('lon', String(lng));
+        fallbackUrl.searchParams.set('addressdetails', '1');
+        const fallbackResponse = await fetch(fallbackUrl.toString(), {
+            cache: 'no-store',
+            headers: { 'Accept-Language': 'es-AR,es;q=0.9,en;q=0.7' }
+        });
+        return await parseResponse(fallbackResponse);
+    } catch (_) {
+        return null;
     }
 }
 
