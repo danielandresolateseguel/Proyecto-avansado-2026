@@ -502,6 +502,25 @@ function initDeliveryGeoUI() {
         if (!esperaPhoneInput.getAttribute('name')) esperaPhoneInput.setAttribute('name', 'pickup_phone');
     }
 
+    const defaultAddressPlaceholder = addressInput ? String(addressInput.getAttribute('placeholder') || '') : '';
+    const defaultLocalityPlaceholder = localityInput ? String(localityInput.getAttribute('placeholder') || '') : '';
+
+    const setGeoResolvingState = (resolving) => {
+        const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
+        if (liveAddressInput) {
+            const currentValue = String(liveAddressInput.value || '').trim();
+            liveAddressInput.placeholder = resolving && !currentValue
+                ? 'Completando dirección...'
+                : defaultAddressPlaceholder;
+        }
+        if (liveLocalityInput) {
+            const currentValue = String(liveLocalityInput.value || '').trim();
+            liveLocalityInput.placeholder = resolving && !currentValue
+                ? 'Completando localidad...'
+                : defaultLocalityPlaceholder;
+        }
+    };
+
     const lockAddressInputs = () => {
         const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
         const hasGeo = Number.isFinite(parseFloat((latEl.value || '').trim())) && Number.isFinite(parseFloat((lngEl.value || '').trim()));
@@ -563,26 +582,29 @@ function initDeliveryGeoUI() {
     });
 
     const tryAutofillFromGeo = async (lat, lng) => {
+        setGeoResolvingState(true);
         const resolved = await reverseGeocodeFromCoords(lat, lng);
-        if (!resolved) return null;
+        if (!resolved) {
+            setGeoResolvingState(false);
+            return null;
+        }
         const applied = applyGeoAutofill(resolved.address, resolved.locality);
         if (!applied.address && !applied.locality) {
             console.warn('Geolocalización sin dirección utilizable:', resolved.payload);
         }
+        setGeoResolvingState(false);
         lockAddressInputs();
         return applied;
     };
 
     const renderFromValues = (options = {}) => {
-        const { resolving = false } = options || {};
         const lat = parseFloat((latEl.value || '').trim());
         const lng = parseFloat((lngEl.value || '').trim());
         const accuracy = parseFloat((accEl.value || '').trim());
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { setPreview(''); return; }
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
         const accTxt = Number.isFinite(accuracy) ? ` (precisión aprox. ${Math.round(accuracy)}m)` : '';
-        const resolvingTxt = resolving ? ' <span style="color:#6b7280;">Completando dirección...</span>' : '';
-        setPreview(`Ubicación lista${accTxt}: <a href="${url}" target="_blank" rel="noopener">ver en mapa</a>${resolvingTxt}`);
+        setPreview(`Ubicación lista${accTxt}: <a href="${url}" target="_blank" rel="noopener">ver en mapa</a>`);
     };
 
     try {
@@ -601,9 +623,11 @@ function initDeliveryGeoUI() {
                 lockAddressInputs();
                 const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
                 if ((!a || !l) && ((liveAddressInput && !(liveAddressInput.value || '').trim()) || (liveLocalityInput && !(liveLocalityInput.value || '').trim()))) {
-                    renderFromValues({ resolving: true });
+                    setGeoResolvingState(true);
+                    renderFromValues();
                     (async () => {
                         const res = await refreshGeoFromStoredCoords({ retry: true });
+                        if (!res) setGeoResolvingState(false);
                         if (!res) return;
                         try {
                             const saved2 = sessionStorage.getItem('delivery_geo');
@@ -645,9 +669,11 @@ function initDeliveryGeoUI() {
                             locality: liveLocalityInput ? String(liveLocalityInput.value || '').trim() : ''
                         }));
                     } catch (_) {}
-                    renderFromValues({ resolving: true });
+                    setGeoResolvingState(true);
+                    renderFromValues();
                     (async () => {
                         const res = await refreshGeoFromStoredCoords({ retry: true });
+                        if (!res) setGeoResolvingState(false);
                         if (res && (res.address || res.locality)) {
                             try {
                                 const saved2 = sessionStorage.getItem('delivery_geo');
