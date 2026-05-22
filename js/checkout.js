@@ -573,14 +573,16 @@ function initDeliveryGeoUI() {
         return applied;
     };
 
-    const renderFromValues = () => {
+    const renderFromValues = (options = {}) => {
+        const { resolving = false } = options || {};
         const lat = parseFloat((latEl.value || '').trim());
         const lng = parseFloat((lngEl.value || '').trim());
         const accuracy = parseFloat((accEl.value || '').trim());
         if (!Number.isFinite(lat) || !Number.isFinite(lng)) { setPreview(''); return; }
         const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`;
         const accTxt = Number.isFinite(accuracy) ? ` (precisión aprox. ${Math.round(accuracy)}m)` : '';
-        setPreview(`Ubicación lista${accTxt}: <a href="${url}" target="_blank" rel="noopener">ver en mapa</a>`);
+        const resolvingTxt = resolving ? ' <span style="color:#6b7280;">Completando dirección...</span>' : '';
+        setPreview(`Ubicación lista${accTxt}: <a href="${url}" target="_blank" rel="noopener">ver en mapa</a>${resolvingTxt}`);
     };
 
     try {
@@ -599,6 +601,7 @@ function initDeliveryGeoUI() {
                 lockAddressInputs();
                 const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
                 if ((!a || !l) && ((liveAddressInput && !(liveAddressInput.value || '').trim()) || (liveLocalityInput && !(liveLocalityInput.value || '').trim()))) {
+                    renderFromValues({ resolving: true });
                     (async () => {
                         const res = await refreshGeoFromStoredCoords({ retry: true });
                         if (!res) return;
@@ -642,7 +645,7 @@ function initDeliveryGeoUI() {
                             locality: liveLocalityInput ? String(liveLocalityInput.value || '').trim() : ''
                         }));
                     } catch (_) {}
-                    renderFromValues();
+                    renderFromValues({ resolving: true });
                     (async () => {
                         const res = await refreshGeoFromStoredCoords({ retry: true });
                         if (res && (res.address || res.locality)) {
