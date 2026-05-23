@@ -691,6 +691,115 @@
       color: #4b5563;
       font-weight: 600;
     }
+    .delivery-toolbar {
+      display: grid;
+      gap: 10px;
+      margin: 10px 0 8px;
+    }
+    .delivery-toolbar-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    .delivery-toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      background: #f8fafc;
+    }
+    .delivery-toolbar-group.filters {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border-color: #dbe4f3;
+    }
+    .delivery-toolbar-group.route-actions {
+      background: #f8fbff;
+      border-color: #dbe4f3;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+    .delivery-toolbar-group.route-actions::-webkit-scrollbar {
+      height: 6px;
+    }
+    .delivery-toolbar-group.route-actions::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+    .delivery-toolbar-group.utilities {
+      background: #ffffff;
+    }
+    .delivery-filter-field {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 4px 10px;
+      border: 1px solid #d6e0ee;
+      border-radius: 12px;
+      background: #ffffff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 16px rgba(59, 130, 246, 0.06);
+    }
+    .delivery-filter-field span {
+      font-size: 12px;
+      font-weight: 800;
+      color: #475569;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .delivery-filter-field select {
+      min-width: 128px;
+      height: 30px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      background: #f8fafc;
+      color: #0f172a;
+      font-weight: 700;
+      padding: 0 10px;
+      outline: none;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+    .delivery-filter-field select:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+      background: #ffffff;
+    }
+    .delivery-toolbar-group.route-actions button {
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+    .delivery-toolbar-title {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-right: 2px;
+    }
+    .delivery-toolbar-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .delivery-toolbar-info .delivery-run-chip,
+    .delivery-toolbar-info .delivery-count-chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #eef2ff;
+      color: #4338ca;
+    }
     .delivery-summary {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -792,6 +901,10 @@
       align-items: center;
       gap: 8px;
       margin: 8px 0 12px;
+      padding: 8px 10px;
+      border: 1px dashed #cbd5e1;
+      border-radius: 12px;
+      background: #f8fafc;
     }
     .delivery-bulk-bar button {
       min-height: 34px;
@@ -822,6 +935,17 @@
       .archived .controls { flex-direction: row !important; align-items: center !important; flex-wrap: wrap !important; }
       .archived .controls > * { width: auto !important; }
       .archived .controls button { width: auto !important; flex: 0 0 auto !important; }
+      .delivery-toolbar-group {
+        width: 100%;
+      }
+      .delivery-toolbar-info {
+        width: 100%;
+      }
+      .delivery-toolbar-info .delivery-run-chip,
+      .delivery-toolbar-info .delivery-count-chip {
+        width: 100%;
+        justify-content: center;
+      }
     }
 
     /* Responsivo: evitar scroll horizontal en móviles */
@@ -1593,49 +1717,60 @@
     </details>
     <details class="delivered" id="delivery-box" style="display:none;">
       <summary>Repartos</summary>
-      <div class="pager" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <label>Ver
-            <select id="delivery-filter">
-              <option value="mine">Mis pedidos</option>
-              <option value="unassigned">Sin asignar</option>
-              <option value="assigned">Asignados</option>
-              <option value="open">Abiertos</option>
-              <option value="all">Todos</option>
-            </select>
-          </label>
-          <label>Estado
-            <select id="delivery-status-filter">
-              <option value="">Todos</option>
-              <option value="pending">Pendiente</option>
-              <option value="assigned">Asignado</option>
-              <option value="en_route">En camino</option>
-              <option value="delivered">Entregado</option>
-              <option value="failed">Falló</option>
-            </select>
-          </label>
-          <button id="delivery-mine" style="background:#1976d2; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Mis pedidos</button>
-          <button id="delivery-unassigned" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Sin asignar</button>
-          <button id="delivery-select-visible" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; border-radius:4px; cursor:pointer;">Seleccionar visibles</button>
-          <button id="delivery-take-selected" style="background:#1d4ed8; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar seleccionados</button>
-          <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Empezar ruta</button>
-          <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
-          <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
-          <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cerrar salida</button>
-          <button id="delivery-reload">Recargar</button>
-          <label class="small" style="display:flex; align-items:center; gap:6px; color:#666;">
-            <input type="checkbox" id="delivery-auto-next" />
-            Auto siguiente
-          </label>
-          <label class="small delivery-compact-toggle">
-            <input type="checkbox" id="delivery-compact-mode" />
-            Salida simple
-          </label>
-          <span id="delivery-count" class="small" style="color:#666;"></span>
-          <span id="delivery-run-label" class="small" style="color:#666;"></span>
+      <div class="delivery-toolbar">
+        <div class="delivery-toolbar-row">
+          <div class="delivery-toolbar-group filters">
+            <span class="delivery-toolbar-title">Filtro</span>
+            <label class="delivery-filter-field">
+              <span>Ver</span>
+              <select id="delivery-filter">
+                <option value="mine">Mis pedidos</option>
+                <option value="unassigned">Sin asignar</option>
+                <option value="assigned">Asignados</option>
+                <option value="open">Abiertos</option>
+                <option value="all">Todos</option>
+              </select>
+            </label>
+            <label class="delivery-filter-field">
+              <span>Estado</span>
+              <select id="delivery-status-filter">
+                <option value="">Todos</option>
+                <option value="pending">Pendiente</option>
+                <option value="assigned">Asignado</option>
+                <option value="en_route">En camino</option>
+                <option value="delivered">Entregado</option>
+                <option value="failed">Falló</option>
+              </select>
+            </label>
+          </div>
+          <div class="delivery-toolbar-group route-actions">
+            <span class="delivery-toolbar-title">Salida</span>
+            <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Empezar ruta</button>
+            <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
+            <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
+            <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cerrar salida</button>
+          </div>
+          <div class="delivery-toolbar-group utilities">
+            <span class="delivery-toolbar-title">Opciones</span>
+            <button id="delivery-reload">Recargar</button>
+            <label class="small" style="display:flex; align-items:center; gap:6px; color:#666;">
+              <input type="checkbox" id="delivery-auto-next" />
+              Auto siguiente
+            </label>
+            <label class="small delivery-compact-toggle">
+              <input type="checkbox" id="delivery-compact-mode" />
+              Salida simple
+            </label>
+          </div>
+          <div class="delivery-toolbar-info">
+            <span id="delivery-count" class="delivery-count-chip"></span>
+            <span id="delivery-run-label" class="delivery-run-chip"></span>
+          </div>
         </div>
       </div>
       <div class="delivery-bulk-bar">
+        <button id="delivery-select-visible" style="background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:4px 8px; border-radius:4px; cursor:pointer;">Seleccionar visibles</button>
+        <button id="delivery-take-selected" style="background:#1d4ed8; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar seleccionados</button>
         <span id="delivery-selection-count" class="delivery-bulk-status"></span>
       </div>
       <div id="delivery-summary" class="delivery-summary" style="display:none;"></div>
@@ -4466,14 +4601,16 @@
       const el = document.getElementById('delivery-run-label');
       if (!el) return;
       const role = String(currentUserRole || '').trim().toLowerCase();
-      if (role !== 'repartidor') { el.textContent = ''; return; }
+      if (role !== 'repartidor') { el.textContent = ''; el.style.display = 'none'; return; }
       try {
         const j = await fetchActiveDeliveryRun();
         const run = j && j.run ? j.run : null;
-        if (!run || !run.id) { el.textContent = ''; return; }
+        if (!run || !run.id) { el.textContent = ''; el.style.display = 'none'; return; }
         el.textContent = `Salida activa: #${run.id}`;
+        el.style.display = 'inline-flex';
       } catch (_) {
         el.textContent = '';
+        el.style.display = 'none';
       }
     }
     function _normUser(s) {
@@ -6432,20 +6569,27 @@
       const statusEl = document.getElementById('delivery-selection-count');
       const takeBtn = document.getElementById('delivery-take-selected');
       const selectBtn = document.getElementById('delivery-select-visible');
+      const bulkBar = document.querySelector('#delivery-box .delivery-bulk-bar');
+      const role = String(currentUserRole || '').trim().toLowerCase();
       const visibleIds = getBulkSelectableDeliveryIds(orders);
       const selectedVisible = visibleIds.filter(id => selectedDeliveryIds.has(id));
+      const allowBulk = role === 'repartidor' && String(deliveryFilter || '') === 'unassigned';
+      if (bulkBar) bulkBar.style.display = allowBulk ? 'flex' : 'none';
       if (statusEl) {
-        if (!visibleIds.length) statusEl.textContent = '';
+        if (!visibleIds.length || !allowBulk) statusEl.textContent = '';
         else statusEl.textContent = `${selectedVisible.length} seleccionado(s) de ${visibleIds.length} sin asignar`;
       }
       if (takeBtn) {
-        takeBtn.disabled = selectedVisible.length === 0;
-        takeBtn.style.opacity = selectedVisible.length === 0 ? '0.55' : '';
-        takeBtn.style.cursor = selectedVisible.length === 0 ? 'not-allowed' : 'pointer';
+        const disabled = !allowBulk || selectedVisible.length === 0;
+        takeBtn.disabled = disabled;
+        takeBtn.style.opacity = disabled ? '0.55' : '';
+        takeBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
       }
       if (selectBtn) {
-        selectBtn.disabled = visibleIds.length === 0;
-        selectBtn.style.opacity = visibleIds.length === 0 ? '0.55' : '';
+        const disabled = !allowBulk || visibleIds.length === 0;
+        selectBtn.disabled = disabled;
+        selectBtn.style.opacity = disabled ? '0.55' : '';
+        selectBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
         selectBtn.textContent = visibleIds.length && selectedVisible.length === visibleIds.length
           ? 'Quitar visibles'
           : 'Seleccionar visibles';
@@ -6553,7 +6697,10 @@
       const list = document.getElementById('delivery-list');
       const countEl = document.getElementById('delivery-count');
       const compactMode = !!deliveryCompactMode;
-      if (countEl) countEl.textContent = `(${orders.length})`;
+      if (countEl) {
+        countEl.textContent = orders.length ? `${orders.length} pedido(s)` : '';
+        countEl.style.display = orders.length ? 'inline-flex' : 'none';
+      }
       renderDeliverySummary(orders);
       const visibleSelectableIds = new Set(getBulkSelectableDeliveryIds(orders));
       Array.from(selectedDeliveryIds).forEach(id => {
@@ -6683,7 +6830,7 @@
           ? `<button class="delivery-unassign" data-id="${safeDeliveryId}" style="background:#607d8b; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Devolver</button>`
           : '';
         const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${safeDeliveryId}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
-        const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Ver</button>`;
+        const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Detalle</button>`;
 
         if (compactMode) {
           const primaryActions = [assignBtn, enRouteBtn, payDeliveredBtn, deliveredBtn, payBtn, mapBtn].filter(Boolean).join('');
