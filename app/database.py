@@ -475,6 +475,7 @@ def init_db_postgres(cur):
             name TEXT NOT NULL,
             price INTEGER NOT NULL,
             stock INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
             active INTEGER NOT NULL DEFAULT 1,
             details TEXT,
             variants_json TEXT,
@@ -485,6 +486,13 @@ def init_db_postgres(cur):
         """
     )
     cur.execute("CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_slug)")
+    try:
+        cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
     
     # Admin Users
     cur.execute(
@@ -822,6 +830,7 @@ def init_db_sqlite(cur):
             name TEXT NOT NULL,
             price INTEGER NOT NULL,
             stock INTEGER NOT NULL DEFAULT 0,
+            position INTEGER NOT NULL DEFAULT 0,
             active INTEGER NOT NULL DEFAULT 1,
             details TEXT,
             variants_json TEXT,
@@ -832,6 +841,10 @@ def init_db_sqlite(cur):
         """
     )
     cur.execute("CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_slug)")
+    try:
+        cur.execute("ALTER TABLE products ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
     
     # Admin Users
     cur.execute(

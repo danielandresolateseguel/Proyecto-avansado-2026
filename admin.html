@@ -695,12 +695,17 @@
       display: grid;
       gap: 10px;
       margin: 10px 0 8px;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: hidden;
     }
     .delivery-toolbar-row {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
+      min-width: 0;
+      max-width: 100%;
     }
     .delivery-toolbar-group {
       display: flex;
@@ -711,6 +716,9 @@
       border: 1px solid #e2e8f0;
       border-radius: 12px;
       background: #f8fafc;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .delivery-toolbar-group.filters {
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
@@ -744,6 +752,9 @@
       border-radius: 12px;
       background: #ffffff;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 16px rgba(59, 130, 246, 0.06);
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .delivery-filter-field span {
       font-size: 12px;
@@ -754,6 +765,7 @@
     }
     .delivery-filter-field select {
       min-width: 128px;
+      max-width: 100%;
       height: 30px;
       border: 1px solid #cbd5e1;
       border-radius: 10px;
@@ -782,13 +794,18 @@
       margin-right: 2px;
     }
     .delivery-toolbar-info {
-      display: flex;
+      display: none;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
       color: #64748b;
       font-size: 12px;
       font-weight: 700;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .delivery-toolbar-info.has-content {
+      display: flex;
     }
     .delivery-toolbar-info .delivery-run-chip,
     .delivery-toolbar-info .delivery-count-chip {
@@ -799,6 +816,10 @@
       border-radius: 999px;
       background: #eef2ff;
       color: #4338ca;
+    }
+    .delivery-toolbar-info .delivery-run-chip:empty,
+    .delivery-toolbar-info .delivery-count-chip:empty {
+      display: none;
     }
     .delivery-summary {
       display: grid;
@@ -937,6 +958,7 @@
       .archived .controls button { width: auto !important; flex: 0 0 auto !important; }
       .delivery-toolbar-group {
         width: 100%;
+        max-width: 100%;
       }
       .delivery-toolbar-info {
         width: 100%;
@@ -945,6 +967,10 @@
       .delivery-toolbar-info .delivery-count-chip {
         width: 100%;
         justify-content: center;
+        box-sizing: border-box;
+      }
+      .delivery-toolbar-group.route-actions {
+        width: 100%;
       }
     }
 
@@ -1991,6 +2017,7 @@
             <th>ID</th>
             <th>Producto</th>
             <th>Detalles</th>
+            <th>Orden</th>
             <th>Precio</th>
             <th>Stock</th>
             <th>Activo</th>
@@ -2265,6 +2292,11 @@
             <div class="edit-form-group">
               <label>Stock</label>
               <input type="number" id="edit-prod-stock" min="0">
+            </div>
+            <div class="edit-form-group">
+              <label>Posición en la categoría</label>
+              <input type="number" id="edit-prod-position" min="1" placeholder="1">
+              <small>Si el producto tiene varias categorías, se usa la primera seleccionada para el orden.</small>
             </div>
             <div class="edit-form-group">
               <label>Sección en Carta Online</label>
@@ -2801,6 +2833,7 @@
     const prodEditImage = document.getElementById('edit-prod-image');
     const prodEditPrice = document.getElementById('edit-prod-price');
     const prodEditStock = document.getElementById('edit-prod-stock');
+    const prodEditPosition = document.getElementById('edit-prod-position');
     const prodEditActive = document.getElementById('edit-prod-active');
     const prodEditLastMod = document.getElementById('edit-prod-last-mod');
     const prodEditSection = document.getElementById('edit-prod-section');
@@ -2818,6 +2851,38 @@
 
     let currentEditingProduct = null;
 
+    function parseAdminProductVariants(product) {
+      try {
+        if (!product || !product.variants) return {};
+        if (typeof product.variants === 'string') {
+          return JSON.parse(product.variants || '{}') || {};
+        }
+        return product.variants || {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function buildProductOrderMeta(product) {
+      const variants = parseAdminProductVariants(product);
+      const catsRaw = variants.food_categories;
+      const cats = Array.isArray(catsRaw)
+        ? catsRaw.map(v => String(v || '').trim()).filter(Boolean)
+        : (typeof catsRaw === 'string' ? catsRaw.split(',').map(v => v.trim()).filter(Boolean) : []);
+      const section = String(variants.section || '').trim();
+      const interest = String(variants.interest_tag || '').trim();
+      const firstCat = cats.length ? cats[0] : '';
+      let label = 'Sin categoría';
+      if (firstCat) label = firstCat;
+      else if (section === 'featured') label = 'Destacados';
+      else if (section === 'interest') label = interest ? `Interés: ${interest}` : 'Por interés';
+      else if (section === 'main') label = 'Menú principal';
+      return {
+        label,
+        position: Math.max(0, parseInt((product && product.position) || '0', 10) || 0)
+      };
+    }
+
     function openProductEditModal(product) {
       if (!prodEditModal) return;
       currentEditingProduct = product;
@@ -2829,6 +2894,7 @@
       prodEditImage.value = product.image_url || '';
       prodEditPrice.value = product.price;
       prodEditStock.value = product.stock;
+      if (prodEditPosition) prodEditPosition.value = product.position || '';
       prodEditActive.checked = !!product.active;
       prodEditLastMod.textContent = product.last_modified ? 'Última modificación: ' + formatARDate(product.last_modified) : 'Sin modificaciones recientes';
 
@@ -3043,6 +3109,10 @@
                 stock: parseInt(prodEditStock.value || '0', 10),
                 active: prodEditActive.checked
             };
+            const positionRaw = String(prodEditPosition && prodEditPosition.value || '').trim();
+            if (positionRaw) {
+                payload.position = Math.max(1, parseInt(positionRaw, 10) || 1);
+            }
 
             // Construir objeto variants para guardar sección y categorías
             let variants = {};
@@ -4601,17 +4671,27 @@
       const el = document.getElementById('delivery-run-label');
       if (!el) return;
       const role = String(currentUserRole || '').trim().toLowerCase();
-      if (role !== 'repartidor') { el.textContent = ''; el.style.display = 'none'; return; }
+      if (role !== 'repartidor') { el.textContent = ''; el.style.display = 'none'; refreshDeliveryToolbarInfoVisibility(); return; }
       try {
         const j = await fetchActiveDeliveryRun();
         const run = j && j.run ? j.run : null;
-        if (!run || !run.id) { el.textContent = ''; el.style.display = 'none'; return; }
+        if (!run || !run.id) { el.textContent = ''; el.style.display = 'none'; refreshDeliveryToolbarInfoVisibility(); return; }
         el.textContent = `Salida activa: #${run.id}`;
         el.style.display = 'inline-flex';
       } catch (_) {
         el.textContent = '';
         el.style.display = 'none';
       }
+      refreshDeliveryToolbarInfoVisibility();
+    }
+    function refreshDeliveryToolbarInfoVisibility() {
+      const box = document.querySelector('#delivery-box .delivery-toolbar-info');
+      const countEl = document.getElementById('delivery-count');
+      const runEl = document.getElementById('delivery-run-label');
+      if (!box) return;
+      const hasCount = !!String(countEl && countEl.textContent || '').trim();
+      const hasRun = !!String(runEl && runEl.textContent || '').trim();
+      box.classList.toggle('has-content', hasCount || hasRun);
     }
     function _normUser(s) {
       return String(s || '').trim().toLowerCase();
@@ -6701,6 +6781,7 @@
         countEl.textContent = orders.length ? `${orders.length} pedido(s)` : '';
         countEl.style.display = orders.length ? 'inline-flex' : 'none';
       }
+      refreshDeliveryToolbarInfoVisibility();
       renderDeliverySummary(orders);
       const visibleSelectableIds = new Set(getBulkSelectableDeliveryIds(orders));
       Array.from(selectedDeliveryIds).forEach(id => {
@@ -7707,19 +7788,22 @@
     }
     async function renderInventory() {
       if (!invTbody) return;
-      invTbody.innerHTML = '<tr><td colspan="7" class="small">Cargando...</td></tr>';
+      invTbody.innerHTML = '<tr><td colspan="8" class="small">Cargando...</td></tr>';
       const items = await fetchProducts(true);
       invTbody.innerHTML = '';
       const imobile = document.getElementById('inventory-mobile');
       if (imobile) imobile.innerHTML = '';
       if (!items.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="7" class="small">Sin productos</td>';
+        tr.innerHTML = '<td colspan="8" class="small">Sin productos</td>';
         invTbody.appendChild(tr);
         if (imobile) imobile.innerHTML = '<div class="small">Sin productos</div>';
         return;
       }
       for (const p of items) {
+        const orderMeta = buildProductOrderMeta(p);
+        const orderText = orderMeta.position > 0 ? `${orderMeta.position}` : '-';
+        const safeOrderLabel = escapeAdminHtml(orderMeta.label);
         const tr = document.createElement('tr');
         const safeProductName = escapeAdminHtml(p.name);
         const safeDetails = escapeAdminHtml(p.details || '-');
@@ -7727,6 +7811,7 @@
           <td>${p.id}</td>
           <td>${safeProductName}</td>
           <td><div class="small" style="max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${safeDetails}</div></td>
+          <td><div>${orderText}</div><div class="small">${safeOrderLabel}</div></td>
           <td>$${p.price}</td>
           <td>${p.stock}</td>
           <td>${p.active ? '<span class="status-badge status-listo">Activo</span>' : '<span class="status-badge status-pendiente">Inactivo</span>'}</td>
@@ -7745,6 +7830,7 @@
             <div class="title">${p.id} · ${p.name}</div>
             <div class="meta">${p.details||'Sin detalles'}</div>
             <div class="grid">
+              <div>Orden: ${orderText} · ${safeOrderLabel}</div>
               <div>Price: $${p.price}</div>
               <div>Stock: ${p.stock}</div>
               <div>${p.active ? '<span class="status-badge status-listo">Activo</span>' : '<span class="status-badge status-pendiente">Inactivo</span>'}</div>
@@ -15488,6 +15574,11 @@
           </div>
         </div>
         <div>
+          <label>Posición en la categoría</label>
+          <input type="number" id="create-prod-position" min="1" placeholder="Vacío = al final" style="width:100%; padding:8px;">
+          <small>Si el producto tiene varias categorías, se usa la primera seleccionada para definir el orden.</small>
+        </div>
+        <div>
           <label>Sección en Carta Online</label>
           <select id="create-prod-section" style="width:100%; padding:8px;">
             <option value="">-- Sin asignar --</option>
@@ -15834,6 +15925,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pDetails = document.getElementById('create-prod-details');
   const pPrice = document.getElementById('create-prod-price');
   const pStock = document.getElementById('create-prod-stock');
+  const pPosition = document.getElementById('create-prod-position');
   const pSection = document.getElementById('create-prod-section');
   const pInterest = document.getElementById('create-prod-interest');
   const pFoodCats = document.getElementById('create-prod-food-cats');
@@ -15884,6 +15976,7 @@ document.addEventListener('DOMContentLoaded', () => {
       pDetails.value = '';
       pPrice.value = '';
       pStock.value = '';
+      if (pPosition) pPosition.value = '';
       pSection.value = '';
       if (pInterest) pInterest.value = '';
       if (pFoodCats) Array.from(pFoodCats.options || []).forEach(o => { o.selected = false; });
@@ -15975,6 +16068,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const name = pName.value.trim();
       const price = parseInt(pPrice.value) || 0;
       const stock = parseInt(pStock.value) || 0;
+      const positionRaw = String(pPosition && pPosition.value || '').trim();
       // Determinar el tenant correctamente desde la sesión/UI actual
       const tenantInputEl = document.getElementById('tenant-input');
       const tenant = (typeof currentTenantSlug !== 'undefined' && currentTenantSlug) 
@@ -16021,6 +16115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         details: pDetails.value,
         price: price,
         stock: stock,
+        position: positionRaw ? Math.max(1, parseInt(positionRaw, 10) || 1) : undefined,
         section: pSection.value,
         interest_tag: pInterest ? pInterest.value : '',
         food_categories: selectedCats,

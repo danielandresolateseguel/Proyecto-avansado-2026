@@ -671,6 +671,31 @@ export async function initDynamicProducts() {
                 if (section === 'interest') existingInterestIds.add(p.id);
             });
         });
+
+        const productOrder = new Map();
+        arr.forEach((p, index) => {
+            if (!p || !p.id) return;
+            productOrder.set(String(p.id), index);
+        });
+        const reorderGrid = (grid) => {
+            if (!grid) return;
+            const cards = Array.from(grid.children || []);
+            cards.sort((a, b) => {
+                const getId = (el) => {
+                    const direct = String(el.getAttribute('data-product-id') || '').trim();
+                    if (direct) return direct;
+                    const btn = el.querySelector('.add-to-cart-btn');
+                    return String(btn && btn.getAttribute('data-id') || '').trim();
+                };
+                const aIdx = productOrder.has(getId(a)) ? productOrder.get(getId(a)) : Number.MAX_SAFE_INTEGER;
+                const bIdx = productOrder.has(getId(b)) ? productOrder.get(getId(b)) : Number.MAX_SAFE_INTEGER;
+                return aIdx - bIdx;
+            });
+            cards.forEach(card => grid.appendChild(card));
+        };
+        reorderGrid(featuredGrid);
+        reorderGrid(mainGrid);
+        reorderGrid(interestGrid);
         bindAddToCartEvents(document);
 
         // Re-initialize modals and search items after dynamic content is loaded

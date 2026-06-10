@@ -15,6 +15,102 @@ def _session_tenant_matches(slug):
     slug = str(slug or '').strip()
     return (not session_tenant) or (not slug) or session_tenant == slug
 
+def _safe_json_loads(raw, fallback=None):
+    try:
+        if isinstance(raw, dict):
+            return raw
+        text = str(raw or '').strip()
+        if not text:
+            return {} if fallback is None else fallback
+        return json.loads(text)
+    except Exception:
+        return {} if fallback is None else fallback
+
+def _normalize_food_categories(value):
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in value.split(',') if part.strip()]
+    return []
+
+def _product_scope_from_parts(section='', interest_tag='', food_categories=None):
+    sec = str(section or '').strip().lower()
+    cats = _normalize_food_categories(food_categories)
+    if cats:
+        return f"main:{cats[0].lower()}"
+    if sec == 'interest':
+        tag = str(interest_tag or '').strip().lower()
+        return f"interest:{tag or '__all__'}"
+    if sec == 'featured':
+        return 'featured:__all__'
+    if sec == 'main':
+        return 'main:__all__'
+    return 'unassigned:__all__'
+
+def _product_scope_from_variants(raw_variants):
+    variants = _safe_json_loads(raw_variants, {})
+    return _product_scope_from_parts(
+        variants.get('section') or '',
+        variants.get('interest_tag') or '',
+        variants.get('food_categories') or []
+    )
+
+def _next_product_position(cur, tenant_slug):
+    cur.execute("SELECT COALESCE(MAX(position), 0) FROM products WHERE tenant_slug = ?", (tenant_slug,))
+    row = cur.fetchone()
+    try:
+        return int((row[0] if row else 0) or 0) + 1
+    except Exception:
+        return 1
+
+def _resequence_scope(cur, tenant_slug, target_product_id, scope_key, desired_position=None):
+    cur.execute(
+        """
+        SELECT product_id, name, COALESCE(position, 0) AS position, COALESCE(variants_json, '') AS variants_json
+        FROM products
+        WHERE tenant_slug = ?
+        """,
+        (tenant_slug,)
+    )
+    rows = cur.fetchall() or []
+    scoped = []
+    target = None
+    for row in rows:
+        pid = str(row[0] or '').strip()
+        if not pid:
+            continue
+        row_scope = _product_scope_from_variants(row[3] or '')
+        if row_scope != scope_key:
+            continue
+        item = {
+            'product_id': pid,
+            'name': str(row[1] or ''),
+            'position': int(row[2] or 0),
+        }
+        scoped.append(item)
+        if pid == str(target_product_id or '').strip():
+            target = item
+    if not scoped or target is None:
+        return
+    scoped.sort(key=lambda item: (int(item['position'] or 0), str(item['name'] or '').lower(), item['product_id']))
+    scoped = [item for item in scoped if item['product_id'] != target['product_id']]
+    insert_at = len(scoped)
+    if desired_position is not None:
+        try:
+            requested = int(desired_position)
+        except Exception:
+            requested = len(scoped) + 1
+        requested = max(1, requested)
+        insert_at = min(len(scoped), requested - 1)
+    scoped.insert(insert_at, target)
+    for idx, item in enumerate(scoped, start=1):
+        if int(item['position'] or 0) == idx:
+            continue
+        cur.execute(
+            "UPDATE products SET position = ?, last_modified = ? WHERE tenant_slug = ? AND product_id = ?",
+            (idx, datetime.utcnow().isoformat(), tenant_slug, item['product_id'])
+        )
+
 @bp.route('/products', methods=['GET'])
 def list_products():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
@@ -22,13 +118,13 @@ def list_products():
     conn = get_db()
     cur = conn.cursor()
     
-    query = "SELECT product_id, name, price, stock, active, COALESCE(details,'') as details, COALESCE(variants_json,'') as variants_json, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url FROM products WHERE tenant_slug = ?"
+    query = "SELECT product_id, name, price, stock, COALESCE(position, 0) as position, active, COALESCE(details,'') as details, COALESCE(variants_json,'') as variants_json, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url FROM products WHERE tenant_slug = ?"
     params = [tenant_slug]
     
     if not include_inactive:
         query += " AND active = 1"
         
-    query += " ORDER BY name ASC"
+    query += " ORDER BY CASE WHEN COALESCE(position, 0) <= 0 THEN 1 ELSE 0 END ASC, COALESCE(position, 0) ASC, name ASC"
     
     cur.execute(query, params)
     rows = cur.fetchall()
@@ -45,11 +141,12 @@ def list_products():
                 'name': r[1], 
                 'price': int(r[2] or 0), 
                 'stock': int(r[3] or 0), 
-                'active': bool(r[4]), 
-                'details': r[5] or '', 
-                'variants': r[6] or '', 
-                'last_modified': r[7] or '', 
-                'image_url': r[8] or ''
+                'position': int(r[4] or 0),
+                'active': bool(r[5]), 
+                'details': r[6] or '', 
+                'variants': r[7] or '', 
+                'last_modified': r[8] or '', 
+                'image_url': r[9] or ''
             })
             
     return jsonify({'products': items, 'tenant_slug': tenant_slug})
@@ -73,6 +170,7 @@ def create_product():
         return jsonify({'error': 'Precio inválido'}), 400
         
     stock = int(data.get('stock', 0))
+    position = data.get('position')
     details = data.get('details', '')
     image_url = data.get('image_url', '')
     section = data.get('section', '')
@@ -96,6 +194,13 @@ def create_product():
         cats = [c.strip() for c in food_categories.split(',') if c.strip()]
         if cats: variants['food_categories'] = cats
     variants_json = json.dumps(variants)
+    scope_key = _product_scope_from_parts(section, interest_tag, food_categories)
+    desired_position = None
+    if position not in (None, ''):
+        try:
+            desired_position = max(1, int(position))
+        except Exception:
+            return jsonify({'error': 'Posición inválida'}), 400
     
     try:
         conn = get_db()
@@ -140,13 +245,17 @@ def create_product():
                 SET name=?, price=?, stock=?, active=1, details=?, variants_json=?, image_url=?, last_modified=?
                 WHERE tenant_slug=? AND product_id=?
             """, (name, price, stock, details, variants_json, image_url, datetime.utcnow().isoformat(), tenant_slug, product_id))
+            if desired_position is not None:
+                _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
             conn.commit()
             return jsonify({'ok': True, 'id': product_id, 'updated': True})
         
+        initial_position = _next_product_position(cur, tenant_slug)
         cur.execute("""
-            INSERT INTO products (tenant_slug, product_id, name, price, stock, active, details, variants_json, image_url, last_modified)
-            VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-        """, (tenant_slug, product_id, name, price, stock, details, variants_json, image_url, datetime.utcnow().isoformat()))
+            INSERT INTO products (tenant_slug, product_id, name, price, stock, position, active, details, variants_json, image_url, last_modified)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        """, (tenant_slug, product_id, name, price, stock, initial_position, details, variants_json, image_url, datetime.utcnow().isoformat()))
+        _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
         conn.commit()
         return jsonify({'ok': True, 'id': product_id, 'created': True})
     except Exception as e:
@@ -204,8 +313,14 @@ def update_product(product_id):
                 fields.append('variants_json = ?')
                 params.append(json.dumps(v or {}))
         except: return jsonify({'error': 'variants inválido'}), 400
+    desired_position = None
+    if 'position' in payload:
+        try:
+            desired_position = max(1, int(payload.get('position')))
+        except Exception:
+            return jsonify({'error': 'position inválida'}), 400
         
-    if not fields: return jsonify({'error': 'sin cambios'}), 400
+    if not fields and desired_position is None: return jsonify({'error': 'sin cambios'}), 400
     fields.append('last_modified = ?')
     params.append(datetime.utcnow().isoformat())
     params.extend([tenant_slug, product_id])
@@ -213,6 +328,11 @@ def update_product(product_id):
     conn = get_db()
     cur = conn.cursor()
     cur.execute(f"UPDATE products SET {', '.join(fields)} WHERE tenant_slug = ? AND product_id = ?", params)
+    if desired_position is not None:
+        cur.execute("SELECT COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, product_id))
+        row = cur.fetchone()
+        scope_key = _product_scope_from_variants(row[0] if row else '')
+        _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
     conn.commit()
     return jsonify({'ok': True, 'product_id': product_id, 'last_modified': params[len(fields)-1]})
 
