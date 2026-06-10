@@ -2814,6 +2814,96 @@
       return origin;
     })();
 
+    function formatUploadFileSize(bytes) {
+      const size = Number(bytes || 0);
+      if (!isFinite(size) || size <= 0) return '0 KB';
+      if (size < 1024) return `${size} B`;
+      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+      return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+    }
+
+    function loadImageElementFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(objectUrl);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error('No se pudo leer la imagen'));
+        };
+        img.src = objectUrl;
+      });
+    }
+
+    async function compressImageForUpload(file, options) {
+      const opts = Object.assign({
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+        outputType: 'image/webp'
+      }, options || {});
+
+      if (!file || !/^image\//i.test(file.type || '')) {
+        return { file, compressed: false, originalSize: Number(file && file.size || 0), finalSize: Number(file && file.size || 0) };
+      }
+      if (/^image\/(gif|svg\+xml)$/i.test(file.type || '')) {
+        return { file, compressed: false, originalSize: Number(file.size || 0), finalSize: Number(file.size || 0) };
+      }
+
+      const img = await loadImageElementFromFile(file);
+      const width = Number(img.naturalWidth || img.width || 0);
+      const height = Number(img.naturalHeight || img.height || 0);
+      if (!width || !height) {
+        return { file, compressed: false, originalSize: Number(file.size || 0), finalSize: Number(file.size || 0) };
+      }
+
+      const scale = Math.min(1, opts.maxWidth / width, opts.maxHeight / height);
+      const targetWidth = Math.max(1, Math.round(width * scale));
+      const targetHeight = Math.max(1, Math.round(height * scale));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        return { file, compressed: false, originalSize: Number(file.size || 0), finalSize: Number(file.size || 0) };
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+      const blob = await new Promise((resolve) => {
+        canvas.toBlob(resolve, opts.outputType, opts.quality);
+      });
+      if (!blob) {
+        return { file, compressed: false, originalSize: Number(file.size || 0), finalSize: Number(file.size || 0) };
+      }
+
+      const originalSize = Number(file.size || 0);
+      const finalSize = Number(blob.size || 0);
+      const resized = targetWidth !== width || targetHeight !== height;
+      if (!finalSize || (!resized && finalSize >= originalSize)) {
+        return { file, compressed: false, originalSize, finalSize: originalSize };
+      }
+
+      const baseName = String(file.name || 'imagen').replace(/\.[^.]+$/, '');
+      const compressedFile = new File([blob], `${baseName}.webp`, {
+        type: opts.outputType,
+        lastModified: Date.now()
+      });
+      return {
+        file: compressedFile,
+        compressed: true,
+        originalSize,
+        finalSize,
+        width: targetWidth,
+        height: targetHeight
+      };
+    }
+
     const statusClasses = {
       por_aprobar: 'status-por_aprobar',
       pendiente: 'status-pendiente',
@@ -2978,8 +3068,9 @@
         prodEditFile.addEventListener('change', async () => {
             if (prodEditFile.files && prodEditFile.files[0]) {
                 const file = prodEditFile.files[0];
+                const processed = await compressImageForUpload(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append('file', processed.file);
                 
                 try {
                     const baseSlug = tenantInput.value.trim() || defaultSlug();
@@ -8825,8 +8916,9 @@
       headerLogoFile.addEventListener('change', async () => {
         if (headerLogoFile.files.length === 0) return;
         const file = headerLogoFile.files[0];
+        const processed = await compressImageForUpload(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.86 });
         const formData = new FormData();
-        formData.append('file', file);
+        formData.append('file', processed.file);
 
         headerLogoUploadBtn.textContent = 'Subiendo...';
         headerLogoUploadBtn.disabled = true;
@@ -8928,8 +9020,9 @@
         fileInput.addEventListener('change', async () => {
            if (fileInput.files.length === 0) return;
            const file = fileInput.files[0];
+           const processed = await compressImageForUpload(file, { maxWidth: 1800, maxHeight: 1800, quality: 0.84 });
            const formData = new FormData();
-           formData.append('file', file);
+           formData.append('file', processed.file);
            
            upBtn.textContent = 'Subiendo...';
            upBtn.disabled = true;
@@ -16035,12 +16128,17 @@ document.addEventListener('DOMContentLoaded', () => {
         previewPlaceholder.style.display = 'none';
       };
       reader.readAsDataURL(file);
+      const processed = await compressImageForUpload(file, { maxWidth: 1600, maxHeight: 1600, quality: 0.82 });
       
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', processed.file);
       
       const statusEl = document.getElementById('create-prod-upload-status');
-      if (statusEl) statusEl.textContent = 'Subiendo imagen...';
+      if (statusEl) {
+        statusEl.textContent = processed.compressed
+          ? `Imagen comprimida: ${formatUploadFileSize(processed.originalSize)} -> ${formatUploadFileSize(processed.finalSize)}. Subiendo...`
+          : 'Subiendo imagen...';
+      }
       
       try {
         if (!csrfToken) await fetchCSRF();
