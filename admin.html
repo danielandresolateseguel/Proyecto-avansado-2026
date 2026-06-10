@@ -8745,19 +8745,29 @@
         headerLogoUploadBtn.textContent = 'Subiendo...';
         headerLogoUploadBtn.disabled = true;
         try {
-          const slug = tenantInput.value.trim() || defaultSlug();
+          const baseSlug = tenantInput.value.trim() || defaultSlug();
+          const slug = (currentTenantSlug && currentTenantSlug.trim()) || baseSlug;
+          if (!csrfToken) await fetchCSRF();
           const url = new URL('/api/upload', API_BASE);
           url.searchParams.set('tenant_slug', slug);
 
           const resp = await wFetch(url.toString(), {
             method: 'POST',
+            headers: {
+              'X-CSRF-Token': csrfToken || ''
+            },
             body: formData
           });
           if (resp.ok) {
             const data = await resp.json();
             headerLogoInput.value = data.url;
           } else {
-            alert('Error al subir imagen');
+            let msg = 'Error al subir imagen';
+            try {
+              const data = await resp.json();
+              if (data && data.error) msg = data.error;
+            } catch (_) {}
+            alert(msg);
           }
         } catch(e) { console.error(e); alert('Error de red'); }
         headerLogoUploadBtn.textContent = 'Subir imagen';
