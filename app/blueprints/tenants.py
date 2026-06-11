@@ -3,6 +3,7 @@ from app.database import get_db, is_postgres
 from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config
 import os
 import json
+import unicodedata
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
@@ -70,6 +71,60 @@ def _can_view_tenant_slug(slug, required_perm=None):
     if required_perm:
         return bool(perms.get(required_perm))
     return bool(perms)
+
+def _slugify_menu_category(value):
+    text = str(value or '').strip().lower()
+    if not text:
+        return ''
+    text = unicodedata.normalize('NFD', text)
+    text = ''.join(ch for ch in text if unicodedata.category(ch) != 'Mn')
+    out = []
+    prev_dash = False
+    for ch in text:
+        if ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        else:
+            if not prev_dash:
+                out.append('-')
+                prev_dash = True
+    return ''.join(out).strip('-')
+
+def _normalize_main_menu_categories(value):
+    if not isinstance(value, list):
+        return []
+    out = []
+    seen = set()
+    for idx, raw in enumerate(value, start=1):
+        label = ''
+        cat_id = ''
+        position = idx
+        if isinstance(raw, dict):
+            label = str(raw.get('label') or raw.get('name') or raw.get('title') or '').strip()
+            cat_id = str(raw.get('id') or raw.get('value') or raw.get('slug') or '').strip()
+            try:
+                position = int(raw.get('position') or idx)
+            except Exception:
+                position = idx
+        elif isinstance(raw, str):
+            label = str(raw).strip()
+        if not label and cat_id:
+            label = cat_id.replace('-', ' ').strip().title()
+        if not cat_id and label:
+            cat_id = _slugify_menu_category(label)
+        norm_id = _slugify_menu_category(cat_id)
+        if not label or not norm_id or norm_id == 'todos' or norm_id in seen:
+            continue
+        seen.add(norm_id)
+        out.append({
+            'id': norm_id,
+            'label': label,
+            'position': max(1, position)
+        })
+    out.sort(key=lambda item: (int(item.get('position') or 0), str(item.get('label') or '').lower(), str(item.get('id') or '').lower()))
+    for idx, item in enumerate(out, start=1):
+        item['position'] = idx
+    return out
 
 def ensure_tenants_status_message_column(conn, cur):
     if is_postgres():
@@ -265,6 +320,8 @@ def get_tenant_header():
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
+        if 'main_menu_categories' in payload:
+            current_cfg['main_menu_categories'] = _normalize_main_menu_categories(payload.get('main_menu_categories'))
         
         # Special case for location/location_label compatibility
         if 'location_label' in payload:
@@ -370,7 +427,8 @@ def get_tenant_header():
         'featured_bg_color': cfg.get('featured_bg_color', '#0c0c0c'),
         'menu_bg_color': cfg.get('menu_bg_color', '#0f0f0f'),
         'interest_bg_color': cfg.get('interest_bg_color', '#121212'),
-        'main_menu_compact_view': bool(cfg.get('main_menu_compact_view', False))
+        'main_menu_compact_view': bool(cfg.get('main_menu_compact_view', False)),
+        'main_menu_categories': _normalize_main_menu_categories(cfg.get('main_menu_categories'))
     })
 
 @bp.route('/tenant_checkout', methods=['GET', 'PATCH'])

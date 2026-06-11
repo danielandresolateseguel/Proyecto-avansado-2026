@@ -206,6 +206,96 @@ function applyMainMenuViewMode(enabled) {
     document.body.dataset.mainMenuView = isCompact ? 'compact' : 'default';
 }
 
+function normalizeConfiguredMainMenuCategories(rawCategories) {
+    if (!Array.isArray(rawCategories) || !rawCategories.length) return [];
+    const seen = new Set();
+    const out = [];
+    rawCategories.forEach((raw, index) => {
+        const label = String(raw && (raw.label || raw.name || raw.title) || '').trim();
+        const id = String(raw && (raw.id || raw.value || raw.slug) || '').trim().toLowerCase();
+        if (!label || !id || id === 'todos' || seen.has(id)) return;
+        seen.add(id);
+        out.push({
+            id,
+            label,
+            position: Math.max(1, parseInt(raw && raw.position || index + 1, 10) || (index + 1))
+        });
+    });
+    out.sort((a, b) => a.position - b.position || a.label.localeCompare(b.label));
+    return out;
+}
+
+function getFallbackMainMenuCategoriesFromDom() {
+    const categoryFilter = document.getElementById('category-filter');
+    if (!categoryFilter) return [];
+    const items = [];
+    const btns = categoryFilter.querySelectorAll('.filter-btn');
+    btns.forEach((btn, index) => {
+        const id = String(btn.getAttribute('data-filter') || '').trim().toLowerCase();
+        const label = String(btn.textContent || '').trim();
+        if (!id || id === 'todos' || !label) return;
+        items.push({ id, label, position: index + 1 });
+    });
+    return items;
+}
+
+function getMainMenuCategoriesForRendering(configured) {
+    const normalized = normalizeConfiguredMainMenuCategories(configured);
+    return normalized.length ? normalized : getFallbackMainMenuCategoriesFromDom();
+}
+
+function applyGastronomiaCategoryFilter(selected) {
+    const chosen = String(selected || 'todos').trim().toLowerCase() || 'todos';
+    const menuSection = document.getElementById('menu-gastronomia');
+    document.querySelectorAll('.searchable-item').forEach(item => {
+        if (menuSection && !menuSection.contains(item)) return;
+        const catAttr = (item.getAttribute('data-food-category') || '').toLowerCase();
+        const cats = catAttr.split(',').map(c => c.trim()).filter(Boolean);
+        let match = false;
+        if (chosen === 'todos') match = true;
+        else if (chosen === 'bebidas-cocteles') match = cats.includes('bebidas') || cats.includes('cocteles');
+        else match = cats.includes(chosen);
+        item.style.display = match ? '' : 'none';
+    });
+}
+
+function bindGastronomiaCategoryFilters() {
+    if (PAGE !== 'gastronomia') return;
+    const categoryFilter = document.getElementById('category-filter');
+    if (!categoryFilter) return;
+    const btns = Array.from(categoryFilter.querySelectorAll('.filter-btn'));
+    btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            try {
+                btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            } catch (_) {}
+            applyGastronomiaCategoryFilter(btn.getAttribute('data-filter'));
+        });
+    });
+    const hintSlug = (window.BUSINESS_SLUG || getBusinessSlug() || 'gastronomia').trim();
+    initScrollableHint(categoryFilter, 'scrollHint_category_' + hintSlug);
+}
+
+function renderMainMenuCategoryFilters(configuredCategories) {
+    if (PAGE !== 'gastronomia') return;
+    const categoryFilter = document.getElementById('category-filter');
+    if (!categoryFilter) return;
+    const activeBtn = categoryFilter.querySelector('.filter-btn.active');
+    const activeValue = String(activeBtn && activeBtn.getAttribute('data-filter') || 'todos').trim().toLowerCase() || 'todos';
+    const categories = getMainMenuCategoriesForRendering(configuredCategories);
+    const nextActive = categories.some(cat => cat.id === activeValue) ? activeValue : 'todos';
+    let html = '<button class="filter-btn' + (nextActive === 'todos' ? ' active' : '') + '" data-filter="todos">Todos</button>';
+    categories.forEach(cat => {
+        const isActive = cat.id === nextActive ? ' active' : '';
+        html += '<button class="filter-btn' + isActive + '" data-filter="' + cat.id + '">' + cat.label + '</button>';
+    });
+    categoryFilter.innerHTML = html;
+    bindGastronomiaCategoryFilters();
+    applyGastronomiaCategoryFilter(nextActive);
+}
+
 function initScrollableHint(container, storageKey) {
     if (!container) return;
 
@@ -388,9 +478,11 @@ function initHeaderContact() {
         applySectionGradient('--gastro-products-bg', '--gastro-products-text', data.menu_bg_color);
         applySectionGradient('--gastro-interest-bg', '--gastro-interest-text', data.interest_bg_color);
         applyMainMenuViewMode(data.main_menu_compact_view);
+        renderMainMenuCategoryFilters(data.main_menu_categories || []);
         try {
             window.BusinessConfig = Object.assign({}, window.BusinessConfig || {}, {
-                main_menu_compact_view: !!data.main_menu_compact_view
+                main_menu_compact_view: !!data.main_menu_compact_view,
+                main_menu_categories: Array.isArray(data.main_menu_categories) ? data.main_menu_categories : []
             });
         } catch (_) {}
 
@@ -905,37 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Filtros de Categoría (Gastronomía)
     if (PAGE === 'gastronomia') {
-        const categoryFilter = document.getElementById('category-filter');
-        if (categoryFilter) {
-            const btns = categoryFilter.querySelectorAll('.filter-btn');
-            btns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    btns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    try {
-                        btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-                    } catch (_) {}
-                    const selected = btn.getAttribute('data-filter');
-                    
-                    const menuSection = document.getElementById('menu-gastronomia');
-                    document.querySelectorAll('.searchable-item').forEach(item => {
-                        if (menuSection && !menuSection.contains(item)) return;
-                        
-                        const catAttr = (item.getAttribute('data-food-category') || '').toLowerCase();
-                        const cats = catAttr.split(',').map(c => c.trim());
-                        let match = false;
-                        if (selected === 'todos') match = true;
-                        else if (selected === 'bebidas-cocteles') match = cats.includes('bebidas') || cats.includes('cocteles');
-                        else if (selected === 'al-plato') match = cats.includes('al-plato');
-                        else match = cats.includes(selected);
-                        
-                        item.style.display = match ? '' : 'none';
-                    });
-                });
-            });
-            const hintSlug = (window.BUSINESS_SLUG || getBusinessSlug() || 'gastronomia').trim();
-            initScrollableHint(categoryFilter, 'scrollHint_category_' + hintSlug);
-        }
+        renderMainMenuCategoryFilters((window.BusinessConfig && window.BusinessConfig.main_menu_categories) || []);
     }
     
     // Filtros de Categoría (Index/Comercio)

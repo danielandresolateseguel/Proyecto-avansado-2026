@@ -2688,6 +2688,22 @@
         </label>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:8px; font-weight:bold;">Categorías de filtro del Menú Principal</label>
+        <div class="small" style="margin-bottom:8px; color:#666;">Podés crear categorías nuevas y ajustar su orden. "Todos" se mantiene fijo primero en la carta.</div>
+        <div id="header-menu-categories-list" style="display:grid; gap:8px; margin-bottom:12px;"></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:end;">
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Nombre visible</label>
+            <input type="text" id="header-menu-category-label" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ej: Pastas">
+          </div>
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Slug interno</label>
+            <input type="text" id="header-menu-category-id" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ej: pastas">
+          </div>
+          <button type="button" id="header-menu-category-add" style="height:36px; padding:0 12px; border:none; border-radius:6px; background:#4caf50; color:#fff; cursor:pointer; font-weight:700;">Agregar</button>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <label style="font-size:12px; display:block; margin-bottom:4px; font-weight:bold;">Fondo Recomendados</label>
         <div style="display:flex; align-items:center; gap:8px;">
           <input type="color" id="interest-bg-color" style="width:50px; height:32px; padding:0; border:1px solid #ccc; border-radius:4px; cursor:pointer;" value="#121212">
@@ -2939,7 +2955,150 @@
     const prevPrice = document.getElementById('preview-price');
     const prevImage = document.querySelector('.preview-image-placeholder');
 
+    const DEFAULT_MAIN_MENU_CATEGORIES = [
+      { id: 'sandwich', label: 'Sándwich', position: 1 },
+      { id: 'pizzas', label: 'Pizzas', position: 2 },
+      { id: 'comen-dos', label: 'Comen dos', position: 3 },
+      { id: 'al-plato', label: 'Al plato', position: 4 },
+      { id: 'bebidas', label: 'Bebidas', position: 5 },
+      { id: 'cocteles', label: 'Cocteles', position: 6 },
+      { id: 'postres', label: 'Postres', position: 7 }
+    ];
+
     let currentEditingProduct = null;
+    let adminMainMenuCategories = DEFAULT_MAIN_MENU_CATEGORIES.slice();
+
+    function slugifyAdminCategory(value) {
+      const text = String(value || '').trim().toLowerCase();
+      if (!text) return '';
+      const normalized = text.normalize ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text;
+      return normalized
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    function normalizeAdminMainMenuCategories(value, useDefaults = true) {
+      const base = Array.isArray(value) && value.length ? value : (useDefaults ? DEFAULT_MAIN_MENU_CATEGORIES : []);
+      const out = [];
+      const seen = new Set();
+      base.forEach((raw, index) => {
+        const label = String(raw && (raw.label || raw.name || raw.title) || '').trim();
+        const catId = slugifyAdminCategory(raw && (raw.id || raw.value || raw.slug) || label);
+        if (!label || !catId || catId === 'todos' || seen.has(catId)) return;
+        seen.add(catId);
+        out.push({ id: catId, label, position: index + 1 });
+      });
+      return out;
+    }
+
+    function getAdminMainMenuCategories() {
+      return normalizeAdminMainMenuCategories(adminMainMenuCategories, true);
+    }
+
+    function setAdminMainMenuCategories(value, useDefaults = true) {
+      adminMainMenuCategories = normalizeAdminMainMenuCategories(value, useDefaults);
+      refreshProductCategoryOptions();
+      renderHeaderMenuCategoriesEditor();
+    }
+
+    function refreshProductCategoryOptions(selectedValuesMap) {
+      const categories = getAdminMainMenuCategories();
+      const applyOptions = (selectEl, selectedValues) => {
+        if (!selectEl) return;
+        const selectedSet = new Set((selectedValues || []).map(v => String(v || '').trim()).filter(Boolean));
+        selectEl.innerHTML = '';
+        categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat.id;
+          opt.textContent = cat.label;
+          if (selectedSet.has(cat.id)) opt.selected = true;
+          selectEl.appendChild(opt);
+        });
+      };
+      applyOptions(prodEditFoodCats, selectedValuesMap && selectedValuesMap.edit);
+      applyOptions(document.getElementById('create-prod-food-cats'), selectedValuesMap && selectedValuesMap.create);
+    }
+
+    function renderHeaderMenuCategoriesEditor() {
+      const listEl = document.getElementById('header-menu-categories-list');
+      if (!listEl) return;
+      const categories = getAdminMainMenuCategories();
+      listEl.innerHTML = '';
+      if (!categories.length) {
+        const empty = document.createElement('div');
+        empty.className = 'small';
+        empty.style.color = '#666';
+        empty.textContent = 'Sin categorías configuradas.';
+        listEl.appendChild(empty);
+        return;
+      }
+      categories.forEach((cat, index) => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid; grid-template-columns:1fr 1fr auto auto auto; gap:8px; align-items:center;';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.value = cat.label;
+        labelInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;';
+        labelInput.addEventListener('input', () => {
+          adminMainMenuCategories[index].label = labelInput.value;
+          refreshProductCategoryOptions();
+        });
+
+        const idInput = document.createElement('input');
+        idInput.type = 'text';
+        idInput.value = cat.id;
+        idInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;';
+        idInput.addEventListener('change', () => {
+          adminMainMenuCategories[index].id = slugifyAdminCategory(idInput.value);
+          setAdminMainMenuCategories(adminMainMenuCategories, false);
+        });
+
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.disabled = index === 0;
+        upBtn.style.cssText = 'height:34px; border:none; border-radius:6px; background:#607d8b; color:#fff; cursor:pointer;';
+        upBtn.addEventListener('click', () => {
+          if (index <= 0) return;
+          const tmp = adminMainMenuCategories[index - 1];
+          adminMainMenuCategories[index - 1] = adminMainMenuCategories[index];
+          adminMainMenuCategories[index] = tmp;
+          setAdminMainMenuCategories(adminMainMenuCategories, false);
+        });
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.disabled = index >= categories.length - 1;
+        downBtn.style.cssText = 'height:34px; border:none; border-radius:6px; background:#607d8b; color:#fff; cursor:pointer;';
+        downBtn.addEventListener('click', () => {
+          if (index >= adminMainMenuCategories.length - 1) return;
+          const tmp = adminMainMenuCategories[index + 1];
+          adminMainMenuCategories[index + 1] = adminMainMenuCategories[index];
+          adminMainMenuCategories[index] = tmp;
+          setAdminMainMenuCategories(adminMainMenuCategories, false);
+        });
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.textContent = 'Eliminar';
+        deleteBtn.style.cssText = 'height:34px; border:none; border-radius:6px; background:#c62828; color:#fff; cursor:pointer;';
+        deleteBtn.addEventListener('click', () => {
+          adminMainMenuCategories.splice(index, 1);
+          setAdminMainMenuCategories(adminMainMenuCategories, false);
+        });
+
+        row.appendChild(labelInput);
+        row.appendChild(idInput);
+        row.appendChild(upBtn);
+        row.appendChild(downBtn);
+        row.appendChild(deleteBtn);
+        listEl.appendChild(row);
+      });
+    }
+
+    setAdminMainMenuCategories(DEFAULT_MAIN_MENU_CATEGORIES, true);
 
     function parseAdminProductVariants(product) {
       try {
@@ -3017,6 +3176,7 @@
           opt.selected = existingCats.includes(opt.value);
         });
       }
+      refreshProductCategoryOptions({ edit: existingCats });
       if (prodEditSection) prodEditSection.value = existingSection;
       if (prodEditInterest) prodEditInterest.value = existingInterest;
 
@@ -8729,6 +8889,10 @@
     const menuBgColor = document.getElementById('menu-bg-color');
     const mainMenuCompactViewInput = document.getElementById('main-menu-compact-view');
     const interestBgColor = document.getElementById('interest-bg-color');
+    const headerMenuCategoriesList = document.getElementById('header-menu-categories-list');
+    const headerMenuCategoryLabel = document.getElementById('header-menu-category-label');
+    const headerMenuCategoryId = document.getElementById('header-menu-category-id');
+    const headerMenuCategoryAdd = document.getElementById('header-menu-category-add');
     const headerAnnouncementActive = document.getElementById('header-announcement-active');
     const headerAnnouncementText = document.getElementById('header-announcement-text');
     const headerHoursTable = document.getElementById('header-hours-table');
@@ -8830,6 +8994,9 @@
         if (featuredBgColor) featuredBgColor.value = data.featured_bg_color || '#0c0c0c';
         if (menuBgColor) menuBgColor.value = data.menu_bg_color || '#0f0f0f';
         if (mainMenuCompactViewInput) mainMenuCompactViewInput.checked = !!data.main_menu_compact_view;
+        setAdminMainMenuCategories(data.main_menu_categories || [], true);
+        if (headerMenuCategoryLabel) headerMenuCategoryLabel.value = '';
+        if (headerMenuCategoryId) headerMenuCategoryId.value = '';
         if (interestBgColor) interestBgColor.value = data.interest_bg_color || '#121212';
         if (headerAnnouncementActive) headerAnnouncementActive.checked = data.announcement_active || false;
         if (headerAnnouncementText) headerAnnouncementText.value = data.announcement_text || '';
@@ -8849,6 +9016,30 @@
     if (headerCloseBtn && headerConfigModal) {
       headerCloseBtn.addEventListener('click', () => {
         headerConfigModal.style.display = 'none';
+      });
+    }
+
+    if (headerMenuCategoryAdd) {
+      headerMenuCategoryAdd.addEventListener('click', () => {
+        const label = String(headerMenuCategoryLabel && headerMenuCategoryLabel.value || '').trim();
+        let catId = String(headerMenuCategoryId && headerMenuCategoryId.value || '').trim();
+        if (!label) {
+          alert('Ingresá un nombre para la categoría');
+          return;
+        }
+        catId = slugifyAdminCategory(catId || label);
+        if (!catId || catId === 'todos') {
+          alert('El slug de la categoría no es válido');
+          return;
+        }
+        if (getAdminMainMenuCategories().some(cat => cat.id === catId)) {
+          alert('Ya existe una categoría con ese slug');
+          return;
+        }
+        adminMainMenuCategories.push({ id: catId, label, position: adminMainMenuCategories.length + 1 });
+        setAdminMainMenuCategories(adminMainMenuCategories, false);
+        if (headerMenuCategoryLabel) headerMenuCategoryLabel.value = '';
+        if (headerMenuCategoryId) headerMenuCategoryId.value = '';
       });
     }
 
@@ -8882,6 +9073,7 @@
             featured_bg_color: featuredBgColor ? featuredBgColor.value : '#0c0c0c',
             menu_bg_color: menuBgColor ? menuBgColor.value : '#0f0f0f',
             main_menu_compact_view: mainMenuCompactViewInput ? !!mainMenuCompactViewInput.checked : false,
+            main_menu_categories: getAdminMainMenuCategories(),
             interest_bg_color: interestBgColor ? interestBgColor.value : '#121212',
             announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
             announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''
@@ -16064,6 +16256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (createBtn) {
     createBtn.addEventListener('click', () => {
+      refreshProductCategoryOptions({ create: [] });
       pId.value = '';
       pName.value = '';
       pDetails.value = '';
