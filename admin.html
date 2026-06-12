@@ -2967,6 +2967,7 @@
 
     let currentEditingProduct = null;
     let adminMainMenuCategories = DEFAULT_MAIN_MENU_CATEGORIES.slice();
+    let adminMainMenuCategoriesLoadedSlug = '';
 
     function slugifyAdminCategory(value) {
       const text = String(value || '').trim().toLowerCase();
@@ -2999,6 +3000,31 @@
       adminMainMenuCategories = normalizeAdminMainMenuCategories(value, useDefaults);
       refreshProductCategoryOptions();
       renderHeaderMenuCategoriesEditor();
+    }
+
+    async function loadAdminMainMenuCategories(force = false) {
+      const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : ((currentTenantSlug || (tenantInput && tenantInput.value) || defaultSlug()) || '')).trim();
+      if (!slug) {
+        setAdminMainMenuCategories(DEFAULT_MAIN_MENU_CATEGORIES, true);
+        adminMainMenuCategoriesLoadedSlug = '';
+        return getAdminMainMenuCategories();
+      }
+      if (!force && adminMainMenuCategoriesLoadedSlug === slug && getAdminMainMenuCategories().length) {
+        return getAdminMainMenuCategories();
+      }
+      try {
+        const url = new URL('/api/tenant_header', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        const resp = await wFetch(url.toString());
+        if (!resp.ok) throw new Error('No se pudo obtener configuración de categorías');
+        const data = await resp.json();
+        setAdminMainMenuCategories(data.main_menu_categories || [], true);
+        adminMainMenuCategoriesLoadedSlug = slug;
+      } catch (_) {
+        setAdminMainMenuCategories(DEFAULT_MAIN_MENU_CATEGORIES, true);
+        adminMainMenuCategoriesLoadedSlug = slug;
+      }
+      return getAdminMainMenuCategories();
     }
 
     function refreshProductCategoryOptions(selectedValuesMap) {
@@ -3132,9 +3158,10 @@
       };
     }
 
-    function openProductEditModal(product) {
+    async function openProductEditModal(product) {
       if (!prodEditModal) return;
       currentEditingProduct = product;
+      await loadAdminMainMenuCategories();
 
       // Populate Form
       prodEditId.value = product.id;
@@ -5763,6 +5790,7 @@
     // filterSelect.addEventListener('change', () => { if (refreshTimer) loadOrdersSafe(); });
     tenantInput.addEventListener('change', async () => { 
         try { localStorage.setItem('tenant_last_selected', tenantInput.value.trim()); } catch (_) {}
+        await loadAdminMainMenuCategories(true);
         await loadSlaThresholds(); 
         await loadTenantPrefs(); 
         if (refreshTimer) loadOrdersSafe(); 
@@ -9092,6 +9120,7 @@
             alert(msg);
             return;
           }
+          adminMainMenuCategoriesLoadedSlug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : '') || adminMainMenuCategoriesLoadedSlug;
           headerConfigModal.style.display = 'none';
           alert('Cabecera actualizada');
         } catch (e) {
@@ -9497,6 +9526,7 @@
       await populateTenantsList();
       await loadSlaThresholds();
       await loadTenantPrefs();
+      await loadAdminMainMenuCategories(true);
       await load();
       refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
       
@@ -16255,7 +16285,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   if (createBtn) {
-    createBtn.addEventListener('click', () => {
+    createBtn.addEventListener('click', async () => {
+      await loadAdminMainMenuCategories();
       refreshProductCategoryOptions({ create: [] });
       pId.value = '';
       pName.value = '';
