@@ -3158,6 +3158,46 @@
       };
     }
 
+    function sortProductsForMainMenuDisplay(items) {
+      const categoryOrder = new Map();
+      getAdminMainMenuCategories().forEach((cat, index) => {
+        const catId = slugifyAdminCategory(cat && cat.id);
+        if (!catId || categoryOrder.has(catId)) return;
+        categoryOrder.set(catId, index);
+      });
+      const sectionRank = (product) => {
+        const variants = parseAdminProductVariants(product);
+        const section = String(variants.section || '').trim().toLowerCase();
+        const catsRaw = variants.food_categories;
+        const cats = Array.isArray(catsRaw)
+          ? catsRaw.map(v => slugifyAdminCategory(v)).filter(Boolean)
+          : (typeof catsRaw === 'string' ? catsRaw.split(',').map(v => slugifyAdminCategory(v)).filter(Boolean) : []);
+        if (cats.length) return { rank: 1, cat: cats[0] };
+        if (section === 'featured') return { rank: 0, cat: '' };
+        if (section === 'interest') return { rank: 2, cat: '' };
+        return { rank: 3, cat: '' };
+      };
+      return (Array.isArray(items) ? items.slice() : []).sort((a, b) => {
+        const aSection = sectionRank(a);
+        const bSection = sectionRank(b);
+        if (aSection.rank !== bSection.rank) return aSection.rank - bSection.rank;
+        if (aSection.rank === 1) {
+          const aCatRank = categoryOrder.has(aSection.cat) ? categoryOrder.get(aSection.cat) : Number.MAX_SAFE_INTEGER - 1;
+          const bCatRank = categoryOrder.has(bSection.cat) ? categoryOrder.get(bSection.cat) : Number.MAX_SAFE_INTEGER - 1;
+          if (aCatRank !== bCatRank) return aCatRank - bCatRank;
+        }
+        const aPos = Math.max(0, parseInt((a && a.position) || '0', 10) || 0);
+        const bPos = Math.max(0, parseInt((b && b.position) || '0', 10) || 0);
+        const aPosRank = aPos > 0 ? aPos : Number.MAX_SAFE_INTEGER;
+        const bPosRank = bPos > 0 ? bPos : Number.MAX_SAFE_INTEGER;
+        if (aPosRank !== bPosRank) return aPosRank - bPosRank;
+        const aName = String((a && a.name) || '').toLowerCase();
+        const bName = String((b && b.name) || '').toLowerCase();
+        if (aName !== bName) return aName.localeCompare(bName);
+        return String((a && a.id) || '').localeCompare(String((b && b.id) || ''));
+      });
+    }
+
     async function openProductEditModal(product) {
       if (!prodEditModal) return;
       currentEditingProduct = product;
@@ -8068,7 +8108,8 @@
     async function renderInventory() {
       if (!invTbody) return;
       invTbody.innerHTML = '<tr><td colspan="8" class="small">Cargando...</td></tr>';
-      const items = await fetchProducts(true);
+      await loadAdminMainMenuCategories();
+      const items = sortProductsForMainMenuDisplay(await fetchProducts(true));
       invTbody.innerHTML = '';
       const imobile = document.getElementById('inventory-mobile');
       if (imobile) imobile.innerHTML = '';

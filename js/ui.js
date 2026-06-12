@@ -573,6 +573,35 @@ export async function initDynamicProducts() {
                 });
             }
         } catch (_) {}
+        const normalizeMainCategory = (value) => {
+            const text = String(value || '').trim().toLowerCase();
+            if (!text) return '';
+            return text.normalize ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text;
+        };
+        const configuredMainCategories = Array.isArray(window.BusinessConfig && window.BusinessConfig.main_menu_categories)
+            ? window.BusinessConfig.main_menu_categories
+            : [];
+        const mainCategoryOrder = new Map();
+        configuredMainCategories.forEach((raw, index) => {
+            const catId = normalizeMainCategory(raw && (raw.id || raw.value || raw.slug));
+            if (!catId || mainCategoryOrder.has(catId)) return;
+            mainCategoryOrder.set(catId, index);
+        });
+        if (!mainCategoryOrder.size) {
+            try {
+                document.querySelectorAll('#category-filter .filter-btn').forEach((btn, index) => {
+                    const catId = normalizeMainCategory(btn.getAttribute('data-filter'));
+                    if (!catId || catId === 'todos' || mainCategoryOrder.has(catId)) return;
+                    mainCategoryOrder.set(catId, index);
+                });
+            } catch (_) {}
+        }
+        const productById = new Map();
+        arr.forEach(p => {
+            if (!p || !p.id) return;
+            productById.set(String(p.id), p);
+        });
+
         arr.forEach(p => {
             if (!p || !p.id) return;
             if (p.active === false) return;
@@ -677,18 +706,50 @@ export async function initDynamicProducts() {
             if (!p || !p.id) return;
             productOrder.set(String(p.id), index);
         });
+        const getCardProductId = (el) => {
+            const direct = String(el.getAttribute('data-product-id') || '').trim();
+            if (direct) return direct;
+            const btn = el.querySelector('.add-to-cart-btn');
+            return String(btn && btn.getAttribute('data-id') || '').trim();
+        };
+        const getMainCardSortMeta = (card) => {
+            const productId = getCardProductId(card);
+            const product = productById.get(productId);
+            const fallback = {
+                categoryRank: Number.MAX_SAFE_INTEGER,
+                positionRank: Number.MAX_SAFE_INTEGER,
+                name: '',
+                id: productId
+            };
+            if (!product) return fallback;
+            const variants = product._variants || {};
+            const rawCats = variants.food_categories;
+            const categories = Array.isArray(rawCats)
+                ? rawCats.map(normalizeMainCategory).filter(Boolean)
+                : String(rawCats || '').split(',').map(normalizeMainCategory).filter(Boolean);
+            const primaryCategory = categories.length ? categories[0] : '';
+            const parsedPosition = parseInt(product.position, 10);
+            return {
+                categoryRank: mainCategoryOrder.has(primaryCategory) ? mainCategoryOrder.get(primaryCategory) : Number.MAX_SAFE_INTEGER - 1,
+                positionRank: Number.isFinite(parsedPosition) && parsedPosition > 0 ? parsedPosition : Number.MAX_SAFE_INTEGER,
+                name: String(product.name || '').toLowerCase(),
+                id: productId
+            };
+        };
         const reorderGrid = (grid) => {
             if (!grid) return;
             const cards = Array.from(grid.children || []);
             cards.sort((a, b) => {
-                const getId = (el) => {
-                    const direct = String(el.getAttribute('data-product-id') || '').trim();
-                    if (direct) return direct;
-                    const btn = el.querySelector('.add-to-cart-btn');
-                    return String(btn && btn.getAttribute('data-id') || '').trim();
-                };
-                const aIdx = productOrder.has(getId(a)) ? productOrder.get(getId(a)) : Number.MAX_SAFE_INTEGER;
-                const bIdx = productOrder.has(getId(b)) ? productOrder.get(getId(b)) : Number.MAX_SAFE_INTEGER;
+                if (grid === mainGrid) {
+                    const aMeta = getMainCardSortMeta(a);
+                    const bMeta = getMainCardSortMeta(b);
+                    if (aMeta.categoryRank !== bMeta.categoryRank) return aMeta.categoryRank - bMeta.categoryRank;
+                    if (aMeta.positionRank !== bMeta.positionRank) return aMeta.positionRank - bMeta.positionRank;
+                    if (aMeta.name !== bMeta.name) return aMeta.name.localeCompare(bMeta.name);
+                    return aMeta.id.localeCompare(bMeta.id);
+                }
+                const aIdx = productOrder.has(getCardProductId(a)) ? productOrder.get(getCardProductId(a)) : Number.MAX_SAFE_INTEGER;
+                const bIdx = productOrder.has(getCardProductId(b)) ? productOrder.get(getCardProductId(b)) : Number.MAX_SAFE_INTEGER;
                 return aIdx - bIdx;
             });
             cards.forEach(card => grid.appendChild(card));
