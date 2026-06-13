@@ -824,15 +824,24 @@ def create_order():
         # Process Items
         for it in items:
             qty = int(it.get('quantity', it.get('qty', 1)) or 1)
-            pid = it.get('id')
+            pid = it.get('product_id') or it.get('base_id') or it.get('id')
+            pack_id = str(it.get('pack_id') or '').strip()
+            pack_label = str(it.get('pack_label') or '').strip()
+            try:
+                pack_size = int(it.get('pack_size') or 1)
+            except Exception:
+                pack_size = 1
+            if pack_size <= 0:
+                pack_size = 1
+            requested_price = int(it.get('price', 0) or 0)
             
             # Check/Create Product
-            cur.execute("SELECT stock FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
+            cur.execute("SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
             row = cur.fetchone()
             if not row:
                 try:
                     nm = str(it.get('name') or '').strip() or 'Producto'
-                    pr = int(it.get('price') or 0)
+                    pr = requested_price
                     # Using INSERT OR IGNORE wrapper logic in database.py
                     cur.execute(
                         "INSERT OR IGNORE INTO products (tenant_slug, product_id, name, price, stock, active) VALUES (?, ?, ?, ?, ?, 1)",
@@ -840,7 +849,7 @@ def create_order():
                     )
                     conn.commit()
                     # Re-fetch
-                    cur.execute("SELECT stock FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
+                    cur.execute("SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
                     row = cur.fetchone()
                 except Exception as e:
                     print(f"Error auto-creating product {pid}: {e}")
@@ -848,11 +857,48 @@ def create_order():
                     return jsonify({'error': 'producto no encontrado y fallo al crear', 'product_id': pid}), 400
             
             stock = int((row[0] if row else 0) or 0)
-            if stock < qty:
+            variants_raw = row[1] if row and len(row) > 1 else ''
+            unit_price = requested_price
+            if pack_id and variants_raw:
+                try:
+                    variants = json.loads(variants_raw or '{}') or {}
+                    packs = variants.get('packs') or variants.get('pack_options') or variants.get('sale_packs') or []
+                    if isinstance(packs, str):
+                        packs = json.loads(packs or '[]') or []
+                    if isinstance(packs, list):
+                        for p in packs:
+                            if not isinstance(p, dict):
+                                continue
+                            if str(p.get('id') or '').strip() != pack_id:
+                                continue
+                            try:
+                                p_price = int(p.get('price') or 0)
+                                if p_price > 0:
+                                    unit_price = p_price
+                            except Exception:
+                                pass
+                            try:
+                                p_size = int(p.get('size') or p.get('qty') or p.get('multiplier') or p.get('units') or 1)
+                                if p_size > 0:
+                                    pack_size = p_size
+                            except Exception:
+                                pass
+                            if not pack_label:
+                                pack_label = str(p.get('label') or p.get('name') or '').strip()
+                            break
+                except Exception:
+                    pass
+            inv_qty = qty * pack_size
+            if stock < inv_qty:
                 conn.rollback()
-                return jsonify({'error': 'stock insuficiente', 'product_id': pid, 'stock': stock, 'requested': qty}), 400
+                return jsonify({'error': 'stock insuficiente', 'product_id': pid, 'stock': stock, 'requested': inv_qty}), 400
             
             # Insert Order Item
+            modifiers = it.get('modifiers') or {}
+            if not isinstance(modifiers, dict):
+                modifiers = {}
+            if pack_id:
+                modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
             cur.execute(
                 """
                 INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, modifiers_json, notes)
@@ -864,14 +910,14 @@ def create_order():
                     pid,
                     it.get('name'),
                     qty,
-                    int(it.get('price', 0) or 0),
-                    str(it.get('modifiers') or {}),
+                    unit_price,
+                    json.dumps(modifiers, ensure_ascii=False),
                     it.get('notes') or ''
                 )
             )
             
             # Update Stock
-            cur.execute("UPDATE products SET stock = stock - ? WHERE tenant_slug = ? AND product_id = ?", (qty, tenant_slug, pid))
+            cur.execute("UPDATE products SET stock = stock - ? WHERE tenant_slug = ? AND product_id = ?", (inv_qty, tenant_slug, pid))
         
         conn.commit()
         return jsonify({'order_id': order_id, 'tenant_order_number': tenant_order_number, 'status': status, 'total': total, 'tenant_slug': tenant_slug}), 201

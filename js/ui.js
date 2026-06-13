@@ -5,6 +5,84 @@ import { addToCart, updateCartDisplay, updateCartCount } from './cart.js?v=8';
 import { getBusinessSlug, formatMoneyWithCode } from './config.js?v=8';
 import { refreshSearchableItems } from './search.js?v=8';
 
+function normalizePackList(raw) {
+    let arr = raw;
+    if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (!s) return [];
+        try {
+            arr = JSON.parse(s);
+        } catch (_) {
+            return [];
+        }
+    }
+    if (!Array.isArray(arr)) return [];
+    const out = [];
+    const seen = new Set();
+    arr.forEach((p, idx) => {
+        if (!p || typeof p !== 'object') return;
+        const id = String(p.id || p.key || p.value || idx).trim();
+        const label = String(p.label || p.name || id).trim();
+        const price = parseInt(p.price, 10);
+        const size = parseInt(p.size ?? p.qty ?? p.multiplier ?? p.units ?? 1, 10);
+        if (!id || !label) return;
+        if (!Number.isFinite(price) || price <= 0) return;
+        const packSize = Number.isFinite(size) && size > 0 ? size : 1;
+        const key = `${id}::${price}::${packSize}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({ id, label, price, pack_size: packSize });
+    });
+    return out;
+}
+
+function readPacksFromButton(button) {
+    if (!button) return [];
+    const raw = String(button.getAttribute('data-packs') || '').trim();
+    if (!raw) return [];
+    try {
+        const direct = JSON.parse(raw);
+        return normalizePackList(direct);
+    } catch (_) {}
+    try {
+        const decoded = decodeURIComponent(raw);
+        const parsed = JSON.parse(decoded);
+        return normalizePackList(parsed);
+    } catch (_) {}
+    return [];
+}
+
+function ensurePackModal() {
+    let modal = document.getElementById('pack-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'pack-modal';
+    modal.className = 'product-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div class="modal-body">
+          <div class="modal-details" style="width:100%;">
+            <h3 id="pack-modal-title"></h3>
+            <p style="margin-top:6px; margin-bottom:10px; opacity:0.9;">Elegí la presentación</p>
+            <div id="pack-modal-options" style="display:flex; flex-direction:column; gap:10px;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) closeBtn.addEventListener('click', () => closeDialog(modal));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeDialog(modal);
+    });
+    return modal;
+}
+
 function parseStockValue(value) {
     const n = parseInt(value, 10);
     return Number.isFinite(n) ? n : null;
@@ -134,8 +212,53 @@ export function onAddToCartClick(event) {
     const titleEl = productCard ? productCard.querySelector('h3') : null;
     const priceEl = productCard ? productCard.querySelector('.product-price') : null;
 
-    let id = button.getAttribute('data-id') || (productCard ? productCard.id : '') || `auto-${Date.now()}`;
+    const productId = button.getAttribute('data-id') || (productCard ? productCard.id : '') || `auto-${Date.now()}`;
     let name = button.getAttribute('data-name') || (titleEl ? titleEl.textContent.trim() : '') || (productImage ? (productImage.alt || '').trim() : '') || 'Producto';
+    const imageSrc = productImage ? productImage.getAttribute('src') : '';
+    const packs = readPacksFromButton(button);
+
+    if (packs.length) {
+        const modal = ensurePackModal();
+        const title = modal.querySelector('#pack-modal-title');
+        const options = modal.querySelector('#pack-modal-options');
+        if (title) title.textContent = name;
+        if (options) options.innerHTML = '';
+
+        const addFromPack = (pack) => {
+            const clientId = `${productId}::pack:${pack.id}`;
+            const displayName = `${name} (${pack.label})`;
+            const meta = {
+                product_id: productId,
+                pack_id: pack.id,
+                pack_label: pack.label,
+                pack_size: pack.pack_size
+            };
+            addToCart(clientId, displayName, pack.price, imageSrc, event, (evt) => {
+                showAddToCartAnimation(evt);
+                showAddedToCartIndicator(button);
+            }, '', meta);
+        };
+
+        packs.forEach(pack => {
+            const optBtn = document.createElement('button');
+            optBtn.type = 'button';
+            optBtn.className = 'modal-add-to-cart';
+            optBtn.style.display = 'flex';
+            optBtn.style.alignItems = 'center';
+            optBtn.style.justifyContent = 'space-between';
+            optBtn.style.gap = '12px';
+            optBtn.innerHTML = `<span style="font-weight:800;">${pack.label}</span><span>${formatMoneyWithCode(pack.price)}</span>`;
+            optBtn.addEventListener('click', () => {
+                closeDialog(modal);
+                addFromPack(pack);
+            });
+            if (options) options.appendChild(optBtn);
+        });
+
+        openDialog(modal);
+        return;
+    }
+
     const attrPrice = button.getAttribute('data-price');
     let price = parseFloat(attrPrice);
 
@@ -146,11 +269,9 @@ export function onAddToCartClick(event) {
     }
 
     if (!isFinite(price) || price <= 0) {
-        console.warn('Precio inválido', { id, name });
+        console.warn('Precio inválido', { id: productId, name });
         return;
     }
-
-    const imageSrc = productImage ? productImage.getAttribute('src') : '';
     
     let notes = '';
     if (button.id === 'modal-add-to-cart-btn') {
@@ -158,10 +279,10 @@ export function onAddToCartClick(event) {
         if (notesEl) notes = notesEl.value;
     }
 
-    addToCart(id, name, price, imageSrc, event, (evt) => {
+    addToCart(productId, name, price, imageSrc, event, (evt) => {
         showAddToCartAnimation(evt);
         showAddedToCartIndicator(button);
-    }, notes);
+    }, notes, null);
 }
 
 // Enlazar eventos
@@ -372,6 +493,9 @@ export function initProductModals() {
             modalAddBtn.setAttribute('data-id', addBtn.getAttribute('data-id'));
             modalAddBtn.setAttribute('data-name', addBtn.getAttribute('data-name'));
             modalAddBtn.setAttribute('data-price', addBtn.getAttribute('data-price'));
+            const packsAttr = addBtn.getAttribute('data-packs');
+            if (packsAttr) modalAddBtn.setAttribute('data-packs', packsAttr);
+            else modalAddBtn.removeAttribute('data-packs');
             const stock = parseStockValue(card && card.dataset ? card.dataset.stock : '');
             applyStockStateToButton(modalAddBtn, stock);
             
@@ -529,6 +653,14 @@ export async function initDynamicProducts() {
                 btn.setAttribute('data-price', String(priceVal));
                 btn.setAttribute('data-name', String(prod.name || ''));
             }
+            if (btn) {
+                const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
+                if (packs.length) {
+                    btn.setAttribute('data-packs', encodeURIComponent(JSON.stringify(packs)));
+                } else {
+                    btn.removeAttribute('data-packs');
+                }
+            }
             applyCardStockState(card, prod);
             const img = card.querySelector('.product-image img');
             if (img && prod.image_url) {
@@ -627,6 +759,8 @@ export async function initDynamicProducts() {
             if (priceVal > 0) {
                 priceText = formatMoneyWithCode(priceVal);
             }
+            const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
+            const packsAttr = packs.length ? ' data-packs="' + encodeURIComponent(JSON.stringify(packs)) + '"' : '';
 
             const buildCard = (section, className) => {
                 const card = document.createElement('div');
@@ -672,7 +806,7 @@ export async function initDynamicProducts() {
                     '<div class="price-container">' +
                     (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
                     '</div>' +
-                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '">Añadir al carrito</button>' +
+                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + '>Añadir al carrito</button>' +
                     '</div>';
                 applyCardStockState(card, p);
                 return card;

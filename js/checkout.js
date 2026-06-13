@@ -363,7 +363,17 @@ function sendOrderToBackend(orderType, data, total) {
             address: orderType === 'direccion' ? { address: data.address, locality: data.locality, geo: data.geo || null } : {},
             customer_phone: orderType === 'direccion' ? data.contactPhone : (orderType === 'espera' ? data.esperaPhone : ''),
             customer_name: orderType === 'espera' ? data.esperaName : (orderType === 'direccion' ? data.deliveryName : ''),
-            items: cart.map(it => ({ id: it.id, name: it.name, price: it.price, quantity: it.quantity, notes: it.notes || '' })),
+            items: cart.map(it => ({
+                id: it.id,
+                product_id: it.product_id || it.id,
+                pack_id: it.pack_id || '',
+                pack_label: it.pack_label || '',
+                pack_size: it.pack_size || 1,
+                name: it.name,
+                price: it.price,
+                quantity: it.quantity,
+                notes: it.notes || ''
+            })),
             order_notes: data.orderNotes
         };
 

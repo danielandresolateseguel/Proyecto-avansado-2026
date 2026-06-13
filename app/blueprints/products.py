@@ -604,6 +604,19 @@ def create_product():
     elif isinstance(food_categories, str):
         cats = [c.strip() for c in food_categories.split(',') if c.strip()]
         if cats: variants['food_categories'] = cats
+    extra_variants = data.get('variants')
+    if isinstance(extra_variants, str):
+        raw = extra_variants.strip()
+        if raw:
+            try:
+                extra_variants = json.loads(raw)
+            except Exception:
+                extra_variants = None
+        else:
+            extra_variants = None
+    if isinstance(extra_variants, dict):
+        for k, v in extra_variants.items():
+            variants[k] = v
     variants_json = json.dumps(variants)
     scope_key = _product_scope_from_parts(section, interest_tag, food_categories)
     desired_position = None

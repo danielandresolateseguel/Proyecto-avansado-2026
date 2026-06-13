@@ -73,7 +73,8 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 /* MODAL STYLES - INCREASED SPECIFICITY TO FIX LAYOUT ISSUES */
 .order-status-modal,
-#product-modal {
+#product-modal,
+#pack-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -89,13 +90,15 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 .order-status-modal.active,
-#product-modal.active {
+#product-modal.active,
+#pack-modal.active {
   display: flex;
   animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content.status-content,
-#product-modal .modal-content {
+#product-modal .modal-content,
+#pack-modal .modal-content {
   background: white;
   width: 100%;
   max-width: 500px;
@@ -111,13 +114,15 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 /* Modal de producto alineado al color de marca del tenant */
-#product-modal .modal-content {
+#product-modal .modal-content,
+#pack-modal .modal-content {
   border-top: 4px solid var(--gastro-accent);
   box-shadow: 0 28px 60px rgba(0, 0, 0, 0.32), 0 10px 24px var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
 }
 
 /* Ensure modal body flows correctly */
-#product-modal .modal-body {
+#product-modal .modal-body,
+#pack-modal .modal-body {
     display: flex;
     flex-direction: column;
     gap: 0; /* Removed gap */
@@ -160,7 +165,9 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 #product-modal .modal-details,
-#product-modal .modal-info {
+#product-modal .modal-info,
+#pack-modal .modal-details,
+#pack-modal .modal-info {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -206,11 +213,29 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
     width: 100%;
 }
 
+#pack-modal .modal-add-to-cart {
+    background-color: var(--gastro-accent, #ff6a00);
+    color: var(--gastro-accent-contrast, #ffffff);
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+
 #product-modal .modal-add-to-cart:hover {
     background-color: var(--gastro-accent-dark);
 }
 
-#product-modal .close-modal {
+#pack-modal .modal-add-to-cart:hover {
+    background-color: var(--gastro-accent-dark);
+}
+
+#product-modal .close-modal,
+#pack-modal .close-modal {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -228,7 +253,8 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
     transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
-#product-modal .close-modal:hover {
+#product-modal .close-modal:hover,
+#pack-modal .close-modal:hover {
     transform: scale(1.04);
     background: var(--gastro-accent-08, rgba(255,106,0,0.08));
     color: var(--gastro-accent-dark, #c45500);

@@ -58,7 +58,7 @@ export function saveCart() {
 }
 
 // Añadir al carrito
-export function addToCart(id, name, price, imageSrc, event, showAnimationCallback, notes = '') {
+export function addToCart(id, name, price, imageSrc, event, showAnimationCallback, notes = '', meta = null) {
     id = id || `auto-${Date.now()}`;
     name = (name && name.trim()) ? name : 'Producto';
     
@@ -83,9 +83,20 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
          console.log('Adding notes to cart item:', notes);
          existingItem.notes = existingItem.notes ? existingItem.notes + ', ' + notes : notes;
     }
+        if (meta && typeof meta === 'object') {
+            if (meta.product_id && !existingItem.product_id) existingItem.product_id = meta.product_id;
+            if (meta.pack_id && !existingItem.pack_id) existingItem.pack_id = meta.pack_id;
+            if (meta.pack_label && !existingItem.pack_label) existingItem.pack_label = meta.pack_label;
+            if (Number.isFinite(meta.pack_size) && !Number.isFinite(existingItem.pack_size)) existingItem.pack_size = meta.pack_size;
+        }
     } else {
+        const m = meta && typeof meta === 'object' ? meta : null;
         cart.push({
             id: id,
+            product_id: m && m.product_id ? m.product_id : undefined,
+            pack_id: m && m.pack_id ? m.pack_id : undefined,
+            pack_label: m && m.pack_label ? m.pack_label : undefined,
+            pack_size: m && Number.isFinite(m.pack_size) ? m.pack_size : undefined,
             name: name,
             price: price,
             image: imageSrc,
@@ -193,6 +204,17 @@ export function updateCartDisplay() {
         const itemName = document.createElement('div');
         itemName.className = 'cart-item-name';
         itemName.textContent = item.name;
+
+        const packLabel = String(item.pack_label || '').trim();
+        const packSize = parseInt(item.pack_size, 10);
+        let itemPack = null;
+        if (packLabel) {
+            itemPack = document.createElement('div');
+            itemPack.className = 'cart-item-pack';
+            const parts = [packLabel];
+            if (Number.isFinite(packSize) && packSize > 1) parts.push(`${packSize}u`);
+            itemPack.textContent = parts.join(' · ');
+        }
         
         const itemPrice = document.createElement('div');
         itemPrice.className = 'cart-item-price';
@@ -270,6 +292,7 @@ export function updateCartDisplay() {
         
         // Ensamblaje
         itemInfo.appendChild(itemName);
+        if (itemPack) itemInfo.appendChild(itemPack);
         itemInfo.appendChild(itemPrice);
         itemInfo.appendChild(itemQuantityContainer);
         itemInfo.appendChild(itemNotesContainer);

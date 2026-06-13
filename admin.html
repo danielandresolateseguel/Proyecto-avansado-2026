@@ -2298,6 +2298,12 @@
               <input type="number" id="edit-prod-stock" min="0">
             </div>
             <div class="edit-form-group">
+              <label>Presentaciones (Unidad / 1/2 Docena / Docena)</label>
+              <div id="edit-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
+              <button type="button" id="edit-prod-add-pack" style="height:34px; border:none; border-radius:8px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:700; width:fit-content; padding:0 12px;">Agregar presentación</button>
+              <small>El stock se descuenta por unidades reales: cantidad × (unidades de la presentación).</small>
+            </div>
+            <div class="edit-form-group">
               <label>Posición en la categoría</label>
               <input type="number" id="edit-prod-position" min="1" placeholder="1">
               <small>Si el producto tiene varias categorías, se usa la primera seleccionada para el orden.</small>
@@ -2952,6 +2958,8 @@
     const prodEditTriggerUpload = document.getElementById('edit-prod-trigger-upload');
     const prodEditFile = document.getElementById('edit-prod-file');
     const prodEditDeleteImgBtn = document.getElementById('edit-prod-delete-img-btn');
+    const prodEditPacks = document.getElementById('edit-prod-packs');
+    const prodEditAddPackBtn = document.getElementById('edit-prod-add-pack');
     
     // Preview Elements
     const prevTitle = document.getElementById('preview-title');
@@ -2972,6 +2980,254 @@
     let currentEditingProduct = null;
     let adminMainMenuCategories = DEFAULT_MAIN_MENU_CATEGORIES.slice();
     let adminMainMenuCategoriesLoadedSlug = '';
+
+    function normalizeAdminPackList(raw) {
+      let arr = raw;
+      if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (!s) return [];
+        try { arr = JSON.parse(s); } catch (_) { return []; }
+      }
+      if (!Array.isArray(arr)) return [];
+      const out = [];
+      const seen = new Set();
+      arr.forEach((p, idx) => {
+        if (!p || typeof p !== 'object') return;
+        const label = String(p.label || p.name || '').trim();
+        const id = slugifyAdminCategory(String(p.id || p.key || label || idx).trim());
+        const price = parseInt(p.price, 10);
+        const mult = parseInt(p.multiplier ?? p.size ?? p.qty ?? p.units ?? 1, 10);
+        if (!label) return;
+        if (!id) return;
+        if (!Number.isFinite(price) || price < 0) return;
+        const units = Number.isFinite(mult) && mult > 0 ? mult : 1;
+        const sig = `${id}::${label}::${price}::${units}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        out.push({ id, label, price, multiplier: units });
+      });
+      return out;
+    }
+
+    function renderAdminPacksEditor(containerEl, packs) {
+      if (!containerEl) return;
+      const safePacks = Array.isArray(packs) ? packs : [];
+      containerEl.innerHTML = '';
+
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+      header.innerHTML = '<div class="small" style="font-weight:700; flex:1 1 160px;">Nombre</div>' +
+        '<div class="small" style="font-weight:700; flex:1 1 160px;">ID</div>' +
+        '<div class="small" style="font-weight:700; flex:0 1 120px;">Precio</div>' +
+        '<div class="small" style="font-weight:700; flex:0 1 120px;">Unidades</div>' +
+        '<div style="width:90px;"></div>';
+      containerEl.appendChild(header);
+
+      const addRow = (pack) => {
+        const row = document.createElement('div');
+        row.dataset.packRow = '1';
+        row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'pack-label';
+        labelInput.placeholder = 'Ej: Docena';
+        labelInput.value = String((pack && pack.label) || '').trim();
+        labelInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+        const idInput = document.createElement('input');
+        idInput.type = 'text';
+        idInput.className = 'pack-id';
+        idInput.placeholder = 'docena';
+        idInput.value = String((pack && pack.id) || '').trim();
+        idInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+        labelInput.addEventListener('change', () => {
+          const nextId = slugifyAdminCategory(labelInput.value);
+          if (nextId && !idInput.value.trim()) idInput.value = nextId;
+        });
+
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.min = '0';
+        priceInput.className = 'pack-price';
+        priceInput.placeholder = '0';
+        const packPrice = pack && Object.prototype.hasOwnProperty.call(pack, 'price') ? pack.price : '';
+        priceInput.value = (packPrice === '' || packPrice === null || typeof packPrice === 'undefined') ? '' : String(parseInt(packPrice, 10) || 0);
+        priceInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+        const multInput = document.createElement('input');
+        multInput.type = 'number';
+        multInput.min = '1';
+        multInput.className = 'pack-multiplier';
+        multInput.placeholder = '1';
+        multInput.value = Number.isFinite(pack && pack.multiplier) ? String(pack.multiplier) : String(parseInt((pack && pack.multiplier) || '1', 10) || 1);
+        multInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = 'Quitar';
+        delBtn.style.cssText = 'height:34px; width:90px; border:none; border-radius:8px; background:#c62828; color:#fff; cursor:pointer; font-weight:700;';
+        delBtn.addEventListener('click', () => row.remove());
+
+        row.appendChild(labelInput);
+        row.appendChild(idInput);
+        row.appendChild(priceInput);
+        row.appendChild(multInput);
+        row.appendChild(delBtn);
+        containerEl.appendChild(row);
+      };
+
+      if (safePacks.length) {
+        safePacks.forEach(p => addRow(p));
+      } else {
+        addRow({ label: 'Unidad', id: 'unidad', price: '', multiplier: 1 });
+      }
+
+      containerEl.dataset.addPackRow = '1';
+      containerEl.dataset.rendered = '1';
+    }
+
+    function addAdminPackRow(containerEl) {
+      if (!containerEl) return;
+      if (containerEl.dataset.rendered !== '1') renderAdminPacksEditor(containerEl, []);
+      const header = containerEl.firstElementChild;
+      const row = document.createElement('div');
+      row.dataset.packRow = '1';
+      row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+
+      const labelInput = document.createElement('input');
+      labelInput.type = 'text';
+      labelInput.className = 'pack-label';
+      labelInput.placeholder = 'Ej: 1/2 Docena';
+      labelInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+      const idInput = document.createElement('input');
+      idInput.type = 'text';
+      idInput.className = 'pack-id';
+      idInput.placeholder = 'media-docena';
+      idInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+      labelInput.addEventListener('change', () => {
+        const nextId = slugifyAdminCategory(labelInput.value);
+        if (nextId && !idInput.value.trim()) idInput.value = nextId;
+      });
+
+      const priceInput = document.createElement('input');
+      priceInput.type = 'number';
+      priceInput.min = '0';
+      priceInput.className = 'pack-price';
+      priceInput.placeholder = '0';
+      priceInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+      const multInput = document.createElement('input');
+      multInput.type = 'number';
+      multInput.min = '1';
+      multInput.className = 'pack-multiplier';
+      multInput.placeholder = '1';
+      multInput.value = '1';
+      multInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.textContent = 'Quitar';
+      delBtn.style.cssText = 'height:34px; width:90px; border:none; border-radius:8px; background:#c62828; color:#fff; cursor:pointer; font-weight:700;';
+      delBtn.addEventListener('click', () => row.remove());
+
+      row.appendChild(labelInput);
+      row.appendChild(idInput);
+      row.appendChild(priceInput);
+      row.appendChild(multInput);
+      row.appendChild(delBtn);
+
+      if (header && header.parentNode === containerEl) {
+        containerEl.appendChild(row);
+      } else {
+        containerEl.appendChild(row);
+      }
+    }
+
+    function readAdminPacksFromEditor(containerEl) {
+      if (!containerEl) return [];
+      const rows = Array.from(containerEl.querySelectorAll('[data-pack-row="1"]'));
+      const out = [];
+      const seen = new Set();
+      rows.forEach(r => {
+        const label = String((r.querySelector('.pack-label') && r.querySelector('.pack-label').value) || '').trim();
+        const id = slugifyAdminCategory(String((r.querySelector('.pack-id') && r.querySelector('.pack-id').value) || '').trim() || label);
+        const price = parseInt((r.querySelector('.pack-price') && r.querySelector('.pack-price').value) || '0', 10);
+        const units = parseInt((r.querySelector('.pack-multiplier') && r.querySelector('.pack-multiplier').value) || '1', 10);
+        if (!label) return;
+        if (!id) return;
+        if (!Number.isFinite(price) || price <= 0) return;
+        const mult = Number.isFinite(units) && units > 0 ? units : 1;
+        const sig = `${id}::${label}::${price}::${mult}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        out.push({ id, label, price, multiplier: mult });
+      });
+      return out;
+    }
+
+    function collectAdminPacksForSave(containerEl, basePrice) {
+      if (!containerEl) return [];
+      const rows = Array.from(containerEl.querySelectorAll('[data-pack-row="1"]'));
+      const hasAny = rows.some(r => {
+        const label = String((r.querySelector('.pack-label') && r.querySelector('.pack-label').value) || '').trim();
+        const id = String((r.querySelector('.pack-id') && r.querySelector('.pack-id').value) || '').trim();
+        const priceRaw = String((r.querySelector('.pack-price') && r.querySelector('.pack-price').value) || '').trim();
+        const unitsRaw = String((r.querySelector('.pack-multiplier') && r.querySelector('.pack-multiplier').value) || '').trim();
+        return !!(label || id || priceRaw || unitsRaw);
+      });
+      if (!hasAny) return [];
+
+      const normalizedBase = parseInt(basePrice || '0', 10) || 0;
+      rows.forEach(r => {
+        const labelEl = r.querySelector('.pack-label');
+        const idEl = r.querySelector('.pack-id');
+        const priceEl = r.querySelector('.pack-price');
+        if (!labelEl || !idEl || !priceEl) return;
+        const label = String(labelEl.value || '').trim().toLowerCase();
+        const id = String(idEl.value || '').trim().toLowerCase();
+        const priceVal = parseInt(String(priceEl.value || '').trim() || '0', 10) || 0;
+        const isUnit = (id === 'unidad') || (label === 'unidad');
+        if (isUnit && priceVal <= 0 && normalizedBase > 0) {
+          priceEl.value = String(normalizedBase);
+        }
+      });
+
+      const packs = readAdminPacksFromEditor(containerEl);
+      if (!packs.length) {
+        alert('Completá precio (> 0) para cada presentación o quitá las filas que no uses.');
+        return null;
+      }
+      return packs;
+    }
+
+    function bindAdminPackPriceSync(priceInputEl, packsContainerEl) {
+      if (!priceInputEl || !packsContainerEl) return;
+      const key = 'packsSyncBound';
+      if (priceInputEl.dataset[key] === '1') return;
+      priceInputEl.dataset[key] = '1';
+      priceInputEl.addEventListener('input', () => {
+        const basePrice = parseInt(String(priceInputEl.value || '').trim() || '0', 10) || 0;
+        if (basePrice <= 0) return;
+        const rows = Array.from(packsContainerEl.querySelectorAll('[data-pack-row="1"]'));
+        for (const r of rows) {
+          const labelEl = r.querySelector('.pack-label');
+          const idEl = r.querySelector('.pack-id');
+          const priceEl = r.querySelector('.pack-price');
+          if (!labelEl || !idEl || !priceEl) continue;
+          const label = String(labelEl.value || '').trim().toLowerCase();
+          const id = String(idEl.value || '').trim().toLowerCase();
+          const isUnit = (id === 'unidad') || (label === 'unidad');
+          if (!isUnit) continue;
+          const current = parseInt(String(priceEl.value || '').trim() || '0', 10) || 0;
+          if (current <= 0) priceEl.value = String(basePrice);
+          break;
+        }
+      });
+    }
 
     function slugifyAdminCategory(value) {
       const text = String(value || '').trim().toLowerCase();
@@ -3251,6 +3507,17 @@
       if (prodEditSection) prodEditSection.value = existingSection;
       if (prodEditInterest) prodEditInterest.value = existingInterest;
 
+      try {
+        const v = parseAdminProductVariants(product);
+        const packs = normalizeAdminPackList(v.packs || v.pack_options || v.sale_packs);
+        renderAdminPacksEditor(prodEditPacks, packs);
+        bindAdminPackPriceSync(prodEditPrice, prodEditPacks);
+        if (prodEditAddPackBtn && prodEditAddPackBtn.dataset.bound !== 'true') {
+          prodEditAddPackBtn.addEventListener('click', () => addAdminPackRow(prodEditPacks));
+          prodEditAddPackBtn.dataset.bound = 'true';
+        }
+      } catch (_) {}
+
       // Update Preview
       updatePreview();
 
@@ -3265,6 +3532,10 @@
       prodEditModal.style.display = 'none';
       prodEditModal.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = 'auto';
+      if (prodEditPacks) {
+        prodEditPacks.innerHTML = '';
+        prodEditPacks.dataset.rendered = '0';
+      }
       currentEditingProduct = null;
     }
 
@@ -3486,6 +3757,16 @@
                 if (variants && typeof variants === 'object' && 'food_categories' in variants) {
                     delete variants.food_categories;
                 }
+            }
+
+            const packs = collectAdminPacksForSave(prodEditPacks, payload.price);
+            if (packs === null) return;
+            if (packs.length) {
+                variants.packs = packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier }));
+            } else {
+                if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
+                if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
+                if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
             }
 
             if (Object.keys(variants).length > 0) {
@@ -16077,6 +16358,12 @@
           </div>
         </div>
         <div>
+          <label>Presentaciones (Unidad / 1/2 Docena / Docena)</label>
+          <div id="create-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <button type="button" id="create-prod-add-pack" style="height:34px; border:none; border-radius:8px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:700; width:fit-content; padding:0 12px;">Agregar presentación</button>
+          <small>Si configurás presentaciones, el cliente elige una y el stock se descuenta por unidades reales.</small>
+        </div>
+        <div>
           <label>Posición en la categoría</label>
           <input type="number" id="create-prod-position" min="1" placeholder="Vacío = al final" style="width:100%; padding:8px;">
           <small>Si el producto tiene varias categorías, se usa la primera seleccionada para definir el orden.</small>
@@ -16434,6 +16721,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const pFoodCats = document.getElementById('create-prod-food-cats');
   const pFile = document.getElementById('create-prod-file');
   const pImgUrl = document.getElementById('create-prod-image-url');
+  const pPacks = document.getElementById('create-prod-packs');
+  const pAddPackBtn = document.getElementById('create-prod-add-pack');
   
   const previewTitle = document.getElementById('create-preview-title');
   const previewDesc = document.getElementById('create-preview-desc');
@@ -16487,6 +16776,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pFoodCats) Array.from(pFoodCats.options || []).forEach(o => { o.selected = false; });
       pFile.value = '';
       pImgUrl.value = '';
+      if (pPacks) {
+        renderAdminPacksEditor(pPacks, []);
+        bindAdminPackPriceSync(pPrice, pPacks);
+        if (pAddPackBtn && pAddPackBtn.dataset.bound !== 'true') {
+          pAddPackBtn.addEventListener('click', () => addAdminPackRow(pPacks));
+          pAddPackBtn.dataset.bound = 'true';
+        }
+      }
       previewImg.style.display = 'none';
       previewPlaceholder.style.display = 'block';
       updatePreview();
@@ -16617,6 +16914,9 @@ document.addEventListener('DOMContentLoaded', () => {
         alert('Por favor complete ID, Nombre y Precio válido.');
         return;
       }
+
+      const packs = collectAdminPacksForSave(pPacks, price);
+      if (packs === null) return;
       
       const payload = {
         tenant_slug: tenant,
@@ -16631,6 +16931,9 @@ document.addEventListener('DOMContentLoaded', () => {
         food_categories: selectedCats,
         image_url: pImgUrl.value
       };
+      if (packs.length) {
+        payload.variants = { packs: packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier })) };
+      }
       
       doCreateBtn.disabled = true;
       doCreateBtn.textContent = 'Guardando...';
