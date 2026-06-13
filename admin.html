@@ -2007,6 +2007,10 @@
         <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
           <button id="inv-create-btn" style="background-color:#4caf50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">+ Nuevo Producto</button>
           <button id="inv-reload">Recargar</button>
+          <button id="inv-import-xlsx-btn" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Importar Excel</button>
+          <button id="inv-download-xlsx-template" style="background-color:#607d8b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Descargar plantilla</button>
+          <button id="inv-export-inventory-xlsx" style="background-color:#455a64; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Exportar inventario</button>
+          <input type="file" id="inv-import-xlsx-file" accept=".xlsx" style="display:none;">
           <span id="inv-hint" class="small">Editar stock requiere login</span>
         </div>
         <button id="close-inventory-box" class="mobile-close-btn" style="background-color:#f44336; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cerrar lista</button>
@@ -3726,6 +3730,10 @@
     const canArchiveSelectedBtn = document.getElementById('can-archive-selected');
     const canArchiveVisibleBtn = document.getElementById('can-archive-visible');
     const invReloadBtn = document.getElementById('inv-reload');
+    const invImportBtn = document.getElementById('inv-import-xlsx-btn');
+    const invImportFile = document.getElementById('inv-import-xlsx-file');
+    const invDownloadTemplateBtn = document.getElementById('inv-download-xlsx-template');
+    const invExportInventoryBtn = document.getElementById('inv-export-inventory-xlsx');
     const invTbody = document.getElementById('inventory-tbody');
     const ordersHistoryGroup = document.getElementById('orders-history-group');
     const deliveredSummaryEl = document.querySelector('#delivered-box > summary');
@@ -3772,6 +3780,7 @@
     let deliveredOffset = 0;
     let canceledLimit = 50;
     let canceledOffset = 0;
+    let lastXlsxImportPreview = null;
     (function(){
       const today = (new Date()).toISOString().slice(0,10);
       const y = new Date(); y.setDate(y.getDate()-1);
@@ -10491,6 +10500,113 @@
     if (invReloadBtn) {
       invReloadBtn.addEventListener('click', async () => {
         try { await renderInventory(); } catch (_) { alert('No se pudo cargar inventario'); }
+      });
+    }
+    if (invDownloadTemplateBtn) {
+      invDownloadTemplateBtn.addEventListener('click', () => {
+        if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
+        const slug = tenantInput.value.trim() || defaultSlug();
+        const url = new URL('/api/products_import_template', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('mode', 'blank');
+        window.open(url.toString(), '_blank');
+      });
+    }
+    if (invExportInventoryBtn) {
+      invExportInventoryBtn.addEventListener('click', () => {
+        if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
+        const slug = tenantInput.value.trim() || defaultSlug();
+        const url = new URL('/api/products_import_template', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('mode', 'export');
+        window.open(url.toString(), '_blank');
+      });
+    }
+    if (invImportBtn && invImportFile) {
+      invImportBtn.addEventListener('click', () => {
+        if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
+        try { invImportFile.click(); } catch (_) {}
+      });
+      invImportFile.addEventListener('change', async () => {
+        const file = invImportFile.files && invImportFile.files[0];
+        if (!file) return;
+        if (!/\.xlsx$/i.test(file.name || '')) {
+          alert('Solo se permite .xlsx');
+          invImportFile.value = '';
+          return;
+        }
+        try {
+          if (!csrfToken) await fetchCSRF();
+          const slug = tenantInput.value.trim() || defaultSlug();
+          const url = new URL('/api/products_import_preview', API_BASE);
+          url.searchParams.set('tenant_slug', slug);
+          const formData = new FormData();
+          formData.append('file', file);
+          const resp = await fetch(url.toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken || '' },
+            body: formData,
+            credentials: 'include'
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data || data.ok !== true) {
+            alert('Error al previsualizar: ' + String((data && data.error) || 'desconocido'));
+            invImportFile.value = '';
+            return;
+          }
+          lastXlsxImportPreview = data;
+          const errCount = Number(data.products && data.products.errors || 0);
+          if (errCount > 0) {
+            const firstErrors = (Array.isArray(data.actions) ? data.actions.filter(a => a && a.action === 'error') : []).slice(0, 8);
+            const lines = firstErrors.map(a => `Fila ${a.row}: ${(a.errors || []).join(', ')}`).join('\n');
+            alert(`Hay ${errCount} filas con errores.\n\n${lines}`);
+            return;
+          }
+          const toCreate = Number(data.products && data.products.to_create || 0);
+          const toUpdate = Number(data.products && data.products.to_update || 0);
+          const catCreate = Number(data.categories && data.categories.to_create || 0);
+          const okApply = confirm(
+            `Importación lista:\n` +
+            `- Categorías nuevas: ${catCreate}\n` +
+            `- Productos nuevos: ${toCreate}\n` +
+            `- Productos a actualizar: ${toUpdate}\n\n` +
+            `Las celdas vacías no modifican datos existentes.\n` +
+            `¿Aplicar ahora?`
+          );
+          if (!okApply) return;
+          const urlApply = new URL('/api/products_import_apply', API_BASE);
+          urlApply.searchParams.set('tenant_slug', slug);
+          const fd2 = new FormData();
+          fd2.append('file', file);
+          if (data.assigned_ids) {
+            fd2.append('assigned_ids_json', JSON.stringify(data.assigned_ids || {}));
+          }
+          const resp2 = await fetch(urlApply.toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken || '' },
+            body: fd2,
+            credentials: 'include'
+          });
+          const data2 = await resp2.json().catch(() => ({}));
+          if (!resp2.ok || !data2 || data2.ok !== true) {
+            alert('Error al importar: ' + String((data2 && data2.error) || 'desconocido'));
+            return;
+          }
+          try { await loadAdminMainMenuCategories(true); } catch (_) {}
+          try { await renderInventory(); } catch (_) {}
+          const c = data2.categories || {};
+          const p = data2.products || {};
+          alert(
+            `Importación aplicada.\n` +
+            `- Categorías creadas: ${Number(c.created_count || 0)}\n` +
+            `- Productos creados: ${Number(p.created || 0)}\n` +
+            `- Productos actualizados: ${Number(p.updated || 0)}`
+          );
+        } catch (e) {
+          alert('Error al importar Excel');
+        } finally {
+          invImportFile.value = '';
+        }
       });
     }
     if (delPageSizeSelect) {
