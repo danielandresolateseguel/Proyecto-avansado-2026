@@ -14699,7 +14699,7 @@
         const url = new URL('/api/tenant_tables', window.location.origin);
         url.searchParams.set('tenant_slug', slug);
         
-        const res = await fetch(url);
+        const res = await fetch(url, { credentials: 'include' });
         if (res.ok) {
            const serverData = await res.json();
            if (serverData && serverData.zones && serverData.zones.length > 0) {
@@ -14761,7 +14761,12 @@
           }));
 
           // If we found local data but server was empty/default, sync to server
-          saveData(); 
+          const canSave = !!(typeof isAuthed !== 'undefined' && isAuthed) && (
+            (typeof isOwnerUser !== 'undefined' && isOwnerUser) ||
+            String((typeof currentUserRole !== 'undefined' ? currentUserRole : '') || '').trim().toLowerCase() === 'admin' ||
+            !!((typeof currentUserPerms !== 'undefined' ? currentUserPerms : null) && (currentUserPerms.tables_manage))
+          );
+          if (canSave) saveData();
         } catch(e) {}
       }
       
@@ -14780,6 +14785,15 @@
       const showSuccessNotice = !!opts.showSuccessNotice;
       const showErrorAlert = !!opts.showErrorAlert;
       const slug = getTablesTenantSlug();
+      const canSave = !!(typeof isAuthed !== 'undefined' && isAuthed) && (
+        (typeof isOwnerUser !== 'undefined' && isOwnerUser) ||
+        String((typeof currentUserRole !== 'undefined' ? currentUserRole : '') || '').trim().toLowerCase() === 'admin' ||
+        !!((typeof currentUserPerms !== 'undefined' ? currentUserPerms : null) && (currentUserPerms.tables_manage))
+      );
+      if (!canSave) {
+        if (showErrorAlert) alert('Sin permisos para guardar mesas.');
+        return false;
+      }
       const btn = document.getElementById('tm-save-layout');
       const originalText = btn ? btn.innerText : 'Guardar Distribución';
       
@@ -14790,10 +14804,15 @@
       }
 
       // Ensure CSRF Token is present
-      if (!CSRF_TOKEN || CSRF_TOKEN === '') {
+      if ((!CSRF_TOKEN || CSRF_TOKEN === '') && (!csrfToken || csrfToken === '')) {
           console.warn('CSRF Token missing in saveData, fetching...');
           try { await fetchCsrfToken(); } catch(e) { console.error(e); }
       }
+      try {
+        if (typeof csrfToken !== 'undefined' && (!csrfToken || csrfToken === '')) {
+          csrfToken = CSRF_TOKEN || csrfToken;
+        }
+      } catch (_) {}
       
       // 1. Save Local (Backup/Offline)
       localStorage.setItem('kds_tables_' + slug, JSON.stringify(data));
@@ -14804,9 +14823,8 @@
          const headers = {
             'Content-Type': 'application/json'
          };
-         if (typeof CSRF_TOKEN !== 'undefined' && CSRF_TOKEN) {
-             headers['X-CSRFToken'] = CSRF_TOKEN;
-         }
+         if (typeof csrfToken !== 'undefined' && csrfToken) headers['X-CSRF-Token'] = csrfToken;
+         if (typeof CSRF_TOKEN !== 'undefined' && CSRF_TOKEN) headers['X-CSRFToken'] = CSRF_TOKEN;
          
          let res = await fetch(`/api/tenant_tables?tenant_slug=${slug}`, {
             method: 'POST',
@@ -14817,18 +14835,31 @@
 
          // Retry once on 403
          if (res.status === 403) {
-             console.warn('403 Forbidden in saveData, retrying with new token...');
-             await fetchCsrfToken();
-             if (CSRF_TOKEN) headers['X-CSRFToken'] = CSRF_TOKEN;
-             res = await fetch(`/api/tenant_tables?tenant_slug=${slug}`, {
-                method: 'POST',
-                headers: headers,
-                body: JSON.stringify(data),
-                credentials: 'include'
-             });
+             let payload = {};
+             try { payload = await res.json(); } catch (_) {}
+             const msg = String(payload && payload.error || '').toLowerCase();
+             if (msg.includes('csrf')) {
+               console.warn('403 Forbidden (csrf) in saveData, retrying with new token...');
+               await fetchCsrfToken();
+               try { if (typeof csrfToken !== 'undefined') csrfToken = CSRF_TOKEN || csrfToken; } catch (_) {}
+               if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+               if (CSRF_TOKEN) headers['X-CSRFToken'] = CSRF_TOKEN;
+               res = await fetch(`/api/tenant_tables?tenant_slug=${slug}`, {
+                  method: 'POST',
+                  headers: headers,
+                  body: JSON.stringify(data),
+                  credentials: 'include'
+               });
+             } else {
+               throw new Error(payload && payload.error ? payload.error : 'HTTP 403');
+             }
          }
          
-         if (!res.ok) throw new Error('Error en servidor: ' + res.status);
+         if (!res.ok) {
+           let payload = {};
+           try { payload = await res.json(); } catch (_) {}
+           throw new Error(payload && payload.error ? payload.error : ('Error en servidor: ' + res.status));
+         }
          
          if (btn) {
              btn.innerText = '¡Guardado!';
