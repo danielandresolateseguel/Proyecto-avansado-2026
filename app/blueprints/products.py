@@ -1,6 +1,7 @@
 import os
 import json
 import io
+import re
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify, session, current_app, send_file
@@ -13,6 +14,55 @@ bp = Blueprint('products', __name__, url_prefix='/api')
 
 def _safe_str(v):
     return str(v or '').strip()
+
+_ID_INTLIKE_RE = re.compile(r'^(\d+)\.0+$')
+_ID_DIGITS_RE = re.compile(r'^\d+$')
+
+def _normalize_product_id_input(value):
+    if value is None:
+        return ''
+    if isinstance(value, bool):
+        return ''
+    if isinstance(value, float):
+        try:
+            if value == value and float(value).is_integer():
+                return str(int(value))
+        except Exception:
+            pass
+    s = str(value).strip()
+    if not s:
+        return ''
+    m = _ID_INTLIKE_RE.match(s)
+    if m:
+        return m.group(1)
+    return s
+
+def _product_id_canonical_key(pid):
+    s = _normalize_product_id_input(pid)
+    if not s:
+        return ''
+    if _ID_DIGITS_RE.match(s):
+        try:
+            return str(int(s))
+        except Exception:
+            return s.lstrip('0') or '0'
+    return s.lower()
+
+def _resolve_existing_product_id(pid_input, existing_ids_set):
+    pid_input = _normalize_product_id_input(pid_input)
+    if not pid_input:
+        return ''
+    if pid_input in existing_ids_set:
+        return pid_input
+    canon = _product_id_canonical_key(pid_input)
+    if not canon:
+        return pid_input
+    candidates = [eid for eid in existing_ids_set if _product_id_canonical_key(eid) == canon]
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        raise ValueError(f'id ambiguo: "{pid_input}" coincide con {", ".join(sorted(candidates)[:5])}')
+    return pid_input
 
 def _cell_present(v):
     if v is None:
@@ -264,6 +314,7 @@ def _build_import_plan(tenant_slug, products_rows, assigned_ids_map=None):
             'image_url': r[7],
             'position': int(r[8] or 0)
         }
+    existing_ids_set = set(existing.keys())
     id_gen = _next_id_generator(existing_ids)
     assigned_ids = {}
     actions = []
@@ -275,13 +326,20 @@ def _build_import_plan(tenant_slug, products_rows, assigned_ids_map=None):
     for row in (products_rows or []):
         row_num = int(row.get('__row_index') or 0) or 0
         raw_id = row.get('id')
-        pid = _safe_str(raw_id)
+        pid_input = _normalize_product_id_input(raw_id)
+        pid = pid_input
         if not pid:
             if assigned_ids_map and str(row_num) in assigned_ids_map:
-                pid = _safe_str(assigned_ids_map.get(str(row_num)))
+                pid = _normalize_product_id_input(assigned_ids_map.get(str(row_num)))
             if not pid:
                 pid = next(id_gen)
             assigned_ids[str(row_num)] = pid
+        else:
+            try:
+                pid = _resolve_existing_product_id(pid, existing_ids_set)
+            except Exception as e:
+                pid = pid_input
+                row['__id_error'] = str(e)
         name_val = row.get('nombre') if 'nombre' in row else row.get('name')
         price_val = row.get('precio') if 'precio' in row else row.get('price')
         stock_val = row.get('stock')
@@ -293,6 +351,8 @@ def _build_import_plan(tenant_slug, products_rows, assigned_ids_map=None):
         position_val = row.get('posicion') if 'posicion' in row else row.get('position')
         entry_errors = []
         is_update = pid in existing
+        if row.get('__id_error'):
+            entry_errors.append(str(row.get('__id_error')))
         has_name = _cell_present(name_val)
         has_price = _cell_present(price_val)
         if not is_update:
