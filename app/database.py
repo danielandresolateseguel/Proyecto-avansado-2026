@@ -37,6 +37,9 @@ class PostgresRow:
         if isinstance(item, int):
             return self._row[item]
         return self._row[self._col_map[item]]
+
+    def __len__(self):
+        return len(self._row)
     
     def get(self, item, default=None):
         try:
