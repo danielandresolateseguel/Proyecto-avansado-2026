@@ -13811,6 +13811,99 @@
           return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       };
 
+      const escapeJsString = (value) => String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+      function normalizePackList(raw) {
+        let arr = raw;
+        if (typeof raw === 'string') {
+          const s = raw.trim();
+          if (!s) return [];
+          try { arr = JSON.parse(s); } catch (_) { return []; }
+        }
+        if (!Array.isArray(arr)) return [];
+        const cleanText = (v) => String(v ?? '')
+          .replace(/[\u200B-\u200D\uFEFF]/g, '')
+          .replace(/\u00A0/g, ' ')
+          .trim();
+        const out = [];
+        const seen = new Set();
+        arr.forEach((p, idx) => {
+          if (!p || typeof p !== 'object') return;
+          const rawId = cleanText(p.id || p.key || p.value);
+          const id = rawId || String(idx);
+          const label = cleanText(p.label || p.name || id) || id;
+          const price = parseInt(p.price, 10);
+          const size = parseInt(p.size ?? p.qty ?? p.multiplier ?? p.units ?? 1, 10);
+          if (!id || !label) return;
+          if (!Number.isFinite(price) || price <= 0) return;
+          const packSize = Number.isFinite(size) && size > 0 ? size : 1;
+          const key = `${id}::${price}::${packSize}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          out.push({ id, label, price, pack_size: packSize });
+        });
+        return out;
+      }
+
+      function getProductPacks(product) {
+        if (!product || typeof product !== 'object') return [];
+        let v = null;
+        if (product.variants && typeof product.variants === 'object') {
+          v = product.variants;
+        } else if (typeof product.variants === 'string' && product.variants.trim()) {
+          try { v = JSON.parse(product.variants); } catch (_) { v = null; }
+        }
+        const raw = (v && (v.packs ?? v.pack_options ?? v.sale_packs)) ?? (product.packs ?? product.pack_options ?? product.sale_packs);
+        return normalizePackList(raw);
+      }
+
+      function ensurePackSelectModal() {
+        let modal = document.getElementById('kds-pack-modal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'kds-pack-modal';
+        modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:10050; align-items:center; justify-content:center; padding:14px;';
+        modal.innerHTML = `
+          <div style="background:#fff; border-radius:12px; width:min(520px, 96vw); max-height:86vh; overflow:auto; box-shadow:0 18px 44px rgba(0,0,0,0.25);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 14px 10px 14px; border-bottom:1px solid #eee;">
+              <div>
+                <div id="kds-pack-title" style="font-weight:800; font-size:16px; line-height:1.2;"></div>
+                <div style="margin-top:4px; font-size:12px; color:#666; font-weight:600;">Elegí la presentación</div>
+              </div>
+              <button type="button" id="kds-pack-close" style="width:34px; height:34px; border-radius:10px; border:1px solid #ddd; background:#fff; cursor:pointer; font-size:20px; line-height:1;">×</button>
+            </div>
+            <div id="kds-pack-options" style="display:flex; flex-direction:column; gap:10px; padding:14px;"></div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        const closeBtn = modal.querySelector('#kds-pack-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.style.display = 'none';
+        });
+        return modal;
+      }
+
+      function openPackPicker(product, packs, onChoose) {
+        const modal = ensurePackSelectModal();
+        const titleEl = modal.querySelector('#kds-pack-title');
+        const optionsEl = modal.querySelector('#kds-pack-options');
+        if (titleEl) titleEl.textContent = product?.name || 'Producto';
+        if (optionsEl) optionsEl.innerHTML = '';
+        (packs || []).forEach(pack => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:12px 12px; border-radius:10px; border:1px solid #e6e6e6; background:#fff; cursor:pointer; font-weight:800;';
+          btn.innerHTML = `<span>${escapeAdminHtml(pack.label)}</span><span style="color:#2e7d32;">$${pack.price}</span>`;
+          btn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            onChoose(pack);
+          });
+          if (optionsEl) optionsEl.appendChild(btn);
+        });
+        modal.style.display = 'flex';
+      }
+
       if (tenantSelect) {
         // Initial sync
         const current = (typeof tenantInput !== 'undefined' && tenantInput.value) ? tenantInput.value : 'gastronomia-local1';
@@ -14004,6 +14097,10 @@
           el.onmouseover = () => el.style.borderColor = '#bbb';
           el.onmouseout = () => el.style.borderColor = '#eee';
           const hasDetails = p.details && p.details.trim().length > 0;
+          const packs = getProductPacks(p);
+          const hasPacks = packs.length > 0;
+          const minPack = hasPacks ? packs.reduce((m, x) => (x.price < m.price ? x : m), packs[0]) : null;
+          const priceLabel = hasPacks ? `Desde $${minPack.price}` : `$${p.price}`;
           el.innerHTML = `
             <div style="flex:1;">
               <div style="display:flex; align-items:center; margin-bottom: 2px;">
@@ -14012,20 +14109,51 @@
               </div>
               <div class="prod-detail-text" style="font-size: 11px; color: #888;">${p.details || ''}</div>
             </div>
-            <div style="font-weight: 700; color: #2e7d32; text-align: right;">$${p.price}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+              <div style="font-size:11px; font-weight:800; color:${hasPacks ? '#4a6fa5' : '#999'};">${hasPacks ? 'Presentaciones' : ''}</div>
+              <div style="font-weight: 700; color: #2e7d32; text-align: right;">${priceLabel}</div>
+            </div>
           `;
-          el.onclick = () => addToCart(p);
+          el.onclick = () => handleProductClick(p);
           productsGrid.appendChild(el);
         });
       }
       
-      function addToCart(p, qty = 1, skipRender = false) {
+      function handleProductClick(p) {
+        const packs = getProductPacks(p);
+        if (packs.length) {
+          openPackPicker(p, packs, (pack) => addToCart(p, 1, false, pack));
+          return;
+        }
+        addToCart(p, 1, false, null);
+      }
+
+      function addToCart(p, qty = 1, skipRender = false, pack = null) {
         const addQty = Math.max(1, safeAdminInt(qty) || 1);
-        const existing = cart.find(i => i.id === p.id);
+        const baseId = String(p?.id ?? '').trim();
+        if (!baseId) return;
+        const packId = pack ? String(pack.id || '').trim() : '';
+        const packLabel = pack ? String(pack.label || '').trim() : '';
+        const packSize = pack ? (safeAdminInt(pack.pack_size) || 1) : 1;
+        const unitPrice = pack ? (safeAdminInt(pack.price) || 0) : (safeAdminInt(p.price) || 0);
+        if (unitPrice <= 0) return;
+        const displayName = packLabel ? `${p.name} (${packLabel})` : p.name;
+        const key = packId ? `${baseId}::pack:${packId}` : baseId;
+        const existing = cart.find(i => i.key === key);
         if (existing) {
           existing.qty += addQty;
         } else {
-          cart.push({ ...p, qty: addQty });
+          cart.push({
+            key,
+            product_id: baseId,
+            name: displayName,
+            price: unitPrice,
+            qty: addQty,
+            details: p.details || '',
+            pack_id: packId || '',
+            pack_label: packLabel || '',
+            pack_size: packId ? packSize : 1
+          });
         }
         if (!skipRender) renderCart();
       }
@@ -14083,8 +14211,8 @@
         });
       };
       
-      window.updateCartQty = (id, delta) => {
-        const idx = cart.findIndex(i => i.id === id);
+      window.updateCartQty = (key, delta) => {
+        const idx = cart.findIndex(i => i.key === key);
         if (idx === -1) return;
         const item = cart[idx];
         item.qty += delta;
@@ -14092,8 +14220,8 @@
         renderCart();
       };
       
-      window.updateCartItemNote = (id, note) => {
-        const item = cart.find(i => i.id === id);
+      window.updateCartItemNote = (key, note) => {
+        const item = cart.find(i => i.key === key);
         if (item) {
             item.notes = note;
         }
@@ -14110,6 +14238,7 @@
           cart.forEach(item => {
             const rowTotal = item.price * item.qty;
             total += rowTotal;
+            const safeKey = escapeJsString(item.key);
             const row = document.createElement('div');
             row.style.cssText = 'display: flex; flex-direction: column; padding: 8px; background: #f9f9f9; border-radius: 6px; font-size: 13px; gap: 8px;';
             row.innerHTML = `
@@ -14119,13 +14248,13 @@
                   <div style="color: #666;">$${item.price} x ${item.qty}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                  <button onclick="updateCartQty('${item.id}', -1)" style="width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #ddd; color: #333; border-radius: 4px;">-</button>
+                  <button onclick="updateCartQty('${safeKey}', -1)" style="width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #ddd; color: #333; border-radius: 4px;">-</button>
                   <span style="font-weight: 600; width: 16px; text-align: center;">${item.qty}</span>
-                  <button onclick="updateCartQty('${item.id}', 1)" style="width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #ddd; color: #333; border-radius: 4px;">+</button>
+                  <button onclick="updateCartQty('${safeKey}', 1)" style="width: 24px; height: 24px; padding: 0; display: flex; align-items: center; justify-content: center; background: #ddd; color: #333; border-radius: 4px;">+</button>
                 </div>
               </div>
               <div>
-                <input type="text" placeholder="Notas (ej. sin sal)" value="${item.notes || ''}" onchange="updateCartItemNote('${item.id}', this.value)" style="width: 100%; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                <input type="text" placeholder="Notas (ej. sin sal)" value="${item.notes || ''}" onchange="updateCartItemNote('${safeKey}', this.value)" style="width: 100%; padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
               </div>
             `;
             cartContainer.appendChild(row);
@@ -14176,12 +14305,16 @@
             customer_name: name,
             customer_phone: phone,
             items: cart.map(i => ({
-              id: i.id,
+              id: i.product_id,
+              product_id: i.product_id,
               name: i.name,
               price: i.price,
               quantity: i.qty,
               details: i.details,
-              notes: i.notes || ''
+              notes: i.notes || '',
+              pack_id: i.pack_id || '',
+              pack_label: i.pack_label || '',
+              pack_size: i.pack_id ? (safeAdminInt(i.pack_size) || 1) : 1
             })),
             total: total,
             status: 'pendiente',
