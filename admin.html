@@ -669,17 +669,39 @@
     .auth-badge { display:inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; }
     .auth-badge.on { background:#2e7d32; color:#fff; }
     .auth-badge.off { background:#b0bec5; color:#fff; }
-    #users-admin-open { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; padding:0; line-height:0; border:none; background:#455a64; color:#fff; cursor:pointer; }
-    #users-admin-open svg { display:block; width:18px; height:18px; }
+    #settings-open { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:8px; padding:0; line-height:0; border:none; background:#455a64; color:#fff; cursor:pointer; }
+    #settings-open svg { display:block; width:18px; height:18px; }
+    .settings-menu { position:absolute; right:0; top:calc(100% + 8px); background:#fff; border:1px solid #e0e0e0; border-radius:12px; box-shadow:0 12px 24px rgba(0,0,0,0.12); padding:8px; min-width: 200px; z-index: 10002; }
+    .settings-menu button, .settings-menu label { width:100%; display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:10px; border:none; background:transparent; cursor:pointer; font-weight:600; color:#243447; text-align:left; }
+    .settings-menu label { cursor: default; }
+    .settings-menu button:hover { background:#f4f6f8; }
+    .settings-sep { height:1px; background:#eee; margin:6px 0; }
+    #cash-panel summary { cursor:pointer; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#f9f9f9; }
+    #cash-panel[open] summary { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+    #cash-panel .cash-panel-inner { border:1px solid #e0e0e0; border-top: none; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; padding: 10px; background: #fff; }
+    #cash-panel .cash-panel-toolbar { display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .orders-quick-filters { display:flex; gap:6px; align-items:center; margin-left: 8px; flex-wrap: wrap; }
     .orders-quick-filters button { border:none; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; background:#607d8b; color:#fff; line-height:1; position:relative; }
     .orders-quick-filters button.qf-pending { background:#607d8b; }
     .orders-quick-filters button.qf-prep { background:#607d8b; }
     .orders-quick-filters button.qf-ready { background:#607d8b; }
     .orders-quick-filters button.qf-en-camino { background:#607d8b; }
+    .orders-quick-filters button.qf-entregado { background:#607d8b; }
     .orders-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
+    .orders-quick-filters .qf-count { display:none; align-items:center; justify-content:center; height:18px; min-width:18px; padding:0 6px; margin-left:6px; border-radius:999px; background: rgba(255,255,255,0.22); color:#fff; font-size:11px; font-weight:800; }
+    .orders-quick-filters button.has-count .qf-count { display:inline-flex; }
     .orders-quick-filters .qf-dot { position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:999px; background:#ff1744; box-shadow:0 0 0 2px #ffffff, 0 2px 6px rgba(0,0,0,0.2); display:none; }
     .orders-quick-filters button.has-dot .qf-dot { display:block; }
+    .orders-empty-box { display: grid; gap: 10px; }
+    .orders-empty-title { font-weight: 800; color: #334155; font-size: 16px; }
+    .orders-empty-meta { font-size: 12px; color: #64748b; }
+    .orders-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .orders-empty-btn { border: 1px solid #d0d7e2; background: #ffffff; padding: 8px 10px; border-radius: 10px; cursor: pointer; font-weight: 800; color: #243447; }
+    .orders-empty-btn.primary { background: #1565c0; border-color: #1565c0; color: #fff; }
+    .orders-empty-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .orders-empty-kpi { border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px; background: #fff; }
+    .orders-empty-kpi .k { font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; letter-spacing: .02em; }
+    .orders-empty-kpi .v { margin-top: 4px; font-size: 16px; font-weight: 900; color: #0f172a; }
     .delivery-compact-toggle {
       display: inline-flex;
       align-items: center;
@@ -1083,6 +1105,12 @@
       #orders-table tbody tr { display: block; background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 10px 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
       #orders-table tbody tr td { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; border: none; padding: 7px 0; }
       #orders-table tbody tr td::before { display: inline-block; font-weight: 600; color: #445; pointer-events: none; }
+      #orders-table tbody tr.orders-empty-panel { grid-column: 1 / -1; border-style: dashed; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); box-shadow: none; }
+      #orders-table tbody tr.orders-empty-aside { grid-column: 2 / -1; border-style: dashed; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); box-shadow: none; }
+      #orders-table tbody tr.orders-empty-panel td,
+      #orders-table tbody tr.orders-empty-aside td { display: block; padding: 0; }
+      #orders-table tbody tr.orders-empty-panel td::before,
+      #orders-table tbody tr.orders-empty-aside td::before { display: none; }
       #orders-table tbody tr td:nth-child(1)::before { content: 'ID'; }
       #orders-table tbody tr td:nth-child(2)::before { content: 'Fecha'; }
       #orders-table tbody tr td:nth-child(3)::before { content: 'Tipo'; }
@@ -1386,16 +1414,22 @@
     <div class="header-main">
       <h1>Panel de Administración (KDS)</h1>
       <div class="header-end">
-        <label class="small" style="display:flex; align-items:center; gap:6px;"><input id="sound-toggle" type="checkbox" checked /> Sonido</label>
         <div class="auth-bar">
           <span id="auth-status-badge" class="auth-badge off">Sin sesión</span>
-          <button id="users-admin-open" title="Usuarios" aria-label="Usuarios" style="display:none;">
-            <svg viewBox="0 0 24 24" style="fill:currentColor">
-              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.484.484 0 0 0 14.4 1h-4.8c-.24 0-.44.17-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.488.488 0 0 0-.59.22L2.24 7.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94 0 .33.02.64.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h4.8c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
-            </svg>
-          </button>
+          <div style="position:relative;">
+            <button id="settings-open" title="Configuración" aria-label="Configuración">
+              <svg viewBox="0 0 24 24" style="fill:currentColor">
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.484.484 0 0 0 14.4 1h-4.8c-.24 0-.44.17-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.488.488 0 0 0-.59.22L2.24 7.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94 0 .33.02.64.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h4.8c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.57 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.03-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+              </svg>
+            </button>
+            <div id="settings-menu" class="settings-menu" style="display:none;">
+              <label class="small"><input id="sound-toggle" type="checkbox" checked /> Sonido</label>
+              <div class="settings-sep"></div>
+              <button id="users-admin-open" type="button" title="Usuarios" aria-label="Usuarios" style="display:none;">Usuarios</button>
+              <button id="logout-btn" type="button" disabled>Salir</button>
+            </div>
+          </div>
           <button id="login-open-btn">Entrar</button>
-          <button id="logout-btn" disabled>Salir</button>
         </div>
       </div>
       <div class="header-rest">
@@ -1427,79 +1461,33 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
       </button>
     </div>
-    <div class="top-actions">
-      <span class="small" style="display:flex; align-items:center; gap:6px;">Caja
-        <span id="cash-status-label" class="small" style="padding:2px 6px; border-radius:12px; background:#b0bec5; color:#fff;">Sin datos</span>
-        <button id="cash-eye-top" class="eye-btn" aria-label="Ocultar caja">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
-        </button>
-      </span>
-      <span class="small" style="display:flex; align-items:center; gap:6px;">Historial
-        <button id="history-eye-top" class="eye-btn" aria-label="Ocultar historial">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
-        </button>
-      </span>
-    </div>
   </div>
   <div id="metrics" class="small" style="margin-bottom:12px;"></div>
-  <div id="analytics">
-    <details id="analytics-panel">
-      <summary>Análisis de Ventas</summary>
-      <div class="analytics-shell">
-        <div class="analytics-toolbar">
-          <label>Período
-            <select id="analytics-range">
-              <option value="today" selected>Hoy</option>
-              <option value="week">Semana</option>
-              <option value="month">Mes</option>
-              <option value="custom">Personalizado</option>
-            </select>
-          </label>
-          <label>Desde
-            <input id="analytics-from" type="date" />
-          </label>
-          <label>Hasta
-            <input id="analytics-to" type="date" />
-          </label>
-          <button id="analytics-apply" style="background:#1565c0; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;">Actualizar</button>
-          <div id="analytics-range-label" class="small" style="color:#5b7083;"></div>
-        </div>
-        <div id="analytics-summary" class="analytics-summary"></div>
-        <div class="analytics-grid">
-          <div class="analytics-block">
-            <h3>Comparativo</h3>
-            <div id="analytics-comparison" class="analytics-comparison-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Canales</h3>
-            <div id="analytics-channel" class="analytics-scroll-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Métodos de Pago</h3>
-            <div id="analytics-payment" class="analytics-scroll-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Productos Top</h3>
-            <div id="analytics-top-products" class="analytics-scroll-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Top por Unidades</h3>
-            <div id="analytics-top-products-qty" class="analytics-scroll-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Ventas por Hora</h3>
-            <div id="analytics-by-hour" class="analytics-scroll-body"></div>
-          </div>
-          <div class="analytics-block">
-            <h3>Tendencia Diaria</h3>
-            <div id="analytics-by-day" class="analytics-scroll-body"></div>
-          </div>
+  <details id="cash-panel" style="margin: 10px 0 12px 0;">
+    <summary>
+      Caja
+      <span id="cash-status-label" class="small" style="padding:2px 6px; border-radius:12px; background:#b0bec5; color:#fff; margin-left: 6px;">Sin datos</span>
+    </summary>
+    <div class="cash-panel-inner">
+      <div class="cash-panel-toolbar">
+        <div class="small" style="font-weight:700; color:#415a77;">Operaciones</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span class="small" style="display:flex; align-items:center; gap:6px;">Caja
+            <button id="cash-eye-top" class="eye-btn" aria-label="Ocultar caja">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+            </button>
+          </span>
+          <span class="small" style="display:flex; align-items:center; gap:6px;">Historial
+            <button id="history-eye-top" class="eye-btn" aria-label="Ocultar historial">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+            </button>
+          </span>
         </div>
       </div>
-    </details>
-  </div>
-  <div id="cash-box" style="margin-bottom:12px;"></div>
-  <div id="cash-history" style="margin-bottom:12px;"></div>
+      <div id="cash-box" style="margin-bottom:12px;"></div>
+      <div id="cash-history" style="margin-bottom:12px;"></div>
+    </div>
+  </details>
 
   <div id="login-box" style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:16px; max-width:360px;">
     <h2>Ingresar</h2>
@@ -1526,10 +1514,11 @@
         <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       </button>
       <div class="orders-quick-filters" id="orders-quick-filters">
-        <button type="button" id="orders-qf-pending" class="qf-pending" title="Nuevos / Pendientes" aria-label="Nuevos / Pendientes">Nuevos<span class="qf-dot" aria-hidden="true"></span></button>
-        <button type="button" id="orders-qf-prep" class="qf-prep" title="En preparación" aria-label="En preparación">Preparación<span class="qf-dot" aria-hidden="true"></span></button>
-        <button type="button" id="orders-qf-ready" class="qf-ready" title="Listos para entrega" aria-label="Listos para entrega">Listos<span class="qf-dot" aria-hidden="true"></span></button>
-        <button type="button" id="orders-qf-en-camino" class="qf-en-camino" title="En camino (Delivery)" aria-label="En camino (Delivery)">En camino<span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-pending" class="qf-pending" title="Nuevos / Pendientes" aria-label="Nuevos / Pendientes">Nuevos<span class="qf-count" id="orders-qf-pending-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-prep" class="qf-prep" title="En preparación" aria-label="En preparación">Preparación<span class="qf-count" id="orders-qf-prep-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-ready" class="qf-ready" title="Listos para entrega" aria-label="Listos para entrega">Listos<span class="qf-count" id="orders-qf-ready-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-en-camino" class="qf-en-camino" title="En camino (Delivery)" aria-label="En camino (Delivery)">En camino<span class="qf-count" id="orders-qf-en-camino-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-entregado" class="qf-entregado" title="Entregados" aria-label="Entregados">Entregados<span class="qf-count" id="orders-qf-entregado-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
       </div>
       <button id="tables-open" class="orders-secondary-cta" style="background:#673ab7; color:#fff; border:none; padding:6px 12px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; margin-left:auto;">Gestión Mesas</button>
     </div>
@@ -2007,6 +1996,12 @@
         <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
           <button id="inv-create-btn" style="background-color:#4caf50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">+ Nuevo Producto</button>
           <button id="inv-reload">Recargar</button>
+          <label class="small" style="display:flex; align-items:center; gap:8px;">
+            Categoría
+            <select id="inv-category-filter" style="height:32px; padding:0 10px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; font-weight:700; color:#0f172a; min-width:220px;">
+              <option value="">Todas</option>
+            </select>
+          </label>
           <button id="inv-import-xlsx-btn" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Importar Excel</button>
           <button id="inv-download-xlsx-template" style="background-color:#607d8b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Descargar plantilla</button>
           <button id="inv-export-inventory-xlsx" style="background-color:#455a64; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Exportar inventario</button>
@@ -2063,6 +2058,63 @@
       </table>
       <div id="carousel-mobile" class="carousel-mobile"></div>
     </details>
+
+    <div id="analytics">
+      <details id="analytics-panel">
+        <summary>Análisis de Ventas</summary>
+        <div class="analytics-shell">
+          <div class="analytics-toolbar">
+            <label>Período
+              <select id="analytics-range">
+                <option value="today" selected>Hoy</option>
+                <option value="week">Semana</option>
+                <option value="month">Mes</option>
+                <option value="custom">Personalizado</option>
+              </select>
+            </label>
+            <label>Desde
+              <input id="analytics-from" type="date" />
+            </label>
+            <label>Hasta
+              <input id="analytics-to" type="date" />
+            </label>
+            <button id="analytics-apply" style="background:#1565c0; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;">Actualizar</button>
+            <div id="analytics-range-label" class="small" style="color:#5b7083;"></div>
+          </div>
+          <div id="analytics-summary" class="analytics-summary"></div>
+          <div class="analytics-grid">
+            <div class="analytics-block">
+              <h3>Comparativo</h3>
+              <div id="analytics-comparison" class="analytics-comparison-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Canales</h3>
+              <div id="analytics-channel" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Métodos de Pago</h3>
+              <div id="analytics-payment" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Productos Top</h3>
+              <div id="analytics-top-products" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Top por Unidades</h3>
+              <div id="analytics-top-products-qty" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Ventas por Hora</h3>
+              <div id="analytics-by-hour" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Tendencia Diaria</h3>
+              <div id="analytics-by-day" class="analytics-scroll-body"></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
 
     <div id="orders-filters-export" style="margin: 12px 0; border: 1px solid #ddd; border-radius: 8px; padding: 12px; background: #fff;">
       <h3 style="margin: 0 0 8px 0; font-size: 1rem; color: #425b76;">Filtros y Exportación</h3>
@@ -3883,7 +3935,10 @@
     // const filterSelect = document.getElementById('status-filter');
 
     const soundToggle = document.getElementById('sound-toggle');
+    const settingsOpenBtn = document.getElementById('settings-open');
+    const settingsMenuEl = document.getElementById('settings-menu');
     const dailyEyeBtn = document.getElementById('daily-eye');
+    const cashPanelEl = document.getElementById('cash-panel');
     const cashEyeTop = document.getElementById('cash-eye-top');
     const historyEyeTop = document.getElementById('history-eye-top');
     const cashStatusLabel = document.getElementById('cash-status-label');
@@ -3912,8 +3967,6 @@
     function setDailyVisible(v){
       dailyVisible = !!v;
       if (metricsBoxEl) metricsBoxEl.style.display = dailyVisible ? '' : 'none';
-      if (cashBoxEl) cashBoxEl.style.display = dailyVisible ? '' : 'none';
-      if (cashHistoryEl) cashHistoryEl.style.display = dailyVisible ? '' : 'none';
       try { localStorage.setItem(DAILY_VISIBLE_KEY, dailyVisible ? '1' : '0'); } catch (_) {}
       updateEyeIcon();
     }
@@ -3937,6 +3990,47 @@
       }
     }
     if (dailyEyeBtn) { dailyEyeBtn.addEventListener('click', () => setDailyVisible(!dailyVisible)); }
+    if (cashPanelEl) {
+      try { cashPanelEl.open = true; } catch (_) {}
+      cashPanelEl.addEventListener('toggle', async () => {
+        if (!cashPanelEl.open) return;
+        try {
+          if (cashCollapsed) {
+            cashCollapsed = false;
+            if (cashBoxEl) cashBoxEl.style.display = 'grid';
+            await renderCashBox();
+          }
+        } catch (_) {}
+        try { updateEyeIcon(); } catch (_) {}
+      });
+    }
+    function closeSettingsMenu(){
+      if (!settingsMenuEl) return;
+      settingsMenuEl.style.display = 'none';
+    }
+    if (settingsOpenBtn && settingsMenuEl) {
+      settingsOpenBtn.addEventListener('click', (e) => {
+        try { e.preventDefault(); } catch (_) {}
+        try { e.stopPropagation(); } catch (_) {}
+        const isOpen = settingsMenuEl.style.display !== 'none' && settingsMenuEl.style.display !== '';
+        settingsMenuEl.style.display = isOpen ? 'none' : 'block';
+      });
+      document.addEventListener('click', (e) => {
+        const t = e && e.target;
+        if (!t) return;
+        if (settingsMenuEl.contains(t)) return;
+        if (settingsOpenBtn.contains(t)) return;
+        closeSettingsMenu();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e && e.key === 'Escape') closeSettingsMenu();
+      });
+      settingsMenuEl.addEventListener('click', (e) => {
+        const t = e && e.target;
+        if (!t) return;
+        if (t && (t.id === 'logout-btn' || t.id === 'users-admin-open')) closeSettingsMenu();
+      });
+    }
     if (cashEyeTop) cashEyeTop.addEventListener('click', async () => {
       cashCollapsed = !cashCollapsed;
       const btn = document.getElementById('toggle-cash');
@@ -4015,6 +4109,7 @@
     const invImportFile = document.getElementById('inv-import-xlsx-file');
     const invDownloadTemplateBtn = document.getElementById('inv-download-xlsx-template');
     const invExportInventoryBtn = document.getElementById('inv-export-inventory-xlsx');
+    const invCategoryFilterSelect = document.getElementById('inv-category-filter');
     const invTbody = document.getElementById('inventory-tbody');
     const ordersHistoryGroup = document.getElementById('orders-history-group');
     const deliveredSummaryEl = document.querySelector('#delivered-box > summary');
@@ -4062,6 +4157,8 @@
     let canceledLimit = 50;
     let canceledOffset = 0;
     let lastXlsxImportPreview = null;
+    let invAllItemsCache = [];
+    let invCategoryFilterValue = '';
     (function(){
       const today = (new Date()).toISOString().slice(0,10);
       const y = new Date(); y.setDate(y.getDate()-1);
@@ -4221,8 +4318,7 @@
       setRoleVisibilityById('daily-controls', canDailyMovements);
       setRoleVisibilityById('metrics', canDailyMovements);
       setRoleVisibilityById('analytics', !isKitchen && canReports);
-      setRoleVisibilityById('cash-box', !isKitchen && canCash);
-      setRoleVisibilityById('cash-history', !isKitchen && canCash);
+      setRoleVisibilityById('cash-panel', !isKitchen && canCash);
       setRoleVisibilityById('table-management', !!mozoTablesOnly && !isKitchen && canTables);
 
       setRoleVisibilityById('btn-new-order', !isKitchen && canOrdersCreate);
@@ -6184,14 +6280,16 @@
       pending: new Set(),
       preparacion: new Set(),
       listo: new Set(),
-      en_camino_delivery: new Set()
+      en_camino_delivery: new Set(),
+      entregado: new Set()
     };
     function getOrdersQuickBuckets(activeAll) {
       const buckets = {
         pending: new Set(),
         preparacion: new Set(),
         listo: new Set(),
-        en_camino_delivery: new Set()
+        en_camino_delivery: new Set(),
+        entregado: new Set()
       };
       const arr = Array.isArray(activeAll) ? activeAll : [];
       for (const o of arr) {
@@ -6203,6 +6301,7 @@
         if (st === 'preparacion') buckets.preparacion.add(id);
         if (st === 'listo') buckets.listo.add(id);
         if (st === 'en_camino' && ot === 'direccion') buckets.en_camino_delivery.add(id);
+        if (st === 'entregado') buckets.entregado.add(id);
       }
       return buckets;
     }
@@ -6243,6 +6342,28 @@
       setDot('orders-qf-prep', 'preparacion');
       setDot('orders-qf-ready', 'listo');
       setDot('orders-qf-en-camino', 'en_camino_delivery');
+      setDot('orders-qf-entregado', 'entregado');
+    }
+    function updateOrdersQuickCounts(buckets) {
+      const setCount = (btnId, countId, key) => {
+        const btn = document.getElementById(btnId);
+        const el = document.getElementById(countId);
+        if (!btn || !el) return;
+        const now = buckets && buckets[key] ? buckets[key] : new Set();
+        const n = now.size || 0;
+        if (n > 0) {
+          btn.classList.add('has-count');
+          el.textContent = String(n);
+        } else {
+          btn.classList.remove('has-count');
+          el.textContent = '';
+        }
+      };
+      setCount('orders-qf-pending', 'orders-qf-pending-count', 'pending');
+      setCount('orders-qf-prep', 'orders-qf-prep-count', 'preparacion');
+      setCount('orders-qf-ready', 'orders-qf-ready-count', 'listo');
+      setCount('orders-qf-en-camino', 'orders-qf-en-camino-count', 'en_camino_delivery');
+      setCount('orders-qf-entregado', 'orders-qf-entregado-count', 'entregado');
     }
     window.setOrdersQuickStatusFilter = function(key) {
       const k = String(key || '').trim();
@@ -6283,16 +6404,19 @@
       setActive('orders-qf-prep', ordersQuickStatusFilter === 'preparacion');
       setActive('orders-qf-ready', ordersQuickStatusFilter === 'listo');
       setActive('orders-qf-en-camino', ordersQuickStatusFilter === 'en_camino_delivery');
+      setActive('orders-qf-entregado', ordersQuickStatusFilter === 'entregado');
     };
     (function bindOrdersQuickFilters(){
       const p = document.getElementById('orders-qf-pending');
       const pr = document.getElementById('orders-qf-prep');
       const r = document.getElementById('orders-qf-ready');
       const c = document.getElementById('orders-qf-en-camino');
+      const e = document.getElementById('orders-qf-entregado');
       if (p) p.addEventListener('click', () => window.setOrdersQuickStatusFilter('pending'));
       if (pr) pr.addEventListener('click', () => window.setOrdersQuickStatusFilter('preparacion'));
       if (r) r.addEventListener('click', () => window.setOrdersQuickStatusFilter('listo'));
       if (c) c.addEventListener('click', () => window.setOrdersQuickStatusFilter('en_camino_delivery'));
+      if (e) e.addEventListener('click', () => window.setOrdersQuickStatusFilter('entregado'));
       try { window.updateOrdersQuickFilterUI(); } catch (_) {}
     })();
 
@@ -6300,20 +6424,18 @@
         window.__lastOrdersData = data;
         const orders = data.orders || [];
         window.currentOrders = orders; // Expose for Table Management
-        // Filtro para mostrar activos: NO entregados/cancelados, O entregados pero MESA NO pagada
-        // Y respetar filtros de configuración
-        const activeAll = orders.filter(o => {
+        const visibleAll = orders.filter(o => {
             if (o.status === 'cancelado') return false;
-            if (o.status === 'entregado') {
-                const pStatus = String(o.payment_status || '').trim().toLowerCase();
-                if (pStatus !== 'paid') return true;
-                return false;
-            }
-            // Config filters
             const type = (o.order_type || '').toLowerCase();
             const typeKey = type === 'mesa' ? 'mesa' : (type === 'espera' ? 'espera' : 'direccion');
             if (ordersConfig.filters[typeKey] === false) return false;
-
+            return true;
+        });
+        const activeAll = visibleAll.filter(o => {
+            if (o.status === 'entregado') {
+                const pStatus = String(o.payment_status || '').trim().toLowerCase();
+                return pStatus !== 'paid';
+            }
             return true;
         });
         const buckets = getOrdersQuickBuckets(activeAll);
@@ -6323,11 +6445,13 @@
           markOrdersQuickSeenFor('preparacion', buckets);
           markOrdersQuickSeenFor('listo', buckets);
           markOrdersQuickSeenFor('en_camino_delivery', buckets);
+          markOrdersQuickSeenFor('entregado', buckets);
         }
         if (ordersQuickStatusFilter) {
           markOrdersQuickSeenFor(ordersQuickStatusFilter, buckets);
         }
         updateOrdersQuickDots(buckets);
+        updateOrdersQuickCounts(buckets);
 
         let active = activeAll;
         try {
@@ -7039,8 +7163,112 @@
         
         viewBtn.addEventListener('click', () => openOrderDetailModal(o.id));
       }
+      try {
+        const fmtTime = () => {
+          try { return new Date().toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }); }
+          catch (_) { try { return new Date().toLocaleTimeString(); } catch(__) { return ''; } }
+        };
+        const qfLabel = (() => {
+          const f = String(ordersQuickStatusFilter || '').trim();
+          if (!f) return 'Todos';
+          if (f === 'pending') return 'Nuevos';
+          if (f === 'preparacion') return 'Preparación';
+          if (f === 'listo') return 'Listos';
+          if (f === 'en_camino_delivery') return 'En camino';
+          if (f === 'entregado') return 'Entregados';
+          return f;
+        })();
+        const typesLabel = (() => {
+          try {
+            const f = ordersConfig && ordersConfig.filters ? ordersConfig.filters : {};
+            const mesaOn = f.mesa !== false;
+            const esperaOn = f.espera !== false;
+            const dirOn = f.direccion !== false;
+            const enabled = [];
+            if (mesaOn) enabled.push('Mesa');
+            if (esperaOn) enabled.push('Espera');
+            if (dirOn) enabled.push('Dirección');
+            if (enabled.length === 3) return 'Tipos: Todos';
+            if (enabled.length === 0) return 'Tipos: Ninguno';
+            return `Tipos: ${enabled.join(' / ')}`;
+          } catch (_) {
+            return 'Tipos: Todos';
+          }
+        })();
+        const filterLine = `Filtro: ${qfLabel} · ${typesLabel}`;
+        const counts = {
+          pending: buckets && buckets.pending ? buckets.pending.size : 0,
+          preparacion: buckets && buckets.preparacion ? buckets.preparacion.size : 0,
+          listo: buckets && buckets.listo ? buckets.listo.size : 0,
+          en_camino_delivery: buckets && buckets.en_camino_delivery ? buckets.en_camino_delivery.size : 0,
+          entregado: buckets && buckets.entregado ? buckets.entregado.size : 0
+        };
+        const kpiHtml = `
+          <div class="orders-empty-kpis">
+            <div class="orders-empty-kpi"><div class="k">Nuevos</div><div class="v">${counts.pending}</div></div>
+            <div class="orders-empty-kpi"><div class="k">Preparación</div><div class="v">${counts.preparacion}</div></div>
+            <div class="orders-empty-kpi"><div class="k">Listos</div><div class="v">${counts.listo}</div></div>
+            <div class="orders-empty-kpi"><div class="k">En camino</div><div class="v">${counts.en_camino_delivery}</div></div>
+          </div>
+        `;
+        const makePanelRow = (kind) => {
+          const tr = document.createElement('tr');
+          tr.className = kind;
+          const title = (kind === 'orders-empty-panel') ? 'Sin pedidos activos' : 'Panel rápido';
+          const subtitle = (kind === 'orders-empty-panel')
+            ? `Esperando nuevas comandas · ${fmtTime()}`
+            : `Resumen mientras operás · ${fmtTime()}`;
+          tr.innerHTML = `
+            <td colspan="8">
+              <div class="orders-empty-box">
+                <div>
+                  <div class="orders-empty-title">${title}</div>
+                  <div class="orders-empty-meta">${subtitle}</div>
+                  <div class="orders-empty-meta">${filterLine}</div>
+                </div>
+                ${kpiHtml}
+                <div class="orders-empty-actions">
+                  <button type="button" class="orders-empty-btn primary" data-action="orders-reload">Recargar</button>
+                  <button type="button" class="orders-empty-btn" data-action="orders-scroll-filters">Ver filtros</button>
+                </div>
+                <div class="orders-empty-meta">Tip: si no aparecen pedidos, revisá rango/fechas y filtros de tipo (Mesa / Espera / Dirección).</div>
+              </div>
+            </td>
+          `;
+          return tr;
+        };
+        if (active.length === 0) {
+          frag.appendChild(makePanelRow('orders-empty-panel'));
+          if (omobilePtr) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <div class="card-content">
+                <div class="title">Sin pedidos activos</div>
+                <div class="meta">Esperando nuevas comandas · ${fmtTime()}</div>
+                <div class="meta">${filterLine}</div>
+                ${kpiHtml}
+                <div class="actions" style="margin-top:10px;">
+                  <button type="button" class="ver-detalle" data-action="orders-reload">Recargar</button>
+                </div>
+              </div>
+            `;
+            fragCards.appendChild(card);
+          }
+        } else if (active.length === 1) {
+          frag.appendChild(makePanelRow('orders-empty-aside'));
+        }
+      } catch (_) {}
       tbody.replaceChildren(frag);
       if (omobilePtr) omobilePtr.replaceChildren(fragCards);
+      try {
+        const binds = Array.from(document.querySelectorAll('[data-action="orders-reload"], [data-action="orders-scroll-filters"]'));
+        for (const b of binds) {
+          const act = b.getAttribute('data-action');
+          if (act === 'orders-reload') b.onclick = () => { try { loadOrdersSafe(); } catch(_) { location.reload(); } };
+          if (act === 'orders-scroll-filters') b.onclick = () => { try { document.getElementById('orders-filters-export')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch(_) {} };
+        }
+      } catch (_) {}
       initSLAClock();
       await renderKitchenOrders(activeAll);
       const role0 = String(currentUserRole || '').trim().toLowerCase();
@@ -8399,15 +8627,47 @@
       if (!invTbody) return;
       invTbody.innerHTML = '<tr><td colspan="8" class="small">Cargando...</td></tr>';
       await loadAdminMainMenuCategories();
-      const items = sortProductsForMainMenuDisplay(await fetchProducts(true));
+      const itemsAll = sortProductsForMainMenuDisplay(await fetchProducts(true));
+      invAllItemsCache = itemsAll;
+      if (invCategoryFilterSelect) {
+        const prev = String(invCategoryFilterValue || invCategoryFilterSelect.value || '');
+        const seen = new Set();
+        const categories = [];
+        for (const p of itemsAll) {
+          const label = String(buildProductOrderMeta(p).label || 'Sin categoría').trim() || 'Sin categoría';
+          const key = slugifyAdminCategory(label) || label.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          categories.push(label);
+        }
+        const nextOptions = [''].concat(categories);
+        invCategoryFilterSelect.innerHTML = '';
+        for (const v of nextOptions) {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v ? v : 'Todas';
+          invCategoryFilterSelect.appendChild(opt);
+        }
+        invCategoryFilterSelect.value = nextOptions.includes(prev) ? prev : '';
+        invCategoryFilterValue = invCategoryFilterSelect.value;
+      }
+      const applyFilter = (list) => {
+        const f = String(invCategoryFilterValue || '').trim();
+        if (!f) return list;
+        return list.filter(p => String(buildProductOrderMeta(p).label || 'Sin categoría').trim() === f);
+      };
+      const items = applyFilter(itemsAll);
       invTbody.innerHTML = '';
       const imobile = document.getElementById('inventory-mobile');
       if (imobile) imobile.innerHTML = '';
       if (!items.length) {
+        const msg = (itemsAll.length && String(invCategoryFilterValue || '').trim())
+          ? 'Sin productos en esta categoría'
+          : 'Sin productos';
         const tr = document.createElement('tr');
-        tr.innerHTML = '<td colspan="8" class="small">Sin productos</td>';
+        tr.innerHTML = `<td colspan="8" class="small">${escapeAdminHtml(msg)}</td>`;
         invTbody.appendChild(tr);
-        if (imobile) imobile.innerHTML = '<div class="small">Sin productos</div>';
+        if (imobile) imobile.innerHTML = `<div class="small">${escapeAdminHtml(msg)}</div>`;
         return;
       }
       for (const p of items) {
@@ -10780,6 +11040,12 @@
     }
     if (invReloadBtn) {
       invReloadBtn.addEventListener('click', async () => {
+        try { await renderInventory(); } catch (_) { alert('No se pudo cargar inventario'); }
+      });
+    }
+    if (invCategoryFilterSelect) {
+      invCategoryFilterSelect.addEventListener('change', async () => {
+        invCategoryFilterValue = invCategoryFilterSelect.value;
         try { await renderInventory(); } catch (_) { alert('No se pudo cargar inventario'); }
       });
     }
