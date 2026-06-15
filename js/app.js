@@ -340,6 +340,63 @@ function initScrollableHint(container, storageKey) {
     }, 650);
 }
 
+function initGastronomiaStickyCategoryFilter() {
+    const categoryFilter = document.getElementById('category-filter');
+    if (!categoryFilter) return;
+    if (categoryFilter.dataset.stickyInit === '1') return;
+    categoryFilter.dataset.stickyInit = '1';
+
+    const placeholder = document.createElement('div');
+    placeholder.style.display = 'none';
+    placeholder.style.height = '0px';
+    placeholder.style.pointerEvents = 'none';
+    if (categoryFilter.parentNode) {
+        categoryFilter.parentNode.insertBefore(placeholder, categoryFilter);
+    }
+
+    let rafId = 0;
+    let thresholdY = 0;
+
+    const measureThreshold = () => {
+        try {
+            placeholder.style.display = 'none';
+            placeholder.style.height = '0px';
+            categoryFilter.classList.remove('is-fixed');
+            const rect = categoryFilter.getBoundingClientRect();
+            thresholdY = rect.top + window.scrollY;
+        } catch (_) {
+            thresholdY = window.scrollY;
+        }
+    };
+
+    const update = () => {
+        if (rafId) return;
+        rafId = requestAnimationFrame(() => {
+            rafId = 0;
+            const shouldFix = window.scrollY >= (thresholdY - 0.5);
+            if (shouldFix) {
+                placeholder.style.display = 'block';
+                placeholder.style.height = (categoryFilter.getBoundingClientRect().height || categoryFilter.offsetHeight || 0) + 'px';
+                categoryFilter.classList.add('is-fixed');
+                categoryFilter.classList.add('is-stuck');
+            } else {
+                placeholder.style.display = 'none';
+                placeholder.style.height = '0px';
+                categoryFilter.classList.remove('is-fixed');
+                categoryFilter.classList.toggle('is-stuck', categoryFilter.getBoundingClientRect().top <= 0.5);
+            }
+        });
+    };
+
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', () => {
+        measureThreshold();
+        update();
+    });
+    measureThreshold();
+    update();
+}
+
 function initHeaderContact() {
     const headerContact = document.querySelector('.header-contact');
     const slug = getBusinessSlug() || 'gastronomia-local1';
@@ -998,6 +1055,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Filtros de Categoría (Gastronomía)
     if (PAGE === 'gastronomia') {
         renderMainMenuCategoryFilters((window.BusinessConfig && window.BusinessConfig.main_menu_categories) || []);
+        initGastronomiaStickyCategoryFilter();
     }
     
     // Filtros de Categoría (Index/Comercio)
@@ -1046,6 +1104,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+
+    initGastronomiaStickyCategoryFilter();
 
     // Inicialización segura de visibilidad de productos
     function initProductVisibility() {

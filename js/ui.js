@@ -195,6 +195,15 @@ export function showAddedToCartIndicator(button) {
 export function highlightElement(element) {
     element.classList.add('highlight-element');
     element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const categoryFilter = document.getElementById('category-filter');
+    if (categoryFilter && categoryFilter.classList.contains('is-stuck')) {
+        const h = categoryFilter.getBoundingClientRect().height || 0;
+        if (h > 0) {
+            setTimeout(() => {
+                window.scrollBy({ top: -(Math.ceil(h) + 8), behavior: 'smooth' });
+            }, 250);
+        }
+    }
     setTimeout(() => {
         element.classList.remove('highlight-element');
     }, 2000);
