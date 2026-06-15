@@ -3133,7 +3133,7 @@
       if (safePacks.length) {
         safePacks.forEach(p => addRow(p));
       } else {
-        addRow({ label: 'Unidad', id: 'unidad', price: '', multiplier: 1 });
+        addRow({ label: '', id: '', price: '', multiplier: 1 });
       }
 
       containerEl.dataset.addPackRow = '1';
@@ -13854,7 +13854,16 @@
           try { v = JSON.parse(product.variants); } catch (_) { v = null; }
         }
         const raw = (v && (v.packs ?? v.pack_options ?? v.sale_packs)) ?? (product.packs ?? product.pack_options ?? product.sale_packs);
-        return normalizePackList(raw);
+        const packs = normalizePackList(raw);
+        if (packs.length === 1) {
+          const only = packs[0];
+          const onlyId = String(only?.id || '').trim().toLowerCase();
+          const basePrice = safeAdminInt(product.price) || 0;
+          if ((onlyId === 'unidad' || onlyId === 'unit') && safeAdminInt(only.price) === basePrice && safeAdminInt(only.pack_size) === 1) {
+            return [];
+          }
+        }
+        return packs;
       }
 
       function ensurePackSelectModal() {
