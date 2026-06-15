@@ -13893,8 +13893,8 @@
         (packs || []).forEach(pack => {
           const btn = document.createElement('button');
           btn.type = 'button';
-          btn.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:12px 12px; border-radius:10px; border:1px solid #e6e6e6; background:#fff; cursor:pointer; font-weight:800;';
-          btn.innerHTML = `<span>${escapeAdminHtml(pack.label)}</span><span style="color:#2e7d32;">$${pack.price}</span>`;
+          btn.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:12px 12px; border-radius:10px; border:1px solid #e6e6e6; background:#fff; cursor:pointer; font-weight:800; color:#111;';
+          btn.innerHTML = `<span style="color:#111;">${escapeAdminHtml(pack.label)}</span><span style="color:#2e7d32;">$${pack.price}</span>`;
           btn.addEventListener('click', () => {
             modal.style.display = 'none';
             onChoose(pack);
