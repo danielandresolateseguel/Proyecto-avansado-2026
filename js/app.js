@@ -346,54 +346,55 @@ function initGastronomiaStickyCategoryFilter() {
     if (categoryFilter.dataset.stickyInit === '1') return;
     categoryFilter.dataset.stickyInit = '1';
 
+    const sentinel = document.createElement('div');
+    sentinel.style.height = '1px';
+    sentinel.style.margin = '0';
+    sentinel.style.padding = '0';
+    sentinel.style.pointerEvents = 'none';
+
     const placeholder = document.createElement('div');
     placeholder.style.display = 'none';
     placeholder.style.height = '0px';
     placeholder.style.pointerEvents = 'none';
     if (categoryFilter.parentNode) {
         categoryFilter.parentNode.insertBefore(placeholder, categoryFilter);
+        categoryFilter.parentNode.insertBefore(sentinel, placeholder);
     }
 
     let rafId = 0;
-    let thresholdY = 0;
-
-    const measureThreshold = () => {
-        try {
-            placeholder.style.display = 'none';
-            placeholder.style.height = '0px';
-            categoryFilter.classList.remove('is-fixed');
-            const rect = categoryFilter.getBoundingClientRect();
-            thresholdY = rect.top + window.scrollY;
-        } catch (_) {
-            thresholdY = window.scrollY;
-        }
-    };
+    let isFixed = false;
 
     const update = () => {
         if (rafId) return;
         rafId = requestAnimationFrame(() => {
             rafId = 0;
-            const shouldFix = window.scrollY >= (thresholdY - 0.5);
-            if (shouldFix) {
+            const sentinelTop = sentinel.getBoundingClientRect().top;
+            const shouldFix = sentinelTop <= 0.5;
+            const shouldUnfix = sentinelTop > 2;
+
+            if (!isFixed && shouldFix) {
+                isFixed = true;
                 placeholder.style.display = 'block';
-                placeholder.style.height = (categoryFilter.getBoundingClientRect().height || categoryFilter.offsetHeight || 0) + 'px';
+                placeholder.style.height = (categoryFilter.offsetHeight || categoryFilter.getBoundingClientRect().height || 0) + 'px';
                 categoryFilter.classList.add('is-fixed');
                 categoryFilter.classList.add('is-stuck');
-            } else {
+            } else if (isFixed && shouldUnfix) {
+                isFixed = false;
                 placeholder.style.display = 'none';
                 placeholder.style.height = '0px';
                 categoryFilter.classList.remove('is-fixed');
-                categoryFilter.classList.toggle('is-stuck', categoryFilter.getBoundingClientRect().top <= 0.5);
+                categoryFilter.classList.remove('is-stuck');
+            }
+
+            if (isFixed) {
+                const h = categoryFilter.offsetHeight || 0;
+                if (h > 0) placeholder.style.height = h + 'px';
             }
         });
     };
 
     window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', () => {
-        measureThreshold();
-        update();
-    });
-    measureThreshold();
+    window.addEventListener('resize', update);
     update();
 }
 
