@@ -15945,6 +15945,121 @@
         }
     };
 
+    window.printKitchenLarge = async function(orderId) {
+        try {
+            const res = await fetch(`/api/orders/${orderId}`);
+            if (!res.ok) throw new Error('Error al cargar pedido');
+            const data = await res.json();
+            const o = data.order;
+            const items = data.items || [];
+
+            const dateStr = new Date(o.created_at).toLocaleString('es-AR');
+
+            const typeRaw = String(o.order_type || '').trim().toLowerCase();
+            const isMesa = (typeRaw === 'mesa');
+            const isDireccion = (typeRaw === 'direccion');
+            const isEspera = (typeRaw === 'espera');
+
+            let destText = 'Mostrador';
+            if (isMesa) {
+                destText = `Mesa: ${o.table_number || 'Mostrador'}`;
+            } else if (isDireccion) {
+                const addr = getAddressText(o.address_json);
+                const name = (o.customer_name || '').trim();
+                destText = `Delivery: ${addr}`;
+                if (name) destText += `<br>Cliente: ${name}`;
+            } else if (isEspera) {
+                const name = (o.customer_name || '').trim();
+                destText = `Retira: ${name || 'Mostrador'}`;
+            }
+
+            let itemsHtml = '<table style="width:100%; border-collapse:collapse; font-size:16px; margin:12px 0;">';
+            itemsHtml += '<tr style="border-bottom:3px solid #000;"><th>Cant</th><th style="text-align:left;">Producto</th></tr>';
+
+            items.forEach(item => {
+                let details = '';
+                if (item.modifiers_json) {
+                    try {
+                        const mods = JSON.parse(item.modifiers_json);
+                        if (Array.isArray(mods) && mods.length > 0) {
+                            details += `<div style="font-size:14px; margin-left:10px;">- ${mods.map(m => m.name).join('<br>- ')}</div>`;
+                        }
+                    } catch(e) {}
+                }
+                if (item.notes) {
+                    details += `<div style="font-size:14px; margin-left:10px; font-weight:900;">NOTA: ${escapeAdminHtml(item.notes)}</div>`;
+                }
+
+                itemsHtml += `
+                    <tr>
+                        <td style="text-align:center; font-weight:900; font-size:20px; padding: 8px 0;">${item.qty}</td>
+                        <td style="padding: 8px 0;">
+                            <div style="font-weight:900; font-size:20px; text-transform:uppercase;">${escapeAdminHtml(item.name)}</div>
+                            ${details}
+                        </td>
+                    </tr>
+                `;
+            });
+            itemsHtml += '</table>';
+
+            const html = `
+                <html>
+                <head>
+                    <title>Comanda Grande #${displayOrderNumber(o)}</title>
+                    <style>
+                        @media print {
+                            @page { size: 80mm auto; margin: 0; }
+                            body { margin: 0; padding: 0; }
+                        }
+                        body {
+                            font-family: 'Courier New', monospace;
+                            width: 100%;
+                            max-width: 74mm;
+                            margin: 0 auto;
+                            padding: 3mm;
+                            color: #000;
+                            box-sizing: border-box;
+                            font-size: 18px;
+                            line-height: 1.25;
+                            overflow-x: hidden;
+                            word-wrap: break-word;
+                        }
+                        .center { text-align: center; }
+                        .bold { font-weight: 900; }
+                        .big { font-size: 1.75em; }
+                        .line { border-bottom: 3px dashed #000; margin: 8px 0; }
+                        .cut-feed { display: block; height: 18mm; color: transparent; }
+                        table { width: 100%; font-size: 18px; border-collapse: collapse; }
+                        td, th { vertical-align: top; }
+                    </style>
+                </head>
+                <body>
+                    <div class="center bold big">COCINA</div>
+                    <div class="center bold" style="font-size:1.25em;">${destText}</div>
+                    <div class="center bold" style="font-size:1.15em;">Pedido: #${displayOrderNumber(o)}</div>
+                    <div class="center">${dateStr}</div>
+                    <div class="line"></div>
+                    ${itemsHtml}
+                    <div class="line"></div>
+                    ${o.order_notes ? `<div style="font-weight:900; font-size:1.25em; border: 3px solid #000; padding: 8px;">NOTA GRAL: ${escapeAdminHtml(o.order_notes)}</div>` : ''}
+                    <div class="cut-feed">.</div>
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            const win = window.open('', 'PrintKitchenLarge', 'height=650,width=380');
+            win.document.write(html);
+            win.document.close();
+        } catch (e) {
+            alert('Error al imprimir comanda: ' + e.message);
+        }
+    };
+
     window.showPrintOptions = function(orderId) {
         const modal = document.getElementById('print-options-modal');
         if (!modal) {
@@ -15963,6 +16078,10 @@
                         <button onclick="window.printKitchen(window._printOrderId); document.getElementById('print-options-modal').classList.remove('active');" style="padding:12px; background:#ef6c00; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center;">
                             <svg style="width:20px;height:20px;margin-right:8px;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.1 13.34l2.83-2.83L3.91 3.5c-1.56 1.56-1.56 4.09 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.2-1.1-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 12.99l1.47-1.46z"/></svg>
                             Ticket Cocina (Comanda)
+                        </button>
+                        <button onclick="window.printKitchenLarge(window._printOrderId); document.getElementById('print-options-modal').classList.remove('active');" style="padding:12px; background:#c62828; color:white; border:none; border-radius:6px; cursor:pointer; font-weight:bold; display:flex; align-items:center; justify-content:center;">
+                            <svg style="width:20px;height:20px;margin-right:8px;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.1 13.34l2.83-2.83L3.91 3.5c-1.56 1.56-1.56 4.09 0 5.66l4.19 4.18zm6.78-1.81c1.53.71 3.68.21 5.27-1.38 1.91-1.91 2.28-4.65.81-6.12-1.46-1.46-4.2-1.1-6.12.81-1.59 1.59-2.09 3.74-1.38 5.27L3.7 19.87l1.41 1.41L12 14.41l6.88 6.88 1.41-1.41L13.41 12.99l1.47-1.46z"/></svg>
+                            Ticket Cocina (Grande)
                         </button>
                     </div>
                     <button onclick="document.getElementById('print-options-modal').classList.remove('active')" style="margin-top:20px; background:transparent; border:1px solid #ccc; color:#666; width:100%; padding:8px;">Cancelar</button>
