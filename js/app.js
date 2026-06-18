@@ -259,6 +259,32 @@ function applyGastronomiaCategoryFilter(selected) {
     });
 }
 
+function scrollToGastronomiaFirstVisibleProduct() {
+    const menuSection = document.getElementById('menu-gastronomia');
+    if (!menuSection) return;
+
+    const filter = document.getElementById('category-filter');
+    const filterHeight = filter && filter.classList.contains('is-fixed') ? (filter.getBoundingClientRect().height || 0) : 0;
+    const offset = filterHeight ? (Math.ceil(filterHeight) + 12) : 0;
+
+    const items = Array.from(menuSection.querySelectorAll('.searchable-item'));
+    const firstVisible = items.find(el => {
+        try {
+            if (!el || el.getClientRects().length === 0) return false;
+            const st = window.getComputedStyle(el);
+            return st.display !== 'none' && st.visibility !== 'hidden';
+        } catch (_) {
+            return false;
+        }
+    });
+
+    const target = firstVisible || menuSection.querySelector('.products-grid') || menuSection;
+    try {
+        const y = target.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: Math.max(0, Math.floor(y)), behavior: 'smooth' });
+    } catch (_) {}
+}
+
 function bindGastronomiaCategoryFilters() {
     if (PAGE !== 'gastronomia') return;
     const categoryFilter = document.getElementById('category-filter');
@@ -272,6 +298,9 @@ function bindGastronomiaCategoryFilters() {
                 btn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             } catch (_) {}
             applyGastronomiaCategoryFilter(btn.getAttribute('data-filter'));
+            requestAnimationFrame(() => {
+                requestAnimationFrame(scrollToGastronomiaFirstVisibleProduct);
+            });
         });
     });
     const hintSlug = (window.BUSINESS_SLUG || getBusinessSlug() || 'gastronomia').trim();
