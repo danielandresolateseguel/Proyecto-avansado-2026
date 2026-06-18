@@ -15859,6 +15859,7 @@
             const s = Math.max(0.8, Math.min(1.6, scale / 100));
             const px = (n) => Math.max(1, Math.round(n * s));
             const total = parseInt(String(o.total || '0'), 10) || 0;
+            const shipping = parseInt(String(o.shipping_cost || '0'), 10) || 0;
 
             const typeRaw = String(o.order_type || '').trim().toLowerCase();
             const isMesa = (typeRaw === 'mesa');
@@ -15948,6 +15949,12 @@
                     <div class="line"></div>
                     ${itemsHtml}
                     <div class="line"></div>
+                    ${(isDireccion && shipping > 0) ? `
+                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:${Math.max(14, px(16))}px; margin:${px(2)}px 0 ${px(2)}px;">
+                        <span>ENVÍO:</span>
+                        <span>$${shipping}</span>
+                    </div>
+                    ` : ''}
                     <div style="display:flex; justify-content:space-between; font-weight:900; font-size:${Math.max(16, px(18))}px; margin:${px(4)}px 0 ${px(2)}px;">
                         <span>TOTAL:</span>
                         <span>$${total}</span>
@@ -15985,6 +15992,7 @@
             const s = Math.max(0.8, Math.min(1.6, scale / 100));
             const px = (n) => Math.max(1, Math.round(n * s));
             const total = parseInt(String(o.total || '0'), 10) || 0;
+            const shipping = parseInt(String(o.shipping_cost || '0'), 10) || 0;
 
             const typeRaw = String(o.order_type || '').trim().toLowerCase();
             const isMesa = (typeRaw === 'mesa');
@@ -16072,6 +16080,12 @@
                     <div class="line"></div>
                     ${itemsHtml}
                     <div class="line"></div>
+                    ${(isDireccion && shipping > 0) ? `
+                    <div style="display:flex; justify-content:space-between; font-weight:700; font-size:${Math.max(16, px(20))}px; margin:${px(4)}px 0 ${px(2)}px;">
+                        <span>ENVÍO:</span>
+                        <span>$${shipping}</span>
+                    </div>
+                    ` : ''}
                     <div style="display:flex; justify-content:space-between; font-weight:900; font-size:${Math.max(18, px(22))}px; margin:${px(6)}px 0 ${px(3)}px;">
                         <span>TOTAL:</span>
                         <span>$${total}</span>
