@@ -261,15 +261,50 @@
     #service-banner{display:none;margin:12px 0 8px;padding:10px 12px;border-radius:8px;border:1px solid #ffeeba;background:#fff3cd;color:#7a5a00;font-weight:600}
     #service-banner.danger{border-color:#f5c6cb;background:#f8d7da;color:#721c24}
 
-    :root { --kds-bg: #f5f7fb; --kds-card-bg: #ffffff; --kds-border: #e6e8ee; --kds-text: #2c3e50; --kds-accent: #4a6fa5; 
+    :root { --kds-bg: #f5f7fb; --kds-card-bg: #ffffff; --kds-border: rgba(148, 163, 184, 0.45); --kds-text: #0f172a; --kds-accent: #334155;
+      --kds-platinum-0: #ffffff; --kds-platinum-1: #f4f6f8; --kds-platinum-2: #e9edf2; --kds-platinum-3: #dfe5ec;
       --st-pendiente: #90caf9; --st-preparacion: #ffd54f; --st-listo: #81c784; --st-en_camino: #4fc3f7; --st-entregado: #b0bec5; --st-cancelado: #ef9a9a; --st-overdue: #f44336; }
-    body { background: var(--kds-bg); color: var(--kds-text); }
+    body {
+      background:
+        radial-gradient(1200px circle at 10% 10%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.0) 56%),
+        radial-gradient(900px circle at 90% 0%, rgba(203,213,225,0.55) 0%, rgba(203,213,225,0.0) 48%),
+        linear-gradient(180deg, var(--kds-platinum-0) 0%, var(--kds-platinum-1) 42%, var(--kds-platinum-2) 100%);
+      color: var(--kds-text);
+    }
+    body.no-auth { background: rgb(57, 9, 9); }
     header h1 { font-size: 1.2rem; font-weight: 600; color: #425b76; margin: 0; }
-    button { min-height: 32px; padding: 0 12px; border: none; border-radius: 8px; background: var(--kds-accent); color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
-    button:hover { background: #3f5f8a; }
+    .tenant-name { font-size: 1.05rem; font-weight: 900; color: #334155; margin: 0; letter-spacing: 0.2px; }
+    .modules-icons { display:flex; align-items:center; gap: 8px; flex: 1 1 auto; min-width: 0; }
+    .module-icon-btn { width: 38px; height: 38px; border-radius: 12px; padding: 0; border: 1px solid rgba(15, 23, 42, 0.12); background: linear-gradient(180deg, rgba(255,255,255,0.86) 0%, rgba(241,245,249,0.86) 100%); color: #0f172a; box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10); display:inline-flex; align-items:center; justify-content:center; }
+    .module-icon-btn:hover { background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(226,232,240,0.90) 100%); transform: translateY(-1px); }
+    .module-icon-btn svg { width: 18px; height: 18px; fill: currentColor; display:block; }
+    .module-icon-btn.active { background: linear-gradient(135deg, #0f172a 0%, #334155 100%); color: #fff; border-color: rgba(15, 23, 42, 0.28); box-shadow: 0 14px 30px rgba(15, 23, 42, 0.18); }
+    .module-panel {
+      margin-top: 16px;
+      border: 1px solid var(--kds-border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.90) 0%, rgba(241,245,249,0.90) 100%);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.10);
+      padding: 14px;
+      overflow: hidden;
+    }
+    #delivery-box > summary,
+    #orders-history-group > summary,
+    #inventory-box > summary,
+    #carousel-box > summary,
+    #analytics-panel > summary { display: none; }
+    #delivery-box:not([open]),
+    #orders-history-group:not([open]),
+    #inventory-box:not([open]),
+    #carousel-box:not([open]),
+    #analytics-panel:not([open]) { display: none; }
+    header { border: 1px solid var(--kds-border); border-radius: 16px; padding: 12px; background: rgba(255,255,255,0.72); backdrop-filter: blur(10px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+    button { min-height: 32px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.20); border-radius: 10px; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); color: #fff; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14); }
+    button:hover { background: linear-gradient(135deg, #0b1220 0%, #2b3646 100%); }
     .controls input, .controls select { border: 1px solid var(--kds-border); border-radius: 8px; padding: 0 10px; background: #fff; }
-    table { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 8px; overflow: hidden; }
-    th { background: #f0f3f8; font-weight: 600; color: #415a77; }
+    .sales-area { background: linear-gradient(180deg, var(--kds-platinum-0) 0%, var(--kds-platinum-1) 100%); border: 1px solid var(--kds-border); box-shadow: 0 14px 34px rgba(15, 23, 42, 0.10); }
+    table { background: var(--kds-platinum-0); border: 1px solid var(--kds-border); border-radius: 12px; overflow: hidden; }
+    th { background: linear-gradient(180deg, rgba(248,250,252,0.95) 0%, rgba(226,232,240,0.92) 100%); font-weight: 700; color: #334155; }
     tbody tr:nth-child(odd) { background: #fafcff; }
     tbody tr:hover { background: #eef3fb; }
     #order-detail, #login-box { box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
@@ -486,11 +521,69 @@
       text-align: center;
       cursor: default;
     }
-    #metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
-    .metric-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .metric-label { font-size: 12px; color: #415a77; }
-    .metric-value { font-size: 22px; font-weight: 700; color: #2c3e50; }
-    .metric-sub { margin-top: 6px; font-size: 12px; color: #666; }
+    #top-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+    }
+    #daily-controls { display:flex; flex-direction:column; gap: 3px; flex: 0 0 auto; min-width: 240px; }
+    #daily-controls .daily-head { display:flex; align-items:center; gap: 8px; font-weight: 800; color:#334155; }
+    #daily-controls .daily-title { font-size: 13px; line-height: 1.1; }
+    #daily-range { font-size: 11px; color: #64748b; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #metrics { flex: 1 1 auto; min-width: 0; width: 100%; }
+    #metrics .metrics-grid { display: flex; gap: 8px; flex-wrap: nowrap; width: 100%; }
+    .metric-card {
+      background: linear-gradient(180deg, var(--kds-platinum-0) 0%, var(--kds-platinum-1) 100%);
+      border: 1px solid var(--kds-border);
+      border-radius: 14px;
+      padding: 8px 10px;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-rows: auto auto;
+      column-gap: 10px;
+      row-gap: 2px;
+      align-items: center;
+      min-height: 0;
+      flex: 1 1 0;
+      min-width: 150px;
+    }
+    .metric-label {
+      grid-column: 1;
+      grid-row: 1;
+      font-size: 11px;
+      color: #475569;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+      line-height: 1.1;
+    }
+    .metric-value {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      font-size: 18px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric-sub {
+      grid-column: 1;
+      grid-row: 2;
+      margin-top: 0;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
     .metric-card.delivered .metric-value { color: #2e7d32; }
     .metric-card.canceled .metric-value { color: #c62828; }
     .metric-card.money .metric-value { color: #1f2937; }
@@ -564,8 +657,73 @@
     body.auth-pending .header-main > :not(h1) { display: none !important; }
     body.no-auth #top-controls, body.no-auth #metrics, body.no-auth #analytics, body.no-auth #cash-box, body.no-auth #cash-history, body.no-auth section.grid,
     body.auth-pending #top-controls, body.auth-pending #metrics, body.auth-pending #analytics, body.auth-pending #cash-box, body.auth-pending #cash-history, body.auth-pending section.grid { display: none !important; }
-    body.no-auth #login-box { display: block !important; }
-    body.auth-pending #login-box { display: block !important; visibility: hidden !important; }
+    body.no-auth #login-box,
+    body.show-login #login-box,
+    body.auth-pending #login-box {
+      position: fixed;
+      inset: 0;
+      display: grid !important;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(1200px circle at 18% 20%, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.00) 55%),
+        radial-gradient(900px circle at 80% 10%, rgba(210,210,210,0.10) 0%, rgba(255,255,255,0.00) 45%),
+        linear-gradient(135deg, rgb(30, 5, 5) 0%, rgb(57, 9, 9) 45%, rgb(18, 3, 3) 100%);
+      z-index: 20050;
+      box-shadow: none;
+      margin: 0;
+      max-width: none;
+      border: 0;
+      border-radius: 0;
+    }
+    body.auth-pending #login-box { visibility: hidden !important; }
+    #login-box .login-card {
+      width: min(420px, 100%);
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 16px;
+      padding: 18px 16px 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f4f6f8 100%);
+      box-shadow:
+        0 18px 45px rgba(0,0,0,0.35),
+        inset 0 1px 0 rgba(255,255,255,0.85);
+    }
+    #login-box h2 {
+      margin: 0 0 12px 0;
+      font-size: 20px;
+      letter-spacing: 0.2px;
+      color: #0f172a;
+    }
+    #login-box label { color: #1f2937; font-weight: 700; font-size: 12px; letter-spacing: 0.3px; text-transform: uppercase; }
+    #login-box input[type="text"],
+    #login-box input[type="password"] {
+      margin-top: 6px;
+      border-radius: 12px;
+      border: 1px solid rgba(148,163,184,0.85) !important;
+      background: rgba(255,255,255,0.92);
+      padding: 0 12px !important;
+      height: 40px !important;
+      outline: none;
+      transition: box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
+      box-sizing: border-box;
+    }
+    #login-box input[type="text"]:focus,
+    #login-box input[type="password"]:focus {
+      border-color: rgba(59,130,246,0.85) !important;
+      box-shadow: 0 0 0 4px rgba(59,130,246,0.16);
+      background: #fff;
+    }
+    #login-box #login-btn {
+      width: 100%;
+      height: 44px !important;
+      margin-top: 10px;
+      border-radius: 12px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      background: linear-gradient(135deg, #111827 0%, #374151 100%);
+      box-shadow: 0 10px 22px rgba(17, 24, 39, 0.28);
+    }
+    #login-box #login-btn:hover { background: linear-gradient(135deg, #0b1220 0%, #2b3646 100%); }
+    #login-box .small { font-size: 12px; }
     #cash-history { display:grid; grid-template-columns: 1fr; gap: 10px; }
     .history-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
     .history-table { width: 100%; border-collapse: collapse; }
@@ -1412,7 +1570,7 @@
 <body class="auth-pending no-auth">
   <header>
     <div class="header-main">
-      <h1>Panel de Administración (KDS)</h1>
+      <div id="tenant-name" class="tenant-name">—</div>
       <div class="header-end">
         <div class="auth-bar">
           <span id="auth-status-badge" class="auth-badge off">Sin sesión</span>
@@ -1433,15 +1591,27 @@
         </div>
       </div>
       <div class="header-rest">
-        <label>Establecimiento:
-          <input id="tenant-input" list="tenants-list" type="text" value="gastronomia-local1" />
-          <datalist id="tenants-list"></datalist>
-        </label>
+        <input id="tenant-input" list="tenants-list" type="text" value="gastronomia-local1" style="display:none;" />
+        <datalist id="tenants-list"></datalist>
 
-        <div id="search-box" style="display:flex; align-items:center; border:1px solid #ccc; border-radius:4px; background:#fff; padding-right:4px;">
-          <input id="search-input" type="text" placeholder="Buscar por ID, nombre..." style="border:none; outline:none; height:30px; padding:0 8px; width:250px;" />
-          <button id="search-btn" title="Buscar" style="border:none; background:none; cursor:pointer; padding:4px; display:flex; align-items:center; color:#555;">
-            <svg viewBox="0 0 24 24" style="width:20px; height:20px;"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+        <div class="modules-icons" id="modules-icons">
+          <button id="module-icon-repartos" class="module-icon-btn" type="button" data-mod="repartos" title="Repartos" aria-label="Repartos">
+            <svg viewBox="0 0 24 24"><path d="M4 15.5 6 13l2 1.5 3-4.5h3l2 2h2.5a1.5 1.5 0 0 1 0 3H21a3 3 0 0 1-6 0H9a3 3 0 0 1-6 0H2.5a1.5 1.5 0 0 1 0-3H4Zm14 4a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm-12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm9.5-10.5h-2.2l-1.3-2H9.5a1.5 1.5 0 0 1 0-3H13l1.2 2h1.3a1.5 1.5 0 0 1 0 3Z"/></svg>
+          </button>
+          <button id="module-icon-cerrados" class="module-icon-btn" type="button" data-mod="cerrados" title="Pedidos cerrados" aria-label="Pedidos cerrados">
+            <svg viewBox="0 0 24 24"><path d="M7 2h10a2 2 0 0 1 2 2v16l-4-2-4 2-4-2-4 2V4a2 2 0 0 1 2-2Zm2 6h6V6H9v2Zm0 4h6v-2H9v2Zm0 4h4v-2H9v2Z"/></svg>
+          </button>
+          <button id="module-icon-inventario" class="module-icon-btn" type="button" data-mod="inventario" title="Inventario" aria-label="Inventario">
+            <svg viewBox="0 0 24 24"><path d="M21 8V7l-9-4-9 4v1l9 4 9-4Zm-9 6L3 10v9l9 4 9-4v-9l-9 4Z"/></svg>
+          </button>
+          <button id="module-icon-carta" class="module-icon-btn" type="button" data-mod="carta" title="Carta Online" aria-label="Carta Online">
+            <svg viewBox="0 0 24 24"><path d="M4 3h13a3 3 0 0 1 3 3v13h-2V6a1 1 0 0 0-1-1H6V3Zm2 4h11a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm1 3v2h9v-2H7Zm0 4v2h7v-2H7Z"/></svg>
+          </button>
+          <button id="module-icon-analisis" class="module-icon-btn" type="button" data-mod="analisis" title="Análisis de ventas" aria-label="Análisis de ventas">
+            <svg viewBox="0 0 24 24"><path d="M5 9h3v10H5V9Zm5-4h3v14h-3V5Zm5 7h3v7h-3v-7Z"/></svg>
+          </button>
+          <button id="module-icon-export" class="module-icon-btn" type="button" data-mod="export" title="Filtros de exportación" aria-label="Filtros de exportación">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2Zm-7-14v2h18V4H3Zm3 8h12v-2H6v2Z"/></svg>
           </button>
         </div>
         <button id="btn-new-order" style="background: #2e7d32; color: #fff; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 0 16px;">
@@ -1455,14 +1625,18 @@
  
   
 
-  <div id="top-controls" style="display:flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom:8px;">
-    <div id="daily-controls" class="small" style="font-weight:700; color:#415a77; display:flex; align-items:center; gap:6px;">Movimientos del día
-      <button id="daily-eye" class="eye-btn" aria-label="Ocultar movimientos">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
-      </button>
+  <div id="top-controls">
+    <div id="daily-controls" class="small">
+      <div class="daily-head">
+        <span class="daily-title">Movimientos del día</span>
+        <button id="daily-eye" class="eye-btn" aria-label="Ocultar movimientos">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+        </button>
+      </div>
+      <div id="daily-range"></div>
     </div>
+    <div id="metrics" class="small"></div>
   </div>
-  <div id="metrics" class="small" style="margin-bottom:12px;"></div>
   <details id="cash-panel" style="margin: 10px 0 12px 0;">
     <summary>
       Caja
@@ -1489,21 +1663,23 @@
     </div>
   </details>
 
-  <div id="login-box" style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:16px; max-width:360px;">
-    <h2>Ingresar</h2>
-    <label style="display:block; margin-bottom:12px;">Establecimiento
-      <input id="login-tenant" list="tenants-list" type="text" style="width:100%; height:32px;" />
-    </label>
-    <label style="display:block; margin-bottom:8px;">Usuario
-      <input id="login-user" type="text" style="width:100%; height:32px;" />
-    </label>
-    <label style="display:block; margin-bottom:12px;">Clave
-      <input id="login-pass" type="password" style="width:100%; height:32px;" />
-    </label>
-    <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-show" type="checkbox" /> Ver clave</label>
-    <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-remember" type="checkbox" /> Recordar usuario</label>
-    <button id="login-btn" style="height:32px;">Entrar</button>
-    <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
+  <div id="login-box">
+    <div class="login-card">
+      <h2>Ingresar</h2>
+      <label style="display:block; margin-bottom:12px;">Establecimiento
+        <input id="login-tenant" list="tenants-list" type="text" style="width:100%; height:32px;" />
+      </label>
+      <label style="display:block; margin-bottom:8px;">Usuario
+        <input id="login-user" type="text" style="width:100%; height:32px;" />
+      </label>
+      <label style="display:block; margin-bottom:12px;">Clave
+        <input id="login-pass" type="password" style="width:100%; height:32px;" />
+      </label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-show" type="checkbox" /> Ver clave</label>
+      <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-remember" type="checkbox" /> Recordar usuario</label>
+      <button id="login-btn" style="height:32px;">Entrar</button>
+      <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
+    </div>
   </div>
 
   <section class="grid">
@@ -1730,7 +1906,7 @@
       <div class="small" id="kitchen-count" style="margin-top:8px; color:#666;"></div>
       <div id="kitchen-cards"></div>
     </details>
-    <details class="delivered" id="delivery-box" style="display:none;">
+    <details class="delivered module-panel" id="delivery-box" style="display:none;">
       <summary>Repartos</summary>
       <div class="delivery-toolbar">
         <div class="delivery-toolbar-row">
@@ -1791,7 +1967,7 @@
       <div id="delivery-summary" class="delivery-summary" style="display:none;"></div>
       <div id="delivery-list" class="orders-mobile"></div>
     </details>
-    <details class="orders-history-group" id="orders-history-group">
+    <details class="orders-history-group module-panel" id="orders-history-group">
       <summary>Pedidos Cerrados</summary>
       <div class="orders-history-inner">
         <div class="controls" style="margin:12px 0; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -1990,7 +2166,7 @@
         </details>
       </div>
     </details>
-    <details class="inventory" id="inventory-box">
+    <details class="inventory module-panel" id="inventory-box">
       <summary>Inventario</summary>
       <div class="actions section-actions-bar" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
@@ -2028,7 +2204,7 @@
       <div id="inventory-mobile" class="inventory-mobile"></div>
     </details>
 
-    <details class="carousel" id="carousel-box">
+    <details class="carousel module-panel" id="carousel-box">
       <summary>Carta Online</summary>
       <div class="actions section-actions-bar" style="margin:8px 0; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <div class="section-actions-main" style="display:flex; align-items:center; gap:8px;">
@@ -2060,7 +2236,7 @@
     </details>
 
     <div id="analytics">
-      <details id="analytics-panel">
+      <details id="analytics-panel" class="module-panel">
         <summary>Análisis de Ventas</summary>
         <div class="analytics-shell">
           <div class="analytics-toolbar">
@@ -2116,7 +2292,7 @@
       </details>
     </div>
 
-    <div id="orders-filters-export" style="margin: 12px 0; border: 1px solid #ddd; border-radius: 8px; padding: 12px; background: #fff;">
+    <div id="orders-filters-export" class="module-panel" style="display:none; margin: 12px 0;">
       <h3 style="margin: 0 0 8px 0; font-size: 1rem; color: #425b76;">Filtros y Exportación</h3>
       <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start;">
         <details class="mobile-filters" id="more-filters" style="flex: 1; min-width: 280px;">
@@ -3932,6 +4108,8 @@
     }
 
     const tenantInput = document.getElementById('tenant-input');
+    const tenantNameEl = document.getElementById('tenant-name');
+    const modulesIconsEl = document.getElementById('modules-icons');
     // const filterSelect = document.getElementById('status-filter');
 
     const soundToggle = document.getElementById('sound-toggle');
@@ -3991,7 +4169,7 @@
     }
     if (dailyEyeBtn) { dailyEyeBtn.addEventListener('click', () => setDailyVisible(!dailyVisible)); }
     if (cashPanelEl) {
-      try { cashPanelEl.open = true; } catch (_) {}
+      try { cashPanelEl.open = false; } catch (_) {}
       cashPanelEl.addEventListener('toggle', async () => {
         if (!cashPanelEl.open) return;
         try {
@@ -4008,6 +4186,25 @@
       if (!settingsMenuEl) return;
       settingsMenuEl.style.display = 'none';
     }
+    function updateTenantName(){
+      if (!tenantNameEl) return;
+      const raw = (tenantInput && String(tenantInput.value || '').trim()) || '';
+      if (!raw) { tenantNameEl.textContent = '—'; return; }
+      const pretty = raw
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')
+        .filter(Boolean)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+      tenantNameEl.textContent = pretty || raw;
+    }
+    if (tenantInput) {
+      tenantInput.addEventListener('input', updateTenantName);
+      tenantInput.addEventListener('change', updateTenantName);
+    }
+    try { updateTenantName(); } catch (_) {}
     if (settingsOpenBtn && settingsMenuEl) {
       settingsOpenBtn.addEventListener('click', (e) => {
         try { e.preventDefault(); } catch (_) {}
@@ -4029,6 +4226,107 @@
         const t = e && e.target;
         if (!t) return;
         if (t && (t.id === 'logout-btn' || t.id === 'users-admin-open')) closeSettingsMenu();
+      });
+    }
+    function scrollToPanel(id, openDetails){
+      const el = document.getElementById(id);
+      if (!el) return false;
+      try { if (openDetails && typeof el.open !== 'undefined') el.open = true; } catch (_) {}
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+      return true;
+    }
+    const MODULES = {
+      repartos: { detailsId: 'delivery-box', iconId: 'module-icon-repartos' },
+      cerrados: { detailsId: 'orders-history-group', iconId: 'module-icon-cerrados' },
+      inventario: { detailsId: 'inventory-box', iconId: 'module-icon-inventario' },
+      carta: { detailsId: 'carousel-box', iconId: 'module-icon-carta' },
+      analisis: { detailsId: 'analytics-panel', iconId: 'module-icon-analisis' },
+      export: { divId: 'orders-filters-export', iconId: 'module-icon-export' },
+    };
+    let activeModule = '';
+    let isModuleSyncing = false;
+    function setActiveModuleIcon(modKey){
+      try {
+        document.querySelectorAll('.module-icon-btn.active').forEach(b => b.classList.remove('active'));
+        const iconId = MODULES[modKey] && MODULES[modKey].iconId;
+        if (iconId) {
+          const btn = document.getElementById(iconId);
+          if (btn) btn.classList.add('active');
+        }
+      } catch (_) {}
+    }
+    function closeAllModules(exceptKey){
+      const keepKey = String(exceptKey || '').trim();
+      isModuleSyncing = true;
+      try {
+        Object.entries(MODULES).forEach(([k, conf]) => {
+          if (k === keepKey) return;
+          if (conf.detailsId) {
+            const d = document.getElementById(conf.detailsId);
+            if (d && typeof d.open !== 'undefined') d.open = false;
+          }
+          if (conf.divId) {
+            const dv = document.getElementById(conf.divId);
+            if (dv) dv.style.display = 'none';
+          }
+        });
+      } catch (_) {}
+      isModuleSyncing = false;
+    }
+    function openModule(modKey){
+      const key = String(modKey || '').trim();
+      if (!key || !MODULES[key]) return;
+      if (activeModule === key) {
+        closeAllModules('');
+        activeModule = '';
+        setActiveModuleIcon('');
+        return;
+      }
+      closeAllModules(key);
+      activeModule = key;
+      setActiveModuleIcon(key);
+      const conf = MODULES[key];
+      if (conf.detailsId) {
+        const d = document.getElementById(conf.detailsId);
+        if (d) {
+          try { d.open = true; } catch (_) {}
+          try { d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+        }
+        return;
+      }
+      if (conf.divId) {
+        const dv = document.getElementById(conf.divId);
+        if (dv) {
+          dv.style.display = '';
+          try { dv.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+        }
+      }
+    }
+    try {
+      Object.entries(MODULES).forEach(([k, conf]) => {
+        if (!conf.detailsId) return;
+        const d = document.getElementById(conf.detailsId);
+        if (!d) return;
+        d.addEventListener('toggle', () => {
+          if (isModuleSyncing) return;
+          if (d.open) {
+            closeAllModules(k);
+            activeModule = k;
+            setActiveModuleIcon(k);
+          } else if (activeModule === k) {
+            activeModule = '';
+            setActiveModuleIcon('');
+          }
+        });
+      });
+    } catch (_) {}
+    try { closeAllModules(''); } catch (_) {}
+    if (modulesIconsEl) {
+      modulesIconsEl.addEventListener('click', (e) => {
+        const btn = (e && e.target && (e.target.closest ? e.target.closest('button[data-mod]') : null)) || null;
+        if (!btn) return;
+        const mod = String(btn.getAttribute('data-mod') || '').trim();
+        openModule(mod);
       });
     }
     if (cashEyeTop) cashEyeTop.addEventListener('click', async () => {
@@ -4271,6 +4569,7 @@
       if (tenantInput) {
         tenantInput.disabled = !!isAuthed;
       }
+      try { updateTenantName(); } catch (_) {}
     }
 
     function updateKitchenVisibility(){
@@ -4329,6 +4628,14 @@
       setRoleVisibilityById('carousel-open', !isKitchen && canCarousel);
       setRoleVisibilityById('users-admin-open', !isKitchen && canUsers);
       setRoleVisibilityById('delivery-open', !isKitchen && canDelivery);
+      const canModulesIcons = !isKitchen && (canDelivery || canOrdersView || canInventory || canReports || canCarousel);
+      setRoleVisibilityById('modules-icons', canModulesIcons);
+      setRoleVisibilityById('module-icon-repartos', !isKitchen && canDelivery);
+      setRoleVisibilityById('module-icon-cerrados', !isKitchen && (canOrdersView || canReports));
+      setRoleVisibilityById('module-icon-inventario', !isKitchen && canInventory);
+      setRoleVisibilityById('module-icon-carta', !isKitchen && canCarousel);
+      setRoleVisibilityById('module-icon-analisis', !isKitchen && canReports);
+      setRoleVisibilityById('module-icon-export', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
 
       setRoleVisibilityById('orders-header-row', !isKitchen && !isRepartidor && ((!mozoTablesOnly && canOrdersView) || (mozoTablesOnly && canTables)));
       setRoleVisibilityById('orders-table', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
@@ -4340,7 +4647,13 @@
       setRoleVisibilityById('orders-history-group', canDeliveredHistory || canCanceledHistory || canArchivedHistory);
       setRoleVisibilityById('delivered-box', canDeliveredHistory);
       setRoleVisibilityById('canceled-box', canCanceledHistory);
-      setRoleVisibilityById('orders-filters-export', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
+      const canExportFilters = !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor;
+      if (!canExportFilters && activeModule === 'export') {
+        try { closeAllModules(''); } catch (_) {}
+        activeModule = '';
+        try { setActiveModuleIcon(''); } catch (_) {}
+      }
+      setRoleVisibilityById('orders-filters-export', !!canExportFilters && activeModule === 'export');
       setRoleVisibilityById('orders-export-btn', !isKitchen && !mozoTablesOnly && canReports && !isRepartidor);
       setRoleVisibilityById('inventory-box', !isKitchen && canInventory);
       setRoleVisibilityById('carousel-box', !isKitchen && canCarousel);
@@ -9900,18 +10213,27 @@
 
 
     // // filterSelect.addEventListener('change', () => { currentOffset = 0; load(); });
-    document.getElementById('search-btn').addEventListener('click', () => {
-      currentSearch = document.getElementById('search-input').value.trim();
-      const fd = document.getElementById('from-date').value;
-      const td = document.getElementById('to-date').value;
-      if (fd) { currentFrom = fd; }
-      if (td) { currentTo = td; }
-      currentLimit = parseInt(document.getElementById('page-size').value, 10) || 50;
-      currentOffset = 0;
-      load();
-      renderMetricsBox();
-      if (!cashCollapsed) renderCashBox();
-    });
+    const searchBtnEl = document.getElementById('search-btn');
+    const searchInputEl = document.getElementById('search-input');
+    if (searchBtnEl && searchInputEl) {
+      searchBtnEl.addEventListener('click', () => {
+        currentSearch = searchInputEl.value.trim();
+        const fd = document.getElementById('from-date').value;
+        const td = document.getElementById('to-date').value;
+        if (fd) { currentFrom = fd; }
+        if (td) { currentTo = td; }
+        currentLimit = parseInt(document.getElementById('page-size').value, 10) || 50;
+        currentOffset = 0;
+        load();
+        renderMetricsBox();
+        if (!cashCollapsed) renderCashBox();
+      });
+      searchInputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          searchBtnEl.click();
+        }
+      });
+    }
     const toggleBtn = document.getElementById('toggle-cash');
     if (toggleBtn) toggleBtn.onclick = async () => {
       cashCollapsed = !cashCollapsed;
@@ -9939,11 +10261,6 @@
     const inventoryBox = document.getElementById('inventory-box');
     if (inventoryBox) inventoryBox.addEventListener('toggle', async () => {
       if (inventoryBox.open) { try { await renderInventory(); } catch (_) {} }
-    });
-    document.getElementById('search-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        document.getElementById('search-btn').click();
-      }
     });
     document.getElementById('page-size').addEventListener('change', () => {
       currentLimit = parseInt(document.getElementById('page-size').value, 10) || 50;
@@ -11643,28 +11960,31 @@
         if (!m) { if (el) el.innerHTML = '<div class="small" style="color:#c62828;">No se pudieron cargar las métricas en el rango actual</div>'; return; }
         const rangeFrom = currentFrom ? formatARDate(currentFrom) : '';
         const rangeTo = currentTo ? formatARDate(currentTo) : '';
-        const rangeLine = (rangeFrom || rangeTo) ? `<div class="small" style="margin-bottom:6px; color:#555;">Rango: ${rangeFrom || '-'} → ${rangeTo || 'ahora'}</div>` : '';
+        const dailyRangeEl = document.getElementById('daily-range');
+        const rangeText = (rangeFrom || rangeTo) ? `Rango: ${rangeFrom || '-'} → ${rangeTo || 'ahora'}` : '';
+        if (dailyRangeEl) dailyRangeEl.textContent = rangeText;
         el.innerHTML = `
-          ${rangeLine}
-          <div id="metric-active" class="metric-card">
-            <div class="metric-label">Activos</div>
-            <div class="metric-value">${m.active_count}</div>
-            <div class="metric-sub">Pedidos en curso</div>
-          </div>
-          <div id="metric-delivered" class="metric-card delivered" style="cursor:pointer;" title="Ver entregados">
-            <div class="metric-label">Entregados</div>
-            <div class="metric-value">${m.delivered_count}</div>
-            <div class="metric-sub">Hoy en el rango seleccionado</div>
-          </div>
-          <div id="metric-canceled" class="metric-card canceled" style="cursor:pointer;" title="Ver cancelados">
-            <div class="metric-label">Cancelados</div>
-            <div class="metric-value">${m.canceled_count}</div>
-            <div class="metric-sub">Pedidos cancelados</div>
-          </div>
-          <div class="metric-card money">
-            <div class="metric-label">Total entregados</div>
-            <div class="metric-value">$${m.delivered_total}</div>
-            <div class="metric-sub">Propina(10%): $${m.delivered_tip_10} · Total c/propina: $${m.delivered_total_with_tip}</div>
+          <div class="metrics-grid">
+            <div id="metric-active" class="metric-card">
+              <div class="metric-label">Activos</div>
+              <div class="metric-value">${m.active_count}</div>
+              <div class="metric-sub">Pedidos en curso</div>
+            </div>
+            <div id="metric-delivered" class="metric-card delivered" style="cursor:pointer;" title="Ver entregados">
+              <div class="metric-label">Entregados</div>
+              <div class="metric-value">${m.delivered_count}</div>
+              <div class="metric-sub">Hoy en el rango seleccionado</div>
+            </div>
+            <div id="metric-canceled" class="metric-card canceled" style="cursor:pointer;" title="Ver cancelados">
+              <div class="metric-label">Cancelados</div>
+              <div class="metric-value">${m.canceled_count}</div>
+              <div class="metric-sub">Pedidos cancelados</div>
+            </div>
+            <div class="metric-card money">
+              <div class="metric-label">Total entregados</div>
+              <div class="metric-value">$${m.delivered_total}</div>
+              <div class="metric-sub">Propina(10%): $${m.delivered_tip_10} · Total c/propina: $${m.delivered_total_with_tip}</div>
+            </div>
           </div>
         `;
         const activeCard = el.querySelector('#metric-active');
@@ -11970,7 +12290,6 @@
 
             <div class="cash-title" style="display:flex; align-items:center; justify-content:space-between;">
               <span>Caja abierta</span>
-              <button id="cash-eye" class="eye-btn" aria-label="Ocultar caja"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></button>
             </div>
             <div id="cash-body">
             <div class="small">Abierta: ${formatARDate(s.opened_at || '')} · Por: ${s.opened_by || ''}</div>
@@ -12137,14 +12456,8 @@
         `;
         const cbtn = document.getElementById('cash-close-btn');
         const reviewModal = document.getElementById('cash-close-modal');
-        const cashEyeBtn = document.getElementById('cash-eye');
         const cashBodyEl = document.getElementById('cash-body');
-        const CASH_BODY_VISIBLE_KEY = 'cash_body_visible';
-        let cashBodyVisible = true;
-        try { const v = localStorage.getItem(CASH_BODY_VISIBLE_KEY); if (v === '0') cashBodyVisible = false; } catch (_) {}
-        function setCashBodyVisible(v){ cashBodyVisible = !!v; if (cashBodyEl) cashBodyEl.style.display = cashBodyVisible ? '' : 'none'; if (cashEyeBtn) cashEyeBtn.setAttribute('aria-label', cashBodyVisible ? 'Ocultar caja' : 'Mostrar caja'); if (cashEyeBtn) cashEyeBtn.innerHTML = cashBodyVisible ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M2.1 3.51 1 4.6l4.11 4.11C3.33 9.87 1.86 11.74 1 12c1.73 4.39 6 7.5 11 7.5 2.11 0 4.08-.51 5.82-1.41l3.58 3.58 1.11-1.09L2.1 3.51zM12 6.5c1.41 0 2.67.58 3.57 1.5l-1.06 1.06a3 3 0 0 0-4.1 4.1L9.35 14.2A5 5 0 0 1 12 6.5zm0 10.5a9.31 9.31 0 0 1-6.63-2.72c-.54-.54-.99-1.1-1.37-1.66l3.17-3.17 1.55 1.55a5 5 0 0 0 6.08 6.08l1.55 1.55A10.97 10.97 0 0 1 12 17z"/></svg>'; try { localStorage.setItem(CASH_BODY_VISIBLE_KEY, cashBodyVisible ? '1' : '0'); } catch (_) {} }
-        setCashBodyVisible(cashBodyVisible);
-        if (cashEyeBtn) cashEyeBtn.addEventListener('click', () => setCashBodyVisible(!cashBodyVisible));
+        if (cashBodyEl) cashBodyEl.style.display = '';
         const reviewCount = document.getElementById('cash-close-review-count');
         const reviewTheo = document.getElementById('cash-close-review-theo');
         const reviewDiff = document.getElementById('cash-close-review-diff');
@@ -12568,7 +12881,7 @@
         return (s.closing_metadata || '').replace(/"/g, '&quot;');
       };
 
-      let html = '<div class="history-card"><div class="history-actions"><div class="cash-title" style="display:flex; align-items:center; justify-content:space-between;"><span>Historial de cierres</span><button id="history-eye" class="eye-btn" aria-label="Ocultar historial"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg></button></div><div style="display:flex; gap:8px; align-items:center;"><button id="cash-history-export">Exportar CSV</button>' + (prevRows.length ? `<button id="cash-history-toggle-prev">Mostrar anteriores (${prevRows.length})</button>` : '') + '</div></div>';
+      let html = '<div class="history-card"><div class="history-actions"><div class="cash-title" style="display:flex; align-items:center; justify-content:space-between;"><span>Historial de cierres</span></div><div style="display:flex; gap:8px; align-items:center;"><button id="cash-history-export">Exportar CSV</button>' + (prevRows.length ? `<button id="cash-history-toggle-prev">Mostrar anteriores (${prevRows.length})</button>` : '') + '</div></div>';
       html += '<div id="cash-history-body"><table class="history-table"><thead><tr><th>Apertura</th><th>Cierre</th><th>Inicial</th><th>Contado</th><th>Ventas</th><th>Entradas</th><th>Salidas</th><th>Teórica</th><th>Diferencia</th><th>Cerró</th><th>Acciones</th></tr></thead><tbody id="history-latest-body">';
       for (const s of latestRows) {
         const sum = s.summary || {};
