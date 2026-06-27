@@ -563,22 +563,50 @@ def cash_session_orders():
             except Exception:
                 meta = {}
             method = meta.get('method') or ''
+            details = meta.get('details') if isinstance(meta, dict) else None
+            if not isinstance(details, list):
+                details = None
             try:
                 amt = int(meta.get('amount') or 0) + int(meta.get('tip') or 0)
             except Exception:
                 amt = 0
-            out.append({'id': oid, 'created_at': created_at, 'total': int(amt), 'payment_method': method})
+            out.append({'id': oid, 'created_at': created_at, 'total': int(amt), 'payment_method': method, 'payment_details': details})
         return jsonify({'orders': out, 'session_id': sid, 'from': opened_at, 'to': end_at})
     else:
         base = (
-            "SELECT o.id, o.created_at, o.total, o.payment_method FROM orders o "
+            "SELECT o.id, o.created_at, o.total, o.payment_method, "
+            "(SELECT payload_json FROM order_events WHERE order_id = o.id AND event_type = 'payment' ORDER BY id DESC LIMIT 1) AS pay_payload "
+            "FROM orders o "
             "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
             "WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ? "
             "ORDER BY o.id DESC"
         )
         cur.execute(base, (tenant_slug, opened_at, end_at))
         rows = cur.fetchall()
-        return jsonify({'orders': [ {'id': int(r[0]), 'created_at': r[1], 'total': int(r[2] or 0), 'payment_method': r[3] } for r in rows ], 'session_id': sid, 'from': opened_at, 'to': end_at})
+        out = []
+        for r in rows or []:
+            try:
+                oid = int(r[0])
+            except Exception:
+                continue
+            created_at = r[1]
+            total = int(r[2] or 0)
+            pm = (r[3] or '')
+            pay_payload = r[4] or ''
+            details = None
+            try:
+                meta = json.loads(pay_payload) if pay_payload else {}
+            except Exception:
+                meta = {}
+            if isinstance(meta, dict):
+                method = meta.get('method')
+                if method:
+                    pm = method
+                dets = meta.get('details')
+                if isinstance(dets, list):
+                    details = dets
+            out.append({'id': oid, 'created_at': created_at, 'total': total, 'payment_method': pm, 'payment_details': details})
+        return jsonify({'orders': out, 'session_id': sid, 'from': opened_at, 'to': end_at})
 
 @bp.route('/sessions', methods=['GET'])
 def cash_sessions_list():

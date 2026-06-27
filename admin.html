@@ -484,6 +484,73 @@
     .edit-form-group input, .edit-form-group textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
     .edit-form-group textarea { resize: vertical; min-height: 60px; }
 
+    #product-create-modal .kds-modal-content { max-width: 980px; border-radius: 16px; }
+    #product-create-modal .kds-modal-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      padding: 14px 18px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+      border-bottom: 1px solid #e5e7eb;
+    }
+    #product-create-modal .kds-modal-header h2 { font-size: 16px; font-weight: 900; color:#0f172a; letter-spacing: 0.2px; }
+    #product-create-modal .kds-modal-body {
+      display:grid;
+      grid-template-columns: minmax(0, 1fr) 340px;
+      gap: 16px;
+      padding: 16px 18px;
+      align-items:start;
+      overflow:auto;
+      max-height: 70vh;
+    }
+    #product-create-modal .create-two-col { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    #product-create-modal .edit-form-group label { color:#475569; font-weight: 800; }
+    #product-create-modal .edit-form-group input,
+    #product-create-modal .edit-form-group textarea,
+    #product-create-modal .edit-form-group select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #fff;
+      color:#0f172a;
+      font-weight: 700;
+    }
+    #product-create-modal .edit-form-group textarea { min-height: 80px; }
+    #product-create-modal .kds-modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid #e5e7eb;
+      background: #f8fafc;
+      display:flex;
+      justify-content:flex-end;
+      gap: 10px;
+    }
+    #product-create-modal .cancel-create-btn {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      color:#111;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    #product-create-modal #do-create-product {
+      height: 38px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid #22c55e;
+      background: #16a34a;
+      color:#fff;
+      font-weight: 950;
+      cursor: pointer;
+    }
+    @media (max-width: 900px) {
+      #product-create-modal .kds-modal-body { grid-template-columns: 1fr; max-height: 74vh; }
+      #product-create-modal .create-preview { order: -1; }
+    }
+
     /* Preview Card - matching user image style */
     .preview-card {
       background: #fff;
@@ -1583,6 +1650,7 @@
             <div id="settings-menu" class="settings-menu" style="display:none;">
               <label class="small"><input id="sound-toggle" type="checkbox" checked /> Sonido</label>
               <div class="settings-sep"></div>
+              <button id="shortcuts-open" type="button" title="Atajos de teclado" aria-label="Atajos de teclado">Atajos</button>
               <button id="users-admin-open" type="button" title="Usuarios" aria-label="Usuarios" style="display:none;">Usuarios</button>
               <button id="logout-btn" type="button" disabled>Salir</button>
             </div>
@@ -1616,6 +1684,10 @@
         </div>
         <button id="btn-new-order" style="background: #2e7d32; color: #fff; font-weight: 600; display: flex; align-items: center; gap: 6px; padding: 0 16px;">
           <span style="font-size: 18px; line-height: 1;">+</span> Pedido
+        </button>
+        <button id="btn-edit-order-picker" type="button" style="background:#f3f4f6; color:#374151; font-weight:800; display:flex; align-items:center; gap:8px; padding:0 14px; border:1px solid #e5e7eb; border-radius:10px;">
+          <svg viewBox="0 0 24 24" aria-hidden="true" style="width:18px; height:18px; fill:currentColor;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+          Editar
         </button>
       </div>
     </div>
@@ -2126,6 +2198,8 @@
                 <th>Fecha</th>
                 <th>Tipo</th>
                 <th>Destino</th>
+                <th>Teléfono</th>
+                <th>Pago</th>
                 <th>Total</th>
                 <th>Estado</th>
               </tr>
@@ -2141,6 +2215,8 @@
                 <th>Fecha</th>
                 <th>Tipo</th>
                 <th>Destino</th>
+                <th>Teléfono</th>
+                <th>Pago</th>
                 <th>Total</th>
                 <th>Estado</th>
               </tr>
@@ -2156,6 +2232,8 @@
                 <th>Fecha</th>
                 <th>Tipo</th>
                 <th>Destino</th>
+                <th>Teléfono</th>
+                <th>Pago</th>
                 <th>Total</th>
                 <th>Estado</th>
               </tr>
@@ -2324,6 +2402,7 @@
     <div class="kds-modal-overlay"></div>
       <div class="kds-modal-content">
         <button id="detail-modal-close" class="kds-modal-close">Cerrar</button>
+        <button id="detail-modal-edit" style="position:absolute; right:190px; top:10px; background:#f3f4f6; color:#374151; border:1px solid #e5e7eb; border-radius:4px; padding:6px 12px; font-weight:bold; cursor:pointer;">Editar</button>
         <button id="detail-modal-print" style="position:absolute; right:90px; top:10px; background:#607d8b; color:white; border:none; border-radius:4px; padding:6px 12px; font-weight:bold; cursor:pointer;">Imprimir</button>
         <div id="detail-modal-body"></div>
       </div>
@@ -2337,6 +2416,59 @@
         <button id="confirm-yes">Sí</button>
         <button id="confirm-no" style="background:#c62828;">No</button>
       </div>
+    </div>
+  </div>
+
+  <div id="kds-shortcuts-modal" class="kds-modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none; position:fixed; inset:0; z-index:20060;">
+    <div class="kds-modal-overlay"></div>
+    <div class="kds-modal-content" style="max-width:640px; width:min(640px, 96vw);">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-weight:900; font-size:18px; color:#1f2937; line-height:1.1;">Atajos de teclado</div>
+          <div class="small" style="margin-top:4px; color:#64748b;">Usá ? para abrir/cerrar esta ayuda · Esc para cerrar</div>
+        </div>
+        <button id="kds-shortcuts-close" type="button" style="width:38px; height:38px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; font-size:20px; line-height:1; color:#111;">×</button>
+      </div>
+      <div style="margin-top:14px; display:grid; gap:10px;">
+        <div style="display:grid; gap:6px;">
+          <div class="small" style="font-weight:800; color:#334155;">Navegación</div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Alt</span> + <span class="pill">1</span> Repartos</span><span><span class="pill">Alt</span> + <span class="pill">4</span> Carta Online</span></div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Alt</span> + <span class="pill">2</span> Cerrados</span><span><span class="pill">Alt</span> + <span class="pill">5</span> Análisis</span></div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Alt</span> + <span class="pill">3</span> Inventario</span><span><span class="pill">Alt</span> + <span class="pill">6</span> Filtros/Export</span></div>
+        </div>
+        <div style="display:grid; gap:6px;">
+          <div class="small" style="font-weight:800; color:#334155;">Acciones</div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Alt</span> + <span class="pill">N</span> Nuevo pedido</span><span><span class="pill">Alt</span> + <span class="pill">R</span> Recargar (según módulo)</span></div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Ctrl</span> + <span class="pill">Alt</span> + <span class="pill">1–5</span> Filtros rápidos (Pedidos)</span><span><span class="pill">Ctrl</span> + <span class="pill">Alt</span> + <span class="pill">M</span> Gestión Mesas</span></div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Ctrl</span> + <span class="pill">Alt</span> + <span class="pill">E</span> Editar pedido</span><span><span class="pill">/</span> Buscar (contextual)</span></div>
+          <div class="small" style="display:flex; justify-content:space-between; gap:12px;"><span><span class="pill">Ctrl</span> + <span class="pill">Alt</span> + <span class="pill">C</span> Abrir/Cerrar Caja</span><span><span class="pill">Esc</span> Cerrar modales</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="kds-edit-picker-modal" class="kds-modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none; position:fixed; inset:0; z-index:20060;">
+    <div class="kds-modal-overlay"></div>
+    <div class="kds-modal-content" style="max-width:820px; width:min(820px, 96vw);">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+        <div>
+          <div style="font-weight:900; font-size:18px; color:#1f2937; line-height:1.1;">Editar pedido</div>
+          <div class="small" style="margin-top:4px; color:#64748b;">Elegí un pedido activo para editar ítems y notas</div>
+        </div>
+        <button id="kds-edit-picker-close" type="button" style="width:38px; height:38px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; font-size:20px; line-height:1; color:#111;">×</button>
+      </div>
+      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <input id="kds-edit-picker-search" type="text" placeholder="Buscar por N°, destino, cliente o teléfono..." style="flex:1 1 320px; min-width: 220px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px;">
+        <button id="kds-edit-picker-refresh" type="button" style="height:40px; padding:0 12px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; font-weight:800; color:#111;">Recargar</button>
+      </div>
+      <div id="kds-edit-picker-filters" style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="kds-edit-picker-filter-all" type="button" data-filter="all" style="height:36px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; background:#111827; color:#fff; font-weight:900; cursor:pointer;">Todos <span id="kds-ep-count-all" class="pill" style="margin-left:6px; background:rgba(255,255,255,0.18); color:#fff;">0</span></button>
+        <button id="kds-edit-picker-filter-pending" type="button" data-filter="pending" style="height:36px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; color:#111; font-weight:900; cursor:pointer;">Pendientes <span id="kds-ep-count-pending" class="pill" style="margin-left:6px;">0</span></button>
+        <button id="kds-edit-picker-filter-prep" type="button" data-filter="preparacion" style="height:36px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; color:#111; font-weight:900; cursor:pointer;">Preparación <span id="kds-ep-count-prep" class="pill" style="margin-left:6px;">0</span></button>
+        <button id="kds-edit-picker-filter-ready" type="button" data-filter="listo" style="height:36px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; color:#111; font-weight:900; cursor:pointer;">Listos <span id="kds-ep-count-ready" class="pill" style="margin-left:6px;">0</span></button>
+        <button id="kds-edit-picker-filter-en-camino" type="button" data-filter="en_camino" style="height:36px; padding:0 12px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; color:#111; font-weight:900; cursor:pointer;">En camino <span id="kds-ep-count-en-camino" class="pill" style="margin-left:6px;">0</span></button>
+      </div>
+      <div id="kds-edit-picker-list" style="margin-top:12px; display:grid; gap:10px; max-height:64vh; overflow:auto;"></div>
     </div>
   </div>
 
@@ -2380,6 +2512,15 @@
             <input type="checkbox" id="pm-cfg-print-transfer">
             Imprimir ticket al registrar Transferencia
          </label>
+         <div style="height:1px; background:#e5e7eb; margin:10px 0;"></div>
+         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+           <div style="font-size:13px; font-weight:900; color:#111;">Medios de pago</div>
+           <button id="pm-methods-add" type="button" style="height:30px; padding:0 10px; border-radius:8px; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; cursor:pointer; font-weight:900;">+ Agregar</button>
+         </div>
+         <div id="pm-methods-list" style="display:grid; gap:8px;"></div>
+         <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:10px;">
+           <button id="pm-methods-save" type="button" style="height:34px; padding:0 12px; border-radius:10px; border:1px solid #86efac; background:#dcfce7; color:#166534; cursor:pointer; font-weight:950;">Guardar</button>
+         </div>
       </div>
       
       <div id="payment-details-box" style="margin-bottom:12px; padding:12px; background:#f0f7ff; border-radius:6px; border:1px solid #cce5ff; display:none;">
@@ -2431,26 +2572,8 @@
 
         <div id="mixed-payment-box" style="display:none; background:#f9f9f9; padding:12px; border:1px solid #ddd; border-radius:6px; margin-top:-4px;">
            <div style="font-size:12px; color:#666; margin-bottom:8px;">Ingrese los montos para cada medio:</div>
-           
-           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <label style="font-size:13px; font-weight:600;">Efectivo</label>
-             <input type="number" class="mixed-input" data-key="contado" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
-           </div>
-           
-           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <label style="font-size:13px; font-weight:600;">POS</label>
-             <input type="number" class="mixed-input" data-key="pos" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
-           </div>
-           
-           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <label style="font-size:13px; font-weight:600;">QR</label>
-             <input type="number" class="mixed-input" data-key="qr" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
-           </div>
-           
-           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-             <label style="font-size:13px; font-weight:600;">Transferencia</label>
-             <input type="number" class="mixed-input" data-key="transferencia" value="0" min="0" style="width:100px; padding:4px; border:1px solid #ccc; border-radius:4px; text-align:right;">
-           </div>
+           <div id="mixed-rows" style="display:grid; gap:8px;"></div>
+           <button id="mixed-add-row" type="button" style="margin-top:10px; width:100%; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; padding:8px; border-radius:6px; cursor:pointer; font-weight:800;">+ Agregar medio</button>
            
            <div style="border-top:1px solid #ddd; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; font-size:13px;">
              <span>Total Ingresado:</span>
@@ -4181,6 +4304,14 @@
         } catch (_) {}
         try { updateEyeIcon(); } catch (_) {}
       });
+      const syncCashEditingFromFocus = () => {
+        const ae = document.activeElement;
+        const tag = String(ae && ae.tagName || '').toUpperCase();
+        const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !(ae && ae.disabled);
+        isCashEditing = !!(ae && isEditable && cashPanelEl.contains(ae));
+      };
+      cashPanelEl.addEventListener('focusin', () => { isCashEditing = true; });
+      cashPanelEl.addEventListener('focusout', () => { setTimeout(syncCashEditingFromFocus, 0); });
     }
     function closeSettingsMenu(){
       if (!settingsMenuEl) return;
@@ -4225,7 +4356,7 @@
       settingsMenuEl.addEventListener('click', (e) => {
         const t = e && e.target;
         if (!t) return;
-        if (t && (t.id === 'logout-btn' || t.id === 'users-admin-open')) closeSettingsMenu();
+        if (t && (t.id === 'logout-btn' || t.id === 'users-admin-open' || t.id === 'shortcuts-open')) closeSettingsMenu();
       });
     }
     function scrollToPanel(id, openDetails){
@@ -4329,6 +4460,423 @@
         openModule(mod);
       });
     }
+
+    const shortcutsModal = document.getElementById('kds-shortcuts-modal');
+    const shortcutsCloseBtn = document.getElementById('kds-shortcuts-close');
+    function isShortcutsOpen() {
+      return !!(shortcutsModal && shortcutsModal.style.display && shortcutsModal.style.display !== 'none');
+    }
+    function openShortcutsModal() {
+      if (!shortcutsModal) return;
+      shortcutsModal.style.display = 'flex';
+      shortcutsModal.setAttribute('aria-hidden', 'false');
+    }
+    function closeShortcutsModal() {
+      if (!shortcutsModal) return;
+      shortcutsModal.style.display = 'none';
+      shortcutsModal.setAttribute('aria-hidden', 'true');
+    }
+    function toggleShortcutsModal() {
+      if (isShortcutsOpen()) closeShortcutsModal();
+      else openShortcutsModal();
+    }
+    if (shortcutsModal) {
+      shortcutsModal.addEventListener('click', (e) => { if (e.target === shortcutsModal) closeShortcutsModal(); });
+      const overlay = shortcutsModal.querySelector('.kds-modal-overlay');
+      if (overlay) overlay.addEventListener('click', closeShortcutsModal);
+    }
+    if (shortcutsCloseBtn) shortcutsCloseBtn.addEventListener('click', closeShortcutsModal);
+    const shortcutsMenuBtn = document.getElementById('shortcuts-open');
+    if (shortcutsMenuBtn) shortcutsMenuBtn.addEventListener('click', openShortcutsModal);
+
+    const editPickerModal = document.getElementById('kds-edit-picker-modal');
+    const editPickerCloseBtn = document.getElementById('kds-edit-picker-close');
+    const editPickerSearchEl = document.getElementById('kds-edit-picker-search');
+    const editPickerListEl = document.getElementById('kds-edit-picker-list');
+    const editPickerRefreshBtn = document.getElementById('kds-edit-picker-refresh');
+    const editPickerOpenBtn = document.getElementById('btn-edit-order-picker');
+    const editPickerFilterAllBtn = document.getElementById('kds-edit-picker-filter-all');
+    const editPickerFilterPendingBtn = document.getElementById('kds-edit-picker-filter-pending');
+    const editPickerFilterPrepBtn = document.getElementById('kds-edit-picker-filter-prep');
+    const editPickerFilterReadyBtn = document.getElementById('kds-edit-picker-filter-ready');
+    const editPickerFilterEnCaminoBtn = document.getElementById('kds-edit-picker-filter-en-camino');
+    const editPickerCountAll = document.getElementById('kds-ep-count-all');
+    const editPickerCountPending = document.getElementById('kds-ep-count-pending');
+    const editPickerCountPrep = document.getElementById('kds-ep-count-prep');
+    const editPickerCountReady = document.getElementById('kds-ep-count-ready');
+    const editPickerCountEnCamino = document.getElementById('kds-ep-count-en-camino');
+    let editPickerStatusFilter = 'all';
+
+    function isEditPickerOpen() {
+      return !!(editPickerModal && editPickerModal.style.display && editPickerModal.style.display !== 'none');
+    }
+    function openEditPickerModal() {
+      if (!editPickerModal) return;
+      editPickerModal.style.display = 'flex';
+      editPickerModal.setAttribute('aria-hidden', 'false');
+      renderEditPickerList((editPickerSearchEl && editPickerSearchEl.value) ? editPickerSearchEl.value : '');
+      try { if (editPickerSearchEl) editPickerSearchEl.focus(); } catch (_) {}
+    }
+    function closeEditPickerModal() {
+      if (!editPickerModal) return;
+      editPickerModal.style.display = 'none';
+      editPickerModal.setAttribute('aria-hidden', 'true');
+    }
+    function escapeLocalHtml(v) {
+      return String(v ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+    function getEditableOrdersCached() {
+      const list = Array.isArray(window.currentOrders) ? window.currentOrders : [];
+      const editable = list.filter(o => {
+        const st = String(o && o.status || '').trim().toLowerCase();
+        if (!st) return false;
+        if (st === 'entregado' || st === 'cancelado') return false;
+        return true;
+      });
+      editable.sort((a, b) => {
+        const ta = parseDateSafe(a && a.created_at || '');
+        const tb = parseDateSafe(b && b.created_at || '');
+        return tb - ta;
+      });
+      return editable;
+    }
+    function getPickerStatusKey(order) {
+      const st = String(order && order.status || '').trim().toLowerCase();
+      if (!st) return '';
+      if (st === 'por_aprobar' || st === 'pendiente') return 'pending';
+      if (st === 'preparacion') return 'preparacion';
+      if (st === 'listo') return 'listo';
+      if (st === 'en_camino') return 'en_camino';
+      return st;
+    }
+    function setEditPickerFilter(filterKey) {
+      const k = String(filterKey || '').trim() || 'all';
+      editPickerStatusFilter = k;
+      updateEditPickerFilterUI();
+      renderEditPickerList((editPickerSearchEl && editPickerSearchEl.value) ? editPickerSearchEl.value : '');
+    }
+    function updateEditPickerFilterUI() {
+      const map = [
+        { key: 'all', el: editPickerFilterAllBtn },
+        { key: 'pending', el: editPickerFilterPendingBtn },
+        { key: 'preparacion', el: editPickerFilterPrepBtn },
+        { key: 'listo', el: editPickerFilterReadyBtn },
+        { key: 'en_camino', el: editPickerFilterEnCaminoBtn },
+      ];
+      map.forEach(({ key, el }) => {
+        if (!el) return;
+        const active = (editPickerStatusFilter === key);
+        el.style.background = active ? '#111827' : '#fff';
+        el.style.color = active ? '#fff' : '#111';
+        el.style.borderColor = active ? '#111827' : '#e5e7eb';
+      });
+    }
+    function updateEditPickerCounts(baseList) {
+      const list = Array.isArray(baseList) ? baseList : [];
+      let pending = 0, prep = 0, ready = 0, enCamino = 0;
+      list.forEach(o => {
+        const k = getPickerStatusKey(o);
+        if (k === 'pending') pending++;
+        else if (k === 'preparacion') prep++;
+        else if (k === 'listo') ready++;
+        else if (k === 'en_camino') enCamino++;
+      });
+      if (editPickerCountAll) editPickerCountAll.textContent = String(list.length);
+      if (editPickerCountPending) editPickerCountPending.textContent = String(pending);
+      if (editPickerCountPrep) editPickerCountPrep.textContent = String(prep);
+      if (editPickerCountReady) editPickerCountReady.textContent = String(ready);
+      if (editPickerCountEnCamino) editPickerCountEnCamino.textContent = String(enCamino);
+    }
+    function buildEditPickerCard(order) {
+      const id = parseInt(String(order && order.id || '0'), 10) || 0;
+      const num = (typeof displayOrderNumber === 'function') ? displayOrderNumber(order) : String(id);
+      const type = String(order && order.order_type || '').trim().toLowerCase();
+      const typeLabel = type || '—';
+      const dest = (typeof destinoLabelFor === 'function') ? destinoLabelFor(order) : '';
+      const st = String(order && order.status || '').trim().toLowerCase() || 'pendiente';
+      const total = parseInt(String(order && order.total || '0'), 10) || 0;
+      const phone = String(order && order.customer_phone || '').trim();
+      const name = String(order && order.customer_name || '').trim();
+      const created = String(order && order.created_at || '').trim();
+      const safeNum = escapeLocalHtml(num);
+      const safeDest = escapeLocalHtml(dest || '-');
+      const safePhone = escapeLocalHtml(phone || '');
+      const safeName = escapeLocalHtml(name || '');
+      const safeType = escapeLocalHtml(typeLabel);
+      const safeStatus = escapeLocalHtml(st);
+      const safeCreated = escapeLocalHtml(created ? formatARDate(created) : '');
+      const safeTotal = escapeLocalHtml(`$${total}`);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.style.cssText = 'text-align:left; width:100%; border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:12px 12px; cursor:pointer; box-shadow:0 10px 22px rgba(0,0,0,0.06); display:grid; gap:8px;';
+      btn.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span style="font-weight:900; color:#111827;">Pedido #${safeNum}</span>
+            <span class="pill">${safeType}</span>
+            <span class="status-badge ${escapeLocalHtml(statusClasses && statusClasses[st] ? statusClasses[st] : 'status-pendiente')}">${safeStatus}</span>
+          </div>
+          <div style="font-weight:900; color:#1f6b39;">${safeTotal}</div>
+        </div>
+        <div class="small" style="color:#475569; display:flex; gap:12px; flex-wrap:wrap;">
+          <span><strong>Destino:</strong> ${safeDest}</span>
+          ${safeName ? `<span><strong>Cliente:</strong> ${safeName}</span>` : ''}
+          ${safePhone ? `<span><strong>Tel:</strong> ${safePhone}</span>` : ''}
+          ${safeCreated ? `<span><strong>Fecha:</strong> ${safeCreated}</span>` : ''}
+        </div>
+      `;
+      btn.addEventListener('click', () => {
+        if (!id) return;
+        try { window.kdsLastOrderId = id; } catch (_) {}
+        closeEditPickerModal();
+        try { EditOrder.openWithFetch(id, String(order && order.table_number || '')); } catch (_) { alert('No se pudo abrir el editor'); }
+      });
+      return btn;
+    }
+    function renderEditPickerList(term) {
+      if (!editPickerListEl) return;
+      const t = String(term || '').trim().toLowerCase();
+      let orders = getEditableOrdersCached();
+      updateEditPickerCounts(orders);
+      updateEditPickerFilterUI();
+      if (editPickerStatusFilter && editPickerStatusFilter !== 'all') {
+        const f = String(editPickerStatusFilter || '').trim();
+        orders = orders.filter(o => getPickerStatusKey(o) === f);
+      }
+      if (t) {
+        orders = orders.filter(o => {
+          const id = String(o && o.id || '').trim();
+          const num = (typeof displayOrderNumber === 'function') ? String(displayOrderNumber(o) || '') : '';
+          const dest = (typeof destinoLabelFor === 'function') ? String(destinoLabelFor(o) || '') : '';
+          const phone = String(o && o.customer_phone || '');
+          const name = String(o && o.customer_name || '');
+          const blob = `${id} ${num} ${dest} ${phone} ${name}`.toLowerCase();
+          return blob.includes(t);
+        });
+      }
+      editPickerListEl.innerHTML = '';
+      if (!orders.length) {
+        editPickerListEl.innerHTML = '<div class="small" style="padding:14px; border:1px dashed #cbd5e1; border-radius:12px; color:#64748b; background:#f8fafc; text-align:center;">No hay pedidos editables con esos filtros</div>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      orders.slice(0, 200).forEach(o => frag.appendChild(buildEditPickerCard(o)));
+      editPickerListEl.appendChild(frag);
+    }
+    async function refreshEditPickerFromApi() {
+      if (!editPickerListEl) return;
+      const tenantEl = document.getElementById('tenant-input');
+      const slug = String(tenantEl && tenantEl.value || '').trim() || 'gastronomia-local1';
+      const url = new URL('/api/orders', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      url.searchParams.set('exclude_archived', 'true');
+      url.searchParams.set('limit', '200');
+      url.searchParams.set('offset', '0');
+      editPickerListEl.innerHTML = '<div class="small" style="padding:12px;">Cargando...</div>';
+      try {
+        const resp = await wFetch(url.toString());
+        if (!resp.ok) throw new Error('No se pudo cargar');
+        const data = await resp.json();
+        const orders = Array.isArray(data && data.orders) ? data.orders : [];
+        window.currentOrders = orders;
+      } catch (_) {}
+      renderEditPickerList((editPickerSearchEl && editPickerSearchEl.value) ? editPickerSearchEl.value : '');
+    }
+
+    if (editPickerModal) {
+      editPickerModal.addEventListener('click', (e) => { if (e.target === editPickerModal) closeEditPickerModal(); });
+      const overlay = editPickerModal.querySelector('.kds-modal-overlay');
+      if (overlay) overlay.addEventListener('click', closeEditPickerModal);
+    }
+    if (editPickerCloseBtn) editPickerCloseBtn.addEventListener('click', closeEditPickerModal);
+    if (editPickerSearchEl) editPickerSearchEl.addEventListener('input', () => renderEditPickerList(editPickerSearchEl.value));
+    if (editPickerRefreshBtn) editPickerRefreshBtn.addEventListener('click', refreshEditPickerFromApi);
+    if (editPickerOpenBtn) editPickerOpenBtn.addEventListener('click', openEditPickerModal);
+    if (editPickerFilterAllBtn) editPickerFilterAllBtn.addEventListener('click', () => setEditPickerFilter('all'));
+    if (editPickerFilterPendingBtn) editPickerFilterPendingBtn.addEventListener('click', () => setEditPickerFilter('pending'));
+    if (editPickerFilterPrepBtn) editPickerFilterPrepBtn.addEventListener('click', () => setEditPickerFilter('preparacion'));
+    if (editPickerFilterReadyBtn) editPickerFilterReadyBtn.addEventListener('click', () => setEditPickerFilter('listo'));
+    if (editPickerFilterEnCaminoBtn) editPickerFilterEnCaminoBtn.addEventListener('click', () => setEditPickerFilter('en_camino'));
+
+    function isTypingTarget(el) {
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      const tag = String(el.tagName || '').toUpperCase();
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+      return false;
+    }
+    function clickById(id) {
+      const el = document.getElementById(id);
+      if (el && typeof el.click === 'function') { el.click(); return true; }
+      return false;
+    }
+    function focusById(id) {
+      const el = document.getElementById(id);
+      if (el && typeof el.focus === 'function') { el.focus(); return true; }
+      return false;
+    }
+    function refreshActiveArea() {
+      if (activeModule === 'repartos') return clickById('delivery-reload');
+      if (activeModule === 'cerrados') return clickById('arch-reload') || clickById('arch-filter-btn');
+      if (activeModule === 'inventario') return clickById('inv-reload');
+      if (activeModule === 'carta') return clickById('car-reload');
+      if (activeModule === 'analisis') return clickById('analytics-apply');
+      if (activeModule === 'export') return clickById('orders-export-btn');
+      try {
+        if (typeof loadOrdersSafe === 'function') { loadOrdersSafe(); return true; }
+      } catch (_) {}
+      try {
+        if (typeof load === 'function') { load(); return true; }
+      } catch (_) {}
+      try { location.reload(); } catch (_) {}
+      return false;
+    }
+    function quickFilterOrders(n) {
+      const idx = Number(n);
+      if (idx === 1) return clickById('orders-qf-pending');
+      if (idx === 2) return clickById('orders-qf-prep');
+      if (idx === 3) return clickById('orders-qf-ready');
+      if (idx === 4) return clickById('orders-qf-en-camino');
+      if (idx === 5) return clickById('orders-qf-entregado');
+      return false;
+    }
+    function toggleCashPanel() {
+      const d = document.getElementById('cash-panel');
+      if (!d || typeof d.open === 'undefined') return false;
+      try { d.open = !d.open; } catch (_) {}
+      if (d.open) {
+        try { d.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+      }
+      return true;
+    }
+    function toggleTableManagement() {
+      return clickById('tables-open');
+    }
+    function focusContextSearch() {
+      const createOrderModal = document.getElementById('create-order-modal');
+      const isCreateOrderOpen = !!(createOrderModal && createOrderModal.classList && createOrderModal.classList.contains('active'));
+      if (isCreateOrderOpen) return focusById('new-order-search');
+      if (activeModule === 'cerrados') return focusById('arch-search');
+      return false;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (!e) return;
+      const key = String(e.key || '');
+
+      if (key === 'Escape') {
+        if (isShortcutsOpen()) { e.preventDefault(); closeShortcutsModal(); return; }
+        if (isEditPickerOpen()) { e.preventDefault(); closeEditPickerModal(); return; }
+        const payModal = document.getElementById('payment-modal');
+        const isPayOpen = !!(payModal && payModal.classList && payModal.classList.contains('active'));
+        if (isPayOpen) {
+          const cancelBtn = document.getElementById('payment-cancel');
+          if (cancelBtn && typeof cancelBtn.click === 'function') { e.preventDefault(); cancelBtn.click(); return; }
+          try { payModal.classList.remove('active'); payModal.setAttribute('aria-hidden','true'); document.body.style.overflow = 'auto'; } catch (_) {}
+          e.preventDefault(); return;
+        }
+        const confirmModal = document.getElementById('confirm-modal');
+        const isConfirmOpen = !!(confirmModal && confirmModal.classList && confirmModal.classList.contains('active'));
+        if (isConfirmOpen) {
+          const noBtn = document.getElementById('confirm-no');
+          if (noBtn && typeof noBtn.click === 'function') { e.preventDefault(); noBtn.click(); return; }
+        }
+        const detailModal = document.getElementById('order-detail-modal');
+        const isDetailOpen = !!(detailModal && detailModal.classList && detailModal.classList.contains('active'));
+        if (isDetailOpen) {
+          const closeBtn = document.getElementById('detail-modal-close');
+          if (closeBtn && typeof closeBtn.click === 'function') { e.preventDefault(); closeBtn.click(); return; }
+        }
+        const createProdModal = document.getElementById('product-create-modal');
+        const isCreateProdOpen = !!(createProdModal && createProdModal.classList && createProdModal.classList.contains('active'));
+        if (isCreateProdOpen) {
+          try {
+            if (typeof window.closeProductCreateModal === 'function') { window.closeProductCreateModal(); e.preventDefault(); return; }
+          } catch (_) {}
+          try { createProdModal.classList.remove('active'); createProdModal.setAttribute('aria-hidden','true'); document.body.style.overflow = 'auto'; } catch (_) {}
+          e.preventDefault(); return;
+        }
+        const prodEditModal = document.getElementById('product-edit-modal');
+        const isProdEditOpen = !!(prodEditModal && prodEditModal.style && prodEditModal.style.display && prodEditModal.style.display !== 'none');
+        if (isProdEditOpen) {
+          try { closeProductEditModal(); } catch (_) {}
+          e.preventDefault(); return;
+        }
+        const carModal = document.getElementById('carousel-modal');
+        const isCarOpen = !!(carModal && carModal.style && carModal.style.display && carModal.style.display !== 'none');
+        if (isCarOpen) {
+          try { closeCarouselModal(); } catch (_) {}
+          e.preventDefault(); return;
+        }
+        const tableDetailModal = document.getElementById('table-detail-modal');
+        const isTableDetailOpen = !!(tableDetailModal && tableDetailModal.classList && tableDetailModal.classList.contains('active'));
+        if (isTableDetailOpen) {
+          const closeBtn = document.getElementById('tdm-close');
+          if (closeBtn && typeof closeBtn.click === 'function') { e.preventDefault(); closeBtn.click(); return; }
+          try { tableDetailModal.style.display = 'none'; tableDetailModal.classList.remove('active'); } catch (_) {}
+          e.preventDefault(); return;
+        }
+        const createOrderModal = document.getElementById('create-order-modal');
+        const isCreateOrderOpen = !!(createOrderModal && createOrderModal.classList && createOrderModal.classList.contains('active'));
+        if (isCreateOrderOpen) {
+          const closeBtn = createOrderModal.querySelector('.close-modal-btn');
+          if (closeBtn && typeof closeBtn.click === 'function') { e.preventDefault(); closeBtn.click(); return; }
+        }
+        const editOrderModal = document.getElementById('edit-order-modal');
+        const isEditOrderOpen = !!(editOrderModal && editOrderModal.classList && editOrderModal.classList.contains('active'));
+        if (isEditOrderOpen) {
+          const closeBtn = document.getElementById('eom-close');
+          if (closeBtn && typeof closeBtn.click === 'function') { e.preventDefault(); closeBtn.click(); return; }
+        }
+        return;
+      }
+
+      const typing = isTypingTarget(document.activeElement);
+      const hasMods = !!(e.altKey || e.ctrlKey || e.metaKey);
+      if (typing && !hasMods) return;
+
+      if (!typing && key === '?') { e.preventDefault(); toggleShortcutsModal(); return; }
+      if (!typing && key === '/') { e.preventDefault(); focusContextSearch(); return; }
+
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const k = key.toLowerCase();
+        if (k === 'n') { e.preventDefault(); clickById('btn-new-order'); return; }
+        if (k === 'r') { e.preventDefault(); refreshActiveArea(); return; }
+        if (k === '1') { e.preventDefault(); openModule('repartos'); return; }
+        if (k === '2') { e.preventDefault(); openModule('cerrados'); return; }
+        if (k === '3') { e.preventDefault(); openModule('inventario'); return; }
+        if (k === '4') { e.preventDefault(); openModule('carta'); return; }
+        if (k === '5') { e.preventDefault(); openModule('analisis'); return; }
+        if (k === '6') { e.preventDefault(); openModule('export'); return; }
+      }
+
+      if (e.ctrlKey && e.altKey && !e.metaKey) {
+        const n = parseInt(key, 10);
+        if (Number.isFinite(n) && n >= 1 && n <= 5) { e.preventDefault(); quickFilterOrders(n); return; }
+        const k = key.toLowerCase();
+        if (k === 'e') {
+          e.preventDefault();
+          const detailModal = document.getElementById('order-detail-modal');
+          if (detailModal && detailModal.classList && detailModal.classList.contains('active')) {
+            const idSpan = document.getElementById('detail-order-id');
+            const oid = idSpan ? parseInt(String(idSpan.textContent || '0'), 10) : 0;
+            if (oid) { try { EditOrder.openWithFetch(oid, ''); } catch (_) {} }
+            return;
+          }
+          openEditPickerModal();
+          return;
+        }
+        if (k === 'm') { e.preventDefault(); toggleTableManagement(); return; }
+        if (k === 'c') { e.preventDefault(); toggleCashPanel(); return; }
+      }
+    });
+
     if (cashEyeTop) cashEyeTop.addEventListener('click', async () => {
       cashCollapsed = !cashCollapsed;
       const btn = document.getElementById('toggle-cash');
@@ -4506,6 +5054,7 @@
     let currentTipPercent = 10;
     let currentTipDefaultEnabled = true;
     let currentTicketFormat = 'full';
+    let currentPaymentMethodsConfig = null;
     let currentOffset = 0;
     let currentLimit = 50;
     let currentSearch = '';
@@ -5188,9 +5737,39 @@
     function isOrderLookupSearch(value) {
       return !!normalizeOrderLookupToken(value);
     }
+    function getPaymentBaseLabel(base) {
+      const k = String(base || '').trim().toLowerCase();
+      if (k === 'contado') return 'Efectivo';
+      if (k === 'pos') return 'POS';
+      if (k === 'qr') return 'QR';
+      if (k === 'transferencia') return 'Transferencia';
+      return k || '-';
+    }
+    function formatPaymentMethodDisplay(meta) {
+      if (!meta) return '';
+      const label = String(meta.label || '').trim();
+      const id = String(meta.id || '').trim();
+      const base = String(meta.base || '').trim().toLowerCase();
+      if (!label) return id || '-';
+      const locked = !!meta.locked;
+      if (locked) return label;
+      const baseLabel = getPaymentBaseLabel(base);
+      const low = label.toLowerCase();
+      if (!baseLabel) return label;
+      if (low.startsWith(baseLabel.toLowerCase())) return label;
+      if (label.includes('·')) return label;
+      return `${baseLabel} · ${label}`;
+    }
     function getPaymentMethodLabel(method) {
       const key = String(method || '').trim().toLowerCase();
       if (!key) return '-';
+      try {
+        const meta = getPaymentMethodMeta(key);
+        if (meta) {
+          const out = formatPaymentMethodDisplay(meta);
+          if (out) return out;
+        }
+      } catch (_) {}
       if (key === 'contado' || key === 'cash') return 'Efectivo';
       if (key === 'pos') return 'POS';
       if (key === 'qr') return 'QR';
@@ -6113,6 +6692,78 @@
       } catch (_) {}
     }
 
+    function _stripDiacritics(value) {
+      try {
+        return String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '');
+      } catch (_) {
+        return String(value || '');
+      }
+    }
+    function _slugKey(value) {
+      const s = _stripDiacritics(String(value || '').trim().toLowerCase());
+      return s
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_+|_+$/g, '');
+    }
+    function _defaultPaymentMethods() {
+      return [
+        { id: 'contado', base: 'contado', label: 'Efectivo', active: true, locked: true },
+        { id: 'pos', base: 'pos', label: 'POS', active: true, locked: true },
+        { id: 'qr', base: 'qr', label: 'QR', active: true, locked: true },
+        { id: 'transferencia', base: 'transferencia', label: 'Transferencia', active: true, locked: true },
+      ];
+    }
+    function normalizePaymentMethodsConfig(raw) {
+      const defaults = _defaultPaymentMethods();
+      const baseAllowed = new Set(['contado', 'pos', 'qr', 'transferencia']);
+      const out = [];
+      const src = raw && typeof raw === 'object'
+        ? (Array.isArray(raw) ? raw : (Array.isArray(raw.methods) ? raw.methods : []))
+        : [];
+      const seen = new Set();
+      const idxById = {};
+      for (const d of defaults) {
+        out.push(Object.assign({}, d));
+        seen.add(d.id);
+        idxById[d.id] = out.length - 1;
+      }
+      for (const it of src) {
+        if (!it || typeof it !== 'object') continue;
+        const id = String(it.id || '').trim().toLowerCase();
+        const label = String(it.label || it.name || '').trim();
+        const base = String(it.base || '').trim().toLowerCase();
+        const active = it.active !== false;
+        if (!id) continue;
+        if (Object.prototype.hasOwnProperty.call(idxById, id)) {
+          const idx = idxById[id];
+          if (idx >= 0 && out[idx]) {
+            if (label) out[idx].label = label;
+            out[idx].active = active;
+          }
+          continue;
+        }
+        if (seen.has(id)) continue;
+        if (!label) continue;
+        if (!baseAllowed.has(base)) continue;
+        out.push({ id, base, label, active, locked: false });
+        seen.add(id);
+      }
+      return { methods: out };
+    }
+    function getPaymentMethodsConfig() {
+      return normalizePaymentMethodsConfig(currentPaymentMethodsConfig);
+    }
+    function getPaymentMethodMeta(methodKey) {
+      const key = String(methodKey || '').trim().toLowerCase();
+      if (!key) return null;
+      const cfg = getPaymentMethodsConfig();
+      const m = (cfg.methods || []).find(x => String(x.id || '').toLowerCase() === key);
+      return m || null;
+    }
+
     async function loadTenantPrefs() {
       try {
         const slug = tenantInput.value.trim() || defaultSlug();
@@ -6124,6 +6775,7 @@
         currentTipPercent = Math.max(0, Math.min(100, Number(p.tip_percent || 10)));
         currentTipDefaultEnabled = !!p.tip_default_enabled;
         currentTicketFormat = (p.ticket_format === 'compact') ? 'compact' : 'full';
+        currentPaymentMethodsConfig = p.payment_methods || null;
       } catch (_) {}
     }
 
@@ -6210,16 +6862,17 @@
             if (e.event_type === 'payment') {
                 try {
                     const payload = JSON.parse(e.payload_json);
-                    const methodMap = { 'contado': 'Efectivo', 'pos': 'POS', 'qr': 'QR', 'transferencia': 'Transferencia' };
-                    let method = methodMap[payload.method] || payload.method;
                     const totalAmt = payload.amount || 0;
                     const tipAmt = payload.tip || 0;
                     const finalTotal = totalAmt + tipAmt;
                     
                     if (payload.method === 'mixed' && Array.isArray(payload.details)) {
-                        const dets = payload.details.map(d => `${methodMap[d.method]||d.method}: ${formatMoney(d.amount)}`).join(', ');
-                        label = `Pago Mixto (${dets}) - Total: ${formatMoney(finalTotal)}`;
+                        const dets = payload.details
+                          .map(d => `${getPaymentMethodLabel(d && d.method)}: ${formatMoney(d && d.amount)}`)
+                          .join(' + ');
+                        label = `Pago mixto (${dets}) - Total: ${formatMoney(finalTotal)}`;
                     } else {
+                        const method = getPaymentMethodLabel(payload.method);
                         label = `Pago registrado (${method}) - Total: ${formatMoney(finalTotal)}`;
                     }
                 } catch (_) {
@@ -6369,7 +7022,20 @@
         const safeClosedBy = closedBy ? escapeHtml(closedBy) : '';
         const paidAt = String(order.paid_at || '').trim();
         const safePaidAt = paidAt ? formatARDate(paidAt) : '';
-        const paymentMethodText = getPaymentMethodLabel(order.payment_method);
+        let paymentMethodText = getPaymentMethodLabel(order.payment_method);
+        if (String(order.payment_method || '').trim().toLowerCase() === 'mixed') {
+          try {
+            const payEvents = (events || []).filter(ev => ev && ev.event_type === 'payment');
+            const lastPay = payEvents.length ? payEvents[payEvents.length - 1] : null;
+            const payload = lastPay ? (JSON.parse(lastPay.payload_json || '{}') || {}) : {};
+            if (String(payload.method || '').trim().toLowerCase() === 'mixed' && Array.isArray(payload.details) && payload.details.length) {
+              const dets = payload.details
+                .map(d => `${getPaymentMethodLabel(d && d.method)}: ${formatMoney(d && d.amount)}`)
+                .join(' + ');
+              paymentMethodText = `Pago mixto (${dets})`;
+            }
+          } catch (_) {}
+        }
         const safePaymentMethod = escapeHtml(paymentMethodText);
         const paymentStatusText = isPaid ? 'Pagado' : (isDelivered ? 'Pendiente de cobro' : 'Sin pago');
         const safePaymentStatus = escapeHtml(paymentStatusText);
@@ -6439,6 +7105,12 @@
         if (printBtn) printBtn.onclick = function(){
             window.showPrintOptions(order.id);
         };
+        const editBtn = document.getElementById('detail-modal-edit');
+        if (editBtn) editBtn.onclick = function(){
+          try { window.kdsLastOrderId = order.id; } catch (_) {}
+          try { EditOrder.openWithFetch(order.id, String(order.table_number || '')); } catch (_) { alert('No se pudo abrir el editor'); }
+        };
+        try { window.kdsLastOrderId = order.id; } catch (_) {}
 
         const cleanup = () => {
             modal.classList.remove('active');
@@ -9149,7 +9821,7 @@
 
       if (!archDel.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="6" class="small">Sin resultados</td>`;
+        tr.innerHTML = `<td colspan="8" class="small">Sin resultados</td>`;
         if(atDel) atDel.appendChild(tr);
         if (mDel) mDel.innerHTML = '<div class="small">Sin resultados</div>';
       }
@@ -9182,6 +9854,20 @@
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safePhoneAttr = escapeAdminAttr(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const paymentDisplayRaw = String(o.payment_method_display || '').trim() || getPaymentMethodLabel(o.payment_method);
+        const safePayment = escapeAdminHtml(paymentDisplayRaw);
+        let paymentTooltip = '';
+        try {
+          const m = String(o.payment_method || '').trim().toLowerCase();
+          const dets = Array.isArray(o.payment_details) ? o.payment_details : null;
+          if (m === 'mixed' && dets && dets.length) {
+            const parts = dets
+              .filter(d => d && (Number(d.amount) || 0) > 0)
+              .map(d => `${getPaymentMethodLabel(d.method)}: ${formatMoney(d.amount)}`);
+            if (parts.length) paymentTooltip = parts.join(' + ');
+          }
+        } catch (_) {}
+        const safePaymentTitle = escapeAdminAttr(paymentTooltip || paymentDisplayRaw);
         const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         const safeStatusText = escapeAdminHtml(getClosedOrderStatusLabel(o));
         tr.innerHTML = `
@@ -9194,6 +9880,7 @@
             ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
             ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
+          <td><span class="small" title="${safePaymentTitle}">${safePayment}</span></td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge ${statusClasses['entregado']}\">${safeStatusText}</span>
@@ -9210,6 +9897,7 @@
               <div class="title">Pedido #${safeOrderNumber}</div>
               <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDest}</span>`:safeDest}</div>
+              <div class="meta" title="${safePaymentTitle}">Pago: ${safePayment}</div>
               <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid"><div>Total: $${o.total}</div></div>
             </div>
@@ -9235,7 +9923,7 @@
       }
       if (!archCan.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="6" class="small">Sin resultados</td>`;
+        tr.innerHTML = `<td colspan="8" class="small">Sin resultados</td>`;
         if(atCan) atCan.appendChild(tr);
         if (mCan) mCan.innerHTML = '<div class="small">Sin resultados</div>';
       }
@@ -9251,6 +9939,20 @@
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safePhoneAttr = escapeAdminAttr(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const paymentDisplayRaw = String(o.payment_method_display || '').trim() || getPaymentMethodLabel(o.payment_method);
+        const safePayment = escapeAdminHtml(paymentDisplayRaw);
+        let paymentTooltip = '';
+        try {
+          const m = String(o.payment_method || '').trim().toLowerCase();
+          const dets = Array.isArray(o.payment_details) ? o.payment_details : null;
+          if (m === 'mixed' && dets && dets.length) {
+            const parts = dets
+              .filter(d => d && (Number(d.amount) || 0) > 0)
+              .map(d => `${getPaymentMethodLabel(d.method)}: ${formatMoney(d.amount)}`);
+            if (parts.length) paymentTooltip = parts.join(' + ');
+          }
+        } catch (_) {}
+        const safePaymentTitle = escapeAdminAttr(paymentTooltip || paymentDisplayRaw);
         const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
@@ -9262,6 +9964,7 @@
             ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
             ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
+          <td><span class="small" title="${safePaymentTitle}">${safePayment}</span></td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge ${statusClasses['cancelado']}\">cancelado</span>
@@ -9277,6 +9980,7 @@
             <div class="title">Pedido #${safeOrderNumber}</div>
             <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
             <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+            <div class="meta" title="${safePaymentTitle}">Pago: ${safePayment}</div>
             <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
             <div class="grid"><div>Total: $${o.total}</div><div>Estado: cancelado</div></div>
             <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
@@ -9294,7 +9998,7 @@
       // Render Reset/Limpiados
       if (!archReset.length) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="6" class="small">Sin resultados</td>`;
+        tr.innerHTML = `<td colspan="8" class="small">Sin resultados</td>`;
         if(atReset) atReset.appendChild(tr);
         if (mReset) mReset.innerHTML = '<div class="small">Sin resultados</div>';
       }
@@ -9310,6 +10014,20 @@
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safePhoneAttr = escapeAdminAttr(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
+        const paymentDisplayRaw = String(o.payment_method_display || '').trim() || getPaymentMethodLabel(o.payment_method);
+        const safePayment = escapeAdminHtml(paymentDisplayRaw);
+        let paymentTooltip = '';
+        try {
+          const m = String(o.payment_method || '').trim().toLowerCase();
+          const dets = Array.isArray(o.payment_details) ? o.payment_details : null;
+          if (m === 'mixed' && dets && dets.length) {
+            const parts = dets
+              .filter(d => d && (Number(d.amount) || 0) > 0)
+              .map(d => `${getPaymentMethodLabel(d.method)}: ${formatMoney(d.amount)}`);
+            if (parts.length) paymentTooltip = parts.join(' + ');
+          }
+        } catch (_) {}
+        const safePaymentTitle = escapeAdminAttr(paymentTooltip || paymentDisplayRaw);
         const safeLastStatus = escapeAdminHtml((o.last_status || '').trim() || '-');
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
@@ -9321,6 +10039,7 @@
             ${phoneDigits ? `<button class=\"copy-phone small\" data-phone=\"${safePhoneAttr}\" style=\"margin-left:6px;\">Copiar</button>` : ''}
             ${safeWaUrl ? `<a class=\"small\" href=\"${safeWaUrl}\" target=\"_blank\" rel=\"noopener\" style=\"margin-left:6px;\">WhatsApp</a>` : ''}
           </td>
+          <td><span class="small" title="${safePaymentTitle}">${safePayment}</span></td>
           <td>$${o.total}</td>
           <td>
             <span class=\"status-badge\" style=\"background:#607d8b;color:#fff;\">limpiado</span>
@@ -9336,6 +10055,7 @@
             <div class="title">Pedido #${safeOrderNumber}</div>
             <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
             <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
+            <div class="meta" title="${safePaymentTitle}">Pago: ${safePayment}</div>
             <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href='${safeWaUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
             <div class="grid"><div>Total: $${o.total}</div><div>Estado: limpiado</div></div>
             <div class="actions"><button class="view-detail" data-id="${safeAdminInt(o.id)}">Ver</button></div>
@@ -10999,11 +11719,13 @@
         const modal = document.getElementById('payment-modal');
         const overlay = modal.querySelector('.kds-modal-overlay');
         const cancelBtn = document.getElementById('payment-cancel');
-        const optionBtns = modal.querySelectorAll('.pay-option-btn');
+        const btnContainer = modal.querySelector('.pay-options-container');
+        let optionBtns = [];
         
         // Mixed Payment Elements
         const mixedBox = document.getElementById('mixed-payment-box');
-        const mixedInputs = modal.querySelectorAll('.mixed-input');
+        const mixedRows = document.getElementById('mixed-rows');
+        const mixedAddRowBtn = document.getElementById('mixed-add-row');
         const mixedTotalEntered = document.getElementById('mixed-total-entered');
         const mixedRemaining = document.getElementById('mixed-remaining');
         const confirmMixedBtn = document.getElementById('confirm-mixed-pay');
@@ -11012,6 +11734,9 @@
         const cfgBtn = document.getElementById('pm-config-btn');
         const cfgBox = document.getElementById('pm-config-box');
         const cfgCheck = document.getElementById('pm-cfg-print-transfer');
+        const pmMethodsList = document.getElementById('pm-methods-list');
+        const pmMethodsAdd = document.getElementById('pm-methods-add');
+        const pmMethodsSave = document.getElementById('pm-methods-save');
 
         if (cfgCheck) {
             // Load preference
@@ -11040,6 +11765,224 @@
             }
         }
 
+        const escHtml = (v) => String(v ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+        const baseLabel = (b) => {
+          const k = String(b || '').toLowerCase();
+          if (k === 'contado') return 'Efectivo';
+          if (k === 'pos') return 'POS';
+          if (k === 'qr') return 'QR';
+          if (k === 'transferencia') return 'Transferencia';
+          return k || '-';
+        };
+        const displayMethodLabel = (m) => {
+          if (!m) return '';
+          const label = String(m.label || '').trim();
+          const id = String(m.id || '').trim();
+          const base = String(m.base || '').trim().toLowerCase();
+          if (!label) return id || '-';
+          if (m.locked) return label;
+          const bl = baseLabel(base);
+          const low = label.toLowerCase();
+          if (!bl) return label;
+          if (low.startsWith(bl.toLowerCase())) return label;
+          if (label.includes('·')) return label;
+          return `${bl} · ${label}`;
+        };
+
+        const getActivePaymentMethods = () => {
+          const cfg = getPaymentMethodsConfig();
+          return (cfg.methods || []).filter(m => m && m.active !== false);
+        };
+        const getDefaultMethodByBase = (base) => {
+          const list = getActivePaymentMethods();
+          const hit = list.find(m => String(m.base || '').toLowerCase() === String(base || '').toLowerCase());
+          return (hit && hit.id) ? String(hit.id) : (list[0] && list[0].id ? String(list[0].id) : 'contado');
+        };
+        const mixedMethodOptionsHtml = () => {
+          const list = getActivePaymentMethods();
+          return list.map(m => `<option value="${escHtml(m.id)}">${escHtml(displayMethodLabel(m) || m.id)}</option>`).join('');
+        };
+        const renderPayOptionButtons = () => {
+          if (!btnContainer) return;
+          const list = getActivePaymentMethods();
+          btnContainer.innerHTML = '';
+          list.forEach(m => {
+            const b = document.createElement('button');
+            b.className = 'pay-option-btn';
+            b.setAttribute('data-method', String(m.id));
+            b.style.cssText = 'padding:12px; text-align:left; font-size:14px; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;';
+            b.innerHTML = `<span style="font-weight:600;">${escHtml(displayMethodLabel(m) || m.id)}</span><svg style="width:16px;height:16px;opacity:0.5;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>`;
+            btnContainer.appendChild(b);
+          });
+          const mixedBtn = document.createElement('button');
+          mixedBtn.className = 'pay-option-btn';
+          mixedBtn.setAttribute('data-method', 'mixed');
+          mixedBtn.style.cssText = 'padding:12px; text-align:left; font-size:14px; background:#f5f5f5; color:#333; border:1px solid #ddd; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;';
+          mixedBtn.innerHTML = `<span style="font-weight:600;">Pago Mixto (Dividir)</span><svg style="width:16px;height:16px;opacity:0.5;" viewBox="0 0 24 24"><path fill="currentColor" d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>`;
+          btnContainer.appendChild(mixedBtn);
+          optionBtns = btnContainer.querySelectorAll('.pay-option-btn');
+        };
+
+        const renderPmMethodsEditor = () => {
+          if (!pmMethodsList) return;
+          const cfg = getPaymentMethodsConfig();
+          pmMethodsList.innerHTML = '';
+          const mkRow = (meta, isNew) => {
+            const id = String(meta && meta.id || '').trim().toLowerCase();
+            const base = String(meta && meta.base || 'transferencia').trim().toLowerCase();
+            const label = String(meta && meta.label || '').trim();
+            const active = meta && meta.active !== false;
+            const locked = !!(meta && meta.locked);
+            const row = document.createElement('div');
+            row.dataset.id = id;
+            row.dataset.locked = locked ? '1' : '0';
+            row.dataset.new = isNew ? '1' : '0';
+            row.style.cssText = 'display:grid; grid-template-columns: 120px 1fr 82px 34px; gap:8px; align-items:center;';
+            row.innerHTML = `
+              <select class="pm-base" style="height:34px; padding:0 10px; border:1px solid #ddd; border-radius:10px; background:#fff; font-weight:900;">
+                <option value="contado">Efectivo</option>
+                <option value="pos">POS</option>
+                <option value="qr">QR</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+              <input class="pm-label" type="text" placeholder="Ej: Cta Santander" style="height:34px; padding:0 10px; border:1px solid #ddd; border-radius:10px; font-weight:800;">
+              <label style="display:flex; align-items:center; gap:8px; justify-content:flex-start; font-size:12px; color:#111; font-weight:900; cursor:pointer;">
+                <input class="pm-active" type="checkbox" style="transform:scale(1.05);">
+                Activo
+              </label>
+              <button type="button" class="pm-del" style="width:34px; height:34px; border-radius:10px; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; cursor:pointer; font-weight:950;">×</button>
+            `;
+            const baseSel = row.querySelector('.pm-base');
+            const labelInp = row.querySelector('.pm-label');
+            const activeChk = row.querySelector('.pm-active');
+            const delBtn = row.querySelector('.pm-del');
+            if (baseSel) {
+              baseSel.value = base;
+              baseSel.disabled = !isNew;
+              baseSel.title = baseLabel(baseSel.value);
+            }
+            if (labelInp) labelInp.value = label;
+            if (activeChk) activeChk.checked = !!active;
+            if (delBtn) {
+              if (locked) {
+                delBtn.disabled = true;
+                delBtn.style.opacity = '0.35';
+                delBtn.style.cursor = 'not-allowed';
+              } else {
+                delBtn.addEventListener('click', () => {
+                  try { row.remove(); } catch (_) {}
+                });
+              }
+            }
+            return row;
+          };
+          (cfg.methods || []).forEach(m => pmMethodsList.appendChild(mkRow(m, false)));
+        };
+
+        const savePmMethodsEditor = async () => {
+          if (!pmMethodsList) return;
+          const rows = Array.from(pmMethodsList.children || []);
+          const baseAllowed = new Set(['contado', 'pos', 'qr', 'transferencia']);
+          const used = new Set();
+          const methods = [];
+          const ensureUniqueId = (id) => {
+            let k = String(id || '').trim().toLowerCase();
+            if (!k) return '';
+            if (!used.has(k)) { used.add(k); return k; }
+            let n = 2;
+            while (used.has(`${k}_${n}`)) n += 1;
+            k = `${k}_${n}`;
+            used.add(k);
+            return k;
+          };
+          for (const r of rows) {
+            const locked = r && r.dataset && r.dataset.locked === '1';
+            const isNew = r && r.dataset && r.dataset.new === '1';
+            const baseSel = r.querySelector('.pm-base');
+            const labelInp = r.querySelector('.pm-label');
+            const activeChk = r.querySelector('.pm-active');
+            const base = String(baseSel && baseSel.value || '').trim().toLowerCase();
+            const label = String(labelInp && labelInp.value || '').trim();
+            const active = !!(activeChk && activeChk.checked);
+            if (!label) continue;
+            if (!baseAllowed.has(base)) continue;
+            let id = String(r.dataset.id || '').trim().toLowerCase();
+            if (locked && !id) id = base;
+            if (isNew || !id) {
+              const slug = _slugKey(label) || 'nuevo';
+              id = ensureUniqueId(`${base}_${slug}`);
+            } else {
+              if (used.has(id)) continue;
+              used.add(id);
+            }
+            methods.push({ id, base, label, active });
+          }
+          const defaults = _defaultPaymentMethods();
+          defaults.forEach(d => {
+            const exists = methods.some(m => String(m.id || '').toLowerCase() === d.id);
+            if (!exists) methods.unshift({ id: d.id, base: d.base, label: d.label, active: true });
+          });
+          try {
+            const slug = tenantInput.value.trim() || defaultSlug();
+            if (!csrfToken) await fetchCSRF();
+            const url = new URL('/api/tenant_prefs', API_BASE);
+            url.searchParams.set('tenant_slug', slug);
+            const resp = await wFetch(url.toString(), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
+              body: JSON.stringify({ section: 'payment_methods', data: { methods } })
+            });
+            if (!resp.ok) return;
+            currentPaymentMethodsConfig = { methods };
+            renderPmMethodsEditor();
+            renderPayOptionButtons();
+          } catch (_) {}
+        };
+
+        if (pmMethodsAdd && !pmMethodsAdd.dataset.listener) {
+          pmMethodsAdd.addEventListener('click', () => {
+            if (!pmMethodsList) return;
+            const row = document.createElement('div');
+            row.dataset.new = '1';
+            row.dataset.locked = '0';
+            row.dataset.id = '';
+            row.style.cssText = 'display:grid; grid-template-columns: 120px 1fr 82px 34px; gap:8px; align-items:center;';
+            row.innerHTML = `
+              <select class="pm-base" style="height:34px; padding:0 10px; border:1px solid #ddd; border-radius:10px; background:#fff; font-weight:900;">
+                <option value="contado">Efectivo</option>
+                <option value="pos">POS</option>
+                <option value="qr">QR</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+              <input class="pm-label" type="text" placeholder="Ej: Cta Santander" style="height:34px; padding:0 10px; border:1px solid #ddd; border-radius:10px; font-weight:800;">
+              <label style="display:flex; align-items:center; gap:8px; justify-content:flex-start; font-size:12px; color:#111; font-weight:900; cursor:pointer;">
+                <input class="pm-active" type="checkbox" style="transform:scale(1.05);" checked>
+                Activo
+              </label>
+              <button type="button" class="pm-del" style="width:34px; height:34px; border-radius:10px; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; cursor:pointer; font-weight:950;">×</button>
+            `;
+            const delBtn = row.querySelector('.pm-del');
+            if (delBtn) delBtn.addEventListener('click', () => { try { row.remove(); } catch (_) {} });
+            pmMethodsList.appendChild(row);
+            try { const inp = row.querySelector('.pm-label'); if (inp) inp.focus(); } catch (_) {}
+          });
+          pmMethodsAdd.dataset.listener = 'true';
+        }
+        if (pmMethodsSave && !pmMethodsSave.dataset.listener) {
+          pmMethodsSave.addEventListener('click', (e) => {
+            try { e.preventDefault(); } catch (_) {}
+            savePmMethodsEditor();
+          });
+          pmMethodsSave.dataset.listener = 'true';
+        }
+        renderPmMethodsEditor();
+        renderPayOptionButtons();
+
         // Elements for confirmation
         const confirmBox = document.getElementById('payment-confirmation-box');
         const confirmMsg = document.getElementById('confirm-pay-msg');
@@ -11051,10 +11994,62 @@
         // Reset mixed UI
         if(mixedBox) mixedBox.style.display = 'none';
         if(confirmBox) confirmBox.style.display = 'none';
-        const btnContainer = optionBtns[0] ? optionBtns[0].parentNode : null;
         if(btnContainer) btnContainer.style.display = 'flex';
 
-        if(mixedInputs) mixedInputs.forEach(i => i.value = '');
+        function normalizeMethod(v){
+          const s = String(v || '').trim().toLowerCase();
+          if (!s) return 'contado';
+          if (s === 'efectivo') return 'contado';
+          if (s === 'transfer') return 'transferencia';
+          return s;
+        }
+        function buildMixedRow(defaultMethod, defaultAmount){
+          const row = document.createElement('div');
+          row.style.cssText = 'display:grid; grid-template-columns: 1fr 120px 38px; gap:8px; align-items:center;';
+          const method = normalizeMethod(defaultMethod);
+          const amount = Number(defaultAmount) || 0;
+          row.innerHTML = `
+            <select class="mixed-method" style="height:36px; padding:0 10px; border:1px solid #ccc; border-radius:6px; background:#fff; font-weight:800;">
+              ${mixedMethodOptionsHtml()}
+            </select>
+            <input type="number" class="mixed-amount" value="${amount ? amount : 0}" min="0" step="1" style="height:36px; padding:0 10px; border:1px solid #ccc; border-radius:6px; text-align:right; font-weight:800;">
+            <button type="button" class="mixed-del" style="width:38px; height:36px; border-radius:8px; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; cursor:pointer; font-weight:900;">×</button>
+          `;
+          const sel = row.querySelector('.mixed-method');
+          const inp = row.querySelector('.mixed-amount');
+          const del = row.querySelector('.mixed-del');
+          if (sel) sel.value = method;
+          if (del) del.addEventListener('click', () => {
+            try { row.remove(); } catch (_) {}
+            updateMixedCalcs();
+          });
+          if (sel) sel.addEventListener('change', updateMixedCalcs);
+          if (inp) inp.addEventListener('input', updateMixedCalcs);
+          return row;
+        }
+        function ensureDefaultMixedRows(){
+          if (!mixedRows) return;
+          mixedRows.innerHTML = '';
+          mixedRows.appendChild(buildMixedRow(getDefaultMethodByBase('contado'), 0));
+          mixedRows.appendChild(buildMixedRow(getDefaultMethodByBase('transferencia'), 0));
+        }
+        function getMixedDetails(){
+          const out = [];
+          if (!mixedRows) return out;
+          const rows = Array.from(mixedRows.querySelectorAll('div'));
+          rows.forEach(r => {
+            const sel = r.querySelector('.mixed-method');
+            const inp = r.querySelector('.mixed-amount');
+            const method = normalizeMethod(sel && sel.value);
+            const amt = Number(inp && inp.value) || 0;
+            if (amt > 0) out.push({ method, amount: amt });
+          });
+          return out;
+        }
+        function getMixedSum(){
+          const details = getMixedDetails();
+          return details.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
+        }
 
         // Elements for details
         const detailsBox = document.getElementById('payment-details-box');
@@ -11126,8 +12121,7 @@
 
         function updateMixedCalcs() {
            if (!mixedBox || mixedBox.style.display === 'none') return;
-           let sum = 0;
-           if(mixedInputs) mixedInputs.forEach(i => sum += (Number(i.value) || 0));
+           const sum = getMixedSum();
            const rem = finalAmount - sum;
            if(mixedTotalEntered) mixedTotalEntered.textContent = formatMoney(sum);
            if(mixedRemaining) {
@@ -11141,7 +12135,14 @@
            }
         }
         
-        if(mixedInputs) mixedInputs.forEach(i => i.oninput = updateMixedCalcs);
+        if (mixedAddRowBtn && !mixedAddRowBtn.dataset.bound) {
+          mixedAddRowBtn.addEventListener('click', () => {
+            if (!mixedRows) return;
+            mixedRows.appendChild(buildMixedRow(getDefaultMethodByBase('contado'), 0));
+            updateMixedCalcs();
+          });
+          mixedAddRowBtn.dataset.bound = 'true';
+        }
 
         if (showBox && tipToggle) {
             tipToggle.onchange = updateCalcs;
@@ -11176,20 +12177,22 @@
                 if(data.method === 'mixed') {
                     msg = `¿Confirmar Pago Mixto de ${formatMoney(data.final_total)}?`;
                 } else {
-                    let name = data.method;
-                    if(name === 'contado') name = 'Efectivo';
-                    else if(name === 'transferencia') name = 'Transferencia';
-                    else if(name === 'pos') name = 'POS';
-                    else if(name === 'qr') name = 'QR';
+                    const name = getPaymentMethodLabel(data.method);
                     msg = `¿Confirmar pago de ${formatMoney(data.final_total)} con ${name}?`;
                 }
                 if(confirmMsg) confirmMsg.textContent = msg;
                 
                 if(confirmCheck) {
                     const auto = (localStorage.getItem('kds_autoprint_transfer') === 'true');
-                    let isTransfer = (data.method === 'transferencia');
+                    const isTransferKey = (k) => {
+                      const key = String(k || '').trim().toLowerCase();
+                      const meta = getPaymentMethodMeta(key);
+                      if (meta && String(meta.base || '').toLowerCase() === 'transferencia') return true;
+                      return key.includes('transferencia') || key === 'trans' || key.startsWith('transfer');
+                    };
+                    let isTransfer = isTransferKey(data.method);
                     if(data.method === 'mixed' && data.details) {
-                        isTransfer = data.details.some(d => d.method === 'transferencia');
+                        isTransfer = data.details.some(d => isTransferKey(d && d.method));
                     }
                     confirmCheck.checked = (isTransfer && auto);
                 }
@@ -11200,6 +12203,7 @@
             if (method === 'mixed') {
                if(mixedBox) {
                   mixedBox.style.display = 'block';
+                  ensureDefaultMixedRows();
                   updateMixedCalcs();
                }
                return; 
@@ -11213,11 +12217,7 @@
         };
 
         if(confirmMixedBtn) confirmMixedBtn.onclick = () => {
-             const details = [];
-             mixedInputs.forEach(i => {
-                const val = Number(i.value)||0;
-                if(val > 0) details.push({ method: i.dataset.key, amount: val });
-             });
+             const details = getMixedDetails();
              pendingData = {
                 method: 'mixed',
                 details: details,
@@ -12185,13 +13185,13 @@
           if (amt) {
             amt.addEventListener('input', updateWords);
             amt.addEventListener('focus', () => { isCashEditing = true; });
-            amt.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; isCashEditing = ['cash-open-amount','cash-open-notes','cash-close-amount','cash-close-notes'].includes(ae && ae.id); }, 10); });
+            amt.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; const tag = String(ae && ae.tagName || '').toUpperCase(); const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !(ae && ae.disabled); isCashEditing = !!(cashPanelEl && ae && isEditable && cashPanelEl.contains(ae)); }, 10); });
             updateWords();
           }
           if (note) {
             note.addEventListener('input', () => { cashOpenDraft.notes = String(note.value||''); });
             note.addEventListener('focus', () => { isCashEditing = true; });
-            note.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; isCashEditing = ['cash-open-amount','cash-open-notes','cash-close-amount','cash-close-notes'].includes(ae && ae.id); }, 10); });
+            note.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; const tag = String(ae && ae.tagName || '').toUpperCase(); const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !(ae && ae.disabled); isCashEditing = !!(cashPanelEl && ae && isEditable && cashPanelEl.contains(ae)); }, 10); });
           }
           const salesEl = document.getElementById('cash-session-sales');
           const inoutEl = document.getElementById('cash-session-inout');
@@ -12584,11 +13584,21 @@
                 const body = document.getElementById('close-orders-body');
                 const sumEl = document.getElementById('close-orders-sum');
                 if (body) {
+                  const paymentCell = (r) => {
+                    const method = String(r && r.payment_method || '').trim().toLowerCase();
+                    if (method === 'mixed' && Array.isArray(r && r.payment_details) && r.payment_details.length) {
+                      const dets = r.payment_details
+                        .map(d => `${getPaymentMethodLabel(d && d.method)}: ${formatMoney(d && d.amount)}`)
+                        .join(' + ');
+                      return `Pago mixto (${dets})`;
+                    }
+                    return getPaymentMethodLabel(method || (r && r.payment_method));
+                  };
                   body.innerHTML = rows.map(r => `
                     <tr>
                       <td style="padding:6px; border-bottom:1px solid #eee;">${r.id}</td>
                       <td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate(r.created_at || '')}</td>
-                      <td style="padding:6px; border-bottom:1px solid #eee;">${r.payment_method || '-'}</td>
+                      <td style="padding:6px; border-bottom:1px solid #eee;">${paymentCell(r) || '-'}</td>
                       <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">$${r.total || 0}</td>
                     </tr>
                   `).join('');
@@ -12684,11 +13694,21 @@
                     const body = document.getElementById('close-orders-body');
                     const sumEl = document.getElementById('close-orders-sum');
                     if (body) {
+                      const paymentCell = (r) => {
+                        const method = String(r && r.payment_method || '').trim().toLowerCase();
+                        if (method === 'mixed' && Array.isArray(r && r.payment_details) && r.payment_details.length) {
+                          const dets = r.payment_details
+                            .map(d => `${getPaymentMethodLabel(d && d.method)}: ${formatMoney(d && d.amount)}`)
+                            .join(' + ');
+                          return `Pago mixto (${dets})`;
+                        }
+                        return getPaymentMethodLabel(method || (r && r.payment_method));
+                      };
                       body.innerHTML = rows.map(r => `
                         <tr>
                           <td style="padding:6px; border-bottom:1px solid #eee;">${r.id}</td>
                           <td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate(r.created_at || '')}</td>
-                          <td style="padding:6px; border-bottom:1px solid #eee;">${r.payment_method || '-'}</td>
+                          <td style="padding:6px; border-bottom:1px solid #eee;">${paymentCell(r) || '-'}</td>
                           <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">$${r.total || 0}</td>
                         </tr>
                       `).join('');
@@ -12803,7 +13823,7 @@
           };
           amtInput.addEventListener('input', syncAmount);
           amtInput.addEventListener('focus', () => { isCashEditing = true; });
-          amtInput.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; isCashEditing = ['cash-open-amount','cash-open-notes','cash-close-amount','cash-close-notes'].includes(ae && ae.id); }, 10); });
+          amtInput.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; const tag = String(ae && ae.tagName || '').toUpperCase(); const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !(ae && ae.disabled); isCashEditing = !!(cashPanelEl && ae && isEditable && cashPanelEl.contains(ae)); }, 10); });
           syncAmount();
         }
         cashCloseDraft.methods = cashCloseDraft.methods || { efectivo: 0, pos: 0, qr: 0, trans: 0, otros: 0 };
@@ -12848,7 +13868,7 @@
         if (noteClose) {
           noteClose.addEventListener('input', () => { cashCloseDraft.notes = String(noteClose.value||''); });
           noteClose.addEventListener('focus', () => { isCashEditing = true; });
-          noteClose.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; isCashEditing = ['cash-open-amount','cash-open-notes','cash-close-amount','cash-close-notes'].includes(ae && ae.id); }, 10); });
+          noteClose.addEventListener('blur', () => { setTimeout(() => { const ae = document.activeElement; const tag = String(ae && ae.tagName || '').toUpperCase(); const isEditable = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !(ae && ae.disabled); isCashEditing = !!(cashPanelEl && ae && isEditable && cashPanelEl.contains(ae)); }, 10); });
         }
       } catch (_) {}
     }
@@ -17245,59 +18265,60 @@
   </div>
 </div>
 
-<div id="product-create-modal" class="kds-modal" style="display:none;">
-  <div class="kds-modal-content" style="max-width: 800px; display: flex; flex-direction: column;">
+<div id="product-create-modal" class="kds-modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="kds-modal-overlay"></div>
+  <div class="kds-modal-content">
     <div class="kds-modal-header">
-      <h2>Nuevo Producto</h2>
-      <span class="close-create-modal" style="cursor:pointer; font-size:24px;">&times;</span>
+      <h2 style="margin:0;">Nuevo Producto</h2>
+      <button type="button" class="close-create-modal" aria-label="Cerrar" style="cursor:pointer; font-size:22px; line-height:1; width:38px; height:38px; border-radius:10px; border:1px solid #e5e7eb; background:#fff; color:#111;">×</button>
     </div>
-    <div class="kds-modal-body" style="display: flex; gap: 20px;">
-      <div style="flex: 1; display: flex; flex-direction: column; gap: 10px;">
-        <div>
-          <label>ID Producto (único)</label>
-          <input type="text" id="create-prod-id" placeholder="Ej: pizza-napolitana" style="width:100%; padding:8px;">
+    <div class="kds-modal-body">
+      <div class="create-form">
+        <div class="edit-form-group">
+          <label for="create-prod-id">ID Producto (único)</label>
+          <input type="text" id="create-prod-id" placeholder="Ej: pizza-napolitana">
         </div>
-        <div>
-          <label>Nombre del Producto</label>
-          <input type="text" id="create-prod-name" placeholder="Ej: Pizza Napolitana" style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-name">Nombre del Producto</label>
+          <input type="text" id="create-prod-name" placeholder="Ej: Pizza Napolitana">
         </div>
-        <div>
-          <label>Descripción / Detalles</label>
-          <textarea id="create-prod-details" rows="3" placeholder="Ingredientes, detalles..." style="width:100%; padding:8px;"></textarea>
+        <div class="edit-form-group">
+          <label for="create-prod-details">Descripción / Detalles</label>
+          <textarea id="create-prod-details" rows="3" placeholder="Ingredientes, detalles..."></textarea>
         </div>
-        <div style="display:flex; gap:10px;">
-          <div style="flex:1;">
-            <label>Precio</label>
-            <input type="number" id="create-prod-price" placeholder="0" style="width:100%; padding:8px;">
+        <div class="create-two-col">
+          <div class="edit-form-group">
+            <label for="create-prod-price">Precio</label>
+            <input type="number" id="create-prod-price" placeholder="0">
           </div>
-          <div style="flex:1;">
-            <label>Stock</label>
-            <input type="number" id="create-prod-stock" placeholder="0" style="width:100%; padding:8px;">
+          <div class="edit-form-group">
+            <label for="create-prod-stock">Stock</label>
+            <input type="number" id="create-prod-stock" placeholder="0">
           </div>
         </div>
-        <div>
+        <div class="edit-form-group">
           <label>Presentaciones (Unidad / 1/2 Docena / Docena)</label>
           <div id="create-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
-          <button type="button" id="create-prod-add-pack" style="height:34px; border:none; border-radius:8px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:700; width:fit-content; padding:0 12px;">Agregar presentación</button>
+          <button type="button" id="create-prod-add-pack" style="height:34px; border:none; border-radius:10px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:800; width:fit-content; padding:0 12px;">Agregar presentación</button>
           <small>Si configurás presentaciones, el cliente elige una y el stock se descuenta por unidades reales.</small>
         </div>
-        <div>
-          <label>Posición en la categoría</label>
-          <input type="number" id="create-prod-position" min="1" placeholder="Vacío = al final" style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-position">Posición en la categoría</label>
+          <input type="number" id="create-prod-position" min="1" placeholder="Vacío = al final">
           <small>Si el producto tiene varias categorías, se usa la primera seleccionada para definir el orden.</small>
         </div>
-        <div>
-          <label>Sección en Carta Online</label>
-          <select id="create-prod-section" style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-section">Sección en Carta Online</label>
+          <select id="create-prod-section">
             <option value="">-- Sin asignar --</option>
             <option value="featured">Platos destacados</option>
             <option value="main">Menú principal</option>
             <option value="interest">Recomendados por interés</option>
           </select>
         </div>
-        <div>
-          <label>Categorías de filtro (menú principal)</label>
-          <select id="create-prod-food-cats" multiple style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-food-cats">Categorías de filtro (menú principal)</label>
+          <select id="create-prod-food-cats" multiple>
             <option value="sandwich">Sándwich</option>
             <option value="pizzas">Pizzas</option>
             <option value="comen-dos">Comen dos</option>
@@ -17308,9 +18329,9 @@
           </select>
           <small>Usado para los filtros de la carta online.</small>
         </div>
-        <div>
-          <label>Etiqueta de interés (requerida si es “Recomendados por interés”)</label>
-          <select id="create-prod-interest" style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-interest">Etiqueta de interés (requerida si es “Recomendados por interés”)</label>
+          <select id="create-prod-interest">
             <option value="">Sin etiqueta</option>
             <option value="2x1">2x1</option>
             <option value="entradas_rapidas">Entradas rápidas</option>
@@ -17320,34 +18341,32 @@
             <option value="combos">Combos</option>
           </select>
         </div>
-        <div>
-          <label>Imagen del Producto</label>
-          <input type="file" id="create-prod-file" accept="image/*" style="width:100%; padding:8px;">
+        <div class="edit-form-group">
+          <label for="create-prod-file">Imagen del Producto</label>
+          <input type="file" id="create-prod-file" accept="image/*">
           <input type="hidden" id="create-prod-image-url">
-          <small id="create-prod-upload-status" style="color:blue;"></small>
+          <small id="create-prod-upload-status" style="color:#2563eb; font-weight:700;"></small>
         </div>
       </div>
-      
-      <!-- Preview Column -->
-      <div style="width: 300px; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-        <h3 style="margin-top:0;">Vista Previa</h3>
-        <div class="product-card" style="border:1px solid #eee; background:white; border-radius:8px; overflow:hidden;">
-            <div class="product-image" style="height:200px; background:#eee; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                <img id="create-preview-img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
-                <span id="create-preview-img-placeholder" style="color:#999;">Sin imagen</span>
-            </div>
-            <div class="product-info" style="padding:15px;">
-                <h3 id="create-preview-title" style="margin:0 0 10px 0; font-size:1.1rem;">Título Producto</h3>
-                <p id="create-preview-desc" style="color:#666; font-size:0.9rem; margin-bottom:10px;">Descripción del producto...</p>
-                <p id="create-preview-price" style="font-weight:bold; color:#2e7d32; font-size:1.1rem;">$0 ARS</p>
-                <button class="add-to-cart-btn" style="width:100%; background:#ff9800; color:white; border:none; padding:8px; border-radius:4px; margin-top:10px;">Añadir al carrito</button>
-            </div>
+      <div class="create-preview">
+        <div class="small" style="font-weight:900; color:#0f172a; margin-bottom:8px;">Vista previa</div>
+        <div class="preview-card" style="max-width:unset;">
+          <div class="preview-image-placeholder" style="height:200px; background-image:none; background:#e5e7eb;">
+            <img id="create-preview-img" src="" style="width:100%; height:100%; object-fit:cover; display:none;">
+            <div id="create-preview-img-placeholder" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:900;">Sin imagen</div>
+          </div>
+          <div class="preview-content">
+            <div id="create-preview-title" class="preview-title" style="margin:0 0 8px 0;">Título Producto</div>
+            <div id="create-preview-desc" class="preview-desc" style="margin:0 0 12px 0;">Descripción del producto...</div>
+            <div id="create-preview-price" class="preview-price" style="margin:0;">$0 ARS</div>
+            <div class="preview-btn" style="margin-top:12px;">Añadir al carrito</div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="kds-modal-footer" style="padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px;">
-      <button class="cancel-create-btn" style="padding: 8px 16px; background: #eee; border: none; border-radius: 4px; cursor: pointer;">Cancelar</button>
-      <button id="do-create-product" style="padding: 8px 16px; background: #4caf50; color: white; border: none; border-radius: 4px; cursor: pointer;">Crear Producto</button>
+    <div class="kds-modal-footer">
+      <button type="button" class="cancel-create-btn">Cancelar</button>
+      <button id="do-create-product" type="button">Crear Producto</button>
     </div>
   </div>
 </div>
@@ -17385,8 +18404,11 @@ window.EditOrder = {
                 table_number: tableNumber,
                 order_notes: detail.order ? detail.order.order_notes : '', // Access via detail.order
                 tenant_slug: detail.order ? detail.order.tenant_slug : '',
-                display_order_number: detail.order ? displayOrderNumber(detail.order) : String(orderId)
+                display_order_number: detail.order ? displayOrderNumber(detail.order) : String(orderId),
+                order_type: detail.order ? detail.order.order_type : '',
+                shipping_cost: detail.order ? detail.order.shipping_cost : 0
             }, detail.items || []);
+            try { window.kdsLastOrderId = orderId; } catch (_) {}
         } catch(e) {
             console.error(e);
             alert('Error al cargar items del pedido');
@@ -17518,6 +18540,10 @@ window.EditOrder = {
     renderItems: function() {
         if (!this.itemsContainer) return;
         let total = 0;
+        const orderType = String((this.currentOrder && this.currentOrder.order_type) || '').trim().toLowerCase();
+        let shipping = 0;
+        try { shipping = parseInt((this.currentOrder && this.currentOrder.shipping_cost) || 0, 10) || 0; } catch (_) { shipping = 0; }
+        if (orderType !== 'direccion') shipping = 0;
         this.itemsContainer.innerHTML = this.items.map((item, idx) => {
             total += item.price * item.qty;
             return `
@@ -17539,7 +18565,8 @@ window.EditOrder = {
                 </div>
             `;
         }).join('');
-        if (this.totalEl) this.totalEl.textContent = '$' + total;
+        const finalTotal = total + shipping;
+        if (this.totalEl) this.totalEl.textContent = '$' + finalTotal;
     },
     
     save: async function() {
@@ -17548,17 +18575,35 @@ window.EditOrder = {
         this.saveBtn.disabled = true;
         
         try {
-            if (!csrfToken) await fetchCSRF();
             const payload = {
-                items: this.items,
+                items: this.items.map(it => ({
+                  product_id: it.id,
+                  id: it.id,
+                  name: it.name,
+                  price: parseInt(it.price || 0, 10) || 0,
+                  qty: parseInt(it.qty || 1, 10) || 1,
+                  notes: it.notes || '',
+                  item_id: it.item_id || null
+                })),
                 order_notes: this.notesEl ? this.notesEl.value : ''
             };
 
-            const resp = await wFetch('/api/orders/' + this.currentOrder.id, {
+            if (!window.CSRF_TOKEN || window.CSRF_TOKEN === '') {
+              try { await window.fetchCsrfToken(); } catch (_) {}
+            }
+            const endpoint = new URL('/api/orders/' + this.currentOrder.id, API_BASE).toString();
+            const headers = { 'Content-Type': 'application/json' };
+            if (window.CSRF_TOKEN) headers['X-CSRFToken'] = window.CSRF_TOKEN;
+            let resp = await wFetch(endpoint, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
+                headers,
                 body: JSON.stringify(payload)
             });
+            if (resp.status === 403) {
+              try { await window.fetchCsrfToken(); } catch (_) {}
+              if (window.CSRF_TOKEN) headers['X-CSRFToken'] = window.CSRF_TOKEN;
+              resp = await wFetch(endpoint, { method: 'PUT', headers, body: JSON.stringify(payload) });
+            }
             
             if (resp.ok) {
                 // Refresh logic
@@ -17572,8 +18617,10 @@ window.EditOrder = {
                     parentModal.classList.remove('active');
                 }
                 
-                // Reload global data
-                if (typeof load === 'function') load();
+                try {
+                  if (typeof loadOrdersSafe === 'function') await loadOrdersSafe();
+                  else if (typeof load === 'function') load();
+                } catch (_) {}
             } else {
                 const err = await resp.json();
                 alert('Error al actualizar: ' + (err.error || 'Desconocido'));
@@ -17709,8 +18756,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (document.getElementById('create-prod-upload-status')) {
         document.getElementById('create-prod-upload-status').textContent = '';
       }
-      
-      createModal.style.display = 'block';
+
+      createModal.classList.add('active');
+      createModal.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      try { if (pId) pId.focus(); } catch (_) {}
       (async () => {
         try {
           const tenantInputEl = document.getElementById('tenant-input');
@@ -17728,11 +18778,19 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function closeModal() {
-    if (createModal) createModal.style.display = 'none';
+    if (!createModal) return;
+    createModal.classList.remove('active');
+    createModal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = 'auto';
   }
 
   if (closeCreateBtn) closeCreateBtn.addEventListener('click', closeModal);
   if (cancelCreateBtn) cancelCreateBtn.addEventListener('click', closeModal);
+  if (createModal) {
+    const overlay = createModal.querySelector('.kds-modal-overlay');
+    if (overlay) overlay.addEventListener('click', closeModal);
+  }
+  try { window.closeProductCreateModal = closeModal; } catch (_) {}
 
   function updatePreview() {
     previewTitle.textContent = pName.value || 'Título Producto';

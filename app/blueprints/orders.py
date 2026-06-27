@@ -1742,15 +1742,13 @@ def pay_order(order_id):
         return jsonify({'error': 'sin permisos'}), 403
     
     payload = request.get_json(silent=True) or {}
-    method = payload.get('payment_method')
+    method = str(payload.get('payment_method') or '').strip().lower()
     tip_amount = int(payload.get('tip_amount') or 0)
     details = payload.get('details') or []
     
     if method == 'mixed':
         if not details or not isinstance(details, list):
              return jsonify({'error': 'detalles de pago mixto requeridos'}), 400
-    elif method not in ('contado', 'pos', 'qr', 'transferencia'):
-        return jsonify({'error': 'método de pago inválido'}), 400
 
     conn = get_db()
     cur = conn.cursor()
@@ -1786,7 +1784,33 @@ def pay_order(order_id):
             except Exception: pass
             return jsonify({'error': 'propina inválida'}), 400
 
+        cfg = get_cached_tenant_config(tenant) or {}
+        base_allowed = ('contado', 'pos', 'qr', 'transferencia')
+        allowed_map = {k: k for k in base_allowed}
+        pm_cfg = cfg.get('payment_methods') or {}
+        pm_list = []
+        if isinstance(pm_cfg, dict):
+            pm_list = pm_cfg.get('methods') if isinstance(pm_cfg.get('methods'), list) else []
+        elif isinstance(pm_cfg, list):
+            pm_list = pm_cfg
+        for it in pm_list or []:
+            if not isinstance(it, dict):
+                continue
+            if it.get('active') is False:
+                continue
+            pid = str(it.get('id') or '').strip().lower()
+            base = str(it.get('base') or '').strip().lower()
+            if not pid or not base or base not in base_allowed:
+                continue
+            allowed_map[pid] = base
+        
+        if method != 'mixed' and method not in allowed_map:
+            try: conn.rollback()
+            except Exception: pass
+            return jsonify({'error': 'método de pago inválido'}), 400
+
         payments_to_register = []
+        sanitized_details = []
         if method == 'mixed':
             sum_details = 0
             for d in details:
@@ -1796,13 +1820,14 @@ def pay_order(order_id):
                 except Exception:
                     pm = ''
                     amt = 0
-                if pm not in ('contado', 'pos', 'qr', 'transferencia') or amt < 0:
+                if pm not in allowed_map or amt < 0:
                     try: conn.rollback()
                     except Exception: pass
                     return jsonify({'error': 'detalles de pago mixto inválidos'}), 400
                 if amt > 0:
                     payments_to_register.append({'method': pm, 'amount': amt})
                     sum_details += amt
+                    sanitized_details.append({'method': pm, 'amount': amt})
             if sum_details != (int(total or 0) + tip_amount):
                 try: conn.rollback()
                 except Exception: pass
@@ -1830,7 +1855,7 @@ def pay_order(order_id):
         created_at = datetime.utcnow().isoformat()
         cur.execute(
             "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (order_id, 'payment', actor or '', 0, json.dumps({'method': method, 'amount': total, 'tip': tip_amount, 'details': details if method == 'mixed' else None}), created_at)
+            (order_id, 'payment', actor or '', 0, json.dumps({'method': method, 'amount': total, 'tip': tip_amount, 'details': sanitized_details if method == 'mixed' else None}), created_at)
         )
 
         for pay in payments_to_register:
@@ -1895,34 +1920,104 @@ def update_order_content(order_id):
     cur = conn.cursor()
     
     # Verificar existencia y estado
-    cur.execute("SELECT status, tenant_slug, payment_status FROM orders WHERE id = ?", (order_id,))
+    cur.execute("SELECT status, tenant_slug, payment_status, order_type, shipping_cost FROM orders WHERE id = ?", (order_id,))
     row = cur.fetchone()
     if not row:
         return jsonify({'error': 'orden no encontrada'}), 404
     
-    status, tenant_slug, _ = row
+    status, tenant_slug, _, order_type, shipping_cost = row
     session_tenant = str(session.get('tenant_slug') or '').strip()
     if session_tenant and tenant_slug and session_tenant != tenant_slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
     if status in ('entregado', 'cancelado'):
         return jsonify({'error': 'no se puede editar una orden finalizada'}), 400
 
+    tenant_slug = str(tenant_slug or '').strip()
+    order_type_norm = str(order_type or '').strip().lower()
+    base_shipping = 0
+    try:
+        base_shipping = int(shipping_cost or 0)
+    except Exception:
+        base_shipping = 0
+    if order_type_norm != 'direccion':
+        base_shipping = 0
+
+    cur.execute("SELECT id, product_id, qty, modifiers_json FROM order_items WHERE order_id = ?", (order_id,))
+    old_rows = cur.fetchall()
+
+    def _pack_size_from_modifiers(raw):
+        try:
+            if raw is None:
+                return 1
+            s = raw if isinstance(raw, str) else str(raw)
+            s = s.strip()
+            if not s:
+                return 1
+            j = json.loads(s) if s.startswith('{') else {}
+            if not isinstance(j, dict):
+                return 1
+            pack = j.get('pack') if isinstance(j.get('pack'), dict) else {}
+            try:
+                sz = int(pack.get('size') or pack.get('pack_size') or pack.get('qty') or 1)
+            except Exception:
+                sz = 1
+            return max(1, sz)
+        except Exception:
+            return 1
+
+    old_units_by_product = {}
+    for r in old_rows:
+        pid = str(r[1] or '').strip()
+        if not pid:
+            continue
+        try:
+            qty = int(r[2] or 0)
+        except Exception:
+            qty = 0
+        if qty <= 0:
+            continue
+        pack_size = _pack_size_from_modifiers(r[3])
+        old_units_by_product[pid] = old_units_by_product.get(pid, 0) + (qty * pack_size)
+
     # Calcular nuevo total
-    total = 0
+    items_total = 0
     valid_items = []
+    new_units_by_product = {}
     for it in new_items:
         try:
             qty = int(it.get('quantity', it.get('qty', 1)))
             if qty <= 0: continue
-            price = int(it.get('price', 0))
-            total += price * qty
+            price = int(it.get('price', it.get('unit_price', 0) or 0))
+            pid = it.get('product_id') or it.get('id')
+            pid = str(pid or '').strip()
+            if not pid:
+                continue
+
+            pack_id = str(it.get('pack_id') or '').strip()
+            pack_label = str(it.get('pack_label') or '').strip()
+            pack_size_raw = it.get('pack_size')
+            try:
+                pack_size = int(pack_size_raw or 1)
+            except Exception:
+                pack_size = 1
+            pack_size = max(1, pack_size)
+
+            modifiers = it.get('modifiers') or {}
+            if not isinstance(modifiers, dict):
+                modifiers = {}
+            if pack_id:
+                modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
+
+            items_total += price * qty
+            new_units_by_product[pid] = new_units_by_product.get(pid, 0) + (qty * pack_size)
             valid_items.append({
-                'product_id': it.get('product_id') or it.get('id'), # Product ID
+                'product_id': pid, # Product ID
                 'item_id': it.get('item_id'), # DB ID (si existe)
-                'name': it.get('name', 'Producto'),
+                'name': it.get('name', pid) or pid,
                 'price': price,
                 'qty': qty,
-                'notes': it.get('notes', '')
+                'notes': it.get('notes', ''),
+                'modifiers_json': json.dumps(modifiers, ensure_ascii=False)
             })
         except:
             continue
@@ -1931,6 +2026,39 @@ def update_order_content(order_id):
     order_notes = payload.get('order_notes')
             
     try:
+        deltas = {}
+        for pid, units in old_units_by_product.items():
+            deltas[pid] = deltas.get(pid, 0) - int(units or 0)
+        for pid, units in new_units_by_product.items():
+            deltas[pid] = deltas.get(pid, 0) + int(units or 0)
+
+        for pid, delta_units in deltas.items():
+            if not delta_units:
+                continue
+            if delta_units > 0:
+                cur.execute("SELECT stock FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
+                prow = cur.fetchone()
+                if not prow:
+                    conn.rollback()
+                    return jsonify({'error': 'producto no encontrado', 'product_id': pid}), 400
+                try:
+                    stock = int(prow[0] or 0)
+                except Exception:
+                    stock = 0
+                if stock < delta_units:
+                    conn.rollback()
+                    return jsonify({'error': 'stock insuficiente', 'product_id': pid, 'stock': stock, 'requested': delta_units}), 400
+
+        for pid, delta_units in deltas.items():
+            if not delta_units:
+                continue
+            cur.execute(
+                "UPDATE products SET stock = stock - ? WHERE tenant_slug = ? AND product_id = ?",
+                (int(delta_units), tenant_slug, pid),
+            )
+
+        total = int(items_total) + int(base_shipping)
+
         # Smart Update Strategy:
         # 1. Eliminar items que no están en la lista de IDs a mantener
         ids_to_keep = [it['item_id'] for it in valid_items if it.get('item_id')]
@@ -1949,21 +2077,24 @@ def update_order_content(order_id):
         # 2. Insertar o Actualizar
         for item in valid_items:
             if item.get('item_id'):
-                cur.execute("UPDATE order_items SET qty=?, notes=? WHERE id=?", (item['qty'], item['notes'], item['item_id']))
+                cur.execute(
+                    "UPDATE order_items SET product_id = ?, name = ?, qty = ?, unit_price = ?, modifiers_json = ?, notes = ? WHERE id = ? AND order_id = ?",
+                    (item['product_id'], item['name'], item['qty'], item['price'], item['modifiers_json'], item['notes'], item['item_id'], order_id),
+                )
             else:
                 cur.execute(
                     """
-                    INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, modifiers_json, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], item['notes'])
+                    (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], item['modifiers_json'], item['notes'])
                 )
             
         # Actualizar Total Orden y Notas Generales si se proveen
         if order_notes is not None:
-            cur.execute("UPDATE orders SET total = ?, order_notes = ? WHERE id = ?", (total, order_notes, order_id))
+            cur.execute("UPDATE orders SET total = ?, order_notes = ?, shipping_cost = ? WHERE id = ?", (total, order_notes, base_shipping, order_id))
         else:
-            cur.execute("UPDATE orders SET total = ? WHERE id = ?", (total, order_id))
+            cur.execute("UPDATE orders SET total = ?, shipping_cost = ? WHERE id = ?", (total, base_shipping, order_id))
         
         # Registrar Evento
         actor = session.get('admin_user') or 'admin'

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db
-from app.utils import is_authed, check_csrf
+from app.utils import is_authed, check_csrf, get_cached_tenant_config
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 import re
@@ -210,13 +210,13 @@ def _norm_payment_method(payment_method):
         if not unicodedata.combining(c)
     )
     value = re.sub(r'[\s_\-]+', ' ', value).strip()
-    if value in ('efectivo', 'cash', 'contado', 'efvo'):
+    if value in ('efectivo', 'cash', 'contado', 'efvo') or 'efectivo' in value or value.startswith('contado'):
         return 'efectivo', 'Efectivo'
-    if value in ('pos', 'pos/qr', 'qr', 'tarjeta', 'card', 'debito', 'credito', 'mercado pago', 'mercadopago'):
+    if value in ('pos', 'pos/qr', 'qr', 'tarjeta', 'card', 'debito', 'credito', 'mercado pago', 'mercadopago') or 'pos' in value or 'qr' in value or 'tarjeta' in value:
         return 'pos', 'POS/QR'
-    if value in ('transferencia', 'transfer', 'trans', 'transferencia bancaria'):
+    if value in ('transferencia', 'transfer', 'trans', 'transferencia bancaria') or 'transferencia' in value or value == 'trans' or value.startswith('transfer'):
         return 'transferencia', 'Transferencia'
-    if value in ('mixed', 'mixto', 'pago mixto'):
+    if value in ('mixed', 'mixto', 'pago mixto') or 'mixto' in value or 'mixed' in value:
         return 'mixto', 'Mixto'
     return 'otros', 'Otros'
 
@@ -239,6 +239,76 @@ def _delta_percent(current, previous):
         return round(((current_val - previous_val) / previous_val) * 100.0, 2)
     except Exception:
         return None
+
+def _base_payment_label(base):
+    k = str(base or '').strip().lower()
+    if k == 'contado':
+        return 'Efectivo'
+    if k == 'pos':
+        return 'POS'
+    if k == 'qr':
+        return 'QR'
+    if k == 'transferencia':
+        return 'Transferencia'
+    return k or '-'
+
+def _load_payment_methods_config(tenant_slug):
+    cfg = get_cached_tenant_config(tenant_slug) or {}
+    pm_cfg = cfg.get('payment_methods') or {}
+    items = []
+    if isinstance(pm_cfg, dict) and isinstance(pm_cfg.get('methods'), list):
+        items = pm_cfg.get('methods') or []
+    elif isinstance(pm_cfg, list):
+        items = pm_cfg
+    base_allowed = ('contado', 'pos', 'qr', 'transferencia')
+    out = {
+        'contado': {'id': 'contado', 'base': 'contado', 'label': 'Efectivo', 'locked': True},
+        'pos': {'id': 'pos', 'base': 'pos', 'label': 'POS', 'locked': True},
+        'qr': {'id': 'qr', 'base': 'qr', 'label': 'QR', 'locked': True},
+        'transferencia': {'id': 'transferencia', 'base': 'transferencia', 'label': 'Transferencia', 'locked': True},
+    }
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        if it.get('active') is False:
+            continue
+        pid = str(it.get('id') or '').strip().lower()
+        base = str(it.get('base') or '').strip().lower()
+        label = str(it.get('label') or it.get('name') or '').strip()
+        if not pid or pid in out:
+            continue
+        if base not in base_allowed:
+            continue
+        if not label:
+            continue
+        out[pid] = {'id': pid, 'base': base, 'label': label, 'locked': False}
+    return out
+
+def _format_payment_label(meta):
+    if not meta:
+        return ''
+    label = str(meta.get('label') or '').strip()
+    pid = str(meta.get('id') or '').strip()
+    base = str(meta.get('base') or '').strip().lower()
+    if not label:
+        return pid or '-'
+    if meta.get('locked'):
+        return label
+    base_label = _base_payment_label(base)
+    low = label.lower()
+    if base_label and low.startswith(base_label.lower()):
+        return label
+    if '·' in label:
+        return label
+    return f"{base_label} · {label}" if base_label else label
+
+def _short_payment_label(full_label):
+    txt = str(full_label or '').strip()
+    if '·' in txt:
+        parts = [p.strip() for p in txt.split('·') if p.strip()]
+        if len(parts) >= 2:
+            return parts[-1]
+    return txt
 
 @bp.route('/archive', methods=['GET'])
 def get_archive():
@@ -264,8 +334,11 @@ def get_archive():
     to_date = _norm_date(to_date, end=True)
     conn = get_db()
     cur = conn.cursor()
+    pm_cfg = _load_payment_methods_config(tenant_slug)
     base = """
-        SELECT o.id, o.created_at, o.order_type, o.table_number, o.address_json, o.total, o.status, o.customer_name, o.customer_phone, h.last_status, h.last_change
+        SELECT o.id, o.created_at, o.order_type, o.table_number, o.address_json, o.total, o.status, o.customer_name, o.customer_phone, h.last_status, h.last_change,
+               o.payment_method,
+               (SELECT payload_json FROM order_events WHERE order_id = o.id AND event_type = 'payment' ORDER BY id DESC LIMIT 1) AS pay_payload
         FROM archived_orders a
         JOIN orders o ON o.id = a.order_id
         LEFT JOIN (
@@ -320,6 +393,46 @@ def get_archive():
     cur.execute(count_sql, count_params)
     total_count = int(cur.fetchone()[0])
     data = [dict(r) for r in rows]
+    for r in data:
+        method = str(r.get('payment_method') or '').strip().lower()
+        pay_payload = r.get('pay_payload') or ''
+        details = None
+        try:
+            meta = json.loads(pay_payload) if pay_payload else {}
+        except Exception:
+            meta = {}
+        if isinstance(meta, dict):
+            m2 = str(meta.get('method') or '').strip().lower()
+            if m2:
+                method = m2
+                r['payment_method'] = m2
+            if isinstance(meta.get('details'), list):
+                details = meta.get('details')
+        r.pop('pay_payload', None)
+        r['payment_details'] = details
+        if method == 'mixed' and isinstance(details, list) and details:
+            uniq = []
+            seen = set()
+            for d in details:
+                if not isinstance(d, dict):
+                    continue
+                mid = str(d.get('method') or '').strip().lower()
+                try:
+                    amt = int(d.get('amount') or 0)
+                except Exception:
+                    amt = 0
+                if not mid or amt <= 0:
+                    continue
+                meta_m = pm_cfg.get(mid) or {'id': mid, 'base': mid, 'label': mid, 'locked': False}
+                full = _format_payment_label(meta_m)
+                short = _short_payment_label(full) if not (meta_m.get('locked') or False) else full
+                if short and short not in seen:
+                    uniq.append(short)
+                    seen.add(short)
+            r['payment_method_display'] = f"Mixto · {' + '.join(uniq)}" if uniq else 'Mixto'
+        else:
+            meta_m = pm_cfg.get(method) or {'id': method, 'base': method, 'label': method, 'locked': False}
+            r['payment_method_display'] = _format_payment_label(meta_m) if method else '-'
     if q:
         try:
             int(q)
