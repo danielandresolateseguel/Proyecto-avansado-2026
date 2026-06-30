@@ -3432,7 +3432,12 @@
       if (safePacks.length) {
         safePacks.forEach(p => addRow(p));
       } else {
-        addRow({ label: '', id: '', price: '', multiplier: 1 });
+        const empty = document.createElement('div');
+        empty.className = 'small';
+        empty.dataset.packsEmpty = '1';
+        empty.style.cssText = 'color:#666; margin-top:4px; font-weight:600;';
+        empty.textContent = 'Sin presentaciones. Usa "Agregar presentacion" si quieres vender por unidad/docena, etc.';
+        containerEl.appendChild(empty);
       }
 
       containerEl.dataset.addPackRow = '1';
@@ -3442,6 +3447,8 @@
     function addAdminPackRow(containerEl) {
       if (!containerEl) return;
       if (containerEl.dataset.rendered !== '1') renderAdminPacksEditor(containerEl, []);
+      const empty = containerEl.querySelector('[data-packs-empty="1"]');
+      if (empty) empty.remove();
       const header = containerEl.firstElementChild;
       const row = document.createElement('div');
       row.dataset.packRow = '1';
