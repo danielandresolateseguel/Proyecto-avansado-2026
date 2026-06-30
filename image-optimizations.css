@@ -43,6 +43,29 @@
     background-color: #f9f9f9;
 }
 
+#featured-dishes .product-image {
+    position: relative;
+    --product-img-bg: none;
+    background-color: #f2f2f2;
+}
+
+#featured-dishes .product-image::before {
+    content: "";
+    position: absolute;
+    inset: -22%;
+    background-image: var(--product-img-bg);
+    background-size: cover;
+    background-position: center;
+    filter: blur(18px) saturate(1.15) brightness(0.95);
+    transform: scale(1.2);
+    opacity: 0.65;
+}
+
+#featured-dishes .product-image img {
+    position: relative;
+    z-index: 1;
+}
+
 /* Fase 3: Optimización de renderizado con content-visibility */
 .product-card {
     /* content-visibility: auto; removed to fix missing cards issue */

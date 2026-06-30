@@ -1,5 +1,27 @@
 // Módulo unificado de optimización y lazy-loading de imágenes
 document.addEventListener('DOMContentLoaded', function() {
+  function applyFeaturedBlurBackground(img) {
+    if (!img) return;
+    const container = img.closest ? img.closest('.product-image') : null;
+    if (!container) return;
+    const featuredRoot = container.closest ? container.closest('#featured-dishes') : null;
+    if (!featuredRoot) return;
+    const src = (img.currentSrc || img.getAttribute('src') || '').trim();
+    if (!src) return;
+    const safeSrc = src.replace(/"/g, '%22');
+    container.style.setProperty('--product-img-bg', `url("${safeSrc}")`);
+  }
+
+  function bindFeaturedBlurBackground(img) {
+    if (!img || !img.dataset) return;
+    if (img.dataset.blurBgBound === '1') return;
+    img.dataset.blurBgBound = '1';
+    const handler = () => applyFeaturedBlurBackground(img);
+    img.addEventListener('load', handler);
+    img.addEventListener('error', handler);
+    handler();
+  }
+
   // Ajustes base para imágenes de productos
   function setupProductImagesDefaults(root = document) {
     const productImages = root.querySelectorAll ? root.querySelectorAll('.product-image img') : [];
@@ -11,6 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
       } catch (e) {
         // silencioso
       }
+      bindFeaturedBlurBackground(img);
     });
   }
 
@@ -25,6 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
               img.dataset.loaded = true;
               img.classList.add('loaded');
             }
+            bindFeaturedBlurBackground(img);
             observer.unobserve(img);
           }
         });
@@ -81,8 +105,10 @@ document.addEventListener('DOMContentLoaded', function() {
         img.alt = 'Imagen no disponible';
         // Evitar bucles sólo después de aplicar fallback
         img.onerror = null;
+        bindFeaturedBlurBackground(img);
       }
       img.addEventListener('error', fallbackIfReallyBroken);
+      bindFeaturedBlurBackground(img);
     });
   }
 
@@ -105,6 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (rect.top < viewportH + margin) {
         img.setAttribute('fetchpriority', 'high');
       }
+      bindFeaturedBlurBackground(img);
     });
   }
 
@@ -170,9 +197,11 @@ document.addEventListener('DOMContentLoaded', function() {
           img.src = FALLBACK_SRC;
           img.srcset = FALLBACK_SRC;
           img.alt = img.alt || 'Imagen no disponible';
+          bindFeaturedBlurBackground(img);
         }
       }
       img.addEventListener('load', ensureVisible);
+      bindFeaturedBlurBackground(img);
     };
     document.querySelectorAll('.product-image img').forEach(applyWatchdog);
     // Observer para nuevas imágenes
@@ -196,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function() {
           img.src = FALLBACK_SRC;
           img.srcset = FALLBACK_SRC;
           img.alt = img.alt || 'Imagen no disponible';
+          bindFeaturedBlurBackground(img);
         }
       });
     }, 1500);
