@@ -1,12 +1,12 @@
 /* Estilos para optimización de imágenes */
 .product-image img {
     max-width: 100%;
-    height: auto;
     display: block;
     transition: transform 0.3s ease, opacity 0.5s ease;
     width: 100%;
-    aspect-ratio: 3/2;
+    height: 100%;
     object-fit: contain;
+    object-position: center;
     opacity: 1;
 }
 
