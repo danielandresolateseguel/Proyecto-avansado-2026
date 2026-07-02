@@ -12163,7 +12163,7 @@
         }
 
         // Elements for details
-        const detailsBox = document.getElementById('payment-details-box');
+        const detailsBoxEl = detailsBox || document.getElementById('payment-details-box');
         const orderTotalEl = document.getElementById('pm-order-total');
         const tipToggle = document.getElementById('pm-tip-toggle');
         const tipAmtEl = document.getElementById('pm-tip-amt');
@@ -12185,7 +12185,7 @@
         // Setup UI
         const showBox = true; // Always show details box to display total
         if (showBox) {
-            detailsBox.style.display = 'block';
+            if (detailsBoxEl) detailsBoxEl.style.display = 'block';
             
             if (sCost > 0) {
                 // Show breakdown
@@ -12214,7 +12214,7 @@
 
             updateCalcs();
         } else {
-            detailsBox.style.display = 'none';
+            if (detailsBoxEl) detailsBoxEl.style.display = 'none';
         }
 
         function updateCalcs() {
