@@ -1716,7 +1716,14 @@
     </summary>
     <div class="cash-panel-inner">
       <div class="cash-panel-toolbar">
-        <div class="small" style="font-weight:700; color:#415a77;">Operaciones</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="small" style="font-weight:700; color:#415a77;">Operaciones</div>
+          <button id="cash-settings-open" type="button" title="Ajustes de caja" aria-label="Ajustes de caja" style="background:#fff; color:#415a77; border:1px solid #dbe4f3; width:32px; height:32px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;">
+            <svg viewBox="0 0 24 24" aria-hidden="true" style="width:18px; height:18px; fill:currentColor;">
+              <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54A.484.484 0 0 0 14.4 1h-4.8c-.24 0-.44.17-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.488.488 0 0 0-.59.22L2.24 7.87a.49.49 0 0 0 .12.61l2.03 1.58c-.05.3-.07.62-.07.94 0 .33.02.64.06.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.04.24.24.41.48.41h4.8c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+            </svg>
+          </button>
+        </div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <span class="small" style="display:flex; align-items:center; gap:6px;">Caja
             <button id="cash-eye-top" class="eye-btn" aria-label="Ocultar caja">
@@ -4902,6 +4909,13 @@
       if (!cashHistoryCollapsed) await renderCashHistory();
       updateEyeIcon();
     });
+    const cashSettingsOpenBtn = document.getElementById('cash-settings-open');
+    if (cashSettingsOpenBtn) cashSettingsOpenBtn.addEventListener('click', async (e) => {
+      try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+      if (!isAuthed) return;
+      try { await loadTenantPrefs(); } catch (_) {}
+      try { askPaymentMethod(0, false, 0, { settingsOnly: true }); } catch (_) {}
+    });
     const tbody = document.getElementById('orders-tbody');
     const countEl = document.getElementById('orders-count');
     const detailEl = document.getElementById('order-detail');
@@ -5174,6 +5188,7 @@
       setRoleVisibilityById('metrics', canDailyMovements);
       setRoleVisibilityById('analytics', !isKitchen && canReports);
       setRoleVisibilityById('cash-panel', !isKitchen && canCash);
+      setRoleVisibilityById('cash-settings-open', !isKitchen && canCash);
       setRoleVisibilityById('table-management', !!mozoTablesOnly && !isKitchen && canTables);
 
       setRoleVisibilityById('btn-new-order', !isKitchen && canOrdersCreate);
@@ -5889,7 +5904,16 @@
       const resp = await wFetch(url.toString());
       if (!resp.ok) throw new Error('No se pudieron cargar pedidos cerrados');
       const data = await resp.json();
-      return Array.isArray(data && data.orders) ? data.orders : [];
+      const list = Array.isArray(data && data.orders) ? data.orders : [];
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return list;
+      const me = String(currentUserName || '').trim().toLowerCase();
+      return list.filter(o => {
+        if (!o) return false;
+        if (String(o.order_type || '').trim().toLowerCase() !== 'direccion') return false;
+        if (!me) return false;
+        return String(o.delivery_assigned_to || '').trim().toLowerCase() === me;
+      });
     }
     async function refreshClosedViews(options = {}) {
       const includeRecent = options.recent !== false;
@@ -11756,13 +11780,16 @@
       });
     }
 
-    async function askPaymentMethod(orderTotal = 0, isTable = false, shippingCost = 0) {
+    async function askPaymentMethod(orderTotal = 0, isTable = false, shippingCost = 0, options = null) {
       return new Promise((resolve) => {
         const modal = document.getElementById('payment-modal');
         const overlay = modal.querySelector('.kds-modal-overlay');
         const cancelBtn = document.getElementById('payment-cancel');
         const btnContainer = modal.querySelector('.pay-options-container');
         let optionBtns = [];
+        const settingsOnly = !!(options && options.settingsOnly);
+        const headerTitleEl = modal ? modal.querySelector('h3') : null;
+        const headerCfgBtn = document.getElementById('pm-config-btn');
         
         // Mixed Payment Elements
         const mixedBox = document.getElementById('mixed-payment-box');
@@ -11779,6 +11806,9 @@
         const pmMethodsList = document.getElementById('pm-methods-list');
         const pmMethodsAdd = document.getElementById('pm-methods-add');
         const pmMethodsSave = document.getElementById('pm-methods-save');
+        const detailsBox = document.getElementById('payment-details-box');
+        const confirmBox = document.getElementById('payment-confirmation-box');
+        const canManageMethods = !!isAuthed && (!!isOwnerUser || String(currentUserRole || '').trim().toLowerCase() === 'admin');
 
         if (cfgCheck) {
             // Load preference
@@ -11928,6 +11958,7 @@
 
         const savePmMethodsEditor = async () => {
           if (!pmMethodsList) return;
+          if (!canManageMethods) return;
           const rows = Array.from(pmMethodsList.children || []);
           const baseAllowed = new Set(['contado', 'pos', 'qr', 'transferencia']);
           const used = new Set();
@@ -11988,6 +12019,7 @@
 
         if (pmMethodsAdd && !pmMethodsAdd.dataset.listener) {
           pmMethodsAdd.addEventListener('click', () => {
+            if (!canManageMethods) return;
             if (!pmMethodsList) return;
             const row = document.createElement('div');
             row.dataset.new = '1';
@@ -12022,11 +12054,20 @@
           });
           pmMethodsSave.dataset.listener = 'true';
         }
+        if (pmMethodsAdd) {
+          pmMethodsAdd.disabled = !canManageMethods;
+          pmMethodsAdd.style.opacity = canManageMethods ? '1' : '0.5';
+          pmMethodsAdd.style.cursor = canManageMethods ? 'pointer' : 'not-allowed';
+        }
+        if (pmMethodsSave) {
+          pmMethodsSave.disabled = !canManageMethods;
+          pmMethodsSave.style.opacity = canManageMethods ? '1' : '0.5';
+          pmMethodsSave.style.cursor = canManageMethods ? 'pointer' : 'not-allowed';
+        }
         renderPmMethodsEditor();
         renderPayOptionButtons();
 
         // Elements for confirmation
-        const confirmBox = document.getElementById('payment-confirmation-box');
         const confirmMsg = document.getElementById('confirm-pay-msg');
         const confirmCheck = document.getElementById('confirm-print-check');
         const confirmBack = document.getElementById('confirm-pay-back');
@@ -12037,6 +12078,27 @@
         if(mixedBox) mixedBox.style.display = 'none';
         if(confirmBox) confirmBox.style.display = 'none';
         if(btnContainer) btnContainer.style.display = 'flex';
+
+        if (settingsOnly) {
+          if (headerTitleEl) {
+            if (!headerTitleEl.dataset.origText) headerTitleEl.dataset.origText = headerTitleEl.textContent || '';
+            headerTitleEl.textContent = 'Ajustes de caja';
+          }
+          if (cancelBtn) {
+            if (!cancelBtn.dataset.origText) cancelBtn.dataset.origText = cancelBtn.textContent || '';
+            cancelBtn.textContent = 'Cerrar';
+          }
+          if (detailsBox) detailsBox.style.display = 'none';
+          if (btnContainer) btnContainer.style.display = 'none';
+          if (mixedBox) mixedBox.style.display = 'none';
+          if (confirmBox) confirmBox.style.display = 'none';
+          if (cfgBox) cfgBox.style.display = 'block';
+          if (headerCfgBtn) headerCfgBtn.style.display = 'none';
+        } else {
+          if (headerTitleEl && headerTitleEl.dataset.origText) headerTitleEl.textContent = headerTitleEl.dataset.origText;
+          if (cancelBtn && cancelBtn.dataset.origText) cancelBtn.textContent = cancelBtn.dataset.origText;
+          if (headerCfgBtn) headerCfgBtn.style.display = '';
+        }
 
         function normalizeMethod(v){
           const s = String(v || '').trim().toLowerCase();

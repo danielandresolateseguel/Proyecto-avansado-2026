@@ -853,7 +853,15 @@ def get_tenant_prefs():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
     if not is_authed():
         return jsonify({'error': 'no autorizado'}), 401
-    if not _can_manage_tenant_slug(slug):
+    role = str(session.get('admin_role') or '').strip().lower()
+    owner = bool(session.get('admin_owner'))
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    if session_tenant and slug and session_tenant != slug:
+        return jsonify({'error': 'no autorizado'}), 403
+    is_super = bool(owner) or role == 'admin'
+    can_view = bool(perms) and any(bool(perms.get(k)) for k in ('cash_view', 'cash_manage', 'delivery_manage', 'orders_view', 'reports_view'))
+    if not (is_super or can_view):
         return jsonify({'error': 'no autorizado'}), 403
     conn = get_db()
     cur = conn.cursor()
@@ -861,7 +869,14 @@ def get_tenant_prefs():
     row = cur.fetchone()
     if row and row[0]:
         try:
-            return jsonify(json.loads(row[0]))
+            cfg = json.loads(row[0])
+            if is_super:
+                return jsonify(cfg)
+            safe = {}
+            for key in ('tip_percent', 'tip_default_enabled', 'ticket_format', 'payment_methods'):
+                if key in cfg:
+                    safe[key] = cfg.get(key)
+            return jsonify(safe)
         except:
             pass
     return jsonify({})
