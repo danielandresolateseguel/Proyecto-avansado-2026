@@ -22,7 +22,7 @@ def favicon():
 
 @bp.route('/api/version')
 def version():
-    return jsonify({
+    resp = jsonify({
         'version': '1.0.21',
         'timestamp': datetime.now(timezone.utc).isoformat(),
         'deploy_check': 'ok',
@@ -31,6 +31,10 @@ def version():
         'python_version': sys.version,
         'cwd': os.getcwd()
     })
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @bp.route('/api/ping_system')
 def ping():

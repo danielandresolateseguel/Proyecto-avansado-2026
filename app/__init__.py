@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request
+from flask import Flask, request, redirect
 from dotenv import load_dotenv
 from . import database
 from werkzeug.exceptions import HTTPException
@@ -92,6 +92,17 @@ def create_app(test_config=None):
 
     # Register public last to avoid catching API routes
     app.register_blueprint(public.bp)
+
+    @app.before_request
+    def redirect_www_to_root():
+        try:
+            host = str(request.host or '').strip().lower()
+            if not host.startswith('www.qplato.com'):
+                return None
+            new_url = request.url.replace('://www.qplato.com', '://qplato.com', 1)
+            return redirect(new_url, code=308)
+        except Exception:
+            return None
 
     @app.after_request
     def apply_security_headers(response):
