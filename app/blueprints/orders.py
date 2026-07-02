@@ -887,9 +887,27 @@ def create_order():
         
         shipping_cost = 0
         distance_km = None
+        shipping_manual = None
         if order_type == 'direccion':
             try:
-                shipping_cost, distance_km = _compute_shipping_cost(cfg, order_type, address_json)
+                if is_admin_origin:
+                    try:
+                        _, _, role, perms, owner = _ctx()
+                        allow_manual = _has_perm(perms, owner, role, 'orders_create')
+                    except Exception:
+                        allow_manual = False
+                    if allow_manual and 'shipping_cost' in payload:
+                        try:
+                            shipping_manual = int(payload.get('shipping_cost') or 0)
+                        except Exception:
+                            shipping_manual = None
+                        if shipping_manual is not None:
+                            shipping_manual = max(0, min(1000000, int(shipping_manual)))
+                if shipping_manual is not None:
+                    shipping_cost = shipping_manual
+                    distance_km = None
+                else:
+                    shipping_cost, distance_km = _compute_shipping_cost(cfg, order_type, address_json)
             except Exception:
                 try:
                     shipping_cost = int(cfg.get('shipping_cost', 0))
@@ -928,7 +946,15 @@ def create_order():
                 'created',
                 creation_actor,
                 0,
-                json.dumps(dict(creation_meta or {}, **({'shipping_km': distance_km} if isinstance(distance_km, (int, float)) and math.isfinite(float(distance_km)) else {}))),
+                json.dumps(dict(
+                    creation_meta or {},
+                    **({
+                        'shipping_km': distance_km
+                    } if isinstance(distance_km, (int, float)) and math.isfinite(float(distance_km)) else {}),
+                    **({
+                        'shipping_manual': shipping_manual
+                    } if isinstance(shipping_manual, int) else {}),
+                )),
                 created_at,
             ),
         )
