@@ -1,5 +1,6 @@
 import json
 import re
+import math
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
@@ -82,6 +83,85 @@ def _load_tenant_config_row(cur, slug):
     if not isinstance(current_cfg, dict):
         current_cfg = {}
     return current_cfg
+
+def _safe_float(value, default=None):
+    try:
+        n = float(value)
+        if math.isfinite(n):
+            return n
+        return default
+    except Exception:
+        return default
+
+def _safe_int(value, default=0):
+    try:
+        return int(value)
+    except Exception:
+        return default
+
+def _extract_lat_lng(obj):
+    if not isinstance(obj, dict):
+        return (None, None)
+    lat = _safe_float(obj.get('lat', obj.get('latitude')))
+    lng = _safe_float(obj.get('lng', obj.get('lon', obj.get('longitude'))))
+    if lat is None or lng is None:
+        return (None, None)
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0):
+        return (None, None)
+    return (lat, lng)
+
+def _haversine_km(lat1, lng1, lat2, lng2):
+    r = 6371.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+    a = (math.sin(dlat / 2.0) ** 2) + math.cos(p1) * math.cos(p2) * (math.sin(dlng / 2.0) ** 2)
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return r * c
+
+def _compute_shipping_cost(cfg, order_type, address_json):
+    order_type_norm = str(order_type or '').strip().lower()
+    if order_type_norm != 'direccion':
+        return 0, None
+
+    base_cost = _safe_int((cfg or {}).get('shipping_cost', 0), 0)
+    distance_cfg = (cfg or {}).get('shipping_distance')
+    if not isinstance(distance_cfg, dict) or not bool(distance_cfg.get('enabled')):
+        return max(0, base_cost), None
+
+    origin = distance_cfg.get('origin') if isinstance(distance_cfg.get('origin'), dict) else {}
+    o_lat, o_lng = _extract_lat_lng(origin)
+    if o_lat is None or o_lng is None:
+        return max(0, base_cost), None
+
+    addr = address_json if isinstance(address_json, dict) else {}
+    geo = addr.get('geo') if isinstance(addr.get('geo'), dict) else (addr.get('location') if isinstance(addr.get('location'), dict) else {})
+    d_lat, d_lng = _extract_lat_lng(geo)
+    if d_lat is None or d_lng is None:
+        return max(0, base_cost), None
+
+    included_km = _safe_float(distance_cfg.get('included_km'), 0.0)
+    if included_km is None or included_km < 0:
+        included_km = 0.0
+    extra_per_km = _safe_int(distance_cfg.get('extra_per_km'), 0)
+    if extra_per_km <= 0:
+        return max(0, base_cost), None
+
+    try:
+        dist_km = _haversine_km(o_lat, o_lng, d_lat, d_lng)
+    except Exception:
+        return max(0, base_cost), None
+
+    extra_km = max(0.0, float(dist_km) - float(included_km))
+    extra_cost = int(math.ceil(extra_km * float(extra_per_km)))
+    shipping_cost = max(0, base_cost + max(0, extra_cost))
+
+    max_cost = _safe_int(distance_cfg.get('max_cost'), 0)
+    if max_cost > 0:
+        shipping_cost = min(shipping_cost, max_cost)
+
+    return shipping_cost, float(dist_km)
 
 def _normalize_quick_order_shortcuts(raw):
     out = []
@@ -618,7 +698,11 @@ def get_tenant_config():
             if v > 0:
                 cfg[k] = v
                 
-    return jsonify(cfg)
+    resp = jsonify(cfg)
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @bp.route('/config', methods=['POST'])
 def update_tenant_config():
@@ -633,6 +717,8 @@ def update_tenant_config():
     can_manage_admin_order_settings = bool(owner or role == 'admin')
     if 'shipping_cost' in payload and not can_manage_admin_order_settings:
         return jsonify({'error': 'solo admin puede modificar el costo de envío'}), 403
+    if 'shipping_distance' in payload and not can_manage_admin_order_settings:
+        return jsonify({'error': 'solo admin puede modificar la configuración de envío por distancia'}), 403
     
     conn = get_db()
     cur = conn.cursor()
@@ -644,6 +730,24 @@ def update_tenant_config():
                 current_cfg[key] = int(payload[key])
             except:
                 pass
+
+    if 'shipping_distance' in payload:
+        raw = payload.get('shipping_distance')
+        if isinstance(raw, dict):
+            enabled = bool(raw.get('enabled'))
+            origin = raw.get('origin') if isinstance(raw.get('origin'), dict) else {}
+            o_lat, o_lng = _extract_lat_lng(origin)
+            included_km = _safe_float(raw.get('included_km'), 0.0)
+            extra_per_km = _safe_int(raw.get('extra_per_km'), 0)
+            max_cost = _safe_int(raw.get('max_cost'), 0)
+            normalized = {
+                'enabled': enabled,
+                'origin': {'lat': o_lat, 'lng': o_lng} if (o_lat is not None and o_lng is not None) else {},
+                'included_km': float(included_km or 0.0),
+                'extra_per_km': int(extra_per_km or 0),
+                'max_cost': int(max_cost or 0),
+            }
+            current_cfg['shipping_distance'] = normalized
             
     if 'time_auto' in payload:
         current_cfg['time_auto'] = bool(payload['time_auto'])
@@ -664,7 +768,11 @@ def update_tenant_config():
     cur.execute("INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)", (slug, json.dumps(current_cfg, ensure_ascii=False)))
     conn.commit()
     invalidate_tenant_config(slug)
-    return jsonify(current_cfg)
+    resp = jsonify(current_cfg)
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @bp.route('/quick_order_shortcuts', methods=['GET'])
 def get_quick_order_shortcuts():
@@ -778,11 +886,15 @@ def create_order():
             status = 'por_aprobar'
         
         shipping_cost = 0
+        distance_km = None
         if order_type == 'direccion':
             try:
-                shipping_cost = int(cfg.get('shipping_cost', 0))
-            except:
-                pass
+                shipping_cost, distance_km = _compute_shipping_cost(cfg, order_type, address_json)
+            except Exception:
+                try:
+                    shipping_cost = int(cfg.get('shipping_cost', 0))
+                except Exception:
+                    shipping_cost = 0
         
         total += shipping_cost
         
@@ -816,7 +928,7 @@ def create_order():
                 'created',
                 creation_actor,
                 0,
-                json.dumps(creation_meta),
+                json.dumps(dict(creation_meta or {}, **({'shipping_km': distance_km} if isinstance(distance_km, (int, float)) and math.isfinite(float(distance_km)) else {}))),
                 created_at,
             ),
         )

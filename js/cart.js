@@ -5,7 +5,8 @@ import {
     CART_STORAGE_KEY, 
     LEGACY_CART_STORAGE_KEY, 
     getCheckoutMode,
-    formatMoneyWithCode
+    formatMoneyWithCode,
+    calculateShippingQuote
 } from './config.js?v=8';
 import { announceCart } from './utils.js';
 
@@ -311,9 +312,27 @@ export function updateCartDisplay() {
     let currentOrderType = 'mesa';
     const checkedRadio = document.querySelector('input[name="orderType"]:checked');
     if (checkedRadio) currentOrderType = checkedRadio.value;
-    
-    if (currentOrderType === 'direccion' && window.BusinessConfig && window.BusinessConfig.shipping_cost) {
-        shippingCost = parseInt(window.BusinessConfig.shipping_cost) || 0;
+    const readDeliveryGeo = () => {
+        try {
+            const latEl = document.getElementById('delivery-geo-lat');
+            const lngEl = document.getElementById('delivery-geo-lng');
+            const lat = latEl ? parseFloat(String(latEl.value || '').trim()) : NaN;
+            const lng = lngEl ? parseFloat(String(lngEl.value || '').trim()) : NaN;
+            if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+        } catch (_) {}
+        try {
+            const saved = sessionStorage.getItem('delivery_geo');
+            if (!saved) return null;
+            const j = JSON.parse(saved);
+            const lat = parseFloat(String(j && (j.lat ?? j.latitude) || '').trim());
+            const lng = parseFloat(String(j && (j.lng ?? j.lon ?? j.longitude) || '').trim());
+            if (Number.isFinite(lat) && Number.isFinite(lng)) return { lat, lng };
+        } catch (_) {}
+        return null;
+    };
+    if (currentOrderType === 'direccion') {
+        const geo = readDeliveryGeo();
+        shippingCost = calculateShippingQuote(currentOrderType, geo).cost || 0;
     }
     
     if (shippingCost > 0) {

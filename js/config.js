@@ -94,7 +94,7 @@ export function loadBusinessConfig(callback) {
     }
     
     const url = `/api/config?slug=${slug}`;
-    fetch(url).then(res => {
+    fetch(url, { cache: 'no-store', credentials: 'same-origin' }).then(res => {
         if (!res.ok) throw new Error('No config JSON found');
         return res.json();
     }).then(json => {
@@ -133,4 +133,67 @@ export function formatMoneyWithCode(amount) {
     const txt = formatMoney(amount);
     const { code } = getCurrencySettings();
     return txt + ' ' + code;
+}
+
+function _isFiniteNumber(n) {
+    return typeof n === 'number' && Number.isFinite(n);
+}
+
+function _extractLatLng(obj) {
+    if (!obj || typeof obj !== 'object') return null;
+    const lat = Number(obj.lat ?? obj.latitude);
+    const lng = Number(obj.lng ?? obj.lon ?? obj.longitude);
+    if (!_isFiniteNumber(lat) || !_isFiniteNumber(lng)) return null;
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+}
+
+function _haversineKm(a, b) {
+    const r = 6371;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const sinDLat = Math.sin(dLat / 2);
+    const sinDLng = Math.sin(dLng / 2);
+    const h = (sinDLat * sinDLat) + Math.cos(lat1) * Math.cos(lat2) * (sinDLng * sinDLng);
+    return 2 * r * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+export function calculateShippingQuote(orderType, geo = null) {
+    const type = String(orderType || '').trim().toLowerCase();
+    if (type !== 'direccion') {
+        return { cost: 0, distanceKm: null, baseCost: 0, extraCost: 0 };
+    }
+
+    const baseCost = parseInt(window.BusinessConfig && window.BusinessConfig.shipping_cost, 10) || 0;
+    const sd = window.BusinessConfig && window.BusinessConfig.shipping_distance;
+    if (!sd || typeof sd !== 'object' || !sd.enabled) {
+        return { cost: Math.max(0, baseCost), distanceKm: null, baseCost: Math.max(0, baseCost), extraCost: 0 };
+    }
+
+    const origin = _extractLatLng(sd.origin || {});
+    const dest = _extractLatLng(geo || {});
+    if (!origin || !dest) {
+        return { cost: Math.max(0, baseCost), distanceKm: null, baseCost: Math.max(0, baseCost), extraCost: 0 };
+    }
+
+    const includedKm = Number(sd.included_km || 0);
+    const extraPerKm = parseInt(sd.extra_per_km, 10) || 0;
+    if (!_isFiniteNumber(includedKm) || includedKm < 0 || extraPerKm <= 0) {
+        return { cost: Math.max(0, baseCost), distanceKm: null, baseCost: Math.max(0, baseCost), extraCost: 0 };
+    }
+
+    const distanceKm = _haversineKm(origin, dest);
+    if (!_isFiniteNumber(distanceKm)) {
+        return { cost: Math.max(0, baseCost), distanceKm: null, baseCost: Math.max(0, baseCost), extraCost: 0 };
+    }
+
+    const extraKm = Math.max(0, distanceKm - includedKm);
+    const extraCost = Math.max(0, Math.ceil(extraKm * extraPerKm));
+    let cost = Math.max(0, baseCost + extraCost);
+    const maxCost = parseInt(sd.max_cost, 10) || 0;
+    if (maxCost > 0) cost = Math.min(cost, maxCost);
+    return { cost, distanceKm, baseCost: Math.max(0, baseCost), extraCost };
 }

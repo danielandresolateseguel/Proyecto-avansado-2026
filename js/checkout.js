@@ -1,9 +1,9 @@
 /**
  * Checkout and WhatsApp Logic
  */
-import { cart, clearCart } from './cart.js?v=8';
+import { cart, clearCart, updateCartDisplay } from './cart.js?v=8';
 import { closeCartUI } from './ui.js?v=8';
-import { getWhatsappNumber, CATEGORY, getCheckoutMode, getWhatsappEnabled, getWhatsappTemplate, getBusinessSlug, formatMoneyWithCode } from './config.js?v=8';
+import { getWhatsappNumber, CATEGORY, getCheckoutMode, getWhatsappEnabled, getWhatsappTemplate, getBusinessSlug, formatMoneyWithCode, calculateShippingQuote } from './config.js?v=8';
 
 function getGeoApiBase() {
     const origin = window.location.origin || '';
@@ -247,8 +247,8 @@ export async function handleCheckout() {
 
     // Totals logic
     let shippingCost = 0;
-    if (orderType === 'direccion' && window.BusinessConfig && window.BusinessConfig.shipping_cost) {
-        shippingCost = parseInt(window.BusinessConfig.shipping_cost) || 0;
+    if (orderType === 'direccion') {
+        shippingCost = calculateShippingQuote(orderType, geo).cost || 0;
     }
     const totalNumber = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0) + shippingCost;
     const totalText = formatMoneyWithCode(parseInt(totalNumber));
@@ -472,6 +472,9 @@ function initDeliveryGeoUI() {
     container.insertBefore(tsEl, first);
 
     const setPreview = (html) => { preview.innerHTML = html || ''; };
+    const notifyCartTotals = () => {
+        try { updateCartDisplay(); } catch (_) {}
+    };
 
     if (!navigator.geolocation) {
         btn.disabled = true;
@@ -604,6 +607,7 @@ function initDeliveryGeoUI() {
         }
         setGeoResolvingState(false);
         lockAddressInputs();
+        notifyCartTotals();
         return applied;
     };
 
@@ -631,6 +635,7 @@ function initDeliveryGeoUI() {
                 const l = String(j.locality || '').trim();
                 applyGeoAutofill(a, l);
                 lockAddressInputs();
+                notifyCartTotals();
                 const { addressInput: liveAddressInput, localityInput: liveLocalityInput } = getLiveDeliveryAddressInputs();
                 if ((!a || !l) && ((liveAddressInput && !(liveAddressInput.value || '').trim()) || (liveLocalityInput && !(liveLocalityInput.value || '').trim()))) {
                     setGeoResolvingState(true);
@@ -648,6 +653,7 @@ function initDeliveryGeoUI() {
                                 sessionStorage.setItem('delivery_geo', JSON.stringify(j2));
                             }
                         } catch (_) {}
+                        notifyCartTotals();
                     })();
                 }
             }
@@ -681,6 +687,7 @@ function initDeliveryGeoUI() {
                     } catch (_) {}
                     setGeoResolvingState(true);
                     renderFromValues();
+                    notifyCartTotals();
                     (async () => {
                         const res = await refreshGeoFromStoredCoords({ retry: true });
                         if (!res) setGeoResolvingState(false);
@@ -694,6 +701,7 @@ function initDeliveryGeoUI() {
                                     sessionStorage.setItem('delivery_geo', JSON.stringify(j2));
                                 }
                             } catch (_) {}
+                            notifyCartTotals();
                             const lat2 = parseFloat((latEl.value || '').trim());
                             const lng2 = parseFloat((lngEl.value || '').trim());
                             const accuracy2 = parseFloat((accEl.value || '').trim());

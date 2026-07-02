@@ -970,6 +970,9 @@ document.addEventListener('DOMContentLoaded', () => {
     loadBusinessConfig(() => {
         // Callback tras cargar config (opcional)
     });
+    document.addEventListener('businessconfig:ready', () => {
+        try { updateCartDisplay(); } catch (_) {}
+    });
 
     // Inicializar Carrusel
     loadAndInitCarousel(window.BUSINESS_SLUG || 'gastronomia-local1');
