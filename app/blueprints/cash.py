@@ -498,6 +498,7 @@ def cash_session_orders():
     if not (_has_perm(perms, owner, role, 'cash_view') or _has_perm(perms, owner, role, 'cash_manage')):
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
+    is_super = bool(owner) or (str(role or '').strip().lower() == 'admin')
     session_id = request.args.get('session_id')
     to_date = request.args.get('to')
     try:
@@ -535,20 +536,23 @@ def cash_session_orders():
             
     if not opened_at:
         return jsonify({'orders': []})
-    if scope == 'user':
-        if sess_scope != 'user' or (sess_opened_by or '').lower() != (actor or '').lower():
+    effective_scope = str(sess_scope or scope or 'tenant').strip().lower() or 'tenant'
+    if not is_super:
+        if scope == 'user':
+            if effective_scope != 'user' or (sess_opened_by or '').lower() != (actor or '').lower():
+                return jsonify({'error': 'acceso denegado a la sesión'}), 403
+        if scope == 'tenant' and effective_scope != 'tenant':
             return jsonify({'error': 'acceso denegado a la sesión'}), 403
-    if scope == 'tenant' and sess_scope != 'tenant':
-        return jsonify({'error': 'acceso denegado a la sesión'}), 403
         
     end_at = to_date if to_date else (closed_at or datetime.utcnow().isoformat())
-    if scope == 'user':
+    if effective_scope == 'user':
+        user_actor = sess_opened_by or actor or ''
         cur.execute(
             "SELECT o.id, o.created_at, e.payload_json "
             "FROM order_events e JOIN orders o ON e.order_id = o.id "
             "WHERE o.tenant_slug = ? AND e.event_type = 'payment' AND lower(e.actor) = lower(?) AND e.created_at >= ? AND e.created_at <= ? "
             "ORDER BY o.id DESC",
-            (tenant_slug, actor or '', opened_at, end_at),
+            (tenant_slug, user_actor, opened_at, end_at),
         )
         out = []
         for r in cur.fetchall() or []:
@@ -619,12 +623,21 @@ def cash_sessions_list():
     if not (_has_perm(perms, owner, role, 'cash_view') or _has_perm(perms, owner, role, 'cash_manage')):
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
+    is_super = bool(owner) or (str(role or '').strip().lower() == 'admin')
+    req_scope = str(request.args.get('scope') or '').strip().lower()
+    scopes = [scope]
+    if is_super:
+        if req_scope in ('tenant', 'user'):
+            scopes = [req_scope]
+        else:
+            scopes = ['tenant', 'user']
     limit = int(request.args.get('limit') or 50)
     offset = int(request.args.get('offset') or 0)
     date_field = (request.args.get('date_field') or 'closed').strip().lower()
     if date_field not in ('closed', 'opened'): date_field = 'closed'
     from_date = request.args.get('from')
     to_date = request.args.get('to')
+    opened_by_filter = str(request.args.get('opened_by') or '').strip()
     
     def _norm_date(s, end=False):
         try:
@@ -637,11 +650,20 @@ def cash_sessions_list():
     
     conn = get_db()
     cur = conn.cursor()
-    base = "SELECT id, tenant_slug, scope, opened_at, opened_by, opening_amount, notes_open, closed_at, closed_by, closing_amount, notes_close, closing_diff, closing_metadata FROM cash_sessions WHERE tenant_slug = ? AND scope = ? AND closed_at IS NOT NULL"
-    params = [tenant_slug, scope]
-    if scope == 'user':
+    base = "SELECT id, tenant_slug, scope, opened_at, opened_by, opening_amount, notes_open, closed_at, closed_by, closing_amount, notes_close, closing_diff, closing_metadata FROM cash_sessions WHERE tenant_slug = ? AND closed_at IS NOT NULL"
+    params = [tenant_slug]
+    if len(scopes) == 1:
+        base += " AND scope = ?"
+        params.append(scopes[0])
+    else:
+        base += " AND scope IN (?, ?)"
+        params.extend(scopes[:2])
+    if not is_super and scope == 'user':
         base += " AND lower(opened_by) = lower(?)"
         params.append(actor or '')
+    if is_super and opened_by_filter:
+        base += " AND lower(opened_by) = lower(?)"
+        params.append(opened_by_filter)
     col = 'closed_at' if date_field == 'closed' else 'opened_at'
     if from_date:
         base += f" AND {col} >= ?"
@@ -768,10 +790,19 @@ def cash_sessions_export_csv():
     if not (_has_perm(perms, owner, role, 'cash_view') or _has_perm(perms, owner, role, 'cash_manage')):
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
+    is_super = bool(owner) or (str(role or '').strip().lower() == 'admin')
+    req_scope = str(request.args.get('scope') or '').strip().lower()
+    scopes = [scope]
+    if is_super:
+        if req_scope in ('tenant', 'user'):
+            scopes = [req_scope]
+        else:
+            scopes = ['tenant', 'user']
     date_field = (request.args.get('date_field') or 'closed').strip().lower()
     if date_field not in ('closed', 'opened'): date_field = 'closed'
     from_date = request.args.get('from')
     to_date = request.args.get('to')
+    opened_by_filter = str(request.args.get('opened_by') or '').strip()
     
     def _norm_date(s, end=False):
         try:
@@ -784,11 +815,20 @@ def cash_sessions_export_csv():
     
     conn = get_db()
     cur = conn.cursor()
-    base = "SELECT id, tenant_slug, scope, opened_at, opened_by, opening_amount, notes_open, closed_at, closed_by, closing_amount, notes_close, closing_diff FROM cash_sessions WHERE tenant_slug = ? AND scope = ? AND closed_at IS NOT NULL"
-    params = [tenant_slug, scope]
-    if scope == 'user':
+    base = "SELECT id, tenant_slug, scope, opened_at, opened_by, opening_amount, notes_open, closed_at, closed_by, closing_amount, notes_close, closing_diff FROM cash_sessions WHERE tenant_slug = ? AND closed_at IS NOT NULL"
+    params = [tenant_slug]
+    if len(scopes) == 1:
+        base += " AND scope = ?"
+        params.append(scopes[0])
+    else:
+        base += " AND scope IN (?, ?)"
+        params.extend(scopes[:2])
+    if not is_super and scope == 'user':
         base += " AND lower(opened_by) = lower(?)"
         params.append(actor or '')
+    if is_super and opened_by_filter:
+        base += " AND lower(opened_by) = lower(?)"
+        params.append(opened_by_filter)
     col = 'closed_at' if date_field == 'closed' else 'opened_at'
     if from_date:
         base += f" AND {col} >= ?"

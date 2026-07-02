@@ -191,6 +191,18 @@ def _has_reports_access():
     perms = _parse_perms_json(session.get('admin_perms') or '')
     return bool(perms.get('reports_view'))
 
+def _ctx():
+    tenant = str(session.get('tenant_slug') or '').strip()
+    role = str(session.get('admin_role') or '').strip().lower()
+    owner = bool(session.get('admin_owner'))
+    perms = _parse_perms_json(session.get('admin_perms') or '')
+    return tenant, role, perms, owner
+
+def _has_perm(perms, owner, role, key):
+    if owner or role == 'admin':
+        return True
+    return bool((perms or {}).get(key))
+
 def _norm_channel(order_type):
     value = str(order_type or '').strip().lower()
     if value == 'mesa':
@@ -312,7 +324,20 @@ def _short_payment_label(full_label):
 
 @bp.route('/archive', methods=['GET'])
 def get_archive():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    session_tenant, role, perms, owner = _ctx()
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    can_access = (
+        _has_reports_access()
+        or _has_perm(perms, owner, role, 'orders_view')
+        or _has_perm(perms, owner, role, 'cash_view')
+        or _has_perm(perms, owner, role, 'cash_manage')
+    )
+    if not can_access:
+        return jsonify({'error': 'sin permisos'}), 403
     a_type = request.args.get('type')
     limit = int(request.args.get('limit') or 100)
     offset = int(request.args.get('offset') or 0)
@@ -452,8 +477,21 @@ def get_archive():
 
 @bp.route('/archive/eligible_count', methods=['GET'])
 def archive_eligible_count():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
     a_type = request.args.get('type')
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or ''
+    session_tenant, role, perms, owner = _ctx()
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    can_access = (
+        _has_reports_access()
+        or _has_perm(perms, owner, role, 'orders_view')
+        or _has_perm(perms, owner, role, 'cash_view')
+        or _has_perm(perms, owner, role, 'cash_manage')
+    )
+    if not can_access:
+        return jsonify({'error': 'sin permisos'}), 403
     hours = int(request.args.get('hours') or 24)
     if a_type not in ('delivered','canceled'):
         return jsonify({'error': 'type inválido'}), 400
@@ -482,7 +520,14 @@ def archive_eligible_count():
 @bp.route('/archive/export.csv', methods=['GET'])
 @bp.route('/archive/export', methods=['GET'])
 def archive_export():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    session_tenant = str(session.get('tenant_slug') or '').strip()
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    if not _has_reports_access():
+        return jsonify({'error': 'sin permisos'}), 403
     a_type = request.args.get('type')
     q = request.args.get('q')
     from_date = request.args.get('from')
@@ -552,7 +597,20 @@ def archive_export():
 
 @bp.route('/archive/metrics', methods=['GET'])
 def archive_metrics():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    session_tenant, role, perms, owner = _ctx()
+    if session_tenant and tenant_slug and session_tenant != tenant_slug:
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    can_access = (
+        _has_reports_access()
+        or _has_perm(perms, owner, role, 'orders_view')
+        or _has_perm(perms, owner, role, 'cash_view')
+        or _has_perm(perms, owner, role, 'cash_manage')
+    )
+    if not can_access:
+        return jsonify({'error': 'sin permisos'}), 403
     q = request.args.get('q')
     from_date = request.args.get('from')
     to_date = request.args.get('to')

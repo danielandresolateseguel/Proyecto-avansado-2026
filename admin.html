@@ -5199,7 +5199,7 @@
       setRoleVisibilityById('orders-count', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
       const canDeliveredHistory = !isKitchen && !mozoTablesOnly && canOrdersView;
       const canCanceledHistory = !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor;
-      const canArchivedHistory = !isKitchen && canReports;
+      const canArchivedHistory = !isKitchen && !mozoTablesOnly && canOrdersView;
       setRoleVisibilityById('orders-history-group', canDeliveredHistory || canCanceledHistory || canArchivedHistory);
       setRoleVisibilityById('delivered-box', canDeliveredHistory);
       setRoleVisibilityById('canceled-box', canCanceledHistory);
@@ -5214,6 +5214,7 @@
       setRoleVisibilityById('inventory-box', !isKitchen && canInventory);
       setRoleVisibilityById('carousel-box', !isKitchen && canCarousel);
       setRoleVisibilityById('archived-box', canArchivedHistory);
+      setRoleVisibilityById('arch-export-btn', canReports);
       setRoleVisibilityById('delivery-box', !isKitchen && canDelivery);
       try { document.body.classList.toggle('role-repartidor', !!isRepartidor); } catch (_) {}
 
