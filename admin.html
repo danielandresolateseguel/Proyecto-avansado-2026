@@ -11942,8 +11942,18 @@
             const delBtn = row.querySelector('.pm-del');
             if (baseSel) {
               baseSel.value = base;
-              baseSel.disabled = !isNew;
+              baseSel.disabled = locked;
               baseSel.title = baseLabel(baseSel.value);
+              if (!baseSel.dataset.listener) {
+                baseSel.addEventListener('change', () => {
+                  try { baseSel.title = baseLabel(baseSel.value); } catch (_) {}
+                  if (!locked) {
+                    row.dataset.new = '1';
+                    row.dataset.id = '';
+                  }
+                });
+                baseSel.dataset.listener = 'true';
+              }
             }
             if (labelInp) labelInp.value = label;
             if (activeChk) activeChk.checked = !!active;
@@ -12056,6 +12066,13 @@
               </label>
               <button type="button" class="pm-del" style="width:34px; height:34px; border-radius:10px; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; cursor:pointer; font-weight:950;">×</button>
             `;
+            try {
+              const baseSel = row.querySelector('.pm-base');
+              if (baseSel) {
+                baseSel.value = 'transferencia';
+                baseSel.title = baseLabel(baseSel.value);
+              }
+            } catch (_) {}
             const delBtn = row.querySelector('.pm-del');
             if (delBtn) delBtn.addEventListener('click', () => { try { row.remove(); } catch (_) {} });
             pmMethodsList.appendChild(row);
