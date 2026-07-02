@@ -2826,6 +2826,36 @@
       <div id="cfg-shipping-section" style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <div style="font-weight:bold; margin-bottom:8px;">Costo de envío (Domicilio):</div>
         <input type="number" id="cfg-shipping-cost" placeholder="0" min="0" step="100" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+        <div style="margin-top:10px; border-top:1px dashed #eee; padding-top:10px;">
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <input type="checkbox" id="cfg-shipping-distance-enabled">
+            <span style="font-size:14px; font-weight:700;">Ajustar por distancia (usa ubicación)</span>
+          </label>
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:8px;">
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:2px;">Origen (lat)</label>
+              <input type="number" id="cfg-shipping-origin-lat" placeholder="-32.9" step="0.000001" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:2px;">Origen (lng)</label>
+              <input type="number" id="cfg-shipping-origin-lng" placeholder="-68.8" step="0.000001" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px;">
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:2px;">KM incluidos</label>
+              <input type="number" id="cfg-shipping-included-km" placeholder="0" min="0" step="0.1" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:2px;">Extra por KM</label>
+              <input type="number" id="cfg-shipping-extra-per-km" placeholder="0" min="0" step="10" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:2px;">Tope (opcional)</label>
+              <input type="number" id="cfg-shipping-max-cost" placeholder="0" min="0" step="100" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+            </div>
+          </div>
+        </div>
       </div>
 
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
@@ -14521,6 +14551,18 @@
                  const allowAdminOrderSettings = applyOrdersConfigAdminVisibility();
                  const inp = document.getElementById('cfg-shipping-cost');
                  const val = inp ? (parseInt(inp.value)||0) : 0;
+                 const distEnabledEl = document.getElementById('cfg-shipping-distance-enabled');
+                 const originLatEl = document.getElementById('cfg-shipping-origin-lat');
+                 const originLngEl = document.getElementById('cfg-shipping-origin-lng');
+                 const includedKmEl = document.getElementById('cfg-shipping-included-km');
+                 const extraPerKmEl = document.getElementById('cfg-shipping-extra-per-km');
+                 const maxCostEl = document.getElementById('cfg-shipping-max-cost');
+                 const distEnabled = distEnabledEl ? !!distEnabledEl.checked : false;
+                 const originLat = originLatEl ? parseFloat(originLatEl.value || '') : NaN;
+                 const originLng = originLngEl ? parseFloat(originLngEl.value || '') : NaN;
+                 const includedKm = includedKmEl ? parseFloat(includedKmEl.value || '0') : 0;
+                 const extraPerKm = extraPerKmEl ? (parseInt(extraPerKmEl.value || '0', 10) || 0) : 0;
+                 const maxCost = maxCostEl ? (parseInt(maxCostEl.value || '0', 10) || 0) : 0;
                  const reqApprovalEl = document.getElementById('cfg-require-approval');
                  const valRequireApproval = reqApprovalEl ? !!reqApprovalEl.checked : false;
 
@@ -14557,6 +14599,13 @@
                  };
                  if (allowAdminOrderSettings) {
                    bodyPayload.shipping_cost = val;
+                   bodyPayload.shipping_distance = {
+                     enabled: distEnabled,
+                     origin: (Number.isFinite(originLat) && Number.isFinite(originLng)) ? { lat: originLat, lng: originLng } : {},
+                     included_km: Number.isFinite(includedKm) ? includedKm : 0,
+                     extra_per_km: extraPerKm,
+                     max_cost: maxCost
+                   };
                  }
                  const bodyStr = JSON.stringify(bodyPayload);
 
@@ -14564,7 +14613,9 @@
                    // 1. Save General Config
                    const resp = await fetch('/api/config', {
                      method: 'POST',
-                     headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || ''},
+                     cache: 'no-store',
+                     credentials: 'same-origin',
+                     headers: {'Content-Type': 'application/json', 'X-CSRF-Token': (csrfToken || (typeof CSRF_TOKEN !== 'undefined' ? CSRF_TOKEN : '') || '')},
                      body: bodyStr
                    });
                    
@@ -14658,11 +14709,25 @@
 
             // Load tenant config
             const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
-            fetch(`/api/config?slug=${slug}`)
+            fetch(`/api/config?slug=${slug}`, { cache: 'no-store', credentials: 'same-origin' })
               .then(r => r.json())
               .then(d => {
                  const inp = document.getElementById('cfg-shipping-cost');
                  if(inp) inp.value = d.shipping_cost || 0;
+                 const distEnabledEl = document.getElementById('cfg-shipping-distance-enabled');
+                 const originLatEl = document.getElementById('cfg-shipping-origin-lat');
+                 const originLngEl = document.getElementById('cfg-shipping-origin-lng');
+                 const includedKmEl = document.getElementById('cfg-shipping-included-km');
+                 const extraPerKmEl = document.getElementById('cfg-shipping-extra-per-km');
+                 const maxCostEl = document.getElementById('cfg-shipping-max-cost');
+                 const sd = (d && d.shipping_distance && typeof d.shipping_distance === 'object') ? d.shipping_distance : {};
+                 const origin = (sd && sd.origin && typeof sd.origin === 'object') ? sd.origin : {};
+                 if (distEnabledEl) distEnabledEl.checked = !!sd.enabled;
+                 if (originLatEl) originLatEl.value = (origin.lat != null && origin.lat !== '') ? origin.lat : '';
+                 if (originLngEl) originLngEl.value = (origin.lng != null && origin.lng !== '') ? origin.lng : '';
+                 if (includedKmEl) includedKmEl.value = (sd.included_km != null && sd.included_km !== '') ? sd.included_km : 0;
+                 if (extraPerKmEl) extraPerKmEl.value = (sd.extra_per_km != null && sd.extra_per_km !== '') ? sd.extra_per_km : 0;
+                 if (maxCostEl) maxCostEl.value = (sd.max_cost != null && sd.max_cost !== '') ? sd.max_cost : 0;
                  const reqApprovalEl = document.getElementById('cfg-require-approval');
                  if (reqApprovalEl) reqApprovalEl.checked = !!d.require_order_approval;
 
@@ -14777,7 +14842,7 @@
                     modal.style.display = 'flex';
                     // Load Config
                     const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
-                    fetch(`/api/config?slug=${slug}`)
+                    fetch(`/api/config?slug=${slug}`, { cache: 'no-store', credentials: 'same-origin' })
                       .then(r => r.json())
                       .then(d => {
                          const checkout = d.checkout || {};
@@ -15261,11 +15326,14 @@
       const productsGrid = document.getElementById('new-order-products');
       const cartContainer = document.getElementById('new-order-cart');
       const subtotalEl = document.getElementById('new-order-subtotal');
+      const shippingRowEl = document.getElementById('new-order-shipping-row');
+      const shippingTotalEl = document.getElementById('new-order-shipping-total');
       const totalEl = document.getElementById('new-order-total');
       const confirmBtn = document.getElementById('btn-create-order-confirm');
       const typeSelect = document.getElementById('new-order-type');
       const shortcutsWrap = document.getElementById('new-order-shortcuts-wrap');
       const shortcutsGrid = document.getElementById('new-order-shortcuts');
+      const shippingInputEl = document.getElementById('new-order-shipping');
       
       // Fields
       const fieldMesa = document.getElementById('field-mesa');
@@ -15274,6 +15342,7 @@
       
       let cart = [];
       let products = [];
+      let baseShippingCost = 0;
       
       // Helper for tenant name display
       const formatTenantName = (s) => {
@@ -15406,6 +15475,7 @@
         modal.style.display = 'flex'; // Ensure display flex
         await populateTableSelect(undefined, true);
         await loadProducts();
+        await loadNewOrderTenantConfig();
         await window.loadQuickOrderShortcuts(true);
         renderCart();
       });
@@ -15415,6 +15485,11 @@
         modal.classList.remove('active');
         modal.style.display = 'none';
         cart = [];
+        baseShippingCost = 0;
+        if (shippingInputEl) {
+          shippingInputEl.value = '';
+          shippingInputEl.dataset.touched = '';
+        }
         renderCart();
       };
       
@@ -15429,10 +15504,48 @@
         }
         if (fieldAddress) fieldAddress.style.display = (val === 'direccion') ? 'block' : 'none';
         if (fieldContact) fieldContact.style.display = (val !== 'mesa') ? 'block' : 'none';
+        if (shippingInputEl) {
+          if (val === 'direccion') {
+            if (shippingInputEl.dataset.touched !== '1') shippingInputEl.value = String(baseShippingCost || 0);
+          } else {
+            shippingInputEl.value = '';
+            shippingInputEl.dataset.touched = '';
+          }
+        }
+        renderCart();
       });
       
       if (tenantSelect) tenantSelect.addEventListener('change', loadProducts);
+      if (tenantSelect) tenantSelect.addEventListener('change', async () => {
+        await loadNewOrderTenantConfig();
+        renderCart();
+      });
       if (searchInput) searchInput.addEventListener('input', renderProducts);
+
+      if (shippingInputEl) {
+        shippingInputEl.addEventListener('input', () => {
+          shippingInputEl.dataset.touched = '1';
+          renderCart();
+        });
+      }
+
+      async function loadNewOrderTenantConfig() {
+        const tenant = tenantSelect ? String(tenantSelect.value || '').trim() : '';
+        if (!tenant) return;
+        try {
+          const url = new URL('/api/config', API_BASE);
+          url.searchParams.set('slug', tenant);
+          const r = await fetch(url.toString(), { cache: 'no-store', credentials: 'include' });
+          if (!r.ok) return;
+          const cfg = await r.json().catch(() => ({}));
+          baseShippingCost = parseInt(cfg && cfg.shipping_cost, 10) || 0;
+          if (shippingInputEl && typeSelect && String(typeSelect.value || '') === 'direccion') {
+            if (shippingInputEl.dataset.touched !== '1') {
+              shippingInputEl.value = String(baseShippingCost || 0);
+            }
+          }
+        } catch (_) {}
+      }
 
       async function populateTableSelect(preselectValue, forceRefresh) {
         const tableSelect = document.getElementById('new-order-table');
@@ -15709,14 +15822,14 @@
       function renderCart() {
         if (!cartContainer) return;
         cartContainer.innerHTML = '';
-        let total = 0;
+        let itemsTotal = 0;
         
         if (cart.length === 0) {
           cartContainer.innerHTML = '<div class="small" style="text-align: center; padding: 20px; color: #999; font-style: italic;">Carrito vacío</div>';
         } else {
           cart.forEach(item => {
             const rowTotal = item.price * item.qty;
-            total += rowTotal;
+            itemsTotal += rowTotal;
             const safeKey = escapeJsString(item.key);
             const row = document.createElement('div');
             row.style.cssText = 'display: flex; flex-direction: column; padding: 8px; background: #f9f9f9; border-radius: 6px; font-size: 13px; gap: 8px;';
@@ -15739,9 +15852,19 @@
             cartContainer.appendChild(row);
           });
         }
-        
-        if (subtotalEl) subtotalEl.textContent = '$' + total;
-        if (totalEl) totalEl.textContent = '$' + total;
+        const type = typeSelect ? String(typeSelect.value || '') : '';
+        let ship = 0;
+        if (type === 'direccion') {
+          const raw = shippingInputEl ? String(shippingInputEl.value || '').trim() : '';
+          ship = parseInt(raw || String(baseShippingCost || 0), 10) || 0;
+          ship = Math.max(0, ship);
+        }
+        const finalTotal = itemsTotal + ship;
+
+        if (subtotalEl) subtotalEl.textContent = '$' + itemsTotal;
+        if (shippingRowEl) shippingRowEl.style.display = (type === 'direccion' && ship > 0) ? 'flex' : 'none';
+        if (shippingTotalEl) shippingTotalEl.textContent = '$' + ship;
+        if (totalEl) totalEl.textContent = '$' + finalTotal;
         
         // Update confirm button state
         if (confirmBtn) {
@@ -15759,7 +15882,14 @@
         try {
           const type = typeSelect.value;
           const tenant = tenantSelect.value;
-          const total = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+          const itemsTotal = cart.reduce((acc, i) => acc + (i.price * i.qty), 0);
+          let shippingCost = 0;
+          if (type === 'direccion') {
+            const rawShip = shippingInputEl ? String(shippingInputEl.value || '').trim() : '';
+            shippingCost = parseInt(rawShip || String(baseShippingCost || 0), 10) || 0;
+            shippingCost = Math.max(0, shippingCost);
+          }
+          const total = itemsTotal + shippingCost;
           
           let address = '';
           let locality = '';
@@ -15802,7 +15932,10 @@
           };
           
           if (type === 'mesa') payload.table_number = table;
-          if (type === 'direccion') payload.address = { address: address, locality: locality };
+          if (type === 'direccion') {
+            payload.address = { address: address, locality: locality };
+            payload.shipping_cost = shippingCost;
+          }
           if (type === 'espera') payload.address = address || 'Retiro en local';
           
           // Ensure CSRF
@@ -16228,6 +16361,8 @@
               <input type="text" id="new-order-address" placeholder="Calle y número" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Localidad</label>
               <input type="text" id="new-order-locality" placeholder="Ej: Las Heras, Mendoza" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Envío</label>
+              <input type="number" id="new-order-shipping" placeholder="0" min="0" step="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
             </div>
 
             <div id="field-contact" class="order-type-field" style="display: none;">
@@ -16262,6 +16397,10 @@
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; color: #666;">
             <span>Subtotal:</span>
             <span id="new-order-subtotal">$0</span>
+          </div>
+          <div id="new-order-shipping-row" style="display:none; justify-content: space-between; margin-bottom: 4px; font-size: 14px; color: #666;">
+            <span>Envío:</span>
+            <span id="new-order-shipping-total">$0</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 800; font-size: 1.25rem; color: #333;">
             <span>Total:</span>
