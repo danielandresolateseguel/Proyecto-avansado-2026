@@ -7012,7 +7012,7 @@
         combinedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
 
         const destino = destinoLabelFor(order);
-        const telefono = ((order.order_type === 'direccion' || order.order_type === 'espera') && order.customer_phone) ? String(order.customer_phone) : '';
+        const telefono = order.customer_phone ? String(order.customer_phone) : '';
         const box = document.createElement('div');
         const itemsRows = items.map(it => {
           const qty = Number(it.qty || 0);
@@ -17300,11 +17300,13 @@
                 const addr = getAddressText(o.address_json);
                 const name = (o.customer_name || '').trim();
                 destText = `Delivery: ${addr}`;
-                if (name) destText += `<br>Cliente: ${name}`;
+                if (name) destText += `<br>Cliente: ${escapeAdminHtml(name)}`;
             } else if (isEspera) {
                 const name = (o.customer_name || '').trim();
-                destText = `Retira: ${name || 'Mostrador'}`;
+                destText = `Retira: ${name ? escapeAdminHtml(name) : 'Mostrador'}`;
             }
+            const customerPhone = (o.customer_phone || '').trim();
+            if (customerPhone) destText += `<br>Tel: ${escapeAdminHtml(customerPhone)}`;
             
             let itemsHtml = '<table style="width:100%; border-collapse:collapse; font-size:12px; margin:10px 0;">';
             itemsHtml += '<tr style="border-bottom:1px solid #000;"><th>Cant</th><th style="text-align:left;">Desc</th><th style="text-align:right;">Tot</th></tr>';
@@ -17482,11 +17484,13 @@
                 const addr = getAddressText(o.address_json);
                 const name = (o.customer_name || '').trim();
                 destText = `Delivery: ${addr}`;
-                if (name) destText += `<br>Cliente: ${name}`;
+                if (name) destText += `<br>Cliente: ${escapeAdminHtml(name)}`;
             } else if (isEspera) {
                 const name = (o.customer_name || '').trim();
-                destText = `Retira: ${name || 'Mostrador'}`;
+                destText = `Retira: ${name ? escapeAdminHtml(name) : 'Mostrador'}`;
             }
+            const customerPhone = (o.customer_phone || '').trim();
+            if (customerPhone) destText += `<br>Tel: ${escapeAdminHtml(customerPhone)}`;
             
             let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:${px(14)}px; margin:${px(10)}px 0;">`;
             itemsHtml += `<tr style="border-bottom:${Math.max(2, px(2))}px solid #000;"><th>Cant</th><th style="text-align:left;">Producto</th></tr>`;
@@ -17615,11 +17619,13 @@
                 const addr = getAddressText(o.address_json);
                 const name = (o.customer_name || '').trim();
                 destText = `Delivery: ${addr}`;
-                if (name) destText += `<br>Cliente: ${name}`;
+                if (name) destText += `<br>Cliente: ${escapeAdminHtml(name)}`;
             } else if (isEspera) {
                 const name = (o.customer_name || '').trim();
-                destText = `Retira: ${name || 'Mostrador'}`;
+                destText = `Retira: ${name ? escapeAdminHtml(name) : 'Mostrador'}`;
             }
+            const customerPhone = (o.customer_phone || '').trim();
+            if (customerPhone) destText += `<br>Tel: ${escapeAdminHtml(customerPhone)}`;
 
             let itemsHtml = `<table style="width:100%; border-collapse:collapse; font-size:${px(16)}px; margin:${px(12)}px 0;">`;
             itemsHtml += `<tr style="border-bottom:${Math.max(3, px(3))}px solid #000;"><th>Cant</th><th style="text-align:left;">Producto</th></tr>`;
@@ -17798,7 +17804,7 @@
          
          const destLabel = (typeof destinoLabelFor === 'function') ? destinoLabelFor(o) : (o.table_number || o.order_type);
          
-         const phoneRaw = ((isDireccion || isEspera) && o.customer_phone) ? String(o.customer_phone) : '';
+         const phoneRaw = o.customer_phone ? String(o.customer_phone) : '';
          const phoneDigits = phoneRaw.replace(/\D/g, '');
          const waUrl = getWaLink(o, phoneDigits);
          
