@@ -6839,7 +6839,7 @@
 
     async function loadTenantPrefs() {
       try {
-        const slug = tenantInput.value.trim() || defaultSlug();
+        const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (currentTenantSlug || tenantInput.value.trim() || defaultSlug()));
         const url = new URL('/api/tenant_prefs', API_BASE);
         url.searchParams.set('tenant_slug', slug);
         const resp = await fetch(url.toString());
@@ -12008,7 +12008,7 @@
             if (!exists) methods.unshift({ id: d.id, base: d.base, label: d.label, active: true });
           });
           try {
-            const slug = tenantInput.value.trim() || defaultSlug();
+            const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (currentTenantSlug || tenantInput.value.trim() || defaultSlug()));
             if (!csrfToken) await fetchCSRF();
             const url = new URL('/api/tenant_prefs', API_BASE);
             url.searchParams.set('tenant_slug', slug);
@@ -12017,10 +12017,19 @@
               headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
               body: JSON.stringify({ section: 'payment_methods', data: { methods } })
             });
-            if (!resp.ok) return;
+            if (!resp.ok) {
+              let msg = 'No se pudieron guardar los medios de pago';
+              try {
+                const j = await resp.json();
+                if (j && j.error) msg = String(j.error);
+              } catch (_) {}
+              try { showToast(msg, 'error'); } catch (_) {}
+              return;
+            }
             currentPaymentMethodsConfig = { methods };
             renderPmMethodsEditor();
             renderPayOptionButtons();
+            try { showToast('Medios de pago guardados', 'success'); } catch (_) {}
           } catch (_) {}
         };
 
