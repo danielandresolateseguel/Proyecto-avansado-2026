@@ -939,6 +939,10 @@ def list_orders():
     from_date = request.args.get('from')
     to_date = request.args.get('to')
     exclude_archived = request.args.get('exclude_archived')
+    date_field = str(request.args.get('date_field') or 'created').strip().lower()
+    if date_field not in ('created', 'closed'):
+        date_field = 'created'
+    use_closed_date = (date_field == 'closed' and str(status or '').strip().lower() in ('entregado', 'cancelado'))
     
     conn = get_db()
     cur = conn.cursor()
@@ -946,22 +950,33 @@ def list_orders():
         ensure_orders_tenant_number_columns(conn, cur)
     except Exception:
         pass
-    base = "SELECT id, tenant_slug, tenant_order_number, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at FROM orders WHERE tenant_slug = ?"
-    params = [tenant_slug]
+    if use_closed_date:
+        base = (
+            "SELECT o.id, o.tenant_slug, o.tenant_order_number, o.order_type, o.table_number, o.address_json, o.status, o.total, o.created_at, "
+            "o.customer_phone, o.customer_name, o.payment_status, o.payment_method, o.tip_amount, o.shipping_cost, o.delivery_assigned_to, "
+            "o.delivery_status, o.delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at, h.last_change AS closed_at "
+            "FROM orders o "
+            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
+            "WHERE o.tenant_slug = ?"
+        )
+        params = [str(status).strip().lower(), tenant_slug]
+    else:
+        base = "SELECT id, tenant_slug, tenant_order_number, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at FROM orders WHERE tenant_slug = ?"
+        params = [tenant_slug]
     if exclude_archived == 'true':
-        base += " AND id NOT IN (SELECT order_id FROM archived_orders)"
+        base += " AND " + ("o.id" if use_closed_date else "id") + " NOT IN (SELECT order_id FROM archived_orders)"
     if status:
-        base += " AND status = ?"
+        base += " AND " + ("o.status" if use_closed_date else "status") + " = ?"
         params.append(status)
     if qid_param:
         try:
             exact_id = int(qid_param)
             visible_num = _parse_visible_order_number(qid_param)
             if visible_num:
-                base += " AND (id = ? OR tenant_order_number = ?)"
+                base += " AND (" + ("o.id" if use_closed_date else "id") + " = ? OR " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?)"
                 params.extend([exact_id, visible_num])
             else:
-                base += " AND id = ?"
+                base += " AND " + ("o.id" if use_closed_date else "id") + " = ?"
                 params.append(exact_id)
         except:
             pass
@@ -970,44 +985,58 @@ def list_orders():
         if visible_num is not None:
             try:
                 qid = int(str(q).strip())
-                base += " AND (id = ? OR tenant_order_number = ?)"
+                base += " AND (" + ("o.id" if use_closed_date else "id") + " = ? OR " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?)"
                 params.extend([qid, visible_num])
             except Exception:
-                base += " AND tenant_order_number = ?"
+                base += " AND " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?"
                 params.append(visible_num)
         else:
             like = f"%{q}%"
-            base += " AND (COALESCE(address_json,'') LIKE ? OR COALESCE(customer_name,'') LIKE ? OR COALESCE(customer_phone,'') LIKE ? OR COALESCE(table_number,'') LIKE ?)"
+            base += (
+                " AND (COALESCE(" + ("o.address_json" if use_closed_date else "address_json") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.customer_name" if use_closed_date else "customer_name") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.customer_phone" if use_closed_date else "customer_phone") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.table_number" if use_closed_date else "table_number") + ",'') LIKE ?)"
+            )
             params.extend([like, like, like, like])
     if from_date:
-        base += " AND created_at >= ?"
+        base += " AND " + ("h.last_change" if use_closed_date else "created_at") + " >= ?"
         params.append(from_date)
     if to_date:
-        base += " AND created_at <= ?"
+        base += " AND " + ("h.last_change" if use_closed_date else "created_at") + " <= ?"
         params.append(to_date)
-    base += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    base += " ORDER BY " + ("h.last_change DESC, o.id DESC" if use_closed_date else "id DESC") + " LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     cur.execute(base, params)
     rows = cur.fetchall()
     data = [dict(r) for r in rows]
     
     # Count query (simplified for brevity)
-    count_sql = "SELECT COUNT(*) FROM orders WHERE tenant_slug = ?"
-    count_params = [tenant_slug]
+    if use_closed_date:
+        count_sql = (
+            "SELECT COUNT(*) "
+            "FROM orders o "
+            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
+            "WHERE o.tenant_slug = ?"
+        )
+        count_params = [str(status).strip().lower(), tenant_slug]
+    else:
+        count_sql = "SELECT COUNT(*) FROM orders WHERE tenant_slug = ?"
+        count_params = [tenant_slug]
     if exclude_archived == 'true':
-        count_sql += " AND id NOT IN (SELECT order_id FROM archived_orders)"
+        count_sql += " AND " + ("o.id" if use_closed_date else "id") + " NOT IN (SELECT order_id FROM archived_orders)"
     if status:
-        count_sql += " AND status = ?"
+        count_sql += " AND " + ("o.status" if use_closed_date else "status") + " = ?"
         count_params.append(status)
     if qid_param:
         try:
             exact_id = int(qid_param)
             visible_num = _parse_visible_order_number(qid_param)
             if visible_num:
-                count_sql += " AND (id = ? OR tenant_order_number = ?)"
+                count_sql += " AND (" + ("o.id" if use_closed_date else "id") + " = ? OR " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?)"
                 count_params.extend([exact_id, visible_num])
             else:
-                count_sql += " AND id = ?"
+                count_sql += " AND " + ("o.id" if use_closed_date else "id") + " = ?"
                 count_params.append(exact_id)
         except Exception:
             pass
@@ -1016,20 +1045,25 @@ def list_orders():
         if visible_num is not None:
             try:
                 qid = int(str(q).strip())
-                count_sql += " AND (id = ? OR tenant_order_number = ?)"
+                count_sql += " AND (" + ("o.id" if use_closed_date else "id") + " = ? OR " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?)"
                 count_params.extend([qid, visible_num])
             except Exception:
-                count_sql += " AND tenant_order_number = ?"
+                count_sql += " AND " + ("o.tenant_order_number" if use_closed_date else "tenant_order_number") + " = ?"
                 count_params.append(visible_num)
         else:
             like = f"%{q}%"
-            count_sql += " AND (COALESCE(address_json,'') LIKE ? OR COALESCE(customer_name,'') LIKE ? OR COALESCE(customer_phone,'') LIKE ? OR COALESCE(table_number,'') LIKE ?)"
+            count_sql += (
+                " AND (COALESCE(" + ("o.address_json" if use_closed_date else "address_json") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.customer_name" if use_closed_date else "customer_name") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.customer_phone" if use_closed_date else "customer_phone") + ",'') LIKE ?"
+                " OR COALESCE(" + ("o.table_number" if use_closed_date else "table_number") + ",'') LIKE ?)"
+            )
             count_params.extend([like, like, like, like])
     if from_date:
-        count_sql += " AND created_at >= ?"
+        count_sql += " AND " + ("h.last_change" if use_closed_date else "created_at") + " >= ?"
         count_params.append(from_date)
     if to_date:
-        count_sql += " AND created_at <= ?"
+        count_sql += " AND " + ("h.last_change" if use_closed_date else "created_at") + " <= ?"
         count_params.append(to_date)
 
     cur.execute(count_sql, count_params)

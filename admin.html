@@ -5800,6 +5800,9 @@
       if (raw === 'retiro') return 'espera';
       return raw;
     }
+    function closedDateForOrder(order) {
+      return (order && (order.closed_at || order.delivered_at || order.created_at)) || '';
+    }
     function matchesClosedDateFilter(order, dateValue) {
       const ts = parseDateSafe(dateValue);
       if (Number.isNaN(ts)) return false;
@@ -5843,7 +5846,7 @@
           const orderType = normalizeClosedTypeFilter(o && o.order_type || '');
           if (orderType !== typeFilter) return false;
         }
-        if (!matchesClosedDateFilter(o, o && o.created_at)) return false;
+        if (!matchesClosedDateFilter(o, closedDateForOrder(o))) return false;
         return true;
       });
     }
@@ -5859,10 +5862,41 @@
       if (!safeTotal) return 0;
       return Math.floor((safeTotal - 1) / safeLimit) * safeLimit;
     }
+    function _closedIsoBoundary(dateStr, end) {
+      const d = String(dateStr || '').trim();
+      if (!d) return '';
+      if (d.length === 10) return d + (end ? 'T23:59:59' : 'T00:00:00');
+      return d;
+    }
+    function getClosedRangeIso() {
+      const from = _closedIsoBoundary(window.archivedFrom || '', false);
+      const to = _closedIsoBoundary(window.archivedTo || '', true);
+      return { from, to };
+    }
+    async function fetchClosedOrdersFromApi(status) {
+      const slug = tenantInput.value.trim() || defaultSlug();
+      const url = new URL('/api/orders', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      url.searchParams.set('status', String(status || '').trim());
+      url.searchParams.set('exclude_archived', 'true');
+      url.searchParams.set('limit', '500');
+      url.searchParams.set('offset', '0');
+      url.searchParams.set('date_field', 'closed');
+      const range = getClosedRangeIso();
+      if (range.from) url.searchParams.set('from', range.from);
+      if (range.to) url.searchParams.set('to', range.to);
+      if (window.archivedSearch) url.searchParams.set('q', window.archivedSearch);
+      const resp = await wFetch(url.toString());
+      if (!resp.ok) throw new Error('No se pudieron cargar pedidos cerrados');
+      const data = await resp.json();
+      return Array.isArray(data && data.orders) ? data.orders : [];
+    }
     async function refreshClosedViews(options = {}) {
       const includeRecent = options.recent !== false;
       const includeArchived = options.archived !== false;
       if (includeRecent) {
+        try { window.deliveredCurrent = await fetchClosedOrdersFromApi('entregado'); } catch (_) { window.deliveredCurrent = window.deliveredCurrent || []; }
+        try { window.canceledCurrent = await fetchClosedOrdersFromApi('cancelado'); } catch (_) { window.canceledCurrent = window.canceledCurrent || []; }
         try { await renderDelivered(window.deliveredCurrent || []); } catch (_) {}
         try { await renderCanceled(window.canceledCurrent || []); } catch (_) {}
       }
@@ -7620,7 +7654,7 @@
 
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
-          <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
+          <td><span class="small">${formatARDate(closedDateForOrder(o) || '')}</span></td>
           <td><span class="pill">${safeOrderType}</span></td>
           <td>${(isMesa || isEspera) ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</td>
           <td>
@@ -9319,7 +9353,7 @@
               : '<span class="small" style="color:#9aa4b2;">-</span>'}
           </td>
           <td>${safeOrderNumber}</td>
-          <td><span class="small">${formatARDate(o.created_at || '')}</span></td>
+          <td><span class="small">${formatARDate(closedDateForOrder(o) || '')}</span></td>
           <td><span class="pill">${safeOrderType}</span></td>
           <td>${o.order_type === 'mesa' ? `<span class="pill pill-mesa">${safeDestLabel}</span>` : safeDestLabel}</td>
           <td>
@@ -9370,7 +9404,7 @@
             </div>
             <div class="card-content">
               <div class="title">Pedido #${displayOrderNumber(o)}</div>
-              <div class="meta">${formatARDate(o.created_at||'')} · ${o.order_type}</div>
+              <div class="meta">${formatARDate(closedDateForOrder(o)||'')} · ${o.order_type}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${destLabel}</span>`:destLabel}</div>
               <div class="meta">${phoneRaw ? `Tel: ${phoneRaw}` : ''} ${waUrl ? `<a href='${waUrl}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">
@@ -9528,7 +9562,7 @@
             </div>
             <div class="card-content">
               <div class="title">Pedido #${safeOrderNumber}</div>
-              <div class="meta">${formatARDate(o.created_at||'')} · ${safeOrderType}</div>
+              <div class="meta">${formatARDate(closedDateForOrder(o)||'')} · ${safeOrderType}</div>
               <div class="meta">Destino: ${o.order_type==='mesa'?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
               <div class="grid">
                 <div>Total: $${o.total}</div>
