@@ -5119,9 +5119,16 @@
     const loginRemEl = document.getElementById('login-remember');
     const loginShowEl = document.getElementById('login-show');
     try { localStorage.removeItem('kds_login_pass'); } catch (_) {}
-    const _rem = (localStorage.getItem(LOGIN_KEY_REM) === '1');
+    let _rem = false;
+    let _lu = '';
+    try {
+      _rem = (localStorage.getItem(LOGIN_KEY_REM) === '1');
+      _lu = localStorage.getItem(LOGIN_KEY_USER) || '';
+    } catch (_) {
+      _rem = false;
+      _lu = '';
+    }
     if (loginRemEl) loginRemEl.checked = _rem;
-    const _lu = localStorage.getItem(LOGIN_KEY_USER) || '';
     if (loginUserEl) loginUserEl.value = _lu;
     if (loginPassEl) loginPassEl.value = '';
     if (loginShowEl && loginPassEl) loginShowEl.onchange = function(){ loginPassEl.type = loginShowEl.checked ? 'text' : 'password'; };
@@ -11812,12 +11819,12 @@
 
         if (cfgCheck) {
             // Load preference
-            cfgCheck.checked = (localStorage.getItem('kds_autoprint_transfer') === 'true');
+            try { cfgCheck.checked = (localStorage.getItem('kds_autoprint_transfer') === 'true'); } catch (_) { cfgCheck.checked = false; }
             
             // Save preference on change (ensure listener added only once)
             if (!cfgCheck.dataset.listener) {
                 cfgCheck.addEventListener('change', (e) => {
-                    localStorage.setItem('kds_autoprint_transfer', e.target.checked);
+                    try { localStorage.setItem('kds_autoprint_transfer', e.target.checked); } catch (_) {}
                 });
                 cfgCheck.dataset.listener = 'true';
             }
