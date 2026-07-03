@@ -2033,12 +2033,15 @@ def pay_order(order_id):
         for pay in payments_to_register:
             pm = pay['method']
             amt = pay['amount']
-            note = f"Cobro pedido #{order_id} ({pm})"
+            base_pm = allowed_map.get(pm) or pm
+            note = f"Cobro pedido #{order_id} ({base_pm})"
+            if base_pm != pm:
+                note += f" [{pm}]"
             if method != 'mixed' and tip_amount > 0:
                  note += f" (incl. propina ${tip_amount})"
             cur.execute(
                 "INSERT INTO cash_movements (session_id, type, amount, note, actor, created_at, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (session_id, 'entrada', amt, note, actor, created_at, pm)
+                (session_id, 'entrada', amt, note, actor, created_at, base_pm)
             )
 
         conn.commit()

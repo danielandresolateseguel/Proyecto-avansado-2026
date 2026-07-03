@@ -414,6 +414,14 @@ def cash_movements_list():
     if not (_has_perm(perms, owner, role, 'cash_view') or _has_perm(perms, owner, role, 'cash_manage')):
         return jsonify({'error': 'sin permisos'}), 403
     scope = _scope_for(role, owner=owner)
+    is_super = bool(owner) or (str(role or '').strip().lower() == 'admin')
+    req_scope = str(request.args.get('scope') or '').strip().lower()
+    scopes = [scope]
+    if is_super:
+        if req_scope in ('tenant', 'user'):
+            scopes = [req_scope]
+        else:
+            scopes = ['tenant', 'user']
     session_id = request.args.get('session_id')
     from_date = request.args.get('from')
     to_date = request.args.get('to')
@@ -431,20 +439,27 @@ def cash_movements_list():
             return jsonify({'error': 'sesión no encontrada'}), 404
         sess_scope = str(srow[0] or 'tenant')
         sess_opened_by = str(srow[1] or '')
-        if scope == 'user' and (sess_scope != 'user' or sess_opened_by.lower() != (actor or '').lower()):
-            return jsonify({'error': 'acceso denegado a la sesión'}), 403
-        if scope == 'tenant' and sess_scope != 'tenant':
-            return jsonify({'error': 'acceso denegado a la sesión'}), 403
-        cur.execute("SELECT id, session_id, type, amount, note, actor, created_at FROM cash_movements WHERE session_id = ? ORDER BY id ASC", (sid,))
+        if not is_super:
+            if scope == 'user' and (sess_scope != 'user' or sess_opened_by.lower() != (actor or '').lower()):
+                return jsonify({'error': 'acceso denegado a la sesión'}), 403
+            if scope == 'tenant' and sess_scope != 'tenant':
+                return jsonify({'error': 'acceso denegado a la sesión'}), 403
+        cur.execute("SELECT id, session_id, type, amount, note, actor, created_at, payment_method FROM cash_movements WHERE session_id = ? ORDER BY id ASC", (sid,))
         movements = [dict(r) for r in cur.fetchall()]
     elif from_date or to_date:
         q = (
-            "SELECT m.id, m.session_id, m.type, m.amount, m.note, m.actor, m.created_at "
+            "SELECT m.id, m.session_id, m.type, m.amount, m.note, m.actor, m.created_at, m.payment_method "
             "FROM cash_movements m JOIN cash_sessions s ON m.session_id = s.id "
-            "WHERE s.tenant_slug = ? AND s.scope = ?"
+            "WHERE s.tenant_slug = ?"
         )
-        params = [tenant_slug, scope]
-        if scope == 'user':
+        params = [tenant_slug]
+        if len(scopes) == 1:
+            q += " AND s.scope = ?"
+            params.append(scopes[0])
+        else:
+            q += " AND s.scope IN (?, ?)"
+            params.extend(scopes[:2])
+        if not is_super and scope == 'user':
             q += " AND lower(s.opened_by) = lower(?)"
             params.append(actor or '')
         if from_date:
@@ -714,20 +729,24 @@ def cash_sessions_list():
         
         cur.execute("SELECT type, payment_method, SUM(amount), COUNT(*) FROM cash_movements WHERE session_id = ? GROUP BY type, payment_method", (sid,))
         rows_mov = cur.fetchall()
-        breakdown = {'efectivo': int(s.get('opening_amount') or 0), 'pos': 0, 'transferencia': 0, 'otros': 0}
-        breakdown_counts = {'efectivo': 0, 'pos': 0, 'transferencia': 0, 'otros': 0}
+        breakdown = _empty_breakdown()
+        breakdown['efectivo'] = int(s.get('opening_amount') or 0)
+        breakdown_counts = _empty_breakdown()
         for rm in rows_mov:
             mtype = rm[0]
             pm = (rm[1] or '').strip().lower()
             amt = int(rm[2] or 0)
             cnt = int(rm[3] or 0)
             if mtype == 'entrada':
-                if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                    breakdown['pos'] += amt
-                    breakdown_counts['pos'] += cnt
-                elif 'transferencia' in pm:
+                if 'qr' in pm:
+                    breakdown['qr'] += amt
+                    breakdown_counts['qr'] += cnt
+                elif 'transferencia' in pm or pm == 'trans':
                     breakdown['transferencia'] += amt
                     breakdown_counts['transferencia'] += cnt
+                elif 'pos' in pm or 'tarjeta' in pm:
+                    breakdown['pos'] += amt
+                    breakdown_counts['pos'] += cnt
                 elif 'otros' in pm:
                     breakdown['otros'] += amt
                     breakdown_counts['otros'] += cnt
@@ -735,12 +754,15 @@ def cash_sessions_list():
                     breakdown['efectivo'] += amt
                     breakdown_counts['efectivo'] += cnt
             elif mtype == 'salida':
-                if 'pos' in pm or 'qr' in pm or 'tarjeta' in pm:
-                    breakdown['pos'] -= amt
-                    breakdown_counts['pos'] += cnt
-                elif 'transferencia' in pm:
+                if 'qr' in pm:
+                    breakdown['qr'] -= amt
+                    breakdown_counts['qr'] += cnt
+                elif 'transferencia' in pm or pm == 'trans':
                     breakdown['transferencia'] -= amt
                     breakdown_counts['transferencia'] += cnt
+                elif 'pos' in pm or 'tarjeta' in pm:
+                    breakdown['pos'] -= amt
+                    breakdown_counts['pos'] += cnt
                 elif 'otros' in pm:
                     breakdown['otros'] -= amt
                     breakdown_counts['otros'] += cnt
