@@ -2702,6 +2702,30 @@
             </div>
             <div class="edit-form-group">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="edit-prod-mixable" style="width:auto;"> Permitir como mitad en Pizza Mixta
+              </label>
+              <small>Marcá esta opción en las pizzas que sí se pueden combinar.</small>
+            </div>
+            <div class="edit-form-group">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="edit-prod-mix-builder" style="width:auto;"> Este producto se arma como Pizza Mixta
+              </label>
+              <div id="edit-prod-mix-config" style="display:none; margin-top:10px;">
+                <label>Categoría de origen de las mitades</label>
+                <select id="edit-prod-mix-source-cat" style="width:100%; padding:8px;">
+                  <option value="pizzas">Pizzas</option>
+                  <option value="sandwich">Sándwich</option>
+                  <option value="comen-dos">Comen dos</option>
+                  <option value="al-plato">Al plato</option>
+                  <option value="bebidas">Bebidas</option>
+                  <option value="cocteles">Cocteles</option>
+                  <option value="postres">Postres</option>
+                </select>
+                <small>Toma dos mitades de esa categoría y calcula el precio como 50% + 50%.</small>
+              </div>
+            </div>
+            <div class="edit-form-group">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
                 <input type="checkbox" id="edit-prod-active" style="width:auto;"> Activo (visible en menú)
               </label>
             </div>
@@ -3343,6 +3367,10 @@
     const prodEditSection = document.getElementById('edit-prod-section');
     const prodEditInterest = document.getElementById('edit-prod-interest');
     const prodEditFoodCats = document.getElementById('edit-prod-food-cats');
+    const prodEditMixable = document.getElementById('edit-prod-mixable');
+    const prodEditMixBuilder = document.getElementById('edit-prod-mix-builder');
+    const prodEditMixConfig = document.getElementById('edit-prod-mix-config');
+    const prodEditMixSourceCat = document.getElementById('edit-prod-mix-source-cat');
     const prodEditTriggerUpload = document.getElementById('edit-prod-trigger-upload');
     const prodEditFile = document.getElementById('edit-prod-file');
     const prodEditDeleteImgBtn = document.getElementById('edit-prod-delete-img-btn');
@@ -3368,6 +3396,15 @@
     let currentEditingProduct = null;
     let adminMainMenuCategories = DEFAULT_MAIN_MENU_CATEGORIES.slice();
     let adminMainMenuCategoriesLoadedSlug = '';
+
+    function syncMixBuilderConfig(toggleEl, containerEl, sourceSelectEl) {
+      if (!containerEl) return;
+      const enabled = !!(toggleEl && toggleEl.checked);
+      containerEl.style.display = enabled ? 'block' : 'none';
+      if (enabled && sourceSelectEl && !String(sourceSelectEl.value || '').trim()) {
+        sourceSelectEl.value = 'pizzas';
+      }
+    }
 
     function normalizeAdminPackList(raw) {
       let arr = raw;
@@ -3907,6 +3944,11 @@
         const packs = normalizeAdminPackList(v.packs || v.pack_options || v.sale_packs);
         renderAdminPacksEditor(prodEditPacks, packs);
         bindAdminPackPriceSync(prodEditPrice, prodEditPacks);
+        if (prodEditMixable) prodEditMixable.checked = !!v.mixable;
+        const mixBuilder = (v.mix_builder && typeof v.mix_builder === 'object') ? v.mix_builder : {};
+        if (prodEditMixBuilder) prodEditMixBuilder.checked = !!(mixBuilder && mixBuilder.enabled !== false);
+        if (prodEditMixSourceCat) prodEditMixSourceCat.value = String(mixBuilder.source_category || 'pizzas');
+        syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat);
         if (prodEditAddPackBtn && prodEditAddPackBtn.dataset.bound !== 'true') {
           prodEditAddPackBtn.addEventListener('click', () => addAdminPackRow(prodEditPacks));
           prodEditAddPackBtn.dataset.bound = 'true';
@@ -3931,6 +3973,10 @@
         prodEditPacks.innerHTML = '';
         prodEditPacks.dataset.rendered = '0';
       }
+      if (prodEditMixable) prodEditMixable.checked = false;
+      if (prodEditMixBuilder) prodEditMixBuilder.checked = false;
+      if (prodEditMixSourceCat) prodEditMixSourceCat.value = 'pizzas';
+      syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat);
       currentEditingProduct = null;
     }
 
@@ -3955,6 +4001,7 @@
     if (prodEditPrice) prodEditPrice.addEventListener('input', updatePreview);
     if (prodEditImage) prodEditImage.addEventListener('input', updatePreview);
     if (prodEditSection) prodEditSection.addEventListener('change', () => {});
+    if (prodEditMixBuilder) prodEditMixBuilder.addEventListener('change', () => syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat));
 
     // Image Upload & Delete Handlers
     if (prodEditTriggerUpload && prodEditFile) {
@@ -4162,6 +4209,25 @@
                 if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
                 if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
                 if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
+            }
+
+            if (prodEditMixable && prodEditMixable.checked) {
+                variants.mixable = true;
+            } else if (variants && typeof variants === 'object' && 'mixable' in variants) {
+                delete variants.mixable;
+            }
+
+            if (prodEditMixBuilder && prodEditMixBuilder.checked) {
+                variants.mix_builder = {
+                    enabled: true,
+                    source_category: String(prodEditMixSourceCat && prodEditMixSourceCat.value || 'pizzas').trim() || 'pizzas',
+                    parts: 2,
+                    part_fraction: 0.5,
+                    only_mixable: true,
+                    pricing_mode: 'sum_parts'
+                };
+            } else if (variants && typeof variants === 'object' && 'mix_builder' in variants) {
+                delete variants.mix_builder;
             }
 
             if (Object.keys(variants).length > 0) {
@@ -18612,6 +18678,30 @@
           <small>Usado para los filtros de la carta online.</small>
         </div>
         <div class="edit-form-group">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="create-prod-mixable" style="width:auto;"> Permitir como mitad en Pizza Mixta
+          </label>
+          <small>Marcá esta opción en las pizzas que se pueden combinar.</small>
+        </div>
+        <div class="edit-form-group">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="create-prod-mix-builder" style="width:auto;"> Este producto se arma como Pizza Mixta
+          </label>
+          <div id="create-prod-mix-config" style="display:none; margin-top:10px;">
+            <label for="create-prod-mix-source-cat">Categoría de origen de las mitades</label>
+            <select id="create-prod-mix-source-cat">
+              <option value="pizzas">Pizzas</option>
+              <option value="sandwich">Sándwich</option>
+              <option value="comen-dos">Comen dos</option>
+              <option value="al-plato">Al plato</option>
+              <option value="bebidas">Bebidas</option>
+              <option value="cocteles">Cocteles</option>
+              <option value="postres">Postres</option>
+            </select>
+            <small>Toma dos mitades de esa categoría y calcula el precio como 50% + 50%.</small>
+          </div>
+        </div>
+        <div class="edit-form-group">
           <label for="create-prod-interest">Etiqueta de interés (requerida si es “Recomendados por interés”)</label>
           <select id="create-prod-interest">
             <option value="">Sin etiqueta</option>
@@ -18966,6 +19056,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const pSection = document.getElementById('create-prod-section');
   const pInterest = document.getElementById('create-prod-interest');
   const pFoodCats = document.getElementById('create-prod-food-cats');
+  const pMixable = document.getElementById('create-prod-mixable');
+  const pMixBuilder = document.getElementById('create-prod-mix-builder');
+  const pMixConfig = document.getElementById('create-prod-mix-config');
+  const pMixSourceCat = document.getElementById('create-prod-mix-source-cat');
   const pFile = document.getElementById('create-prod-file');
   const pImgUrl = document.getElementById('create-prod-image-url');
   const pPacks = document.getElementById('create-prod-packs');
@@ -19021,6 +19115,10 @@ document.addEventListener('DOMContentLoaded', () => {
       pSection.value = '';
       if (pInterest) pInterest.value = '';
       if (pFoodCats) Array.from(pFoodCats.options || []).forEach(o => { o.selected = false; });
+      if (pMixable) pMixable.checked = false;
+      if (pMixBuilder) pMixBuilder.checked = false;
+      if (pMixSourceCat) pMixSourceCat.value = 'pizzas';
+      syncMixBuilderConfig(pMixBuilder, pMixConfig, pMixSourceCat);
       pFile.value = '';
       pImgUrl.value = '';
       if (pPacks) {
@@ -19083,6 +19181,7 @@ document.addEventListener('DOMContentLoaded', () => {
   [pName, pDetails, pPrice].forEach(el => {
     if (el) el.addEventListener('input', updatePreview);
   });
+  if (pMixBuilder) pMixBuilder.addEventListener('change', () => syncMixBuilderConfig(pMixBuilder, pMixConfig, pMixSourceCat));
 
   if (pFile) {
     pFile.addEventListener('change', async () => {
@@ -19191,6 +19290,21 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       if (packs.length) {
         payload.variants = { packs: packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier })) };
+      }
+      if (pMixable && pMixable.checked) {
+        payload.variants = payload.variants || {};
+        payload.variants.mixable = true;
+      }
+      if (pMixBuilder && pMixBuilder.checked) {
+        payload.variants = payload.variants || {};
+        payload.variants.mix_builder = {
+          enabled: true,
+          source_category: String(pMixSourceCat && pMixSourceCat.value || 'pizzas').trim() || 'pizzas',
+          parts: 2,
+          part_fraction: 0.5,
+          only_mixable: true,
+          pricing_mode: 'sum_parts'
+        };
       }
       
       doCreateBtn.disabled = true;

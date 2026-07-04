@@ -58,6 +58,16 @@ export function saveCart() {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
 }
 
+function getMixSummary(item) {
+    if (item && typeof item.mix_summary === 'string' && item.mix_summary.trim()) {
+        return item.mix_summary.trim();
+    }
+    const modifiers = item && item.modifiers && typeof item.modifiers === 'object' ? item.modifiers : {};
+    const mix = Array.isArray(modifiers.mix) ? modifiers.mix : [];
+    if (!mix.length) return '';
+    return mix.map(part => `1/2 ${String(part && part.name || 'Pizza').trim()}`).join(' + ');
+}
+
 // Añadir al carrito
 export function addToCart(id, name, price, imageSrc, event, showAnimationCallback, notes = '', meta = null) {
     id = id || `auto-${Date.now()}`;
@@ -89,6 +99,8 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             if (meta.pack_id && !existingItem.pack_id) existingItem.pack_id = meta.pack_id;
             if (meta.pack_label && !existingItem.pack_label) existingItem.pack_label = meta.pack_label;
             if (Number.isFinite(meta.pack_size) && !Number.isFinite(existingItem.pack_size)) existingItem.pack_size = meta.pack_size;
+            if (meta.modifiers && typeof meta.modifiers === 'object' && !existingItem.modifiers) existingItem.modifiers = meta.modifiers;
+            if (meta.mix_summary && !existingItem.mix_summary) existingItem.mix_summary = String(meta.mix_summary);
         }
     } else {
         const m = meta && typeof meta === 'object' ? meta : null;
@@ -98,6 +110,8 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             pack_id: m && m.pack_id ? m.pack_id : undefined,
             pack_label: m && m.pack_label ? m.pack_label : undefined,
             pack_size: m && Number.isFinite(m.pack_size) ? m.pack_size : undefined,
+            modifiers: m && m.modifiers && typeof m.modifiers === 'object' ? m.modifiers : undefined,
+            mix_summary: m && m.mix_summary ? String(m.mix_summary) : undefined,
             name: name,
             price: price,
             image: imageSrc,
@@ -216,6 +230,14 @@ export function updateCartDisplay() {
             if (Number.isFinite(packSize) && packSize > 1) parts.push(`${packSize}u`);
             itemPack.textContent = parts.join(' · ');
         }
+
+        const mixSummary = getMixSummary(item);
+        let itemMix = null;
+        if (mixSummary) {
+            itemMix = document.createElement('div');
+            itemMix.className = 'cart-item-pack';
+            itemMix.textContent = mixSummary;
+        }
         
         const itemPrice = document.createElement('div');
         itemPrice.className = 'cart-item-price';
@@ -294,6 +316,7 @@ export function updateCartDisplay() {
         // Ensamblaje
         itemInfo.appendChild(itemName);
         if (itemPack) itemInfo.appendChild(itemPack);
+        if (itemMix) itemInfo.appendChild(itemMix);
         itemInfo.appendChild(itemPrice);
         itemInfo.appendChild(itemQuantityContainer);
         itemInfo.appendChild(itemNotesContainer);

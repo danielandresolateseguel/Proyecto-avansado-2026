@@ -5,6 +5,16 @@ import { cart, clearCart, updateCartDisplay } from './cart.js?v=8';
 import { closeCartUI } from './ui.js?v=8';
 import { getWhatsappNumber, CATEGORY, getCheckoutMode, getWhatsappEnabled, getWhatsappTemplate, getBusinessSlug, formatMoneyWithCode, calculateShippingQuote } from './config.js?v=8';
 
+function getCheckoutMixSummary(item) {
+    if (item && typeof item.mix_summary === 'string' && item.mix_summary.trim()) {
+        return item.mix_summary.trim();
+    }
+    const modifiers = item && item.modifiers && typeof item.modifiers === 'object' ? item.modifiers : {};
+    const mix = Array.isArray(modifiers.mix) ? modifiers.mix : [];
+    if (!mix.length) return '';
+    return mix.map(part => `1/2 ${String(part && part.name || 'Pizza').trim()}`).join(' + ');
+}
+
 function getGeoApiBase() {
     const origin = window.location.origin || '';
     return /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
@@ -239,6 +249,8 @@ export async function handleCheckout() {
         itemsList += `${index + 1}. \uD83D\uDCE6 ${item.name}\n`;
         itemsList += `   \uD83D\uDCCA Cantidad: ${item.quantity}\n`;
         itemsList += `   \uD83D\uDCB5 Precio unitario: ${precioFormateado}\n`;
+        const mixSummary = getCheckoutMixSummary(item);
+        if (mixSummary) itemsList += `   \uD83C\uDF55 Mitades: ${mixSummary}\n`;
         const subtotalTxt = formatMoneyWithCode(parseInt(item.price * item.quantity));
         itemsList += `   \uD83D\uDCB0 Subtotal: ${subtotalTxt}\n`;
         if ((item.notes || '').trim()) itemsList += `   \uD83D\uDCDD Detalle: ${(item.notes||'').trim()}\n`;
@@ -372,6 +384,7 @@ function sendOrderToBackend(orderType, data, total) {
                 name: it.name,
                 price: it.price,
                 quantity: it.quantity,
+                modifiers: it.modifiers || {},
                 notes: it.notes || ''
             })),
             order_notes: data.orderNotes

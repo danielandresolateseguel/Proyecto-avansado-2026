@@ -99,6 +99,113 @@ def _safe_int(value, default=0):
     except Exception:
         return default
 
+def _parse_variants_json(raw):
+    if isinstance(raw, dict):
+        return raw
+    if not raw:
+        return {}
+    try:
+        parsed = json.loads(raw or '{}') or {}
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+def _normalize_food_categories_local(value):
+    if isinstance(value, list):
+        return [str(v or '').strip().lower() for v in value if str(v or '').strip()]
+    if isinstance(value, str):
+        return [part.strip().lower() for part in value.split(',') if part.strip()]
+    return []
+
+def _build_mix_summary(parts):
+    if not isinstance(parts, list):
+        return ''
+    labels = []
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        name = str(part.get('name') or '').strip() or 'Pizza'
+        labels.append(f"1/2 {name}")
+    return ' + '.join(labels)
+
+def _resolve_mix_price(cur, tenant_slug, base_product_id, base_variants, modifiers):
+    mix_builder = base_variants.get('mix_builder') if isinstance(base_variants, dict) else None
+    if not isinstance(mix_builder, dict) or mix_builder.get('enabled') is False:
+        return None, modifiers
+    mix_items = modifiers.get('mix') if isinstance(modifiers, dict) else None
+    if not isinstance(mix_items, list) or not mix_items:
+        raise ValueError('faltan las mitades de la pizza mixta')
+
+    parts = max(1, _safe_int(mix_builder.get('parts'), 2))
+    if len(mix_items) != parts:
+        raise ValueError('la pizza mixta requiere exactamente dos mitades')
+
+    source_category = str(mix_builder.get('source_category') or '').strip().lower()
+    only_mixable = bool(mix_builder.get('only_mixable', True))
+    fraction_default = _safe_float(mix_builder.get('part_fraction'), 0.5)
+    if fraction_default is None or fraction_default <= 0:
+        fraction_default = 0.5
+
+    allowed_product_ids = mix_builder.get('allowed_product_ids') or []
+    if isinstance(allowed_product_ids, str):
+        allowed_product_ids = [part.strip() for part in allowed_product_ids.split(',') if part.strip()]
+    if not isinstance(allowed_product_ids, list):
+        allowed_product_ids = []
+    allowed_product_ids = [str(pid or '').strip() for pid in allowed_product_ids if str(pid or '').strip()]
+
+    sanitized_parts = []
+    unit_price = 0
+    for raw_part in mix_items:
+        if not isinstance(raw_part, dict):
+            raise ValueError('configuración inválida para la pizza mixta')
+        component_id = str(raw_part.get('product_id') or raw_part.get('id') or '').strip()
+        if not component_id:
+            raise ValueError('una mitad de la pizza mixta no tiene producto asociado')
+        if component_id == str(base_product_id):
+            raise ValueError('la pizza mixta no puede mezclarse consigo misma')
+        cur.execute(
+            "SELECT name, price, active, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+            (tenant_slug, component_id)
+        )
+        component_row = cur.fetchone()
+        if not component_row:
+            raise ValueError(f'producto no encontrado para pizza mixta: {component_id}')
+        component_name = str(component_row[0] or component_id).strip()
+        component_price = int(component_row[1] or 0)
+        component_active = bool(component_row[2])
+        component_variants = _parse_variants_json(component_row[3] if len(component_row) > 3 else '')
+        if not component_active:
+            raise ValueError(f'la mitad seleccionada no está activa: {component_name}')
+        if allowed_product_ids and component_id not in allowed_product_ids:
+            raise ValueError(f'la mitad seleccionada no está permitida: {component_name}')
+        categories = _normalize_food_categories_local(component_variants.get('food_categories') or [])
+        if source_category and source_category not in categories:
+            raise ValueError(f'la mitad seleccionada no pertenece a la categoría {source_category}: {component_name}')
+        if only_mixable and not bool(component_variants.get('mixable')):
+            raise ValueError(f'la pizza no está marcada como combinable: {component_name}')
+        fraction = _safe_float(raw_part.get('fraction'), fraction_default)
+        if fraction is None or fraction <= 0:
+            fraction = fraction_default
+        applied_price = int(round(component_price * fraction))
+        unit_price += applied_price
+        sanitized_parts.append({
+            'product_id': component_id,
+            'name': component_name,
+            'fraction': fraction,
+            'base_price': component_price,
+            'applied_price': applied_price
+        })
+
+    next_modifiers = dict(modifiers or {})
+    next_modifiers['mix'] = sanitized_parts
+    next_modifiers['mix_summary'] = _build_mix_summary(sanitized_parts)
+    next_modifiers['mix_builder'] = {
+        'source_category': source_category,
+        'parts': parts,
+        'pricing_mode': str(mix_builder.get('pricing_mode') or 'sum_parts')
+    }
+    return unit_price, next_modifiers
+
 def _extract_lat_lng(obj):
     if not isinstance(obj, dict):
         return (None, None)
@@ -959,6 +1066,7 @@ def create_order():
             ),
         )
 
+        items_total = 0
         # Process Items
         for it in items:
             qty = int(it.get('quantity', it.get('qty', 1)) or 1)
@@ -996,10 +1104,20 @@ def create_order():
             
             stock = int((row[0] if row else 0) or 0)
             variants_raw = row[1] if row and len(row) > 1 else ''
+            variants = _parse_variants_json(variants_raw)
+            modifiers = it.get('modifiers') or {}
+            if not isinstance(modifiers, dict):
+                modifiers = {}
             unit_price = requested_price
-            if pack_id and variants_raw:
+            try:
+                mixed_price, modifiers = _resolve_mix_price(cur, tenant_slug, pid, variants, modifiers)
+                if mixed_price is not None and mixed_price > 0:
+                    unit_price = mixed_price
+            except ValueError as e:
+                conn.rollback()
+                return jsonify({'error': str(e), 'product_id': pid}), 400
+            if pack_id and variants:
                 try:
-                    variants = json.loads(variants_raw or '{}') or {}
                     packs = variants.get('packs') or variants.get('pack_options') or variants.get('sale_packs') or []
                     if isinstance(packs, str):
                         packs = json.loads(packs or '[]') or []
@@ -1032,9 +1150,6 @@ def create_order():
                 return jsonify({'error': 'stock insuficiente', 'product_id': pid, 'stock': stock, 'requested': inv_qty}), 400
             
             # Insert Order Item
-            modifiers = it.get('modifiers') or {}
-            if not isinstance(modifiers, dict):
-                modifiers = {}
             if pack_id:
                 modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
             cur.execute(
@@ -1053,10 +1168,13 @@ def create_order():
                     it.get('notes') or ''
                 )
             )
+            items_total += unit_price * qty
             
             # Update Stock
             cur.execute("UPDATE products SET stock = stock - ? WHERE tenant_slug = ? AND product_id = ?", (inv_qty, tenant_slug, pid))
         
+        total = int(items_total) + int(shipping_cost)
+        cur.execute("UPDATE orders SET total = ? WHERE id = ?", (total, order_id))
         conn.commit()
         return jsonify({'order_id': order_id, 'tenant_order_number': tenant_order_number, 'status': status, 'total': total, 'tenant_slug': tenant_slug}), 201
 

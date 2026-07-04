@@ -52,6 +52,132 @@ function readPacksFromButton(button) {
     return [];
 }
 
+function normalizeMixBuilder(raw) {
+    let value = raw;
+    if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (!s) return null;
+        try {
+            value = JSON.parse(s);
+        } catch (_) {
+            return null;
+        }
+    }
+    if (!value || typeof value !== 'object') return null;
+    const enabled = value.enabled !== false;
+    if (!enabled) return null;
+    const sourceCategory = String(value.source_category || '').trim();
+    const parts = parseInt(value.parts, 10);
+    const partFraction = parseFloat(value.part_fraction);
+    return {
+        enabled: true,
+        source_category: sourceCategory,
+        parts: Number.isFinite(parts) && parts > 0 ? parts : 2,
+        part_fraction: Number.isFinite(partFraction) && partFraction > 0 ? partFraction : 0.5,
+        only_mixable: value.only_mixable !== false,
+        pricing_mode: String(value.pricing_mode || 'sum_parts').trim() || 'sum_parts'
+    };
+}
+
+function readMixBuilderFromButton(button) {
+    if (!button) return null;
+    const raw = String(button.getAttribute('data-mix-builder') || '').trim();
+    if (!raw) return null;
+    try {
+        return normalizeMixBuilder(JSON.parse(raw));
+    } catch (_) {}
+    try {
+        return normalizeMixBuilder(JSON.parse(decodeURIComponent(raw)));
+    } catch (_) {}
+    return null;
+}
+
+function normalizeCategoryToken(value) {
+    const text = String(value || '').trim().toLowerCase();
+    if (!text) return '';
+    return text.normalize ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text;
+}
+
+function getCatalogProducts() {
+    return Array.isArray(window.__tenantCatalogProducts) ? window.__tenantCatalogProducts : [];
+}
+
+function productMatchesMixSource(product, sourceCategory) {
+    if (!sourceCategory) return true;
+    const variants = product && product._variants && typeof product._variants === 'object' ? product._variants : {};
+    const rawCats = variants.food_categories;
+    let cats = [];
+    if (Array.isArray(rawCats)) {
+        cats = rawCats;
+    } else if (typeof rawCats === 'string' && rawCats.trim()) {
+        cats = rawCats.split(',').map(cat => cat.trim());
+    }
+    const wanted = normalizeCategoryToken(sourceCategory);
+    return cats.some(cat => normalizeCategoryToken(cat) === wanted);
+}
+
+function getMixCandidateProducts(baseProductId, mixBuilder) {
+    return getCatalogProducts().filter(product => {
+        if (!product || !product.id) return false;
+        if (String(product.id) === String(baseProductId)) return false;
+        if (product.active === false) return false;
+        const variants = product._variants && typeof product._variants === 'object' ? product._variants : {};
+        if (variants.mix_builder && variants.mix_builder.enabled !== false) return false;
+        if (!productMatchesMixSource(product, mixBuilder && mixBuilder.source_category)) return false;
+        if (mixBuilder && mixBuilder.only_mixable && variants.mixable !== true) return false;
+        const price = parseInt(product.price, 10);
+        return Number.isFinite(price) && price > 0;
+    }).sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'es'));
+}
+
+function buildMixSummary(components) {
+    if (!Array.isArray(components) || !components.length) return '';
+    return components.map(part => `1/2 ${part.name || 'Pizza'}`).join(' + ');
+}
+
+function ensureMixModal() {
+    let modal = document.getElementById('mix-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mix-modal';
+    modal.className = 'product-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="modal-content">
+        <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div class="modal-body">
+          <div class="modal-details" style="width:100%;">
+            <h3 id="mix-modal-title"></h3>
+            <p style="margin-top:6px; margin-bottom:14px; opacity:0.9;">Elegí las dos mitades para calcular el precio final.</p>
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <label style="display:flex; flex-direction:column; gap:6px; font-weight:700;">
+                <span>Primera mitad</span>
+                <select id="mix-modal-first" style="padding:10px; border:1px solid #d0d7de; border-radius:8px;"></select>
+              </label>
+              <label style="display:flex; flex-direction:column; gap:6px; font-weight:700;">
+                <span>Segunda mitad</span>
+                <select id="mix-modal-second" style="padding:10px; border:1px solid #d0d7de; border-radius:8px;"></select>
+              </label>
+              <div id="mix-modal-summary" style="padding:12px; border-radius:10px; background:#f8fafc; color:#0f172a; font-weight:700;"></div>
+              <div id="mix-modal-price" style="font-size:20px; font-weight:900;"></div>
+              <button type="button" id="mix-modal-confirm" class="modal-add-to-cart" style="width:100%;">Agregar Pizza Mixta</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) closeBtn.addEventListener('click', () => closeDialog(modal));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeDialog(modal);
+    });
+    return modal;
+}
+
 function ensurePackModal() {
     let modal = document.getElementById('pack-modal');
     if (modal) return modal;
@@ -225,6 +351,100 @@ export function onAddToCartClick(event) {
     let name = button.getAttribute('data-name') || (titleEl ? titleEl.textContent.trim() : '') || (productImage ? (productImage.alt || '').trim() : '') || 'Producto';
     const imageSrc = productImage ? productImage.getAttribute('src') : '';
     const packs = readPacksFromButton(button);
+    const mixBuilder = readMixBuilderFromButton(button);
+
+    if (mixBuilder) {
+        const candidates = getMixCandidateProducts(productId, mixBuilder);
+        if (candidates.length === 0) {
+            alert('No hay pizzas disponibles para combinar en este momento.');
+            return;
+        }
+        const modal = ensureMixModal();
+        const title = modal.querySelector('#mix-modal-title');
+        const firstSelect = modal.querySelector('#mix-modal-first');
+        const secondSelect = modal.querySelector('#mix-modal-second');
+        const summaryEl = modal.querySelector('#mix-modal-summary');
+        const priceEl = modal.querySelector('#mix-modal-price');
+        const confirmBtn = modal.querySelector('#mix-modal-confirm');
+        if (title) title.textContent = name;
+        const buildOption = (product) => {
+            const opt = document.createElement('option');
+            opt.value = String(product.id || '');
+            opt.textContent = `${product.name || 'Pizza'} - ${formatMoneyWithCode(parseInt(product.price, 10) || 0)}`;
+            return opt;
+        };
+        const fillSelect = (selectEl) => {
+            if (!selectEl) return;
+            selectEl.innerHTML = '';
+            candidates.forEach(product => selectEl.appendChild(buildOption(product)));
+        };
+        fillSelect(firstSelect);
+        fillSelect(secondSelect);
+        if (firstSelect && candidates[0]) firstSelect.value = String(candidates[0].id);
+        if (secondSelect && candidates[1]) {
+            secondSelect.value = String(candidates[1].id);
+        } else if (secondSelect && candidates[0]) {
+            secondSelect.value = String(candidates[0].id);
+        }
+
+        const updateMixState = () => {
+            const first = candidates.find(product => String(product.id) === String(firstSelect && firstSelect.value || ''));
+            const second = candidates.find(product => String(product.id) === String(secondSelect && secondSelect.value || ''));
+            if (!first || !second) {
+                if (summaryEl) summaryEl.textContent = 'Seleccioná las dos mitades.';
+                if (priceEl) priceEl.textContent = '';
+                if (confirmBtn) confirmBtn.disabled = true;
+                return null;
+            }
+            const fraction = Number.isFinite(mixBuilder.part_fraction) && mixBuilder.part_fraction > 0 ? mixBuilder.part_fraction : 0.5;
+            const components = [first, second].map(product => {
+                const basePrice = parseInt(product.price, 10) || 0;
+                return {
+                    product_id: String(product.id || ''),
+                    name: String(product.name || 'Pizza'),
+                    fraction,
+                    base_price: basePrice,
+                    applied_price: Math.round(basePrice * fraction)
+                };
+            });
+            const summary = buildMixSummary(components);
+            const totalPrice = components.reduce((sum, part) => sum + (parseInt(part.applied_price, 10) || 0), 0);
+            if (summaryEl) summaryEl.textContent = summary;
+            if (priceEl) priceEl.textContent = `Total: ${formatMoneyWithCode(totalPrice)}`;
+            if (confirmBtn) confirmBtn.disabled = totalPrice <= 0;
+            return { components, summary, totalPrice };
+        };
+
+        if (firstSelect) firstSelect.onchange = updateMixState;
+        if (secondSelect) secondSelect.onchange = updateMixState;
+        if (confirmBtn) {
+            confirmBtn.onclick = () => {
+                const state = updateMixState();
+                if (!state || !state.components.length || state.totalPrice <= 0) return;
+                const signature = state.components
+                    .map(part => String(part.product_id || '').trim())
+                    .filter(Boolean)
+                    .sort()
+                    .join('+');
+                const clientId = `${productId}::mix:${signature}`;
+                const meta = {
+                    product_id: productId,
+                    modifiers: {
+                        mix: state.components
+                    },
+                    mix_summary: state.summary
+                };
+                closeDialog(modal);
+                addToCart(clientId, name, state.totalPrice, imageSrc, event, (evt) => {
+                    showAddToCartAnimation(evt);
+                    showAddedToCartIndicator(button);
+                }, '', meta);
+            };
+        }
+        updateMixState();
+        openDialog(modal);
+        return;
+    }
 
     if (packs.length) {
         const modal = ensurePackModal();
@@ -624,6 +844,9 @@ export async function initDynamicProducts() {
             }
             map[p.id] = p;
         });
+        try {
+            window.__tenantCatalogProducts = arr;
+        } catch (_) {}
         const cards = document.querySelectorAll('.product-card');
         const existingIds = new Set();
         cards.forEach(card => {
@@ -664,10 +887,16 @@ export async function initDynamicProducts() {
             }
             if (btn) {
                 const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
+                const mixBuilder = normalizeMixBuilder(v.mix_builder);
                 if (packs.length) {
                     btn.setAttribute('data-packs', encodeURIComponent(JSON.stringify(packs)));
                 } else {
                     btn.removeAttribute('data-packs');
+                }
+                if (mixBuilder) {
+                    btn.setAttribute('data-mix-builder', encodeURIComponent(JSON.stringify(mixBuilder)));
+                } else {
+                    btn.removeAttribute('data-mix-builder');
                 }
             }
             applyCardStockState(card, prod);
@@ -770,6 +999,8 @@ export async function initDynamicProducts() {
             }
             const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
             const packsAttr = packs.length ? ' data-packs="' + encodeURIComponent(JSON.stringify(packs)) + '"' : '';
+            const mixBuilder = normalizeMixBuilder(v.mix_builder);
+            const mixAttr = mixBuilder ? ' data-mix-builder="' + encodeURIComponent(JSON.stringify(mixBuilder)) + '"' : '';
 
             const buildCard = (section, className) => {
                 const card = document.createElement('div');
@@ -815,7 +1046,7 @@ export async function initDynamicProducts() {
                     '<div class="price-container">' +
                     (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
                     '</div>' +
-                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + '>Añadir al carrito</button>' +
+                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + mixAttr + '>Añadir al carrito</button>' +
                     '</div>';
                 applyCardStockState(card, p);
                 return card;
