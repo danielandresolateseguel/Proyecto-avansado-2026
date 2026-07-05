@@ -146,24 +146,31 @@ function ensureMixModal() {
     modal.setAttribute('aria-hidden', 'true');
     modal.style.display = 'none';
     modal.innerHTML = `
-      <div class="modal-content">
+      <div class="modal-content mix-modal-shell">
         <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="modal-body">
-          <div class="modal-details" style="width:100%;">
-            <h3 id="mix-modal-title"></h3>
-            <p style="margin-top:6px; margin-bottom:14px; opacity:0.9;">Elegí las dos mitades para calcular el precio final.</p>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-              <label style="display:flex; flex-direction:column; gap:6px; font-weight:700;">
-                <span>Primera mitad</span>
-                <select id="mix-modal-first" style="padding:10px; border:1px solid #d0d7de; border-radius:8px;"></select>
-              </label>
-              <label style="display:flex; flex-direction:column; gap:6px; font-weight:700;">
-                <span>Segunda mitad</span>
-                <select id="mix-modal-second" style="padding:10px; border:1px solid #d0d7de; border-radius:8px;"></select>
-              </label>
-              <div id="mix-modal-summary" style="padding:12px; border-radius:10px; background:#f8fafc; color:#0f172a; font-weight:700;"></div>
-              <div id="mix-modal-price" style="font-size:20px; font-weight:900;"></div>
-              <button type="button" id="mix-modal-confirm" class="modal-add-to-cart" style="width:100%;">Agregar Pizza Mixta</button>
+          <div class="modal-details mix-modal-details">
+            <div class="mix-modal-hero">
+              <div class="mix-modal-kicker">Pizza Mixta</div>
+              <h3 id="mix-modal-title" class="mix-modal-title"></h3>
+              <p class="mix-modal-description">Elegí las dos mitades para calcular el precio final y agregar una sola pizza al carrito.</p>
+            </div>
+            <div class="mix-modal-body">
+              <div class="mix-modal-grid">
+                <label class="mix-modal-field">
+                  <span class="mix-modal-field-label">Primera mitad</span>
+                  <select id="mix-modal-first" class="mix-modal-select"></select>
+                </label>
+                <label class="mix-modal-field">
+                  <span class="mix-modal-field-label">Segunda mitad</span>
+                  <select id="mix-modal-second" class="mix-modal-select"></select>
+                </label>
+              </div>
+              <div class="mix-modal-grid mix-modal-summary-grid">
+                <div id="mix-modal-summary" class="mix-modal-summary"></div>
+                <div id="mix-modal-price" class="mix-modal-price"></div>
+              </div>
+              <button type="button" id="mix-modal-confirm" class="modal-add-to-cart mix-modal-confirm">Agregar Pizza Mixta</button>
             </div>
           </div>
         </div>
@@ -409,8 +416,16 @@ export function onAddToCartClick(event) {
             });
             const summary = buildMixSummary(components);
             const totalPrice = components.reduce((sum, part) => sum + (parseInt(part.applied_price, 10) || 0), 0);
-            if (summaryEl) summaryEl.textContent = summary;
-            if (priceEl) priceEl.textContent = `Total: ${formatMoneyWithCode(totalPrice)}`;
+            if (summaryEl) {
+                summaryEl.innerHTML = `
+                  <div class="mix-modal-eyebrow">Combinacion</div>
+                  <div class="mix-modal-summary-text">${summary}</div>
+                  <div class="mix-modal-chip-list">
+                    ${components.map(part => `<span class="mix-modal-chip">1/2 ${part.name} · ${formatMoneyWithCode(part.applied_price)}</span>`).join('')}
+                  </div>
+                `;
+            }
+            if (priceEl) priceEl.innerHTML = `<div><div class="mix-modal-eyebrow">Total</div><div class="mix-modal-total">${formatMoneyWithCode(totalPrice)}</div></div>`;
             if (confirmBtn) confirmBtn.disabled = totalPrice <= 0;
             return { components, summary, totalPrice };
         };

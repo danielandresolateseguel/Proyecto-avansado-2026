@@ -74,7 +74,8 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 /* MODAL STYLES - INCREASED SPECIFICITY TO FIX LAYOUT ISSUES */
 .order-status-modal,
 #product-modal,
-#pack-modal {
+#pack-modal,
+#mix-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -91,14 +92,16 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 .order-status-modal.active,
 #product-modal.active,
-#pack-modal.active {
+#pack-modal.active,
+#mix-modal.active {
   display: flex;
   animation: fadeIn 0.2s ease-out;
 }
 
 .modal-content.status-content,
 #product-modal .modal-content,
-#pack-modal .modal-content {
+#pack-modal .modal-content,
+#mix-modal .modal-content {
   background: white;
   width: 100%;
   max-width: 500px;
@@ -115,14 +118,16 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 /* Modal de producto alineado al color de marca del tenant */
 #product-modal .modal-content,
-#pack-modal .modal-content {
+#pack-modal .modal-content,
+#mix-modal .modal-content {
   border-top: 4px solid var(--gastro-accent);
   box-shadow: 0 28px 60px rgba(0, 0, 0, 0.32), 0 10px 24px var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
 }
 
 /* Ensure modal body flows correctly */
 #product-modal .modal-body,
-#pack-modal .modal-body {
+#pack-modal .modal-body,
+#mix-modal .modal-body {
     display: flex;
     flex-direction: column;
     gap: 0; /* Removed gap */
@@ -167,7 +172,9 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 #product-modal .modal-details,
 #product-modal .modal-info,
 #pack-modal .modal-details,
-#pack-modal .modal-info {
+#pack-modal .modal-info,
+#mix-modal .modal-details,
+#mix-modal .modal-info {
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -234,8 +241,13 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
     background-color: var(--gastro-accent-dark);
 }
 
+#mix-modal .modal-add-to-cart:hover {
+    filter: brightness(1.04);
+}
+
 #product-modal .close-modal,
-#pack-modal .close-modal {
+#pack-modal .close-modal,
+#mix-modal .close-modal {
     position: absolute;
     top: 12px;
     right: 12px;
@@ -254,11 +266,262 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 #product-modal .close-modal:hover,
-#pack-modal .close-modal:hover {
+#pack-modal .close-modal:hover,
+#mix-modal .close-modal:hover {
     transform: scale(1.04);
     background: var(--gastro-accent-08, rgba(255,106,0,0.08));
     color: var(--gastro-accent-dark, #c45500);
     box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+
+#mix-modal {
+  justify-content: center;
+  align-items: center;
+}
+
+#mix-modal .mix-modal-shell {
+  width: min(560px, calc(100vw - 32px));
+  max-width: 560px;
+  border-radius: 22px;
+  overflow: hidden;
+  margin: auto;
+}
+
+#mix-modal .mix-modal-details {
+  width: 100%;
+  padding: 0;
+  gap: 0;
+}
+
+#mix-modal .mix-modal-hero {
+  padding: 22px 22px 18px;
+  background: linear-gradient(135deg, var(--gastro-accent-dark, #c45500) 0%, var(--gastro-accent, #ff6a00) 100%);
+  color: var(--gastro-accent-contrast, #121212);
+}
+
+#mix-modal .mix-modal-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.16);
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#mix-modal .mix-modal-title {
+  margin: 12px 0 0;
+  color: inherit;
+  font-size: 1.9rem;
+  line-height: 1.05;
+  font-weight: 800;
+}
+
+#mix-modal .mix-modal-description {
+  margin: 10px 0 0;
+  color: inherit;
+  opacity: 0.92;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+#mix-modal .mix-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 22px 22px;
+  background: #ffffff;
+}
+
+#mix-modal .mix-modal-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#mix-modal .mix-modal-summary-grid {
+  grid-template-columns: minmax(0, 1.35fr) minmax(180px, 0.9fr);
+  align-items: stretch;
+}
+
+#mix-modal .mix-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+#mix-modal .mix-modal-field-label,
+#mix-modal .mix-modal-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  font-weight: 900;
+}
+
+#mix-modal .mix-modal-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  background: #fff;
+  color: #111827;
+  font-weight: 700;
+}
+
+#mix-modal .mix-modal-select:focus {
+  outline: none;
+  border-color: var(--gastro-accent, #ff6a00);
+  box-shadow: 0 0 0 3px var(--gastro-accent-18, rgba(255,106,0,0.18));
+}
+
+#mix-modal .mix-modal-summary {
+  min-height: 96px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+#mix-modal .mix-modal-summary-text {
+  margin-top: 8px;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+#mix-modal .mix-modal-chip-list {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#mix-modal .mix-modal-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: var(--gastro-accent-08, rgba(255,106,0,0.08));
+  border: 1px solid var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
+  color: var(--gastro-accent-dark, #c45500);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+#mix-modal .mix-modal-price {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fafafa 0%, var(--gastro-accent-08, rgba(255,106,0,0.08)) 100%);
+  border: 1px solid var(--gastro-accent-18, rgba(255, 106, 0, 0.18));
+  color: #0f172a;
+  text-align: center;
+}
+
+#mix-modal .mix-modal-total {
+  margin-top: 6px;
+  color: var(--gastro-accent-dark, #c45500);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+#mix-modal .mix-modal-confirm {
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  background: linear-gradient(180deg, var(--gastro-accent) 0%, var(--gastro-accent-dark) 100%);
+  color: var(--gastro-accent-contrast, #121212);
+  box-shadow: 0 12px 28px var(--gastro-accent-22, rgba(255,106,0,0.22));
+}
+
+#mix-modal .mix-modal-confirm:disabled,
+#mix-modal .mix-modal-confirm[aria-disabled="true"] {
+  background: #d4d8df;
+  color: #6f7782;
+  box-shadow: none;
+  filter: none;
+}
+
+@media (max-width: 768px) {
+  #mix-modal {
+    padding: 12px;
+  }
+
+  #mix-modal .mix-modal-shell {
+    width: min(100%, 100vw - 24px);
+    max-height: calc(100vh - 24px);
+    border-radius: 18px;
+  }
+
+  #mix-modal .mix-modal-title {
+    font-size: 1.6rem;
+  }
+
+  #mix-modal .mix-modal-grid,
+  #mix-modal .mix-modal-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  #mix-modal {
+    padding: 8px;
+  }
+
+  #mix-modal .mix-modal-shell {
+    width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    border-radius: 16px;
+  }
+
+  #mix-modal .mix-modal-hero {
+    padding: 18px 16px 16px;
+  }
+
+  #mix-modal .mix-modal-body {
+    padding: 14px 16px 16px;
+    gap: 14px;
+  }
+
+  #mix-modal .mix-modal-title {
+    font-size: 1.4rem;
+  }
+
+  #mix-modal .mix-modal-description {
+    font-size: 0.9rem;
+  }
+
+  #mix-modal .mix-modal-summary,
+  #mix-modal .mix-modal-price {
+    padding: 12px 14px;
+  }
+
+  #mix-modal .mix-modal-total {
+    font-size: 1.45rem;
+  }
+
+  #mix-modal .close-modal {
+    width: 34px;
+    height: 34px;
+    top: 10px;
+    right: 10px;
+  }
 }
 
 #product-modal .styled-textarea {
