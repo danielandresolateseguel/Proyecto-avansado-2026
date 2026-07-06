@@ -74,6 +74,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 /* MODAL STYLES - INCREASED SPECIFICITY TO FIX LAYOUT ISSUES */
 .order-status-modal,
 #product-modal,
+#product-options-modal,
 #pack-modal,
 #mix-modal {
   position: fixed;
@@ -92,6 +93,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 .order-status-modal.active,
 #product-modal.active,
+#product-options-modal.active,
 #pack-modal.active,
 #mix-modal.active {
   display: flex;
@@ -100,6 +102,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 .modal-content.status-content,
 #product-modal .modal-content,
+#product-options-modal .modal-content,
 #pack-modal .modal-content,
 #mix-modal .modal-content {
   background: white;
@@ -118,6 +121,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 /* Modal de producto alineado al color de marca del tenant */
 #product-modal .modal-content,
+#product-options-modal .modal-content,
 #pack-modal .modal-content,
 #mix-modal .modal-content {
   border-top: 4px solid var(--gastro-accent);
@@ -126,6 +130,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 /* Ensure modal body flows correctly */
 #product-modal .modal-body,
+#product-options-modal .modal-body,
 #pack-modal .modal-body,
 #mix-modal .modal-body {
     display: flex;
@@ -171,6 +176,8 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 
 #product-modal .modal-details,
 #product-modal .modal-info,
+#product-options-modal .modal-details,
+#product-options-modal .modal-info,
 #pack-modal .modal-details,
 #pack-modal .modal-info,
 #mix-modal .modal-details,
@@ -246,6 +253,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 #product-modal .close-modal,
+#product-options-modal .close-modal,
 #pack-modal .close-modal,
 #mix-modal .close-modal {
     position: absolute;
@@ -266,6 +274,7 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 }
 
 #product-modal .close-modal:hover,
+#product-options-modal .close-modal:hover,
 #pack-modal .close-modal:hover,
 #mix-modal .close-modal:hover {
     transform: scale(1.04);

@@ -483,6 +483,269 @@
     .edit-form-group label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px; color: #555; }
     .edit-form-group input, .edit-form-group textarea { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
     .edit-form-group textarea { resize: vertical; min-height: 60px; }
+    .product-addons-panel {
+      display: none;
+      margin-top: 10px;
+      border: 1px solid #d9e5f3;
+      border-radius: 18px;
+      padding: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      box-shadow: 0 16px 30px rgba(37,99,235,0.06), inset 0 1px 0 rgba(255,255,255,0.8);
+    }
+    .product-addons-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .product-addons-meta > div {
+      min-width: 0;
+      flex: 1 1 130px;
+    }
+    .product-addons-meta > div:first-child {
+      flex-basis: 220px;
+    }
+    .product-addons-meta > div:nth-child(2) {
+      flex-basis: 160px;
+    }
+    .product-addons-meta > div:nth-child(3),
+    .product-addons-meta > div:nth-child(4) {
+      flex-basis: 96px;
+    }
+    .product-addons-meta label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #475569;
+      line-height: 1.25;
+    }
+    .product-addons-meta input,
+    .product-addons-meta select {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      min-height: 44px;
+      border: 1px solid #d5dee9;
+      border-radius: 10px;
+      background: #fff;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    .product-addons-options-block {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #e6edf5;
+    }
+    .product-addons-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .product-addons-section-head::before {
+      content: '';
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #2563eb 0%, #16a34a 100%);
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.10);
+      flex: 0 0 auto;
+    }
+    .product-addons-section-head h4 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: 0.01em;
+    }
+    .product-addons-section-head p {
+      margin: 3px 0 0;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+    }
+    .product-addons-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .product-addon-row {
+      position: relative;
+      border: 1px solid #d6e2f0;
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(37,99,235,0.05) 0%, rgba(37,99,235,0.00) 42%),
+        linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 14px 26px rgba(15,23,42,0.06);
+      overflow: hidden;
+    }
+    .product-addon-row-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .product-addon-row-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 900;
+      color: #0f172a;
+      line-height: 1.3;
+      min-width: 0;
+      flex: 1 1 180px;
+    }
+    .product-addon-row-title::before {
+      content: '';
+      width: 22px;
+      height: 22px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+      border: 1px solid #bfdbfe;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+      flex: 0 0 auto;
+    }
+    .product-addon-remove {
+      height: 34px;
+      min-width: 96px;
+      padding: 0 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 800;
+      box-shadow: 0 10px 18px rgba(220,38,38,0.18);
+      flex: 0 0 auto;
+    }
+    .product-addon-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 10px;
+      align-items: flex-start;
+    }
+    .product-addon-field {
+      min-width: 0;
+      flex: 1 1 140px;
+    }
+    .product-addon-grid > .product-addon-field:nth-child(1) {
+      flex-basis: 210px;
+    }
+    .product-addon-grid > .product-addon-field:nth-child(2) {
+      flex-basis: 170px;
+    }
+    .product-addon-grid > .product-addon-field:nth-child(3),
+    .product-addon-grid > .product-addon-field:nth-child(4) {
+      flex-basis: 120px;
+    }
+    .product-addon-field span {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      font-weight: 800;
+      color: #475569;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
+    .product-addon-field input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 11px 12px;
+      min-height: 44px;
+      border: 1px solid #d8e3ef;
+      border-radius: 12px;
+      background: #fff;
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7);
+    }
+    .product-addon-field input:disabled {
+      background: #f8fafc;
+      color: #94a3b8;
+    }
+    .product-addon-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .product-addon-check {
+      display: inline-flex;
+      align-items: flex-start;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #dbe7f3;
+      background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+      color: #334155;
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      line-height: 1.3;
+      flex: 1 1 180px;
+      white-space: normal;
+    }
+    .product-addon-check input {
+      width: auto;
+      margin: 0;
+      margin-top: 1px;
+      accent-color: #2563eb;
+      flex: 0 0 auto;
+    }
+    .product-addons-empty {
+      color: #64748b;
+      font-weight: 700;
+      padding: 14px;
+      border: 1px dashed #c7d7eb;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    }
+    .product-addons-cta {
+      margin-top: 12px;
+      height: 38px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #2f9e44 0%, #2e7d32 100%);
+      color: #fff;
+      cursor: pointer;
+      font-weight: 800;
+      width: fit-content;
+      padding: 0 16px;
+      box-shadow: 0 12px 20px rgba(46,125,50,0.18);
+    }
+    .product-addons-help {
+      display: block;
+      margin-top: 10px;
+      color: #475569;
+      line-height: 1.45;
+    }
+    @media (max-width: 560px) {
+      .product-addons-panel {
+        padding: 12px;
+      }
+      .product-addons-section-head,
+      .product-addon-row-head {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .product-addons-meta > div,
+      .product-addon-field,
+      .product-addon-check {
+        flex-basis: 100%;
+      }
+      .product-addon-remove,
+      .product-addons-cta {
+        width: 100%;
+      }
+    }
 
     #product-create-modal .kds-modal-content { max-width: 980px; border-radius: 16px; }
     #product-create-modal .kds-modal-header {
@@ -2662,6 +2925,45 @@
               <small>El stock se descuenta por unidades reales: cantidad × (unidades de la presentación).</small>
             </div>
             <div class="edit-form-group">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="edit-prod-addons-enabled" style="width:auto;"> Habilitar adicionales para este producto
+              </label>
+              <div id="edit-prod-addons-config" class="product-addons-panel">
+                <div class="product-addons-meta">
+                  <div>
+                    <label>Título</label>
+                    <input type="text" id="edit-prod-addons-title" placeholder="Adicionales">
+                  </div>
+                  <div>
+                    <label>Modo de selección</label>
+                    <select id="edit-prod-addons-mode">
+                      <option value="multiple">Múltiple</option>
+                      <option value="single">Única opción</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label>Mínimo</label>
+                    <input type="number" id="edit-prod-addons-min" min="0" value="0">
+                  </div>
+                  <div>
+                    <label>Máximo</label>
+                    <input type="number" id="edit-prod-addons-max" min="0" value="0">
+                  </div>
+                </div>
+                <div class="product-addons-options-block">
+                  <div class="product-addons-section-head">
+                    <div>
+                      <h4>Opciones disponibles</h4>
+                      <p>Definí nombre, ID, precio y si permite cantidad variable.</p>
+                    </div>
+                  </div>
+                  <div id="edit-prod-addons-options" class="product-addons-list"></div>
+                  <button type="button" id="edit-prod-addons-add-option" class="product-addons-cta">Agregar adicional</button>
+                </div>
+                <small class="product-addons-help">Queda guardado dentro del producto y luego se puede migrar a catálogo reutilizable sin rehacer la UI.</small>
+              </div>
+            </div>
+            <div class="edit-form-group">
               <label>Posición en la categoría</label>
               <input type="number" id="edit-prod-position" min="1" placeholder="1">
               <small>Si el producto tiene varias categorías, se usa la primera seleccionada para el orden.</small>
@@ -3376,6 +3678,14 @@
     const prodEditDeleteImgBtn = document.getElementById('edit-prod-delete-img-btn');
     const prodEditPacks = document.getElementById('edit-prod-packs');
     const prodEditAddPackBtn = document.getElementById('edit-prod-add-pack');
+    const prodEditAddonsEnabled = document.getElementById('edit-prod-addons-enabled');
+    const prodEditAddonsConfig = document.getElementById('edit-prod-addons-config');
+    const prodEditAddonsTitle = document.getElementById('edit-prod-addons-title');
+    const prodEditAddonsMode = document.getElementById('edit-prod-addons-mode');
+    const prodEditAddonsMin = document.getElementById('edit-prod-addons-min');
+    const prodEditAddonsMax = document.getElementById('edit-prod-addons-max');
+    const prodEditAddonsOptions = document.getElementById('edit-prod-addons-options');
+    const prodEditAddonsAddOption = document.getElementById('edit-prod-addons-add-option');
     
     // Preview Elements
     const prevTitle = document.getElementById('preview-title');
@@ -3661,6 +3971,350 @@
       });
     }
 
+    function syncAddonsConfig(toggleEl, containerEl, titleEl, modeEl, minEl, maxEl) {
+      if (!containerEl) return;
+      const enabled = !!(toggleEl && toggleEl.checked);
+      containerEl.style.display = enabled ? 'block' : 'none';
+      if (!enabled) return;
+      if (titleEl && !String(titleEl.value || '').trim()) titleEl.value = 'Adicionales';
+      if (modeEl && !String(modeEl.value || '').trim()) modeEl.value = 'multiple';
+      if (minEl && String(minEl.value || '').trim() === '') minEl.value = '0';
+      if (maxEl && String(maxEl.value || '').trim() === '') maxEl.value = '0';
+    }
+
+    function normalizeAdminAddonsConfig(raw) {
+      if (!raw || typeof raw !== 'object') return null;
+      if (raw.enabled === false) return null;
+      const optionsRaw = Array.isArray(raw.options) ? raw.options : [];
+      const options = [];
+      const seen = new Set();
+      optionsRaw.forEach((option, idx) => {
+        if (!option || typeof option !== 'object') return;
+        const label = String(option.label || option.name || '').trim();
+        const id = slugifyAdminCategory(String(option.id || option.key || label || idx).trim());
+        const price = parseInt(option.price, 10);
+        if (!label || !id) return;
+        if (!Number.isFinite(price) || price < 0) return;
+        const sig = `${id}::${label}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        const maxQty = parseInt(option.max_qty ?? option.maxQty ?? 1, 10);
+        const sortOrder = parseInt(option.sort_order ?? option.sortOrder ?? idx, 10);
+        options.push({
+          id,
+          label,
+          price,
+          active: option.active !== false,
+          allow_quantity: option.allow_quantity === true,
+          max_qty: Number.isFinite(maxQty) && maxQty > 0 ? maxQty : 1,
+          sort_order: Number.isFinite(sortOrder) ? sortOrder : idx
+        });
+      });
+      if (!options.length) return null;
+      options.sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return String(a.label || '').localeCompare(String(b.label || ''), 'es');
+      });
+      const minSelect = parseInt(raw.min_select, 10);
+      const maxSelect = parseInt(raw.max_select, 10);
+      return {
+        enabled: true,
+        mode: String(raw.mode || 'inline').trim() || 'inline',
+        title: String(raw.title || 'Adicionales').trim() || 'Adicionales',
+        selection_mode: String(raw.selection_mode || 'multiple').trim().toLowerCase() === 'single' ? 'single' : 'multiple',
+        min_select: Number.isFinite(minSelect) && minSelect > 0 ? minSelect : 0,
+        max_select: Number.isFinite(maxSelect) && maxSelect > 0 ? maxSelect : 0,
+        source_ids: Array.isArray(raw.source_ids) ? raw.source_ids.map(v => String(v || '').trim()).filter(Boolean) : [],
+        options
+      };
+    }
+
+    function renderAdminAddonsEditor(containerEl, options) {
+      if (!containerEl) return;
+      const safeOptions = Array.isArray(options) ? options : [];
+      containerEl.innerHTML = '';
+
+      const addRow = (option) => {
+        const row = document.createElement('div');
+        row.dataset.addonRow = '1';
+        row.className = 'product-addon-row';
+
+        const labelInput = document.createElement('input');
+        labelInput.type = 'text';
+        labelInput.className = 'addon-label';
+        labelInput.placeholder = 'Ej: Panceta';
+        labelInput.value = String((option && option.label) || '').trim();
+
+        const idInput = document.createElement('input');
+        idInput.type = 'text';
+        idInput.className = 'addon-id';
+        idInput.placeholder = 'panceta';
+        idInput.value = String((option && option.id) || '').trim();
+        const syncIdFromLabel = () => {
+          const nextId = slugifyAdminCategory(labelInput.value);
+          if (nextId && !idInput.value.trim()) idInput.value = nextId;
+        };
+        labelInput.addEventListener('change', syncIdFromLabel);
+        labelInput.addEventListener('blur', syncIdFromLabel);
+
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.min = '0';
+        priceInput.className = 'addon-price';
+        priceInput.placeholder = '0';
+        priceInput.value = (option && Object.prototype.hasOwnProperty.call(option, 'price')) ? String(parseInt(option.price, 10) || 0) : '';
+
+        const activeWrap = document.createElement('label');
+        activeWrap.className = 'product-addon-check';
+        const activeInput = document.createElement('input');
+        activeInput.type = 'checkbox';
+        activeInput.className = 'addon-active';
+        activeInput.checked = option ? option.active !== false : true;
+        activeWrap.appendChild(activeInput);
+        activeWrap.appendChild(document.createTextNode('Activo'));
+
+        const qtyWrap = document.createElement('label');
+        qtyWrap.className = 'product-addon-check';
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'checkbox';
+        qtyInput.className = 'addon-allow-qty';
+        qtyInput.checked = !!(option && option.allow_quantity);
+        qtyWrap.appendChild(qtyInput);
+        qtyWrap.appendChild(document.createTextNode('Permite varias unidades'));
+
+        const maxQtyInput = document.createElement('input');
+        maxQtyInput.type = 'number';
+        maxQtyInput.min = '1';
+        maxQtyInput.className = 'addon-max-qty';
+        maxQtyInput.value = String(parseInt((option && option.max_qty) || '1', 10) || 1);
+
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = 'Quitar';
+        delBtn.className = 'product-addon-remove';
+        delBtn.addEventListener('click', () => row.remove());
+
+        const title = document.createElement('div');
+        title.className = 'product-addon-row-title';
+        const refreshTitle = () => {
+          const label = String(labelInput.value || '').trim();
+          title.textContent = label || 'Nuevo adicional';
+        };
+        refreshTitle();
+
+        const head = document.createElement('div');
+        head.className = 'product-addon-row-head';
+        head.appendChild(title);
+        head.appendChild(delBtn);
+
+        const grid = document.createElement('div');
+        grid.className = 'product-addon-grid';
+
+        const labelField = document.createElement('label');
+        labelField.className = 'product-addon-field';
+        labelField.innerHTML = '<span>Nombre visible</span>';
+        labelField.appendChild(labelInput);
+
+        const idField = document.createElement('label');
+        idField.className = 'product-addon-field';
+        idField.innerHTML = '<span>ID interno</span>';
+        idField.appendChild(idInput);
+
+        const priceField = document.createElement('label');
+        priceField.className = 'product-addon-field';
+        priceField.innerHTML = '<span>Precio</span>';
+        priceField.appendChild(priceInput);
+
+        const maxQtyField = document.createElement('label');
+        maxQtyField.className = 'product-addon-field';
+        maxQtyField.innerHTML = '<span>Cantidad máxima</span>';
+        maxQtyField.appendChild(maxQtyInput);
+
+        grid.appendChild(labelField);
+        grid.appendChild(idField);
+        grid.appendChild(priceField);
+        grid.appendChild(maxQtyField);
+
+        const flags = document.createElement('div');
+        flags.className = 'product-addon-flags';
+        flags.appendChild(activeWrap);
+        flags.appendChild(qtyWrap);
+
+        const syncMaxQtyState = () => {
+          const enabled = !!qtyInput.checked;
+          maxQtyInput.disabled = !enabled;
+          if (!enabled) maxQtyInput.value = '1';
+        };
+        labelInput.addEventListener('input', refreshTitle);
+        qtyInput.addEventListener('change', syncMaxQtyState);
+        syncMaxQtyState();
+
+        row.appendChild(head);
+        row.appendChild(grid);
+        row.appendChild(flags);
+        containerEl.appendChild(row);
+      };
+
+      if (safeOptions.length) {
+        safeOptions.forEach(option => addRow(option));
+      } else {
+        const empty = document.createElement('div');
+        empty.className = 'product-addons-empty';
+        empty.dataset.addonsEmpty = '1';
+        empty.textContent = 'Sin adicionales configurados. Usa "Agregar adicional" para crear opciones.';
+        containerEl.appendChild(empty);
+      }
+      containerEl.dataset.rendered = '1';
+    }
+
+    function addAdminAddonRow(containerEl) {
+      if (!containerEl) return;
+      if (containerEl.dataset.rendered !== '1') renderAdminAddonsEditor(containerEl, []);
+      const empty = containerEl.querySelector('[data-addons-empty="1"]');
+      if (empty) empty.remove();
+      const row = document.createElement('div');
+      row.dataset.addonRow = '1';
+      row.className = 'product-addon-row';
+      row.innerHTML = `
+        <div class="product-addon-row-head">
+          <div class="product-addon-row-title">Nuevo adicional</div>
+          <button type="button" class="addon-remove product-addon-remove">Quitar</button>
+        </div>
+        <div class="product-addon-grid">
+          <label class="product-addon-field">
+            <span>Nombre visible</span>
+            <input type="text" class="addon-label" placeholder="Ej: Panceta">
+          </label>
+          <label class="product-addon-field">
+            <span>ID interno</span>
+            <input type="text" class="addon-id" placeholder="panceta">
+          </label>
+          <label class="product-addon-field">
+            <span>Precio</span>
+            <input type="number" min="0" class="addon-price" placeholder="0">
+          </label>
+          <label class="product-addon-field">
+            <span>Cantidad máxima</span>
+            <input type="number" min="1" class="addon-max-qty" value="1" disabled>
+          </label>
+        </div>
+        <div class="product-addon-flags">
+          <label class="product-addon-check"><input type="checkbox" class="addon-active" checked> Activo</label>
+          <label class="product-addon-check"><input type="checkbox" class="addon-allow-qty"> Permite varias unidades</label>
+        </div>
+      `;
+      const labelInput = row.querySelector('.addon-label');
+      const idInput = row.querySelector('.addon-id');
+      const removeBtn = row.querySelector('.addon-remove');
+      const allowQty = row.querySelector('.addon-allow-qty');
+      const maxQtyInput = row.querySelector('.addon-max-qty');
+      const titleEl = row.querySelector('.product-addon-row-title');
+      if (labelInput && idInput) {
+        const syncIdFromLabel = () => {
+          const nextId = slugifyAdminCategory(labelInput.value);
+          if (nextId && !idInput.value.trim()) idInput.value = nextId;
+        };
+        const syncTitle = () => {
+          if (!titleEl) return;
+          const label = String(labelInput.value || '').trim();
+          titleEl.textContent = label || 'Nuevo adicional';
+        };
+        labelInput.addEventListener('change', syncIdFromLabel);
+        labelInput.addEventListener('blur', syncIdFromLabel);
+        labelInput.addEventListener('input', syncTitle);
+        syncTitle();
+      }
+      if (allowQty && maxQtyInput) {
+        const syncMaxQtyState = () => {
+          const enabled = !!allowQty.checked;
+          maxQtyInput.disabled = !enabled;
+          if (!enabled) maxQtyInput.value = '1';
+        };
+        allowQty.addEventListener('change', syncMaxQtyState);
+        syncMaxQtyState();
+      }
+      if (removeBtn) removeBtn.addEventListener('click', () => row.remove());
+      containerEl.appendChild(row);
+    }
+
+    function readAdminAddonsFromEditor(containerEl) {
+      if (!containerEl) return [];
+      const rows = Array.from(containerEl.querySelectorAll('[data-addon-row="1"]'));
+      const out = [];
+      const seen = new Set();
+      rows.forEach((row, idx) => {
+        const label = String((row.querySelector('.addon-label') && row.querySelector('.addon-label').value) || '').trim();
+        const id = slugifyAdminCategory(String((row.querySelector('.addon-id') && row.querySelector('.addon-id').value) || '').trim() || label);
+        const price = parseInt((row.querySelector('.addon-price') && row.querySelector('.addon-price').value) || '0', 10);
+        const active = !!(row.querySelector('.addon-active') && row.querySelector('.addon-active').checked);
+        const allowQty = !!(row.querySelector('.addon-allow-qty') && row.querySelector('.addon-allow-qty').checked);
+        const maxQty = parseInt((row.querySelector('.addon-max-qty') && row.querySelector('.addon-max-qty').value) || '1', 10);
+        if (!label || !id) return;
+        if (!Number.isFinite(price) || price < 0) return;
+        const sig = `${id}::${label}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        out.push({
+          id,
+          label,
+          price,
+          active,
+          allow_quantity: allowQty,
+          max_qty: Number.isFinite(maxQty) && maxQty > 0 ? maxQty : 1,
+          sort_order: idx
+        });
+      });
+      return out;
+    }
+
+    function collectAdminAddonsForSave(config) {
+      if (!config || !config.container || !config.enabled) return null;
+      if (!config.enabled.checked) return {};
+      const options = readAdminAddonsFromEditor(config.container);
+      if (!options.length) {
+        alert('Agregá al menos un adicional o desactivá la opción de adicionales.');
+        return null;
+      }
+      const activeOptions = options.filter(option => option.active !== false);
+      if (!activeOptions.length) {
+        alert('Debe haber al menos un adicional activo.');
+        return null;
+      }
+      const selectionMode = String(config.mode && config.mode.value || 'multiple').trim().toLowerCase() === 'single' ? 'single' : 'multiple';
+      const minSelect = Math.max(0, parseInt(String(config.min && config.min.value || '0').trim() || '0', 10) || 0);
+      const maxSelect = Math.max(0, parseInt(String(config.max && config.max.value || '0').trim() || '0', 10) || 0);
+      if (selectionMode === 'single' && maxSelect > 1) {
+        alert('Si el modo es "Única opción", el máximo debe ser 0 o 1.');
+        return null;
+      }
+      if (maxSelect > 0 && minSelect > maxSelect) {
+        alert('El mínimo de adicionales no puede ser mayor al máximo.');
+        return null;
+      }
+      return {
+        enabled: true,
+        mode: 'inline',
+        title: String(config.title && config.title.value || 'Adicionales').trim() || 'Adicionales',
+        selection_mode: selectionMode,
+        min_select: minSelect,
+        max_select: maxSelect,
+        source_ids: [],
+        options
+      };
+    }
+
+    function applyAdminAddonsConfig(config, rawValue) {
+      if (!config || !config.enabled) return;
+      const normalized = normalizeAdminAddonsConfig(rawValue || {});
+      config.enabled.checked = !!normalized;
+      if (config.title) config.title.value = normalized ? String(normalized.title || 'Adicionales') : 'Adicionales';
+      if (config.mode) config.mode.value = normalized ? String(normalized.selection_mode || 'multiple') : 'multiple';
+      if (config.min) config.min.value = normalized ? String(parseInt(normalized.min_select, 10) || 0) : '0';
+      if (config.max) config.max.value = normalized ? String(parseInt(normalized.max_select, 10) || 0) : '0';
+      if (config.container) renderAdminAddonsEditor(config.container, normalized ? normalized.options : []);
+      syncAddonsConfig(config.enabled, config.wrapper, config.title, config.mode, config.min, config.max);
+    }
+
     function slugifyAdminCategory(value) {
       const text = String(value || '').trim().toLowerCase();
       if (!text) return '';
@@ -3944,6 +4598,19 @@
         const packs = normalizeAdminPackList(v.packs || v.pack_options || v.sale_packs);
         renderAdminPacksEditor(prodEditPacks, packs);
         bindAdminPackPriceSync(prodEditPrice, prodEditPacks);
+        applyAdminAddonsConfig({
+          enabled: prodEditAddonsEnabled,
+          wrapper: prodEditAddonsConfig,
+          title: prodEditAddonsTitle,
+          mode: prodEditAddonsMode,
+          min: prodEditAddonsMin,
+          max: prodEditAddonsMax,
+          container: prodEditAddonsOptions
+        }, v.addons);
+        if (prodEditAddonsAddOption && prodEditAddonsAddOption.dataset.bound !== 'true') {
+          prodEditAddonsAddOption.addEventListener('click', () => addAdminAddonRow(prodEditAddonsOptions));
+          prodEditAddonsAddOption.dataset.bound = 'true';
+        }
         if (prodEditMixable) prodEditMixable.checked = !!v.mixable;
         const hasMixBuilder = !!(v.mix_builder && typeof v.mix_builder === 'object' && Object.keys(v.mix_builder).length > 0);
         const mixBuilder = hasMixBuilder ? v.mix_builder : {};
@@ -3974,6 +4641,16 @@
         prodEditPacks.innerHTML = '';
         prodEditPacks.dataset.rendered = '0';
       }
+      if (prodEditAddonsEnabled) prodEditAddonsEnabled.checked = false;
+      if (prodEditAddonsTitle) prodEditAddonsTitle.value = 'Adicionales';
+      if (prodEditAddonsMode) prodEditAddonsMode.value = 'multiple';
+      if (prodEditAddonsMin) prodEditAddonsMin.value = '0';
+      if (prodEditAddonsMax) prodEditAddonsMax.value = '0';
+      if (prodEditAddonsOptions) {
+        prodEditAddonsOptions.innerHTML = '';
+        prodEditAddonsOptions.dataset.rendered = '0';
+      }
+      syncAddonsConfig(prodEditAddonsEnabled, prodEditAddonsConfig, prodEditAddonsTitle, prodEditAddonsMode, prodEditAddonsMin, prodEditAddonsMax);
       if (prodEditMixable) prodEditMixable.checked = false;
       if (prodEditMixBuilder) prodEditMixBuilder.checked = false;
       if (prodEditMixSourceCat) prodEditMixSourceCat.value = 'pizzas';
@@ -4003,6 +4680,7 @@
     if (prodEditImage) prodEditImage.addEventListener('input', updatePreview);
     if (prodEditSection) prodEditSection.addEventListener('change', () => {});
     if (prodEditMixBuilder) prodEditMixBuilder.addEventListener('change', () => syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat));
+    if (prodEditAddonsEnabled) prodEditAddonsEnabled.addEventListener('change', () => syncAddonsConfig(prodEditAddonsEnabled, prodEditAddonsConfig, prodEditAddonsTitle, prodEditAddonsMode, prodEditAddonsMin, prodEditAddonsMax));
 
     // Image Upload & Delete Handlers
     if (prodEditTriggerUpload && prodEditFile) {
@@ -4210,6 +4888,22 @@
                 if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
                 if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
                 if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
+            }
+
+            const addons = collectAdminAddonsForSave({
+              enabled: prodEditAddonsEnabled,
+              wrapper: prodEditAddonsConfig,
+              title: prodEditAddonsTitle,
+              mode: prodEditAddonsMode,
+              min: prodEditAddonsMin,
+              max: prodEditAddonsMax,
+              container: prodEditAddonsOptions
+            });
+            if (addons === null) return;
+            if (addons && addons.enabled) {
+                variants.addons = addons;
+            } else if (variants && typeof variants === 'object' && 'addons' in variants) {
+                delete variants.addons;
             }
 
             if (prodEditMixable && prodEditMixable.checked) {
@@ -7086,6 +7780,7 @@
           const unit = Number(it.unit_price || 0);
           const subtotal = qty * unit;
           const notes = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
+          const modLines = buildModifierDisplayLines(it.modifiers_json);
           const safeName = escapeHtml(it.name);
           const safeNotes = escapeHtml(notes);
           
@@ -7094,16 +7789,17 @@
           const newBadge = isNew ? '<span style="background:#4caf50; color:white; padding:2px 6px; border-radius:4px; font-size:0.75em; margin-left:5px;">NUEVO</span>' : '';
           const rowStyle = isNew ? 'style="background-color: #f0fdf4;"' : '';
 
-          return `<tr ${rowStyle}><td>${qty}</td><td>${safeName}${newBadge}</td><td>$${unit}</td><td>$${subtotal}</td></tr>${notes ? `<tr><td colspan=4 class="small" style="color:#e65100; font-style:italic;">Nota: ${safeNotes}</td></tr>` : ''}`;
+          return `<tr ${rowStyle}><td>${qty}</td><td>${safeName}${newBadge}</td><td>$${unit}</td><td>$${subtotal}</td></tr>${modLines.length ? `<tr><td colspan=4 class="small" style="color:#475569; line-height:1.45;">${modLines.map(line => `• ${escapeHtml(line)}`).join('<br>')}</td></tr>` : ''}${notes ? `<tr><td colspan=4 class="small" style="color:#e65100; font-style:italic;">Nota: ${safeNotes}</td></tr>` : ''}`;
         }).join('');
         const itemsMobileRows = items.map(it => {
           const qty = Number(it.qty || 0);
           const unit = Number(it.unit_price || 0);
           const subtotal = qty * unit;
           const notes = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
+          const modLines = buildModifierDisplayLines(it.modifiers_json);
           const safeName = escapeHtml(it.name);
           const safeNotes = escapeHtml(notes);
-          return `<div class="row"><div class="left"><span class="qty">${qty}×</span><span class="name">${safeName}</span></div><div class="subtotal">$${subtotal}</div></div>${notes ? `<div class="note">Nota: ${safeNotes}</div>` : ''}`;
+          return `<div class="row"><div class="left"><span class="qty">${qty}×</span><span class="name">${safeName}</span></div><div class="subtotal">$${subtotal}</div></div>${modLines.length ? `<div class="small" style="color:#475569; line-height:1.45; margin:4px 0 8px 0;">${modLines.map(line => `• ${escapeHtml(line)}`).join('<br>')}</div>` : ''}${notes ? `<div class="note">Nota: ${safeNotes}</div>` : ''}`;
         }).join('');
         const itemsHtml = items.length ? `
           <div class="detail-items-mobile">
@@ -9274,27 +9970,87 @@
       });
     }
 
-    function formatModifiersForKitchen(modifiersJson) {
-      const raw = String(modifiersJson || '').trim();
-      if (!raw || raw === '{}' || raw === 'null' || raw === 'undefined') return '';
+    function parseAdminModifiers(rawModifiers) {
+      if (!rawModifiers || rawModifiers === '{}' || rawModifiers === 'null' || rawModifiers === 'undefined') return null;
+      if (typeof rawModifiers === 'object' && !Array.isArray(rawModifiers)) return rawModifiers;
+      const raw = String(rawModifiers || '').trim();
+      if (!raw || raw === '{}' || raw === 'null' || raw === 'undefined') return null;
       try {
-        const obj = JSON.parse(raw);
-        if (!obj || typeof obj !== 'object') return raw;
-        const parts = [];
-        for (const k of Object.keys(obj)) {
-          const v = obj[k];
-          if (v === null || typeof v === 'undefined' || v === '') continue;
-          if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') parts.push(`${k}: ${v}`);
-          else if (Array.isArray(v)) parts.push(`${k}: ${v.filter(x => x !== null && typeof x !== 'undefined' && x !== '').join(', ')}`);
-          else if (typeof v === 'object') {
-            const inner = Object.keys(v).map(kk => `${kk}=${v[kk]}`).join(', ');
-            if (inner) parts.push(`${k}: ${inner}`);
-          }
-        }
-        return parts.join(' · ');
+        const parsed = JSON.parse(raw);
+        return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : null;
       } catch (_) {
-        return raw;
+        return null;
       }
+    }
+
+    function buildMixSummaryFromModifiers(modifiers) {
+      if (!modifiers || typeof modifiers !== 'object') return '';
+      const explicit = String(modifiers.mix_summary || '').trim();
+      if (explicit) return explicit;
+      const mix = Array.isArray(modifiers.mix) ? modifiers.mix : [];
+      const labels = mix.map((part) => `1/2 ${String(part && part.name || 'Pizza').trim() || 'Pizza'}`).filter(Boolean);
+      return labels.join(' + ');
+    }
+
+    function buildAddonsSummaryFromModifiers(modifiers) {
+      if (!modifiers || typeof modifiers !== 'object') return '';
+      const explicit = String(modifiers.addons_summary || '').trim();
+      if (explicit) return explicit;
+      const addons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+      return addons.map((addon) => {
+        const label = String(addon && (addon.label || addon.name) || 'Adicional').trim() || 'Adicional';
+        const qty = Math.max(1, safeAdminInt(addon && addon.qty) || 1);
+        return qty > 1 ? `${label} x${qty}` : label;
+      }).filter(Boolean).join(' + ');
+    }
+
+    function buildModifierDisplayLines(rawModifiers) {
+      const modifiers = parseAdminModifiers(rawModifiers);
+      if (!modifiers) return [];
+      const lines = [];
+      const pack = modifiers.pack && typeof modifiers.pack === 'object' ? modifiers.pack : null;
+      const packLabel = pack ? String(pack.label || pack.name || '').trim() : '';
+      if (packLabel) lines.push(`Presentación: ${packLabel}`);
+
+      const mixSummary = buildMixSummaryFromModifiers(modifiers);
+      if (mixSummary) lines.push(`Pizza mixta: ${mixSummary}`);
+
+      const addonsSummary = buildAddonsSummaryFromModifiers(modifiers);
+      if (addonsSummary) lines.push(`Adicionales: ${addonsSummary}`);
+
+      const skip = new Set(['pack', 'mix', 'mix_summary', 'mix_builder', 'addons', 'addons_summary', 'addons_meta']);
+      for (const key of Object.keys(modifiers)) {
+        if (skip.has(key)) continue;
+        const value = modifiers[key];
+        if (value === null || typeof value === 'undefined' || value === '') continue;
+        if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+          lines.push(`${key}: ${value}`);
+          continue;
+        }
+        if (Array.isArray(value)) {
+          const items = value.map((entry) => {
+            if (entry === null || typeof entry === 'undefined' || entry === '') return '';
+            if (typeof entry === 'string' || typeof entry === 'number' || typeof entry === 'boolean') return String(entry);
+            if (entry && typeof entry === 'object') return String(entry.name || entry.label || entry.id || '').trim();
+            return '';
+          }).filter(Boolean);
+          if (items.length) lines.push(`${key}: ${items.join(', ')}`);
+          continue;
+        }
+        if (typeof value === 'object') {
+          const inner = Object.keys(value).map((innerKey) => {
+            const innerVal = value[innerKey];
+            if (innerVal === null || typeof innerVal === 'undefined' || innerVal === '') return '';
+            return `${innerKey}=${innerVal}`;
+          }).filter(Boolean).join(', ');
+          if (inner) lines.push(`${key}: ${inner}`);
+        }
+      }
+      return lines;
+    }
+
+    function formatModifiersForKitchen(modifiersJson) {
+      return buildModifierDisplayLines(modifiersJson).join(' · ');
     }
 
     let kitchenQuickFilter = 'ingresos';
@@ -9359,13 +10115,13 @@
           const qty = Number(it.qty || 0);
           const name = String(it.name || '').trim();
           const note = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
-          const mods = formatModifiersForKitchen(it.modifiers_json);
+          const modLines = buildModifierDisplayLines(it.modifiers_json);
           return `
             <div class="k-item">
               <div class="k-qty">${qty}×</div>
               <div class="k-name">${name}</div>
               ${note ? `<div class="k-note">Nota: ${note}</div>` : ''}
-              ${mods ? `<div class="k-mod">Opciones: ${mods}</div>` : ''}
+              ${modLines.length ? `<div class="k-mod">${modLines.map(line => `<div>${escapeAdminHtml(line)}</div>`).join('')}</div>` : ''}
             </div>
           `;
         }).join('') : `<div class="small" style="color:#666;">Sin items</div>`;
@@ -15538,6 +16294,71 @@
         return parts.map(part => `1/2 ${part.name || 'Pizza'}`).join(' + ');
       }
 
+      function normalizeAddonsConfig(raw) {
+        if (!raw || typeof raw !== 'object') return null;
+        if (raw.enabled === false) return null;
+        const optionsRaw = Array.isArray(raw.options) ? raw.options : [];
+        const options = [];
+        const seen = new Set();
+        optionsRaw.forEach((option, idx) => {
+          if (!option || typeof option !== 'object') return;
+          const label = String(option.label || option.name || '').trim();
+          const id = String(option.id || option.key || label || idx).trim();
+          const price = safeAdminInt(option.price);
+          if (!id || !label) return;
+          if (price < 0) return;
+          if (option.active === false) return;
+          const sig = `${id}::${label}`;
+          if (seen.has(sig)) return;
+          seen.add(sig);
+          const maxQty = safeAdminInt(option.max_qty ?? option.maxQty ?? 1);
+          const sortOrder = safeAdminInt(option.sort_order ?? option.sortOrder ?? idx);
+          options.push({
+            id,
+            label,
+            price,
+            allow_quantity: option.allow_quantity === true,
+            max_qty: maxQty > 0 ? maxQty : 1,
+            sort_order: Number.isFinite(sortOrder) ? sortOrder : idx
+          });
+        });
+        options.sort((a, b) => {
+          if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+          return String(a.label || '').localeCompare(String(b.label || ''), 'es');
+        });
+        if (!options.length) return null;
+        const minSelect = safeAdminInt(raw.min_select);
+        const maxSelect = safeAdminInt(raw.max_select);
+        const selectionMode = String(raw.selection_mode || 'multiple').trim().toLowerCase() === 'single' ? 'single' : 'multiple';
+        return {
+          enabled: true,
+          mode: String(raw.mode || 'inline').trim() || 'inline',
+          title: String(raw.title || 'Adicionales').trim() || 'Adicionales',
+          selection_mode: selectionMode,
+          min_select: minSelect > 0 ? minSelect : 0,
+          max_select: maxSelect > 0 ? maxSelect : 0,
+          options
+        };
+      }
+
+      function buildAddonsSummary(addons) {
+        if (!Array.isArray(addons) || !addons.length) return '';
+        return addons.map((addon) => {
+          const qty = Math.max(1, safeAdminInt(addon && addon.qty) || 1);
+          const label = String(addon && (addon.label || addon.name) || 'Adicional').trim() || 'Adicional';
+          return qty > 1 ? `${label} x${qty}` : label;
+        }).join(' + ');
+      }
+
+      function buildAddonsSignature(addons) {
+        if (!Array.isArray(addons) || !addons.length) return '';
+        return addons.map((addon) => {
+          const id = String(addon && addon.id || '').trim();
+          const qty = Math.max(1, safeAdminInt(addon && addon.qty) || 1);
+          return id ? `${id}:${qty}` : '';
+        }).filter(Boolean).sort().join('|');
+      }
+
       function ensurePackSelectModal() {
         let modal = document.getElementById('kds-pack-modal');
         if (modal) return modal;
@@ -15711,6 +16532,252 @@
           };
         }
         updateMixState();
+        modal.style.display = 'flex';
+      }
+
+      function ensureProductOptionsModal() {
+        let modal = document.getElementById('kds-product-options-modal');
+        if (modal) return modal;
+        modal = document.createElement('div');
+        modal.id = 'kds-product-options-modal';
+        modal.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(2,6,23,0.62); z-index:10070; align-items:center; justify-content:center; padding:16px;';
+        modal.innerHTML = `
+          <div style="background:#fff; border-radius:18px; width:min(640px, 96vw); max-height:88vh; overflow:auto; box-shadow:0 24px 54px rgba(15,23,42,0.30);">
+            <div style="padding:18px 18px 16px; background:linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%); color:#fff;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+                <div>
+                  <div style="display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; background:rgba(255,255,255,0.16); font-size:11px; font-weight:900; letter-spacing:0.05em; text-transform:uppercase;">Configurar producto</div>
+                  <div id="kds-product-options-title" style="margin-top:12px; font-size:24px; line-height:1.05; font-weight:900;"></div>
+                  <div id="kds-product-options-subtitle" style="margin-top:8px; font-size:13px; line-height:1.4; color:rgba(255,255,255,0.88);"></div>
+                </div>
+                <button type="button" id="kds-product-options-close" style="width:36px; height:36px; border-radius:12px; border:1px solid rgba(255,255,255,0.28); background:rgba(255,255,255,0.14); color:#fff; cursor:pointer; font-size:20px; line-height:1;">×</button>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; padding:18px;">
+              <div id="kds-product-options-body" style="display:flex; flex-direction:column; gap:16px;"></div>
+              <div style="display:grid; gap:12px; grid-template-columns:1.2fr 0.8fr;">
+                <div id="kds-product-options-summary" style="min-height:84px; padding:14px 16px; border-radius:14px; border:1px solid #e2e8f0; background:#f8fafc;"></div>
+                <div id="kds-product-options-price" style="display:flex; align-items:center; justify-content:center; padding:14px 16px; border-radius:14px; border:1px solid #bfdbfe; background:linear-gradient(135deg, #ecfeff 0%, #eff6ff 100%); color:#0f172a; text-align:center;"></div>
+              </div>
+              <button type="button" id="kds-product-options-confirm" style="width:100%; min-height:50px; border:none; border-radius:14px; background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color:#fff; cursor:pointer; font-size:17px; font-weight:900;">Agregar al pedido</button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+        const closeBtn = modal.querySelector('#kds-product-options-close');
+        if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) modal.style.display = 'none';
+        });
+        return modal;
+      }
+
+      function openProductOptionsPicker(product, packs, addonsConfig, onChoose) {
+        const modal = ensureProductOptionsModal();
+        const titleEl = modal.querySelector('#kds-product-options-title');
+        const subtitleEl = modal.querySelector('#kds-product-options-subtitle');
+        const bodyEl = modal.querySelector('#kds-product-options-body');
+        const summaryEl = modal.querySelector('#kds-product-options-summary');
+        const priceEl = modal.querySelector('#kds-product-options-price');
+        const confirmBtn = modal.querySelector('#kds-product-options-confirm');
+        const basePrice = safeAdminInt(product && product.price) || 0;
+        const hasPacks = Array.isArray(packs) && packs.length > 0;
+        const addonCfg = normalizeAddonsConfig(addonsConfig);
+        const hasAddons = !!addonCfg;
+        if (titleEl) titleEl.textContent = product && product.name ? product.name : 'Producto';
+        if (subtitleEl) {
+          const parts = [];
+          if (hasPacks) parts.push('Elegí la presentación');
+          if (hasAddons) parts.push('definí los adicionales');
+          subtitleEl.textContent = parts.length ? `${parts.join(' y ')} antes de agregar al pedido.` : 'Configurá el producto antes de agregarlo.';
+        }
+        if (bodyEl) bodyEl.innerHTML = '';
+
+        let selectedPackId = hasPacks ? String((packs[0] && packs[0].id) || '') : '';
+        const addonRows = [];
+
+        if (hasPacks && bodyEl) {
+          const section = document.createElement('section');
+          section.innerHTML = `
+            <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900; margin-bottom:8px;">Presentaciones</div>
+            <div data-role="pack-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+          `;
+          const packList = section.querySelector('[data-role="pack-list"]');
+          packs.forEach((pack, idx) => {
+            const packId = String(pack && pack.id || '').trim();
+            const row = document.createElement('label');
+            row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:12px; border:1px solid #dbe2ea; background:#fff; cursor:pointer;';
+            row.innerHTML = `
+              <span style="display:flex; align-items:center; gap:10px;">
+                <input type="radio" name="kds-product-pack" value="${escapeAdminAttr(packId)}" ${idx === 0 ? 'checked' : ''} style="accent-color:#2563eb;">
+                <span style="font-weight:800; color:#0f172a;">${escapeAdminHtml(pack.label || 'Presentación')}</span>
+              </span>
+              <span style="font-weight:900; color:#2e7d32;">$${safeAdminInt(pack.price) || 0}</span>
+            `;
+            const input = row.querySelector('input');
+            if (input) {
+              input.addEventListener('change', () => {
+                selectedPackId = String(input.value || '').trim();
+                updateState();
+              });
+            }
+            if (packList) packList.appendChild(row);
+          });
+          bodyEl.appendChild(section);
+        }
+
+        if (hasAddons && bodyEl) {
+          const section = document.createElement('section');
+          section.innerHTML = `
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:8px;">
+              <div>
+                <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">${escapeAdminHtml(addonCfg.title || 'Adicionales')}</div>
+                <div style="margin-top:4px; font-size:12px; color:#475569;">${addonCfg.selection_mode === 'single' ? 'Podés elegir una opción.' : 'Elegí uno o más adicionales según corresponda.'}</div>
+              </div>
+              <div style="text-align:right; font-size:12px; color:#475569; font-weight:700;">
+                ${addonCfg.min_select > 0 ? `<div>Mínimo: ${addonCfg.min_select}</div>` : ''}
+                ${addonCfg.max_select > 0 ? `<div>Máximo: ${addonCfg.max_select}</div>` : ''}
+              </div>
+            </div>
+            <div data-role="addons-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+          `;
+          const addonsList = section.querySelector('[data-role="addons-list"]');
+          const selectionType = addonCfg.selection_mode === 'single' ? 'radio' : 'checkbox';
+          addonCfg.options.forEach((option) => {
+            const row = document.createElement('div');
+            row.style.cssText = 'display:flex; flex-direction:column; gap:8px; padding:12px; border-radius:12px; border:1px solid #dbe2ea; background:#fff;';
+            row.innerHTML = `
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+                <label style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1;">
+                  <input type="${selectionType}" name="kds-product-addon" value="${escapeAdminAttr(option.id)}" style="accent-color:#2563eb;">
+                  <span>
+                    <span style="display:block; font-weight:800; color:#0f172a;">${escapeAdminHtml(option.label)}</span>
+                    <span style="display:block; margin-top:2px; font-size:12px; color:#64748b;">${option.allow_quantity ? `Cantidad variable hasta ${option.max_qty}` : 'Cantidad fija x1'}</span>
+                  </span>
+                </label>
+                <span style="font-weight:900; color:#2e7d32;">$${safeAdminInt(option.price) || 0}</span>
+              </div>
+              ${option.allow_quantity ? `<div style="display:flex; align-items:center; gap:8px;"><span style="font-size:12px; color:#475569; font-weight:700;">Cantidad</span><input type="number" min="1" max="${option.max_qty}" value="1" data-role="qty" style="width:86px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:10px; font-weight:800;" disabled></div>` : ''}
+            `;
+            const input = row.querySelector(`input[type="${selectionType}"]`);
+            const qtyInput = row.querySelector('[data-role="qty"]');
+            const setQtyEnabled = () => {
+              if (!qtyInput) return;
+              qtyInput.disabled = !input.checked;
+            };
+            if (input) {
+              input.addEventListener('change', () => {
+                if (selectionType === 'radio') {
+                  addonRows.forEach((entry) => {
+                    if (entry.qtyInput) entry.qtyInput.disabled = !entry.input.checked;
+                  });
+                } else {
+                  setQtyEnabled();
+                }
+                updateState();
+              });
+            }
+            if (qtyInput) {
+              qtyInput.addEventListener('input', () => {
+                const maxQty = Math.max(1, safeAdminInt(option.max_qty) || 1);
+                let value = safeAdminInt(qtyInput.value) || 1;
+                value = Math.min(Math.max(1, value), maxQty);
+                qtyInput.value = String(value);
+                updateState();
+              });
+            }
+            addonRows.push({ option, input, qtyInput });
+            if (addonsList) addonsList.appendChild(row);
+          });
+          bodyEl.appendChild(section);
+        }
+
+        const getSelectedPack = () => {
+          if (!hasPacks) return null;
+          return packs.find((pack) => String(pack && pack.id || '') === selectedPackId) || packs[0] || null;
+        };
+
+        const getSelectedAddons = () => {
+          return addonRows.filter((entry) => entry.input && entry.input.checked).map((entry) => {
+            const qty = entry.option.allow_quantity && entry.qtyInput
+              ? Math.min(Math.max(1, safeAdminInt(entry.qtyInput.value) || 1), Math.max(1, safeAdminInt(entry.option.max_qty) || 1))
+              : 1;
+            const unitPrice = safeAdminInt(entry.option.price) || 0;
+            return {
+              id: String(entry.option.id || '').trim(),
+              label: String(entry.option.label || 'Adicional').trim() || 'Adicional',
+              qty,
+              unit_price: unitPrice,
+              total_price: unitPrice * qty
+            };
+          });
+        };
+
+        const updateState = () => {
+          const selectedPack = getSelectedPack();
+          const selectedAddons = getSelectedAddons();
+          const selectedCount = selectedAddons.length;
+          const minSelect = addonCfg ? Math.max(0, safeAdminInt(addonCfg.min_select) || 0) : 0;
+          const maxSelect = addonCfg ? Math.max(0, safeAdminInt(addonCfg.max_select) || 0) : 0;
+          let message = '';
+          if (addonCfg) {
+            if (addonCfg.selection_mode === 'single' && selectedCount > 1) {
+              message = 'Solo se permite un adicional.';
+            } else if (selectedCount < minSelect) {
+              message = `Debés elegir al menos ${minSelect} adicional(es).`;
+            } else if (maxSelect > 0 && selectedCount > maxSelect) {
+              message = `Solo se permiten hasta ${maxSelect} adicional(es).`;
+            }
+          }
+          const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (safeAdminInt(addon.total_price) || 0), 0);
+          const totalPrice = (selectedPack ? (safeAdminInt(selectedPack.price) || 0) : basePrice) + addonsTotal;
+          if (summaryEl) {
+            const packLine = selectedPack ? `<div style="margin-top:8px;"><span style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentación</span><div style="margin-top:4px; font-size:16px; font-weight:900; color:#0f172a;">${escapeAdminHtml(selectedPack.label || 'Presentación')}</div></div>` : '';
+            const addonsLine = selectedAddons.length
+              ? `<div style="margin-top:8px;"><span style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Adicionales</span><div style="margin-top:4px; font-size:15px; font-weight:800; color:#0f172a;">${escapeAdminHtml(buildAddonsSummary(selectedAddons))}</div></div>`
+              : (addonCfg ? `<div style="margin-top:8px; font-size:14px; color:#64748b;">Sin adicionales seleccionados.</div>` : '');
+            const messageHtml = message ? `<div style="margin-top:12px; padding:10px 12px; border-radius:10px; background:#fff7ed; color:#9a3412; font-size:12px; font-weight:800; border:1px solid #fdba74;">${escapeAdminHtml(message)}</div>` : '';
+            summaryEl.innerHTML = `
+              <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Resumen</div>
+              ${packLine || '<div style="margin-top:8px; font-size:14px; color:#64748b;">Se usa el precio base del producto.</div>'}
+              ${addonsLine}
+              ${messageHtml}
+            `;
+          }
+          if (priceEl) {
+            priceEl.innerHTML = `<div><div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#475569; font-weight:900;">Total</div><div style="margin-top:6px; font-size:28px; font-weight:900;">$${totalPrice}</div></div>`;
+          }
+          if (confirmBtn) confirmBtn.disabled = !!message || totalPrice <= 0;
+          return {
+            pack: selectedPack,
+            addons: selectedAddons,
+            addonsSummary: buildAddonsSummary(selectedAddons),
+            totalPrice,
+            valid: !message && totalPrice > 0
+          };
+        };
+
+        if (confirmBtn) {
+          confirmBtn.onclick = () => {
+            const state = updateState();
+            if (!state || !state.valid) return;
+            const keyParts = [];
+            if (state.pack && state.pack.id) keyParts.push(`pack:${String(state.pack.id).trim()}`);
+            if (state.addons.length) keyParts.push(`addons:${buildAddonsSignature(state.addons)}`);
+            modal.style.display = 'none';
+            onChoose({
+              pack: state.pack,
+              modifiers: state.addons.length ? {
+                addons: state.addons.map((addon) => ({ id: addon.id, qty: addon.qty }))
+              } : {},
+              addons_summary: state.addonsSummary,
+              totalPrice: state.totalPrice,
+              keySuffix: keyParts.join('::')
+            });
+          };
+        }
+
+        updateState();
         modal.style.display = 'flex';
       }
 
@@ -15986,8 +17053,14 @@
           return;
         }
         const packs = getProductPacks(p);
-        if (packs.length) {
-          openPackPicker(p, packs, (pack) => addToCart(p, 1, false, pack));
+        const addonsConfig = normalizeAddonsConfig(variants.addons);
+        if (packs.length || addonsConfig) {
+          openProductOptionsPicker(p, packs, addonsConfig, (state) => addToCart(p, 1, false, state.pack || null, {
+            modifiers: state.modifiers || {},
+            addons_summary: state.addons_summary || '',
+            totalPrice: state.totalPrice,
+            keySuffix: state.keySuffix || ''
+          }));
           return;
         }
         addToCart(p, 1, false, null);
@@ -16021,7 +17094,8 @@
             pack_label: packLabel || '',
             pack_size: packId ? packSize : 1,
             modifiers: meta && meta.modifiers && typeof meta.modifiers === 'object' ? meta.modifiers : {},
-            mix_summary: meta && meta.mix_summary ? String(meta.mix_summary) : ''
+            mix_summary: meta && meta.mix_summary ? String(meta.mix_summary) : '',
+            addons_summary: meta && meta.addons_summary ? String(meta.addons_summary) : ''
           });
         }
         if (!skipRender) renderCart();
@@ -16115,6 +17189,7 @@
                 <div style="flex: 1; margin-right: 8px;">
                   <div style="font-weight: 600;">${item.name}</div>
                   ${item.mix_summary ? `<div style="margin-top:4px; font-size:12px; color:#1d4ed8; font-weight:700;">${escapeAdminHtml(item.mix_summary)}</div>` : ''}
+                  ${item.addons_summary ? `<div style="margin-top:4px; font-size:12px; color:#7c3aed; font-weight:700;">Adicionales: ${escapeAdminHtml(item.addons_summary)}</div>` : ''}
                   <div style="color: #666;">$${item.price} x ${item.qty}</div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -17776,15 +18851,9 @@
             
             items.forEach(item => {
                 let details = '';
-                if (item.modifiers_json) {
-                    try {
-                        const mods = JSON.parse(item.modifiers_json);
-                        if (Array.isArray(mods) && mods.length > 0) {
-                            details += `<div style="font-size:${px(12)}px; margin-left:${px(10)}px;">- ${mods.map(m => escapeAdminHtml(m.name)).join('<br>- ')}</div>`;
-                        } else if (typeof mods === 'object') {
-                             // Handle object format if necessary
-                        }
-                    } catch(e) {}
+                const modifierLines = buildModifierDisplayLines(item.modifiers_json);
+                if (modifierLines.length) {
+                    details += modifierLines.map(line => `<div style="font-size:${px(12)}px; margin-left:${px(10)}px;">- ${escapeAdminHtml(line)}</div>`).join('');
                 }
                 if (item.notes) {
                     details += `<div style="font-size:${px(12)}px; margin-left:${px(10)}px; font-weight:900;">NOTA: ${escapeAdminHtml(item.notes)}</div>`;
@@ -17911,13 +18980,9 @@
 
             items.forEach(item => {
                 let details = '';
-                if (item.modifiers_json) {
-                    try {
-                        const mods = JSON.parse(item.modifiers_json);
-                        if (Array.isArray(mods) && mods.length > 0) {
-                            details += `<div style="font-size:${px(14)}px; margin-left:${px(10)}px;">- ${mods.map(m => escapeAdminHtml(m.name)).join('<br>- ')}</div>`;
-                        }
-                    } catch(e) {}
+                const modifierLines = buildModifierDisplayLines(item.modifiers_json);
+                if (modifierLines.length) {
+                    details += modifierLines.map(line => `<div style="font-size:${px(14)}px; margin-left:${px(10)}px;">- ${escapeAdminHtml(line)}</div>`).join('');
                 }
                 if (item.notes) {
                     details += `<div style="font-size:${px(14)}px; margin-left:${px(10)}px; font-weight:900;">NOTA: ${escapeAdminHtml(item.notes)}</div>`;
@@ -18864,6 +19929,45 @@
           <small>Si configurás presentaciones, el cliente elige una y el stock se descuenta por unidades reales.</small>
         </div>
         <div class="edit-form-group">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="create-prod-addons-enabled" style="width:auto;"> Habilitar adicionales para este producto
+          </label>
+          <div id="create-prod-addons-config" class="product-addons-panel">
+            <div class="product-addons-meta">
+              <div>
+                <label for="create-prod-addons-title">Título</label>
+                <input type="text" id="create-prod-addons-title" placeholder="Adicionales">
+              </div>
+              <div>
+                <label for="create-prod-addons-mode">Modo de selección</label>
+                <select id="create-prod-addons-mode">
+                  <option value="multiple">Múltiple</option>
+                  <option value="single">Única opción</option>
+                </select>
+              </div>
+              <div>
+                <label for="create-prod-addons-min">Mínimo</label>
+                <input type="number" id="create-prod-addons-min" min="0" value="0">
+              </div>
+              <div>
+                <label for="create-prod-addons-max">Máximo</label>
+                <input type="number" id="create-prod-addons-max" min="0" value="0">
+              </div>
+            </div>
+            <div class="product-addons-options-block">
+              <div class="product-addons-section-head">
+                <div>
+                  <h4>Opciones disponibles</h4>
+                  <p>Definí nombre, ID, precio y si permite cantidad variable.</p>
+                </div>
+              </div>
+              <div id="create-prod-addons-options" class="product-addons-list"></div>
+              <button type="button" id="create-prod-addons-add-option" class="product-addons-cta">Agregar adicional</button>
+            </div>
+            <small class="product-addons-help">Primero queda configurado por producto; más adelante se puede migrar a catálogo centralizado.</small>
+          </div>
+        </div>
+        <div class="edit-form-group">
           <label for="create-prod-position">Posición en la categoría</label>
           <input type="number" id="create-prod-position" min="1" placeholder="Vacío = al final">
           <small>Si el producto tiene varias categorías, se usa la primera seleccionada para definir el orden.</small>
@@ -19006,15 +20110,37 @@ window.EditOrder = {
         this.currentOrder = order;
         this.availableProducts = [];
         // Clone items
-        this.items = initialItems.map(i => ({
-            id: i.product_id || i.id, 
-            item_id: i.id, // ID DB (pk)
-            created_at: i.created_at,
-            name: i.name,
-            price: parseFloat(i.unit_price || i.price),
-            qty: parseInt(i.qty || i.quantity || 1),
-            notes: i.notes || ''
-        }));
+        this.items = initialItems.map(i => {
+            let modifiers = {};
+            try {
+                const parsed = JSON.parse(String(i.modifiers_json || '{}'));
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) modifiers = parsed;
+            } catch (_) {}
+            const pack = modifiers && typeof modifiers.pack === 'object' ? modifiers.pack : {};
+            const rawAddons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+            const addonsSummary = String(modifiers.addons_summary || '').trim() || rawAddons.map((addon) => {
+                const label = String(addon && (addon.label || addon.name) || 'Adicional').trim() || 'Adicional';
+                const qty = Math.max(1, safeAdminInt(addon && addon.qty) || 1);
+                return qty > 1 ? `${label} x${qty}` : label;
+            }).filter(Boolean).join(' + ');
+            const rawMix = Array.isArray(modifiers.mix) ? modifiers.mix : [];
+            const mixSummary = String(modifiers.mix_summary || '').trim() || rawMix.map((part) => `1/2 ${String(part && part.name || 'Pizza').trim() || 'Pizza'}`).join(' + ');
+            return {
+                id: i.product_id || i.id,
+                item_id: i.id,
+                created_at: i.created_at,
+                name: i.name,
+                price: parseFloat(i.unit_price || i.price),
+                qty: parseInt(i.qty || i.quantity || 1),
+                notes: i.notes || '',
+                modifiers,
+                pack_id: String(pack.id || '').trim(),
+                pack_label: String(pack.label || '').trim(),
+                pack_size: Math.max(1, safeAdminInt(pack.size || pack.pack_size || pack.qty || 1) || 1),
+                mix_summary: mixSummary,
+                addons_summary: addonsSummary
+            };
+        });
         
         const idEl = document.getElementById('eom-id');
         if(idEl) idEl.textContent = order.display_order_number || order.id;
@@ -19092,7 +20218,7 @@ window.EditOrder = {
         const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => p.id === prodId);
         if (!prod) return;
         
-        const existing = this.items.find(i => i.id === prod.id);
+        const existing = this.items.find(i => i.id === prod.id && !i.pack_id && !i.mix_summary && !i.addons_summary && (!i.modifiers || !Object.keys(i.modifiers).length));
         if (existing) {
             existing.qty++;
         } else {
@@ -19101,7 +20227,13 @@ window.EditOrder = {
                 name: prod.name,
                 price: parseFloat(prod.price),
                 qty: 1,
-                notes: ''
+                notes: '',
+                modifiers: {},
+                pack_id: '',
+                pack_label: '',
+                pack_size: 1,
+                mix_summary: '',
+                addons_summary: ''
             });
         }
         this.renderItems();
@@ -19136,6 +20268,9 @@ window.EditOrder = {
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="flex:1;">
                             <div style="font-weight:600; font-size:0.9rem;">${item.name}</div>
+                            ${item.pack_label ? `<div style="margin-top:4px; font-size:0.78rem; color:#1d4ed8; font-weight:700;">Presentación: ${escapeAdminHtml(item.pack_label)}</div>` : ''}
+                            ${item.mix_summary ? `<div style="margin-top:4px; font-size:0.78rem; color:#1d4ed8; font-weight:700;">${escapeAdminHtml(item.mix_summary)}</div>` : ''}
+                            ${item.addons_summary ? `<div style="margin-top:4px; font-size:0.78rem; color:#7c3aed; font-weight:700;">Adicionales: ${escapeAdminHtml(item.addons_summary)}</div>` : ''}
                             <div style="font-size:0.8rem; color:#666;">$${item.price} x ${item.qty}</div>
                         </div>
                         <div style="display:flex; gap:5px; align-items:center;">
@@ -19168,7 +20303,11 @@ window.EditOrder = {
                   price: parseInt(it.price || 0, 10) || 0,
                   qty: parseInt(it.qty || 1, 10) || 1,
                   notes: it.notes || '',
-                  item_id: it.item_id || null
+                  item_id: it.item_id || null,
+                  pack_id: it.pack_id || '',
+                  pack_label: it.pack_label || '',
+                  pack_size: it.pack_id ? (parseInt(it.pack_size || 1, 10) || 1) : 1,
+                  modifiers: it.modifiers && typeof it.modifiers === 'object' ? it.modifiers : {}
                 })),
                 order_notes: this.notesEl ? this.notesEl.value : ''
             };
@@ -19277,6 +20416,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const pImgUrl = document.getElementById('create-prod-image-url');
   const pPacks = document.getElementById('create-prod-packs');
   const pAddPackBtn = document.getElementById('create-prod-add-pack');
+  const pAddonsEnabled = document.getElementById('create-prod-addons-enabled');
+  const pAddonsConfig = document.getElementById('create-prod-addons-config');
+  const pAddonsTitle = document.getElementById('create-prod-addons-title');
+  const pAddonsMode = document.getElementById('create-prod-addons-mode');
+  const pAddonsMin = document.getElementById('create-prod-addons-min');
+  const pAddonsMax = document.getElementById('create-prod-addons-max');
+  const pAddonsOptions = document.getElementById('create-prod-addons-options');
+  const pAddonsAddOption = document.getElementById('create-prod-addons-add-option');
   
   const previewTitle = document.getElementById('create-preview-title');
   const previewDesc = document.getElementById('create-preview-desc');
@@ -19332,6 +20479,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pMixBuilder) pMixBuilder.checked = false;
       if (pMixSourceCat) pMixSourceCat.value = 'pizzas';
       syncMixBuilderConfig(pMixBuilder, pMixConfig, pMixSourceCat);
+      if (pAddonsEnabled) pAddonsEnabled.checked = false;
+      if (pAddonsTitle) pAddonsTitle.value = 'Adicionales';
+      if (pAddonsMode) pAddonsMode.value = 'multiple';
+      if (pAddonsMin) pAddonsMin.value = '0';
+      if (pAddonsMax) pAddonsMax.value = '0';
+      syncAddonsConfig(pAddonsEnabled, pAddonsConfig, pAddonsTitle, pAddonsMode, pAddonsMin, pAddonsMax);
       pFile.value = '';
       pImgUrl.value = '';
       if (pPacks) {
@@ -19340,6 +20493,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (pAddPackBtn && pAddPackBtn.dataset.bound !== 'true') {
           pAddPackBtn.addEventListener('click', () => addAdminPackRow(pPacks));
           pAddPackBtn.dataset.bound = 'true';
+        }
+      }
+      if (pAddonsOptions) {
+        renderAdminAddonsEditor(pAddonsOptions, []);
+        if (pAddonsAddOption && pAddonsAddOption.dataset.bound !== 'true') {
+          pAddonsAddOption.addEventListener('click', () => addAdminAddonRow(pAddonsOptions));
+          pAddonsAddOption.dataset.bound = 'true';
         }
       }
       previewImg.style.display = 'none';
@@ -19395,6 +20555,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.addEventListener('input', updatePreview);
   });
   if (pMixBuilder) pMixBuilder.addEventListener('change', () => syncMixBuilderConfig(pMixBuilder, pMixConfig, pMixSourceCat));
+  if (pAddonsEnabled) pAddonsEnabled.addEventListener('change', () => syncAddonsConfig(pAddonsEnabled, pAddonsConfig, pAddonsTitle, pAddonsMode, pAddonsMin, pAddonsMax));
 
   if (pFile) {
     pFile.addEventListener('change', async () => {
@@ -19503,6 +20664,20 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       if (packs.length) {
         payload.variants = { packs: packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier })) };
+      }
+      const addons = collectAdminAddonsForSave({
+        enabled: pAddonsEnabled,
+        wrapper: pAddonsConfig,
+        title: pAddonsTitle,
+        mode: pAddonsMode,
+        min: pAddonsMin,
+        max: pAddonsMax,
+        container: pAddonsOptions
+      });
+      if (addons === null) return;
+      if (addons && addons.enabled) {
+        payload.variants = payload.variants || {};
+        payload.variants.addons = addons;
       }
       if (pMixable && pMixable.checked) {
         payload.variants = payload.variants || {};

@@ -135,6 +135,363 @@ function buildMixSummary(components) {
     return components.map(part => `1/2 ${part.name || 'Pizza'}`).join(' + ');
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function normalizeAddonsConfig(raw) {
+    let value = raw;
+    if (typeof raw === 'string') {
+        const s = raw.trim();
+        if (!s) return null;
+        try {
+            value = JSON.parse(s);
+        } catch (_) {
+            return null;
+        }
+    }
+    if (!value || typeof value !== 'object') return null;
+    if (value.enabled === false) return null;
+    const optionsRaw = Array.isArray(value.options) ? value.options : [];
+    const options = [];
+    const seen = new Set();
+    optionsRaw.forEach((option, idx) => {
+        if (!option || typeof option !== 'object') return;
+        const label = String(option.label || option.name || '').trim();
+        const id = String(option.id || option.key || label || idx).trim();
+        const price = parseInt(option.price, 10);
+        if (!id || !label) return;
+        if (!Number.isFinite(price) || price < 0) return;
+        if (option.active === false) return;
+        const sig = `${id}::${label}`;
+        if (seen.has(sig)) return;
+        seen.add(sig);
+        const maxQty = parseInt(option.max_qty ?? option.maxQty ?? 1, 10);
+        const sortOrder = parseInt(option.sort_order ?? option.sortOrder ?? idx, 10);
+        options.push({
+            id,
+            label,
+            price,
+            active: true,
+            allow_quantity: option.allow_quantity === true,
+            max_qty: Number.isFinite(maxQty) && maxQty > 0 ? maxQty : 1,
+            sort_order: Number.isFinite(sortOrder) ? sortOrder : idx
+        });
+    });
+    options.sort((a, b) => {
+        if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+        return String(a.label || '').localeCompare(String(b.label || ''), 'es');
+    });
+    if (!options.length) return null;
+    const minSelect = parseInt(value.min_select, 10);
+    const maxSelect = parseInt(value.max_select, 10);
+    const selectionMode = String(value.selection_mode || 'multiple').trim().toLowerCase() === 'single' ? 'single' : 'multiple';
+    return {
+        enabled: true,
+        mode: String(value.mode || 'inline').trim() || 'inline',
+        title: String(value.title || 'Adicionales').trim() || 'Adicionales',
+        selection_mode: selectionMode,
+        min_select: Number.isFinite(minSelect) && minSelect > 0 ? minSelect : 0,
+        max_select: Number.isFinite(maxSelect) && maxSelect > 0 ? maxSelect : 0,
+        source_ids: Array.isArray(value.source_ids) ? value.source_ids.map(v => String(v || '').trim()).filter(Boolean) : [],
+        options
+    };
+}
+
+function readAddonsConfigFromButton(button) {
+    if (!button) return null;
+    const raw = String(button.getAttribute('data-addons') || '').trim();
+    if (!raw) return null;
+    try {
+        return normalizeAddonsConfig(JSON.parse(raw));
+    } catch (_) {}
+    try {
+        return normalizeAddonsConfig(JSON.parse(decodeURIComponent(raw)));
+    } catch (_) {}
+    return null;
+}
+
+function buildAddonsSummary(addons) {
+    if (!Array.isArray(addons) || !addons.length) return '';
+    return addons.map(addon => {
+        const qty = parseInt(addon && addon.qty, 10) || 1;
+        const label = String(addon && addon.label || addon && addon.name || 'Adicional').trim();
+        return qty > 1 ? `${label} x${qty}` : label;
+    }).join(' + ');
+}
+
+function buildAddonsSignature(addons) {
+    if (!Array.isArray(addons) || !addons.length) return '';
+    return addons
+        .map(addon => `${String(addon && addon.id || addon && addon.product_id || '').trim()}:${parseInt(addon && addon.qty, 10) || 1}`)
+        .filter(Boolean)
+        .sort()
+        .join('+');
+}
+
+function ensureProductOptionsModal() {
+    let modal = document.getElementById('product-options-modal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'product-options-modal';
+    modal.className = 'product-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="modal-content" style="width:min(580px, 96vw); max-width:580px; border-radius:20px; overflow:hidden;">
+        <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div class="modal-body">
+          <div class="modal-details" style="width:100%; padding:0;">
+            <div style="padding:22px 22px 16px; background:linear-gradient(180deg, var(--gastro-accent-08, rgba(255,106,0,0.08)) 0%, #fff 100%);">
+              <div id="product-options-kicker" style="display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:var(--gastro-accent-08, rgba(255,106,0,0.08)); color:var(--gastro-accent-dark, #c45500); font-size:12px; font-weight:900; letter-spacing:0.05em; text-transform:uppercase;">Configurar producto</div>
+              <h3 id="product-options-title" style="margin:12px 0 0; font-size:28px; line-height:1.05; color:#0f172a;"></h3>
+              <p id="product-options-subtitle" style="margin:8px 0 0; font-size:14px; line-height:1.45; color:#475569;">Elegí la presentación y los adicionales antes de agregar al carrito.</p>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:16px; padding:18px 22px 22px;">
+              <div id="product-options-pack-wrap" style="display:none; flex-direction:column; gap:8px;">
+                <label for="product-options-pack-select" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentación</label>
+                <select id="product-options-pack-select" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-weight:700; color:#111827;"></select>
+              </div>
+              <div id="product-options-addons-wrap" style="display:none; flex-direction:column; gap:10px;">
+                <div id="product-options-addons-title" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Adicionales</div>
+                <div id="product-options-addons-help" style="font-size:13px; color:#64748b;"></div>
+                <div id="product-options-addons-list" style="display:flex; flex-direction:column; gap:10px;"></div>
+              </div>
+              <div style="display:grid; gap:12px; grid-template-columns:1.35fr 0.9fr; align-items:stretch;">
+                <div id="product-options-summary" style="padding:14px 16px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; color:#0f172a; font-weight:700; min-height:92px;"></div>
+                <div id="product-options-total" style="display:flex; align-items:center; justify-content:center; padding:14px 16px; border-radius:16px; background:linear-gradient(180deg, #fafafa 0%, var(--gastro-accent-08, rgba(255,106,0,0.08)) 100%); border:1px solid var(--gastro-accent-18, rgba(255, 106, 0, 0.18)); text-align:center;"></div>
+              </div>
+              <button type="button" id="product-options-confirm" class="modal-add-to-cart" style="width:100%; min-height:52px; border-radius:14px; font-size:18px; font-weight:900;">Agregar al carrito</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const closeBtn = modal.querySelector('.close-modal');
+    if (closeBtn) closeBtn.addEventListener('click', () => closeDialog(modal));
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeDialog(modal);
+    });
+    return modal;
+}
+
+function openProductOptionsModal({ productId, name, imageSrc, event, sourceButton, notes = '', basePrice = 0, packs = [], addonsConfig = null }) {
+    const hasPacks = Array.isArray(packs) && packs.length > 0;
+    const hasAddons = addonsConfig && Array.isArray(addonsConfig.options) && addonsConfig.options.length > 0;
+    if (!hasPacks && !hasAddons) {
+        addToCart(productId, name, basePrice, imageSrc, event, (evt) => {
+            showAddToCartAnimation(evt);
+            if (sourceButton) showAddedToCartIndicator(sourceButton);
+        }, notes, null);
+        return;
+    }
+    const modal = ensureProductOptionsModal();
+    const titleEl = modal.querySelector('#product-options-title');
+    const subtitleEl = modal.querySelector('#product-options-subtitle');
+    const packWrap = modal.querySelector('#product-options-pack-wrap');
+    const packSelect = modal.querySelector('#product-options-pack-select');
+    const addonsWrap = modal.querySelector('#product-options-addons-wrap');
+    const addonsTitle = modal.querySelector('#product-options-addons-title');
+    const addonsHelp = modal.querySelector('#product-options-addons-help');
+    const addonsList = modal.querySelector('#product-options-addons-list');
+    const summaryEl = modal.querySelector('#product-options-summary');
+    const totalEl = modal.querySelector('#product-options-total');
+    const confirmBtn = modal.querySelector('#product-options-confirm');
+
+    if (titleEl) titleEl.textContent = name || 'Producto';
+    if (subtitleEl) {
+        subtitleEl.textContent = hasPacks && hasAddons
+            ? 'Elegí la presentación y los adicionales antes de agregar al carrito.'
+            : (hasAddons ? 'Elegí los adicionales antes de agregar al carrito.' : 'Elegí la presentación antes de agregar al carrito.');
+    }
+    if (packWrap) packWrap.style.display = hasPacks ? 'flex' : 'none';
+    if (addonsWrap) addonsWrap.style.display = hasAddons ? 'flex' : 'none';
+    if (addonsTitle && hasAddons) addonsTitle.textContent = String(addonsConfig.title || 'Adicionales');
+
+    const state = {
+        packId: hasPacks ? String((packs[0] && packs[0].id) || '') : '',
+        addonQtys: {}
+    };
+
+    if (packSelect) {
+        packSelect.innerHTML = '';
+        (packs || []).forEach((pack) => {
+            const opt = document.createElement('option');
+            opt.value = String(pack.id || '');
+            opt.textContent = `${pack.label || 'Presentación'} - ${formatMoneyWithCode(parseInt(pack.price, 10) || 0)}`;
+            packSelect.appendChild(opt);
+        });
+        if (state.packId) packSelect.value = state.packId;
+    }
+
+    const getCurrentPack = () => {
+        if (!hasPacks) return null;
+        return packs.find(pack => String(pack.id || '') === String(state.packId || '')) || packs[0] || null;
+    };
+
+    const updateState = () => {
+        const currentPack = getCurrentPack();
+        const resolvedBasePrice = currentPack ? (parseInt(currentPack.price, 10) || 0) : (parseInt(basePrice, 10) || 0);
+        const activeAddons = [];
+        if (hasAddons) {
+            (addonsConfig.options || []).forEach((option) => {
+                const qty = parseInt(state.addonQtys[option.id], 10) || 0;
+                if (qty <= 0) return;
+                activeAddons.push({
+                    id: option.id,
+                    label: option.label,
+                    qty,
+                    unit_price: option.price,
+                    total_price: qty * option.price
+                });
+            });
+        }
+        const selectedCount = activeAddons.length;
+        const minSelect = parseInt(addonsConfig && addonsConfig.min_select, 10) || 0;
+        const maxSelect = parseInt(addonsConfig && addonsConfig.max_select, 10) || 0;
+        const singleMode = !!(addonsConfig && addonsConfig.selection_mode === 'single');
+        const invalidMin = selectedCount < minSelect;
+        const invalidMax = maxSelect > 0 && selectedCount > maxSelect;
+        const invalidSingle = singleMode && selectedCount > 1;
+        const isValid = !(invalidMin || invalidMax || invalidSingle);
+        const addonsTotal = activeAddons.reduce((sum, addon) => sum + (parseInt(addon.total_price, 10) || 0), 0);
+        const totalPrice = resolvedBasePrice + addonsTotal;
+        const packText = currentPack ? `${currentPack.label} · ${formatMoneyWithCode(currentPack.price)}` : 'Sin presentación especial';
+        const addonsSummary = buildAddonsSummary(activeAddons);
+
+        if (addonsHelp && hasAddons) {
+            const hints = [];
+            if (singleMode) hints.push('Elegí una sola opción');
+            if (minSelect > 0) hints.push(`mínimo ${minSelect}`);
+            if (maxSelect > 0) hints.push(`máximo ${maxSelect}`);
+            addonsHelp.textContent = hints.length ? hints.join(' · ') : 'Podés sumar adicionales al producto.';
+        }
+        if (addonsList && hasAddons) {
+            addonsList.innerHTML = '';
+            (addonsConfig.options || []).forEach((option) => {
+                const qty = parseInt(state.addonQtys[option.id], 10) || 0;
+                const maxQty = option.allow_quantity ? option.max_qty : 1;
+                const row = document.createElement('div');
+                row.style.cssText = 'display:flex; align-items:center; gap:12px; justify-content:space-between; padding:12px 14px; border-radius:14px; border:1px solid #e2e8f0; background:#fff;';
+                row.innerHTML = `
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-weight:800; color:#0f172a;">${escapeHtml(option.label)}</div>
+                    <div style="margin-top:4px; font-size:12px; color:#64748b;">${formatMoneyWithCode(option.price)}${maxQty > 1 ? ` · hasta ${maxQty}` : ''}</div>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <button type="button" data-addon-action="decrease" data-addon-id="${escapeHtml(option.id)}" style="width:32px; height:32px; padding:0; border:none; border-radius:999px; background:#e2e8f0; color:#0f172a; font-weight:900; font-size:20px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">-</button>
+                    <span style="width:26px; text-align:center; font-weight:900; color:#0f172a; display:inline-flex; align-items:center; justify-content:center; line-height:1;">${qty}</span>
+                    <button type="button" data-addon-action="increase" data-addon-id="${escapeHtml(option.id)}" style="width:32px; height:32px; padding:0; border:none; border-radius:999px; background:var(--gastro-accent, #ff6a00); color:var(--gastro-accent-contrast, #121212); font-weight:900; font-size:20px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">+</button>
+                  </div>
+                `;
+                const decBtn = row.querySelector('[data-addon-action="decrease"]');
+                const incBtn = row.querySelector('[data-addon-action="increase"]');
+                if (decBtn) {
+                    decBtn.disabled = qty <= 0;
+                    decBtn.style.opacity = qty <= 0 ? '0.45' : '1';
+                    decBtn.addEventListener('click', () => {
+                        const currentQty = parseInt(state.addonQtys[option.id], 10) || 0;
+                        state.addonQtys[option.id] = Math.max(0, currentQty - 1);
+                        updateState();
+                    });
+                }
+                if (incBtn) {
+                    incBtn.disabled = qty >= maxQty || (singleMode && selectedCount >= 1 && qty <= 0);
+                    incBtn.style.opacity = incBtn.disabled ? '0.45' : '1';
+                    incBtn.addEventListener('click', () => {
+                        if (singleMode) {
+                            Object.keys(state.addonQtys).forEach((key) => { state.addonQtys[key] = 0; });
+                        }
+                        const currentQty = parseInt(state.addonQtys[option.id], 10) || 0;
+                        state.addonQtys[option.id] = Math.min(maxQty, currentQty + 1);
+                        updateState();
+                    });
+                }
+                addonsList.appendChild(row);
+            });
+        }
+
+        if (summaryEl) {
+            summaryEl.innerHTML = `
+              <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Resumen</div>
+              <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px; color:#0f172a;">
+                <div><strong>Base:</strong> ${escapeHtml(packText)}</div>
+                <div><strong>Adicionales:</strong> ${escapeHtml(addonsSummary || 'Sin adicionales')}</div>
+                ${!isValid ? `<div style="color:#b91c1c; font-size:12px; font-weight:900;">${escapeHtml(invalidMin ? `Elegí al menos ${minSelect} adicional(es).` : (invalidMax ? `Elegí hasta ${maxSelect} adicional(es).` : 'Solo podés elegir un adicional.'))}</div>` : ''}
+              </div>
+            `;
+        }
+        if (totalEl) {
+            totalEl.innerHTML = `
+              <div>
+                <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Total</div>
+                <div style="margin-top:6px; font-size:28px; line-height:1.05; font-weight:900; color:var(--gastro-accent-dark, #c45500);">${formatMoneyWithCode(totalPrice)}</div>
+              </div>
+            `;
+        }
+        if (confirmBtn) confirmBtn.disabled = !isValid || totalPrice <= 0;
+        return { currentPack, activeAddons, addonsSummary, totalPrice, isValid };
+    };
+
+    if (packSelect) {
+        packSelect.onchange = () => {
+            state.packId = String(packSelect.value || '');
+            updateState();
+        };
+    }
+    if (confirmBtn) {
+        confirmBtn.onclick = () => {
+            const current = updateState();
+            if (!current || !current.isValid || current.totalPrice <= 0) return;
+            const currentPack = current.currentPack;
+            const addons = current.activeAddons;
+            const keyParts = [];
+            if (currentPack && currentPack.id) keyParts.push(`pack:${String(currentPack.id).trim()}`);
+            const addonsSignature = buildAddonsSignature(addons);
+            if (addonsSignature) keyParts.push(`addons:${addonsSignature}`);
+            const clientId = `${productId}${keyParts.length ? `::${keyParts.join('::')}` : ''}`;
+            const meta = {
+                product_id: productId,
+                totalPrice: current.totalPrice,
+                keySuffix: keyParts.join('::'),
+                modifiers: {},
+                addons_summary: current.addonsSummary
+            };
+            let displayName = name;
+            if (currentPack && currentPack.id) {
+                meta.pack_id = currentPack.id;
+                meta.pack_label = currentPack.label;
+                meta.pack_size = currentPack.pack_size;
+                displayName = `${name} (${currentPack.label})`;
+            }
+            if (addons.length) {
+                meta.modifiers.addons = addons;
+                meta.modifiers.addons_summary = current.addonsSummary;
+                meta.modifiers.addons_meta = {
+                    mode: String(addonsConfig && addonsConfig.mode || 'inline'),
+                    title: String(addonsConfig && addonsConfig.title || 'Adicionales')
+                };
+            }
+            if (!Object.keys(meta.modifiers).length) delete meta.modifiers;
+            closeDialog(modal);
+            addToCart(clientId, displayName, current.totalPrice, imageSrc, event, (evt) => {
+                showAddToCartAnimation(evt);
+                if (sourceButton) showAddedToCartIndicator(sourceButton);
+            }, notes, meta);
+        };
+    }
+    updateState();
+    openDialog(modal);
+}
+
 function ensureMixModal() {
     let modal = document.getElementById('mix-modal');
     if (modal) return modal;
@@ -359,6 +716,7 @@ export function onAddToCartClick(event) {
     const imageSrc = productImage ? productImage.getAttribute('src') : '';
     const packs = readPacksFromButton(button);
     const mixBuilder = readMixBuilderFromButton(button);
+    const addonsConfig = readAddonsConfigFromButton(button);
 
     if (mixBuilder) {
         const candidates = getMixCandidateProducts(productId, mixBuilder);
@@ -461,45 +819,24 @@ export function onAddToCartClick(event) {
         return;
     }
 
-    if (packs.length) {
-        const modal = ensurePackModal();
-        const title = modal.querySelector('#pack-modal-title');
-        const options = modal.querySelector('#pack-modal-options');
-        if (title) title.textContent = name;
-        if (options) options.innerHTML = '';
+    let notes = '';
+    if (button.id === 'modal-add-to-cart-btn') {
+        const notesEl = document.getElementById('modal-product-notes');
+        if (notesEl) notes = notesEl.value;
+    }
 
-        const addFromPack = (pack) => {
-            const clientId = `${productId}::pack:${pack.id}`;
-            const displayName = `${name} (${pack.label})`;
-            const meta = {
-                product_id: productId,
-                pack_id: pack.id,
-                pack_label: pack.label,
-                pack_size: pack.pack_size
-            };
-            addToCart(clientId, displayName, pack.price, imageSrc, event, (evt) => {
-                showAddToCartAnimation(evt);
-                showAddedToCartIndicator(button);
-            }, '', meta);
-        };
-
-        packs.forEach(pack => {
-            const optBtn = document.createElement('button');
-            optBtn.type = 'button';
-            optBtn.className = 'modal-add-to-cart';
-            optBtn.style.display = 'flex';
-            optBtn.style.alignItems = 'center';
-            optBtn.style.justifyContent = 'space-between';
-            optBtn.style.gap = '12px';
-            optBtn.innerHTML = `<span style="font-weight:800;">${pack.label}</span><span>${formatMoneyWithCode(pack.price)}</span>`;
-            optBtn.addEventListener('click', () => {
-                closeDialog(modal);
-                addFromPack(pack);
-            });
-            if (options) options.appendChild(optBtn);
+    if (packs.length || addonsConfig) {
+        openProductOptionsModal({
+            productId,
+            name,
+            imageSrc,
+            event,
+            sourceButton: button,
+            notes,
+            basePrice: parseFloat(button.getAttribute('data-price')) || 0,
+            packs,
+            addonsConfig
         });
-
-        openDialog(modal);
         return;
     }
 
@@ -517,12 +854,6 @@ export function onAddToCartClick(event) {
         return;
     }
     
-    let notes = '';
-    if (button.id === 'modal-add-to-cart-btn') {
-        const notesEl = document.getElementById('modal-product-notes');
-        if (notesEl) notes = notesEl.value;
-    }
-
     addToCart(productId, name, price, imageSrc, event, (evt) => {
         showAddToCartAnimation(evt);
         showAddedToCartIndicator(button);
@@ -740,6 +1071,9 @@ export function initProductModals() {
             const packsAttr = addBtn.getAttribute('data-packs');
             if (packsAttr) modalAddBtn.setAttribute('data-packs', packsAttr);
             else modalAddBtn.removeAttribute('data-packs');
+            const addonsAttr = addBtn.getAttribute('data-addons');
+            if (addonsAttr) modalAddBtn.setAttribute('data-addons', addonsAttr);
+            else modalAddBtn.removeAttribute('data-addons');
             const stock = parseStockValue(card && card.dataset ? card.dataset.stock : '');
             applyStockStateToButton(modalAddBtn, stock);
             
@@ -903,6 +1237,7 @@ export async function initDynamicProducts() {
             if (btn) {
                 const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
                 const mixBuilder = normalizeMixBuilder(v.mix_builder);
+                const addonsConfig = normalizeAddonsConfig(v.addons);
                 if (packs.length) {
                     btn.setAttribute('data-packs', encodeURIComponent(JSON.stringify(packs)));
                 } else {
@@ -912,6 +1247,11 @@ export async function initDynamicProducts() {
                     btn.setAttribute('data-mix-builder', encodeURIComponent(JSON.stringify(mixBuilder)));
                 } else {
                     btn.removeAttribute('data-mix-builder');
+                }
+                if (addonsConfig) {
+                    btn.setAttribute('data-addons', encodeURIComponent(JSON.stringify(addonsConfig)));
+                } else {
+                    btn.removeAttribute('data-addons');
                 }
             }
             applyCardStockState(card, prod);
@@ -1016,6 +1356,8 @@ export async function initDynamicProducts() {
             const packsAttr = packs.length ? ' data-packs="' + encodeURIComponent(JSON.stringify(packs)) + '"' : '';
             const mixBuilder = normalizeMixBuilder(v.mix_builder);
             const mixAttr = mixBuilder ? ' data-mix-builder="' + encodeURIComponent(JSON.stringify(mixBuilder)) + '"' : '';
+            const addonsConfig = normalizeAddonsConfig(v.addons);
+            const addonsAttr = addonsConfig ? ' data-addons="' + encodeURIComponent(JSON.stringify(addonsConfig)) + '"' : '';
 
             const buildCard = (section, className) => {
                 const card = document.createElement('div');
@@ -1061,7 +1403,7 @@ export async function initDynamicProducts() {
                     '<div class="price-container">' +
                     (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
                     '</div>' +
-                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + mixAttr + '>Añadir al carrito</button>' +
+                    '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + mixAttr + addonsAttr + '>Añadir al carrito</button>' +
                     '</div>';
                 applyCardStockState(card, p);
                 return card;

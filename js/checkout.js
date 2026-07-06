@@ -15,6 +15,23 @@ function getCheckoutMixSummary(item) {
     return mix.map(part => `1/2 ${String(part && part.name || 'Pizza').trim()}`).join(' + ');
 }
 
+function getCheckoutAddonsSummary(item) {
+    if (item && typeof item.addons_summary === 'string' && item.addons_summary.trim()) {
+        return item.addons_summary.trim();
+    }
+    const modifiers = item && item.modifiers && typeof item.modifiers === 'object' ? item.modifiers : {};
+    if (typeof modifiers.addons_summary === 'string' && modifiers.addons_summary.trim()) {
+        return modifiers.addons_summary.trim();
+    }
+    const addons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+    if (!addons.length) return '';
+    return addons.map(addon => {
+        const qty = parseInt(addon && addon.qty, 10) || 1;
+        const label = String(addon && addon.label || addon && addon.name || 'Adicional').trim();
+        return qty > 1 ? `${label} x${qty}` : label;
+    }).join(' + ');
+}
+
 function getGeoApiBase() {
     const origin = window.location.origin || '';
     return /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
@@ -251,6 +268,8 @@ export async function handleCheckout() {
         itemsList += `   \uD83D\uDCB5 Precio unitario: ${precioFormateado}\n`;
         const mixSummary = getCheckoutMixSummary(item);
         if (mixSummary) itemsList += `   \uD83C\uDF55 Mitades: ${mixSummary}\n`;
+        const addonsSummary = getCheckoutAddonsSummary(item);
+        if (addonsSummary) itemsList += `   \u2795 Adicionales: ${addonsSummary}\n`;
         const subtotalTxt = formatMoneyWithCode(parseInt(item.price * item.quantity));
         itemsList += `   \uD83D\uDCB0 Subtotal: ${subtotalTxt}\n`;
         if ((item.notes || '').trim()) itemsList += `   \uD83D\uDCDD Detalle: ${(item.notes||'').trim()}\n`;

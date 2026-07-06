@@ -128,6 +128,130 @@ def _build_mix_summary(parts):
         labels.append(f"1/2 {name}")
     return ' + '.join(labels)
 
+def _normalize_addons_config(raw):
+    if not isinstance(raw, dict) or raw.get('enabled') is False:
+        return None
+    options = []
+    seen = set()
+    for idx, option in enumerate(raw.get('options') or []):
+        if not isinstance(option, dict):
+            continue
+        label = str(option.get('label') or option.get('name') or '').strip()
+        addon_id = str(option.get('id') or option.get('key') or label or idx).strip()
+        if not addon_id or not label:
+            continue
+        try:
+            price = int(option.get('price') or 0)
+        except Exception:
+            continue
+        if price < 0:
+            continue
+        if option.get('active') is False:
+            continue
+        sig = f"{addon_id}::{label}"
+        if sig in seen:
+            continue
+        seen.add(sig)
+        max_qty = _safe_int(option.get('max_qty', option.get('maxQty', 1)), 1)
+        sort_order = _safe_int(option.get('sort_order', option.get('sortOrder', idx)), idx)
+        options.append({
+            'id': addon_id,
+            'label': label,
+            'price': price,
+            'allow_quantity': bool(option.get('allow_quantity', False)),
+            'max_qty': max(1, max_qty),
+            'sort_order': sort_order
+        })
+    if not options:
+        return None
+    options.sort(key=lambda item: (item.get('sort_order', 0), str(item.get('label') or '').lower()))
+    selection_mode = str(raw.get('selection_mode') or 'multiple').strip().lower()
+    if selection_mode != 'single':
+        selection_mode = 'multiple'
+    min_select = max(0, _safe_int(raw.get('min_select'), 0))
+    max_select = max(0, _safe_int(raw.get('max_select'), 0))
+    return {
+        'enabled': True,
+        'mode': str(raw.get('mode') or 'inline').strip() or 'inline',
+        'title': str(raw.get('title') or 'Adicionales').strip() or 'Adicionales',
+        'selection_mode': selection_mode,
+        'min_select': min_select,
+        'max_select': max_select,
+        'options': options
+    }
+
+def _build_addons_summary(items):
+    if not isinstance(items, list):
+        return ''
+    labels = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get('label') or item.get('name') or '').strip() or 'Adicional'
+        qty = max(1, _safe_int(item.get('qty'), 1))
+        labels.append(f"{label} x{qty}" if qty > 1 else label)
+    return ' + '.join(labels)
+
+def _resolve_addons_price(cur, tenant_slug, base_product_id, base_variants, modifiers, current_unit_price):
+    addons_cfg = _normalize_addons_config(base_variants.get('addons') if isinstance(base_variants, dict) else None)
+    if not addons_cfg:
+        return current_unit_price, modifiers
+    raw_addons = modifiers.get('addons') if isinstance(modifiers, dict) else []
+    if raw_addons is None:
+        raw_addons = []
+    if not isinstance(raw_addons, list):
+        raise ValueError('configuración inválida para los adicionales')
+
+    options_map = {str(option.get('id') or '').strip(): option for option in addons_cfg.get('options') or []}
+    sanitized_addons = []
+    addons_total = 0
+    selected_count = 0
+
+    for raw_addon in raw_addons:
+        if not isinstance(raw_addon, dict):
+            raise ValueError('configuración inválida para los adicionales')
+        addon_id = str(raw_addon.get('id') or raw_addon.get('product_id') or '').strip()
+        if not addon_id:
+            raise ValueError('un adicional no tiene identificador')
+        option = options_map.get(addon_id)
+        if not option:
+            raise ValueError(f'adicional no permitido para el producto: {addon_id}')
+        qty = max(1, _safe_int(raw_addon.get('qty'), 1))
+        if not bool(option.get('allow_quantity')):
+            qty = 1
+        qty = min(qty, max(1, _safe_int(option.get('max_qty'), 1)))
+        unit_price = max(0, _safe_int(option.get('price'), 0))
+        total_price = unit_price * qty
+        addons_total += total_price
+        selected_count += 1
+        sanitized_addons.append({
+            'id': addon_id,
+            'label': str(option.get('label') or addon_id).strip() or addon_id,
+            'qty': qty,
+            'unit_price': unit_price,
+            'total_price': total_price
+        })
+
+    min_select = max(0, _safe_int(addons_cfg.get('min_select'), 0))
+    max_select = max(0, _safe_int(addons_cfg.get('max_select'), 0))
+    selection_mode = str(addons_cfg.get('selection_mode') or 'multiple').strip().lower()
+    if selected_count < min_select:
+        raise ValueError(f'el producto requiere al menos {min_select} adicional(es)')
+    if selection_mode == 'single' and selected_count > 1:
+        raise ValueError('solo se permite un adicional para este producto')
+    if max_select > 0 and selected_count > max_select:
+        raise ValueError(f'solo se permiten hasta {max_select} adicional(es)')
+
+    next_modifiers = dict(modifiers or {})
+    next_modifiers['addons'] = sanitized_addons
+    next_modifiers['addons_summary'] = _build_addons_summary(sanitized_addons)
+    next_modifiers['addons_meta'] = {
+        'mode': str(addons_cfg.get('mode') or 'inline'),
+        'title': str(addons_cfg.get('title') or 'Adicionales'),
+        'selection_mode': selection_mode
+    }
+    return max(0, int(current_unit_price or 0)) + addons_total, next_modifiers
+
 def _resolve_mix_price(cur, tenant_slug, base_product_id, base_variants, modifiers):
     mix_builder = base_variants.get('mix_builder') if isinstance(base_variants, dict) else None
     if not isinstance(mix_builder, dict) or mix_builder.get('enabled') is False:
@@ -1144,6 +1268,11 @@ def create_order():
                             break
                 except Exception:
                     pass
+            try:
+                unit_price, modifiers = _resolve_addons_price(cur, tenant_slug, pid, variants, modifiers, unit_price)
+            except ValueError as e:
+                conn.rollback()
+                return jsonify({'error': str(e), 'product_id': pid}), 400
             inv_qty = qty * pack_size
             if stock < inv_qty:
                 conn.rollback()
@@ -2280,12 +2409,12 @@ def update_order_content(order_id):
         try:
             qty = int(it.get('quantity', it.get('qty', 1)))
             if qty <= 0: continue
-            price = int(it.get('price', it.get('unit_price', 0) or 0))
             pid = it.get('product_id') or it.get('id')
             pid = str(pid or '').strip()
             if not pid:
                 continue
 
+            requested_price = int(it.get('price', it.get('unit_price', 0) or 0))
             pack_id = str(it.get('pack_id') or '').strip()
             pack_label = str(it.get('pack_label') or '').strip()
             pack_size_raw = it.get('pack_size')
@@ -2298,16 +2427,78 @@ def update_order_content(order_id):
             modifiers = it.get('modifiers') or {}
             if not isinstance(modifiers, dict):
                 modifiers = {}
+            pack_meta = modifiers.get('pack') if isinstance(modifiers.get('pack'), dict) else {}
+            if not pack_id and pack_meta:
+                pack_id = str(pack_meta.get('id') or '').strip()
+            if not pack_label and pack_meta:
+                pack_label = str(pack_meta.get('label') or '').strip()
+            if pack_meta:
+                try:
+                    pack_size = max(1, int(pack_meta.get('size') or pack_meta.get('pack_size') or pack_meta.get('qty') or pack_size or 1))
+                except Exception:
+                    pack_size = max(1, pack_size)
+
+            cur.execute(
+                "SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                (tenant_slug, pid),
+            )
+            prow = cur.fetchone()
+            if not prow:
+                conn.rollback()
+                return jsonify({'error': 'producto no encontrado', 'product_id': pid}), 400
+
+            variants = _parse_variants_json(prow[1] if len(prow) > 1 else '')
+            unit_price = requested_price
+            try:
+                mixed_price, modifiers = _resolve_mix_price(cur, tenant_slug, pid, variants, modifiers)
+                if mixed_price is not None and mixed_price > 0:
+                    unit_price = mixed_price
+            except ValueError as e:
+                conn.rollback()
+                return jsonify({'error': str(e), 'product_id': pid}), 400
+            if pack_id and variants:
+                try:
+                    packs = variants.get('packs') or variants.get('pack_options') or variants.get('sale_packs') or []
+                    if isinstance(packs, str):
+                        packs = json.loads(packs or '[]') or []
+                    if isinstance(packs, list):
+                        for p in packs:
+                            if not isinstance(p, dict):
+                                continue
+                            if str(p.get('id') or '').strip() != pack_id:
+                                continue
+                            try:
+                                p_price = int(p.get('price') or 0)
+                                if p_price > 0:
+                                    unit_price = p_price
+                            except Exception:
+                                pass
+                            try:
+                                p_size = int(p.get('size') or p.get('qty') or p.get('multiplier') or p.get('units') or 1)
+                                if p_size > 0:
+                                    pack_size = p_size
+                            except Exception:
+                                pass
+                            if not pack_label:
+                                pack_label = str(p.get('label') or p.get('name') or '').strip()
+                            break
+                except Exception:
+                    pass
+            try:
+                unit_price, modifiers = _resolve_addons_price(cur, tenant_slug, pid, variants, modifiers, unit_price)
+            except ValueError as e:
+                conn.rollback()
+                return jsonify({'error': str(e), 'product_id': pid}), 400
             if pack_id:
                 modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
 
-            items_total += price * qty
+            items_total += unit_price * qty
             new_units_by_product[pid] = new_units_by_product.get(pid, 0) + (qty * pack_size)
             valid_items.append({
                 'product_id': pid, # Product ID
                 'item_id': it.get('item_id'), # DB ID (si existe)
                 'name': it.get('name', pid) or pid,
-                'price': price,
+                'price': unit_price,
                 'qty': qty,
                 'notes': it.get('notes', ''),
                 'modifiers_json': json.dumps(modifiers, ensure_ascii=False)

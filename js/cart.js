@@ -68,6 +68,23 @@ function getMixSummary(item) {
     return mix.map(part => `1/2 ${String(part && part.name || 'Pizza').trim()}`).join(' + ');
 }
 
+function getAddonsSummary(item) {
+    if (item && typeof item.addons_summary === 'string' && item.addons_summary.trim()) {
+        return item.addons_summary.trim();
+    }
+    const modifiers = item && item.modifiers && typeof item.modifiers === 'object' ? item.modifiers : {};
+    if (typeof modifiers.addons_summary === 'string' && modifiers.addons_summary.trim()) {
+        return modifiers.addons_summary.trim();
+    }
+    const addons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+    if (!addons.length) return '';
+    return addons.map(addon => {
+        const qty = parseInt(addon && addon.qty, 10) || 1;
+        const label = String(addon && addon.label || addon && addon.name || 'Adicional').trim();
+        return qty > 1 ? `${label} x${qty}` : label;
+    }).join(' + ');
+}
+
 // Añadir al carrito
 export function addToCart(id, name, price, imageSrc, event, showAnimationCallback, notes = '', meta = null) {
     id = id || `auto-${Date.now()}`;
@@ -101,6 +118,7 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             if (Number.isFinite(meta.pack_size) && !Number.isFinite(existingItem.pack_size)) existingItem.pack_size = meta.pack_size;
             if (meta.modifiers && typeof meta.modifiers === 'object' && !existingItem.modifiers) existingItem.modifiers = meta.modifiers;
             if (meta.mix_summary && !existingItem.mix_summary) existingItem.mix_summary = String(meta.mix_summary);
+            if (meta.addons_summary && !existingItem.addons_summary) existingItem.addons_summary = String(meta.addons_summary);
         }
     } else {
         const m = meta && typeof meta === 'object' ? meta : null;
@@ -112,6 +130,7 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             pack_size: m && Number.isFinite(m.pack_size) ? m.pack_size : undefined,
             modifiers: m && m.modifiers && typeof m.modifiers === 'object' ? m.modifiers : undefined,
             mix_summary: m && m.mix_summary ? String(m.mix_summary) : undefined,
+            addons_summary: m && m.addons_summary ? String(m.addons_summary) : undefined,
             name: name,
             price: price,
             image: imageSrc,
@@ -238,6 +257,14 @@ export function updateCartDisplay() {
             itemMix.className = 'cart-item-pack';
             itemMix.textContent = mixSummary;
         }
+
+        const addonsSummary = getAddonsSummary(item);
+        let itemAddons = null;
+        if (addonsSummary) {
+            itemAddons = document.createElement('div');
+            itemAddons.className = 'cart-item-pack';
+            itemAddons.textContent = `Adicionales: ${addonsSummary}`;
+        }
         
         const itemPrice = document.createElement('div');
         itemPrice.className = 'cart-item-price';
@@ -317,6 +344,7 @@ export function updateCartDisplay() {
         itemInfo.appendChild(itemName);
         if (itemPack) itemInfo.appendChild(itemPack);
         if (itemMix) itemInfo.appendChild(itemMix);
+        if (itemAddons) itemInfo.appendChild(itemAddons);
         itemInfo.appendChild(itemPrice);
         itemInfo.appendChild(itemQuantityContainer);
         itemInfo.appendChild(itemNotesContainer);
