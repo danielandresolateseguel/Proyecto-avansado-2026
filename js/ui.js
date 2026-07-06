@@ -144,6 +144,113 @@ function escapeHtml(value) {
         .replace(/'/g, '&#39;');
 }
 
+function _tenantSlugForLogo() {
+    try {
+        const slug = getBusinessSlug();
+        if (slug) return String(slug || '').trim();
+    } catch (_) {}
+    try {
+        const raw = document.body && document.body.dataset ? (document.body.dataset.slug || document.body.dataset.tenant || '') : '';
+        if (raw) return String(raw || '').trim();
+    } catch (_) {}
+    return '';
+}
+
+function _hasUploadedTenantLogo(tenantSlug) {
+    try {
+        if (typeof window.__tenantHasLogoUpload === 'boolean') return window.__tenantHasLogoUpload;
+    } catch (_) {}
+    const slug = String(tenantSlug || '').trim();
+    if (!slug) return false;
+    try {
+        return String(localStorage.getItem('cached_tenant_logo_uploaded_' + slug) || '') === '1';
+    } catch (_) {}
+    return false;
+}
+
+function getTenantLogoUrl() {
+    const slug = _tenantSlugForLogo();
+    if (!_hasUploadedTenantLogo(slug)) return '';
+    let src = '';
+    try {
+        src = String(window.__tenantLogoUrl || '').trim();
+    } catch (_) {}
+    if (!src && slug) {
+        try {
+            src = String(localStorage.getItem('cached_logo_url_' + slug) || '').trim();
+        } catch (_) {}
+    }
+    if (!src) {
+        const imgEl = document.querySelector('.site-logo img');
+        if (imgEl) src = String(imgEl.currentSrc || imgEl.src || imgEl.getAttribute('src') || '').trim();
+    }
+    if (!src) return '';
+    if (src.startsWith('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')) return '';
+    return src;
+}
+
+function resolveProductImageUrl(rawUrl) {
+    const direct = String(rawUrl || '').trim();
+    if (direct) return direct;
+    return getTenantLogoUrl();
+}
+
+function attachTenantLogoFallback(img) {
+    if (!img) return;
+    const fallback = getTenantLogoUrl();
+    if (!fallback) return;
+    img.dataset.fallbackSrc = fallback;
+    if (img.dataset.fallbackBound === '1') return;
+    img.dataset.fallbackBound = '1';
+    img.addEventListener('error', () => {
+        const next = String(img.dataset.fallbackSrc || '').trim();
+        if (!next) return;
+        const current = String(img.currentSrc || img.src || '').trim();
+        if (!current) return;
+        if (current === next) return;
+        img.dataset.fallbackApplied = '1';
+        img.src = next;
+    });
+}
+
+function setImageWithTenantFallback(img, primaryUrl) {
+    if (!img) return;
+    attachTenantLogoFallback(img);
+    const primary = String(primaryUrl || '').trim();
+    if (primary) {
+        img.dataset.fallbackApplied = '';
+        img.src = primary;
+        return;
+    }
+    const fallback = String(img.dataset.fallbackSrc || getTenantLogoUrl() || '').trim();
+    if (fallback) {
+        img.dataset.fallbackApplied = '1';
+        img.src = fallback;
+    }
+}
+
+export function applyProductImageFallbacks() {
+    const fallback = getTenantLogoUrl();
+    if (!fallback) return;
+    document.querySelectorAll('.product-card .product-image').forEach((wrap) => {
+        if (!wrap) return;
+        let img = wrap.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            wrap.appendChild(img);
+        }
+        attachTenantLogoFallback(img);
+        const current = String(img.getAttribute('src') || img.src || '').trim();
+        if (!current || current.startsWith('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')) {
+            img.dataset.fallbackApplied = '1';
+            img.src = fallback;
+        }
+    });
+}
+try { window.applyProductImageFallbacks = applyProductImageFallbacks; } catch (_) {}
+
 function normalizeAddonsConfig(raw) {
     let value = raw;
     if (typeof raw === 'string') {
@@ -1058,7 +1165,10 @@ export function initProductModals() {
         const price = card.querySelector('.product-price');
         const addBtn = card.querySelector('.add-to-cart-btn');
 
-        if (modalImg && img) modalImg.src = img.src;
+        if (modalImg) {
+            attachTenantLogoFallback(modalImg);
+            setImageWithTenantFallback(modalImg, img ? (img.getAttribute('src') || img.src || '') : '');
+        }
         if (modalTitle && title) modalTitle.textContent = title.textContent;
         if (modalDesc && desc) modalDesc.textContent = desc.textContent;
         if (modalPrice && price) modalPrice.textContent = price.textContent;
@@ -1256,8 +1366,8 @@ export async function initDynamicProducts() {
             }
             applyCardStockState(card, prod);
             const img = card.querySelector('.product-image img');
-            if (img && prod.image_url) {
-                img.src = prod.image_url;
+            if (img) {
+                setImageWithTenantFallback(img, String(prod.image_url || '').trim());
             }
             const section = v.section || '';
             const fc = v.food_categories;
@@ -1347,7 +1457,7 @@ export async function initDynamicProducts() {
             };
 
             const priceVal = isFinite(parseInt(p.price)) ? parseInt(p.price) : 0;
-            const imgSrc = p.image_url || '';
+            const imgSrc = String(p.image_url || '').trim() || getTenantLogoUrl();
             let priceText = '';
             if (priceVal > 0) {
                 priceText = formatMoneyWithCode(priceVal);
@@ -1395,7 +1505,7 @@ export async function initDynamicProducts() {
                     }
                 }
                 card.innerHTML = '<div class="product-image">' +
-                    (imgSrc ? '<img src="' + imgSrc + '" alt="">' : '') +
+                    (imgSrc ? '<img src="' + imgSrc + '" alt="' + escapeHtml(p.name || '') + '" loading="lazy" decoding="async">' : '') +
                     '</div>' +
                     '<div class="product-info">' +
                     '<h3>' + (p.name || '') + '</h3>' +
@@ -1406,6 +1516,8 @@ export async function initDynamicProducts() {
                     '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + mixAttr + addonsAttr + '>Añadir al carrito</button>' +
                     '</div>';
                 applyCardStockState(card, p);
+                const img = card.querySelector('.product-image img');
+                if (img) setImageWithTenantFallback(img, String(p.image_url || '').trim());
                 return card;
             };
 
@@ -1492,6 +1604,7 @@ export async function initDynamicProducts() {
 
         // Re-initialize modals and search items after dynamic content is loaded
         initProductModals();
+        applyProductImageFallbacks();
         refreshSearchableItems();
         
         // Disparar evento para notificar que los productos se cargaron

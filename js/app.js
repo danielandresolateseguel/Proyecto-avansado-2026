@@ -464,6 +464,16 @@ function initHeaderContact() {
             if (data.currency_locale) window.CURRENCY_LOCALE = String(data.currency_locale || '');
         } catch (_) {}
         const logoUrl = (data.logo_url || '').trim();
+        const hasUploadedLogo = !!logoUrl;
+        try {
+            window.__tenantHasLogoUpload = hasUploadedLogo;
+            window.__tenantLogoUrl = logoUrl;
+        } catch (_) {}
+        try {
+            localStorage.setItem('cached_tenant_logo_uploaded_' + slug, hasUploadedLogo ? '1' : '0');
+            if (hasUploadedLogo) localStorage.setItem('cached_logo_url_' + slug, logoUrl);
+            else localStorage.removeItem('cached_logo_url_' + slug);
+        } catch (_) {}
         
         // Helper functions for color manipulation
         const darken = (hex, amount) => {
@@ -577,6 +587,9 @@ function initHeaderContact() {
         if (logoImg) {
             logoImg.src = logoUrl || 'Imagenes/Epalogo.png';
         }
+        try {
+            if (typeof window.applyProductImageFallbacks === 'function') window.applyProductImageFallbacks();
+        } catch (_) {}
 
         // Dynamic Favicon Update
         const faviconUrl = logoUrl || 'Imagenes/Epalogo.png';
