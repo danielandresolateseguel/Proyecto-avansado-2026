@@ -16647,7 +16647,7 @@
         return modal;
       }
 
-      function openMixPicker(product, mixBuilder, onChoose) {
+      function openMixPicker(product, mixBuilder, onChoose, initialParts, confirmLabel) {
         const candidates = getMixCandidateProducts(product && product.id, mixBuilder);
         if (!candidates.length) {
           alert('No hay pizzas disponibles para combinar en este momento.');
@@ -16661,6 +16661,7 @@
         const priceEl = modal.querySelector('#kds-mix-price');
         const confirmBtn = modal.querySelector('#kds-mix-confirm');
         if (titleEl) titleEl.textContent = product?.name || 'Pizza Mixta';
+        if (confirmBtn) confirmBtn.textContent = String(confirmLabel || '').trim() || 'Agregar Pizza Mixta';
         const buildOption = (item) => {
           const opt = document.createElement('option');
           opt.value = String(item.id || '');
@@ -16677,6 +16678,15 @@
         if (firstSelect && candidates[0]) firstSelect.value = String(candidates[0].id);
         if (secondSelect && candidates[1]) secondSelect.value = String(candidates[1].id);
         else if (secondSelect && candidates[0]) secondSelect.value = String(candidates[0].id);
+
+        const normalizePartId = (raw) => String(raw && (raw.product_id ?? raw.id ?? raw) || '').trim();
+        const initialIds = Array.isArray(initialParts) ? initialParts.map(normalizePartId).filter(Boolean) : [];
+        if (initialIds.length && firstSelect && candidates.some(c => String(c.id) === initialIds[0])) {
+          firstSelect.value = initialIds[0];
+        }
+        if (initialIds.length > 1 && secondSelect && candidates.some(c => String(c.id) === initialIds[1])) {
+          secondSelect.value = initialIds[1];
+        }
 
         const updateMixState = () => {
           const first = candidates.find(item => String(item.id) === String(firstSelect && firstSelect.value || ''));
@@ -16767,7 +16777,7 @@
         return modal;
       }
 
-      function openProductOptionsPicker(product, packs, addonsConfig, onChoose) {
+      function openProductOptionsPicker(product, packs, addonsConfig, onChoose, initialState, confirmLabel) {
         const modal = ensureProductOptionsModal();
         const titleEl = modal.querySelector('#kds-product-options-title');
         const subtitleEl = modal.querySelector('#kds-product-options-subtitle');
@@ -16780,6 +16790,7 @@
         const addonCfg = normalizeAddonsConfig(addonsConfig);
         const hasAddons = !!addonCfg;
         if (titleEl) titleEl.textContent = product && product.name ? product.name : 'Producto';
+        if (confirmBtn) confirmBtn.textContent = String(confirmLabel || '').trim() || 'Agregar al pedido';
         if (subtitleEl) {
           const parts = [];
           if (hasPacks) parts.push('Elegí la presentación');
@@ -16789,7 +16800,18 @@
         if (bodyEl) bodyEl.innerHTML = '';
 
         let selectedPackId = hasPacks ? String((packs[0] && packs[0].id) || '') : '';
+        const initialPackId = String(initialState && initialState.pack_id || '').trim();
+        if (initialPackId && hasPacks && packs.some(pack => String(pack && pack.id || '') === initialPackId)) {
+          selectedPackId = initialPackId;
+        }
         const addonRows = [];
+        const initialAddons = Array.isArray(initialState && initialState.addons) ? initialState.addons : [];
+        const initialAddonMap = new Map(
+          initialAddons
+            .map((a) => ({ id: String(a && (a.id ?? a.addon_id) || '').trim(), qty: Math.max(1, safeAdminInt(a && a.qty) || 1) }))
+            .filter((a) => a.id)
+            .map((a) => [a.id, a.qty])
+        );
 
         if (hasPacks && bodyEl) {
           const section = document.createElement('section');
@@ -16811,6 +16833,7 @@
             `;
             const input = row.querySelector('input');
             if (input) {
+              if (String(input.value || '') === selectedPackId) input.checked = true;
               input.addEventListener('change', () => {
                 selectedPackId = String(input.value || '').trim();
                 updateState();
@@ -16861,6 +16884,11 @@
               qtyInput.disabled = !input.checked;
             };
             if (input) {
+              const preQty = initialAddonMap.get(String(input.value || '').trim());
+              if (preQty) {
+                input.checked = true;
+                if (qtyInput) qtyInput.value = String(preQty);
+              }
               input.addEventListener('change', () => {
                 if (selectionType === 'radio') {
                   addonRows.forEach((entry) => {
@@ -16883,6 +16911,7 @@
             }
             addonRows.push({ option, input, qtyInput });
             if (addonsList) addonsList.appendChild(row);
+            if (input && qtyInput && input.checked) qtyInput.disabled = false;
           });
           bodyEl.appendChild(section);
         }
@@ -16975,6 +17004,19 @@
         updateState();
         modal.style.display = 'flex';
       }
+
+      window.KdsProductConfig = window.KdsProductConfig || {};
+      window.KdsProductConfig.getProductVariants = getProductVariants;
+      window.KdsProductConfig.getProductPacks = getProductPacks;
+      window.KdsProductConfig.normalizeMixBuilder = normalizeMixBuilder;
+      window.KdsProductConfig.normalizeAddonsConfig = normalizeAddonsConfig;
+      window.KdsProductConfig.buildAddonsSignature = buildAddonsSignature;
+      window.KdsProductConfig.buildAddonsSummary = buildAddonsSummary;
+      window.KdsProductConfig.buildMixSummary = buildMixSummary;
+      window.KdsProductConfig.getMixCandidateProducts = getMixCandidateProducts;
+      window.KdsProductConfig.openPackPicker = openPackPicker;
+      window.KdsProductConfig.openMixPicker = openMixPicker;
+      window.KdsProductConfig.openProductOptionsPicker = openProductOptionsPicker;
 
       if (tenantSelect) {
         // Initial sync
@@ -20260,6 +20302,7 @@ window.EditOrder = {
     currentOrder: null,
     items: [],
     availableProducts: [],
+    _syncScheduled: false,
     
     init: function() {
         this.modal = document.getElementById('edit-order-modal');
@@ -20276,6 +20319,55 @@ window.EditOrder = {
         if(overlay) overlay.onclick = () => this.close();
         if(this.search) this.search.oninput = (e) => this.renderProducts(e.target.value);
         if(this.saveBtn) this.saveBtn.onclick = () => this.save();
+    },
+
+    _buildAddonsSignature: function(addons) {
+        if (!Array.isArray(addons) || !addons.length) return '';
+        return addons.map((addon) => {
+            const id = String(addon && (addon.id || addon.addon_id) || '').trim();
+            const qty = Math.max(1, safeAdminInt(addon && addon.qty) || 1);
+            return id ? `${id}:${qty}` : '';
+        }).filter(Boolean).sort().join('|');
+    },
+
+    _buildMixSignature: function(mixParts) {
+        if (!Array.isArray(mixParts) || !mixParts.length) return '';
+        return mixParts.map((part) => {
+            const pid = String(part && (part.product_id || part.id) || '').trim();
+            const fraction = (part && typeof part.fraction === 'number') ? part.fraction : parseFloat(part && part.fraction);
+            const frac = Number.isFinite(fraction) && fraction > 0 ? String(fraction) : '0.5';
+            return pid ? `${pid}:${frac}` : '';
+        }).filter(Boolean).sort().join('|');
+    },
+
+    _getProductById: function(productId) {
+        const all = Array.isArray(this.availableProducts) ? this.availableProducts : [];
+        return all.find(p => String(p.id) === String(productId)) || null;
+    },
+
+    _getProductConfig: function(product) {
+        const api = window.KdsProductConfig;
+        if (!api || !product) return null;
+        const variants = api.getProductVariants ? api.getProductVariants(product) : {};
+        const packs = api.getProductPacks ? api.getProductPacks(product) : [];
+        const mixBuilder = api.normalizeMixBuilder ? api.normalizeMixBuilder(variants && variants.mix_builder) : null;
+        const addonsCfg = api.normalizeAddonsConfig ? api.normalizeAddonsConfig(variants && variants.addons) : null;
+        const hasMix = !!mixBuilder;
+        const hasPacks = Array.isArray(packs) && packs.length > 0;
+        const hasAddons = !!addonsCfg;
+        if (!hasMix && !hasPacks && !hasAddons) return null;
+        return { variants, packs, mixBuilder, addonsCfg, hasMix, hasPacks, hasAddons };
+    },
+
+    _syncItemProductNames: function() {
+        if (!Array.isArray(this.availableProducts) || !this.availableProducts.length) return;
+        this.items.forEach((item) => {
+            if (!item || !item.id) return;
+            const prod = this.availableProducts.find(p => String(p.id) === String(item.id));
+            if (prod && prod.name && (!item.name || String(item.name).trim() === String(item.id))) {
+                item.name = prod.name;
+            }
+        });
     },
     
     openWithFetch: async function(orderId, tableNumber) {
@@ -20320,6 +20412,13 @@ window.EditOrder = {
             }).filter(Boolean).join(' + ');
             const rawMix = Array.isArray(modifiers.mix) ? modifiers.mix : [];
             const mixSummary = String(modifiers.mix_summary || '').trim() || rawMix.map((part) => `1/2 ${String(part && part.name || 'Pizza').trim() || 'Pizza'}`).join(' + ');
+            const packId = String(pack.id || '').trim();
+            const addonsSig = rawAddons.length ? EditOrder._buildAddonsSignature(rawAddons) : '';
+            const mixSig = rawMix.length ? EditOrder._buildMixSignature(rawMix) : '';
+            const keyParts = [];
+            if (packId) keyParts.push(`pack:${packId}`);
+            if (mixSig) keyParts.push(`mix:${mixSig}`);
+            if (addonsSig) keyParts.push(`addons:${addonsSig}`);
             return {
                 id: i.product_id || i.id,
                 item_id: i.id,
@@ -20329,11 +20428,12 @@ window.EditOrder = {
                 qty: parseInt(i.qty || i.quantity || 1),
                 notes: i.notes || '',
                 modifiers,
-                pack_id: String(pack.id || '').trim(),
+                pack_id: packId,
                 pack_label: String(pack.label || '').trim(),
                 pack_size: Math.max(1, safeAdminInt(pack.size || pack.pack_size || pack.qty || 1) || 1),
                 mix_summary: mixSummary,
-                addons_summary: addonsSummary
+                addons_summary: addonsSummary,
+                config_key: keyParts.join('::')
             };
         });
         
@@ -20346,7 +20446,11 @@ window.EditOrder = {
         
         this.modal.style.display = 'flex';
         this.modal.classList.add('active');
-        this.loadProductsForOrder().then(() => this.renderProducts(''));
+        this.loadProductsForOrder().then(() => {
+            this._syncItemProductNames();
+            this.renderProducts('');
+            this.renderItems();
+        });
         this.renderItems();
     },
     
@@ -20412,8 +20516,87 @@ window.EditOrder = {
     addItem: function(prodId) {
         const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => p.id === prodId);
         if (!prod) return;
-        
-        const existing = this.items.find(i => i.id === prod.id && !i.pack_id && !i.mix_summary && !i.addons_summary && (!i.modifiers || !Object.keys(i.modifiers).length));
+
+        const cfg = this._getProductConfig(prod);
+        if (cfg && cfg.hasMix && window.KdsProductConfig && typeof window.KdsProductConfig.openMixPicker === 'function') {
+            window.KdsProductConfig.openMixPicker(prod, cfg.mixBuilder, (state) => {
+                if (!state || !state.totalPrice) return;
+                const components = Array.isArray(state.components) ? state.components : [];
+                const mixParts = components.map((part) => ({
+                    product_id: String(part.product_id || '').trim(),
+                    fraction: part.fraction
+                })).filter(p => p.product_id);
+                const mixSummary = String(state.summary || '').trim();
+                const modifiers = { mix: mixParts, mix_summary: mixSummary };
+                const mixSig = this._buildMixSignature(mixParts);
+                const key = mixSig ? `mix:${mixSig}` : '';
+                const existing = this.items.find(i => String(i.id) === String(prod.id) && String(i.config_key || '') === key && !String(i.notes || '').trim());
+                if (existing) {
+                    existing.qty++;
+                } else {
+                    this.items.push({
+                        id: prod.id,
+                        name: prod.name,
+                        price: parseFloat(state.totalPrice),
+                        qty: 1,
+                        notes: '',
+                        modifiers,
+                        pack_id: '',
+                        pack_label: '',
+                        pack_size: 1,
+                        mix_summary: mixSummary,
+                        addons_summary: '',
+                        config_key: key
+                    });
+                }
+                this.renderItems();
+            }, null, 'Agregar Pizza Mixta');
+            return;
+        }
+
+        if (cfg && (cfg.hasPacks || cfg.hasAddons) && window.KdsProductConfig && typeof window.KdsProductConfig.openProductOptionsPicker === 'function') {
+            window.KdsProductConfig.openProductOptionsPicker(prod, cfg.packs, (cfg.variants && cfg.variants.addons) || null, (state) => {
+                if (!state || !state.totalPrice) return;
+                const nextModifiers = state.modifiers && typeof state.modifiers === 'object' ? state.modifiers : {};
+                if (state.pack && typeof state.pack === 'object') {
+                    nextModifiers.pack = {
+                        id: String(state.pack.id || '').trim(),
+                        label: String(state.pack.label || '').trim(),
+                        size: Math.max(1, safeAdminInt(state.pack.pack_size) || 1)
+                    };
+                }
+                const packId = state.pack ? String(state.pack.id || '').trim() : '';
+                const addonList = Array.isArray(nextModifiers.addons) ? nextModifiers.addons : [];
+                const addonsSig = addonList.length ? this._buildAddonsSignature(addonList) : '';
+                const keyParts = [];
+                if (packId) keyParts.push(`pack:${packId}`);
+                if (addonsSig) keyParts.push(`addons:${addonsSig}`);
+                const key = keyParts.join('::');
+                const existing = this.items.find(i => String(i.id) === String(prod.id) && String(i.config_key || '') === key && !String(i.notes || '').trim());
+                if (existing) {
+                    existing.qty++;
+                } else {
+                    this.items.push({
+                        id: prod.id,
+                        name: prod.name,
+                        price: parseFloat(state.totalPrice),
+                        qty: 1,
+                        notes: '',
+                        modifiers: nextModifiers,
+                        pack_id: packId,
+                        pack_label: state.pack ? String(state.pack.label || '').trim() : '',
+                        pack_size: packId ? Math.max(1, safeAdminInt(state.pack.pack_size) || 1) : 1,
+                        mix_summary: '',
+                        addons_summary: String(state.addons_summary || '').trim(),
+                        config_key: key
+                    });
+                }
+                this.renderItems();
+            }, null, 'Agregar al pedido');
+            return;
+        }
+
+        const existing = this.items.find(i => String(i.id) === String(prod.id) && !String(i.config_key || '') && !String(i.notes || '').trim());
         if (existing) {
             existing.qty++;
         } else {
@@ -20428,10 +20611,86 @@ window.EditOrder = {
                 pack_label: '',
                 pack_size: 1,
                 mix_summary: '',
-                addons_summary: ''
+                addons_summary: '',
+                config_key: ''
             });
         }
         this.renderItems();
+    },
+
+    configureItem: function(idx) {
+        const item = this.items[idx];
+        if (!item) return;
+        const prod = this._getProductById(item.id);
+        if (!prod) return;
+        const cfg = this._getProductConfig(prod);
+        if (!cfg || !window.KdsProductConfig) return;
+
+        if (cfg.hasMix && typeof window.KdsProductConfig.openMixPicker === 'function') {
+            const currentMix = item.modifiers && typeof item.modifiers === 'object' ? item.modifiers.mix : null;
+            const initialParts = Array.isArray(currentMix) ? currentMix.map(p => p && (p.product_id || p.id)) : [];
+            window.KdsProductConfig.openMixPicker(prod, cfg.mixBuilder, (state) => {
+                if (!state || !state.totalPrice) return;
+                const components = Array.isArray(state.components) ? state.components : [];
+                const mixParts = components.map((part) => ({
+                    product_id: String(part.product_id || '').trim(),
+                    fraction: part.fraction
+                })).filter(p => p.product_id);
+                const mixSummary = String(state.summary || '').trim();
+                const nextModifiers = Object.assign({}, (item.modifiers && typeof item.modifiers === 'object') ? item.modifiers : {});
+                nextModifiers.mix = mixParts;
+                nextModifiers.mix_summary = mixSummary;
+                item.modifiers = nextModifiers;
+                item.mix_summary = mixSummary;
+                item.price = parseFloat(state.totalPrice);
+                const mixSig = this._buildMixSignature(mixParts);
+                item.config_key = mixSig ? `mix:${mixSig}` : '';
+                this.renderItems();
+            }, initialParts, 'Aplicar cambios');
+            return;
+        }
+
+        if ((cfg.hasPacks || cfg.hasAddons) && typeof window.KdsProductConfig.openProductOptionsPicker === 'function') {
+            const currentPackId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || '').trim();
+            const currentAddons = item.modifiers && typeof item.modifiers === 'object' ? item.modifiers.addons : null;
+            const initialState = {
+                pack_id: currentPackId,
+                addons: Array.isArray(currentAddons) ? currentAddons.map((a) => ({ id: a && (a.id || a.addon_id), qty: a && a.qty })) : []
+            };
+            window.KdsProductConfig.openProductOptionsPicker(prod, cfg.packs, (cfg.variants && cfg.variants.addons) || null, (state) => {
+                if (!state || !state.totalPrice) return;
+                const nextModifiers = Object.assign({}, (item.modifiers && typeof item.modifiers === 'object') ? item.modifiers : {});
+                const patch = state.modifiers && typeof state.modifiers === 'object' ? state.modifiers : {};
+                Object.keys(patch).forEach((k) => { nextModifiers[k] = patch[k]; });
+                if (state.pack && typeof state.pack === 'object') {
+                    nextModifiers.pack = {
+                        id: String(state.pack.id || '').trim(),
+                        label: String(state.pack.label || '').trim(),
+                        size: Math.max(1, safeAdminInt(state.pack.pack_size) || 1)
+                    };
+                    item.pack_id = String(state.pack.id || '').trim();
+                    item.pack_label = String(state.pack.label || '').trim();
+                    item.pack_size = Math.max(1, safeAdminInt(state.pack.pack_size) || 1);
+                } else {
+                    item.pack_id = '';
+                    item.pack_label = '';
+                    item.pack_size = 1;
+                    if (nextModifiers.pack) delete nextModifiers.pack;
+                }
+                item.modifiers = nextModifiers;
+                item.addons_summary = String(state.addons_summary || '').trim();
+                item.price = parseFloat(state.totalPrice);
+
+                const keyParts = [];
+                if (item.pack_id) keyParts.push(`pack:${item.pack_id}`);
+                const addonList = Array.isArray(nextModifiers.addons) ? nextModifiers.addons : [];
+                const addonsSig = addonList.length ? this._buildAddonsSignature(addonList) : '';
+                if (addonsSig) keyParts.push(`addons:${addonsSig}`);
+                item.config_key = keyParts.join('::');
+                this.renderItems();
+            }, initialState, 'Aplicar cambios');
+            return;
+        }
     },
     
     updateQty: function(idx, delta) {
@@ -20458,6 +20717,9 @@ window.EditOrder = {
         if (orderType !== 'direccion') shipping = 0;
         this.itemsContainer.innerHTML = this.items.map((item, idx) => {
             total += item.price * item.qty;
+            const prod = this._getProductById(item.id);
+            const cfg = this._getProductConfig(prod);
+            const showConfig = !!cfg;
             return `
                 <div style="background:white; padding:8px; border-radius:6px; border:1px solid #eee; display:flex; flex-direction:column; gap:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -20468,7 +20730,8 @@ window.EditOrder = {
                             ${item.addons_summary ? `<div style="margin-top:4px; font-size:0.78rem; color:#7c3aed; font-weight:700;">Adicionales: ${escapeAdminHtml(item.addons_summary)}</div>` : ''}
                             <div style="font-size:0.8rem; color:#666;">$${item.price} x ${item.qty}</div>
                         </div>
-                        <div style="display:flex; gap:5px; align-items:center;">
+                        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                            ${showConfig ? `<button onclick="EditOrder.configureItem(${idx})" style="height:28px; padding:0 10px; background:#f1f5f9; color:#0f172a; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-weight:900; font-size:12px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">Configurar</button>` : ''}
                             <button onclick="EditOrder.updateQty(${idx}, -1)" style="width:28px; height:28px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">-</button>
                             <span style="width:20px; text-align:center; font-size:0.9rem;">${item.qty}</span>
                             <button onclick="EditOrder.updateQty(${idx}, 1)" style="width:28px; height:28px; background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">+</button>
