@@ -2919,10 +2919,18 @@
               <input type="number" id="edit-prod-stock" min="0">
             </div>
             <div class="edit-form-group">
-              <label>Presentaciones (Unidad / 1/2 Docena / Docena)</label>
-              <div id="edit-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
-              <button type="button" id="edit-prod-add-pack" style="height:34px; border:none; border-radius:8px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:700; width:fit-content; padding:0 12px;">Agregar presentación</button>
-              <small>El stock se descuenta por unidades reales: cantidad × (unidades de la presentación).</small>
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                <input type="checkbox" id="edit-prod-packs-enabled" style="width:auto;"> Habilitar presentaciones para este producto
+              </label>
+              <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+                <button type="button" id="edit-prod-packs-toggle" style="height:28px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; cursor:pointer; font-weight:700; padding:0 10px;" disabled>Ver/Editar</button>
+                <div id="edit-prod-packs-summary" style="font-size:12px; color:#64748b; display:none;"></div>
+              </div>
+              <div id="edit-prod-packs-panel" style="display:none; margin-top:10px;">
+                <div id="edit-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
+                <button type="button" id="edit-prod-add-pack" style="height:34px; border:none; border-radius:8px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:700; width:fit-content; padding:0 12px;">Agregar presentación</button>
+                <small>El stock se descuenta por unidades reales: cantidad × (unidades de la presentación).</small>
+              </div>
             </div>
             <div class="edit-form-group">
               <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -3676,6 +3684,10 @@
     const prodEditTriggerUpload = document.getElementById('edit-prod-trigger-upload');
     const prodEditFile = document.getElementById('edit-prod-file');
     const prodEditDeleteImgBtn = document.getElementById('edit-prod-delete-img-btn');
+    const prodEditPacksEnabled = document.getElementById('edit-prod-packs-enabled');
+    const prodEditPacksPanel = document.getElementById('edit-prod-packs-panel');
+    const prodEditPacksToggle = document.getElementById('edit-prod-packs-toggle');
+    const prodEditPacksSummary = document.getElementById('edit-prod-packs-summary');
     const prodEditPacks = document.getElementById('edit-prod-packs');
     const prodEditAddPackBtn = document.getElementById('edit-prod-add-pack');
     const prodEditAddonsEnabled = document.getElementById('edit-prod-addons-enabled');
@@ -3749,33 +3761,24 @@
       const safePacks = Array.isArray(packs) ? packs : [];
       containerEl.innerHTML = '';
 
-      const header = document.createElement('div');
-      header.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
-      header.innerHTML = '<div class="small" style="font-weight:700; flex:1 1 160px;">Nombre</div>' +
-        '<div class="small" style="font-weight:700; flex:1 1 160px;">ID</div>' +
-        '<div class="small" style="font-weight:700; flex:0 1 120px;">Precio</div>' +
-        '<div class="small" style="font-weight:700; flex:0 1 120px;">Unidades</div>' +
-        '<div style="width:90px;"></div>';
-      containerEl.appendChild(header);
-
       const addRow = (pack) => {
         const row = document.createElement('div');
         row.dataset.packRow = '1';
-        row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+        row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;';
 
         const labelInput = document.createElement('input');
         labelInput.type = 'text';
         labelInput.className = 'pack-label';
         labelInput.placeholder = 'Ej: Docena';
         labelInput.value = String((pack && pack.label) || '').trim();
-        labelInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+        labelInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
         const idInput = document.createElement('input');
         idInput.type = 'text';
         idInput.className = 'pack-id';
         idInput.placeholder = 'docena';
         idInput.value = String((pack && pack.id) || '').trim();
-        idInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+        idInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
         labelInput.addEventListener('change', () => {
           const nextId = slugifyAdminCategory(labelInput.value);
@@ -3789,7 +3792,7 @@
         priceInput.placeholder = '0';
         const packPrice = pack && Object.prototype.hasOwnProperty.call(pack, 'price') ? pack.price : '';
         priceInput.value = (packPrice === '' || packPrice === null || typeof packPrice === 'undefined') ? '' : String(parseInt(packPrice, 10) || 0);
-        priceInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+        priceInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
         const multInput = document.createElement('input');
         multInput.type = 'number';
@@ -3797,7 +3800,7 @@
         multInput.className = 'pack-multiplier';
         multInput.placeholder = '1';
         multInput.value = Number.isFinite(pack && pack.multiplier) ? String(pack.multiplier) : String(parseInt((pack && pack.multiplier) || '1', 10) || 1);
-        multInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+        multInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
@@ -3805,11 +3808,36 @@
         delBtn.style.cssText = 'height:34px; width:90px; border:none; border-radius:8px; background:#c62828; color:#fff; cursor:pointer; font-weight:700;';
         delBtn.addEventListener('click', () => row.remove());
 
-        row.appendChild(labelInput);
-        row.appendChild(idInput);
-        row.appendChild(priceInput);
-        row.appendChild(multInput);
-        row.appendChild(delBtn);
+        const mkField = (labelText, inputEl, boxStyle) => {
+          const box = document.createElement('div');
+          box.style.cssText = boxStyle;
+          const lab = document.createElement('div');
+          lab.className = 'small';
+          lab.style.cssText = 'font-weight:700; color:#334155;';
+          lab.textContent = labelText;
+          box.appendChild(lab);
+          box.appendChild(inputEl);
+          return box;
+        };
+
+        const nameBox = mkField('Nombre', labelInput, 'display:flex; flex-direction:column; gap:4px; flex:1 1 160px; min-width: 140px;');
+        const idBox = mkField('ID', idInput, 'display:flex; flex-direction:column; gap:4px; flex:1 1 160px; min-width: 140px;');
+        const priceBox = mkField('Precio', priceInput, 'display:flex; flex-direction:column; gap:4px; flex:0 1 120px; min-width: 110px;');
+        const unitsBox = mkField('Unidades', multInput, 'display:flex; flex-direction:column; gap:4px; flex:0 1 120px; min-width: 110px;');
+        const delBox = document.createElement('div');
+        delBox.style.cssText = 'display:flex; flex-direction:column; gap:4px; width:90px;';
+        const delLab = document.createElement('div');
+        delLab.className = 'small';
+        delLab.style.cssText = 'font-weight:700; opacity:0;';
+        delLab.textContent = 'Acción';
+        delBox.appendChild(delLab);
+        delBox.appendChild(delBtn);
+
+        row.appendChild(nameBox);
+        row.appendChild(idBox);
+        row.appendChild(priceBox);
+        row.appendChild(unitsBox);
+        row.appendChild(delBox);
         containerEl.appendChild(row);
       };
 
@@ -3833,22 +3861,21 @@
       if (containerEl.dataset.rendered !== '1') renderAdminPacksEditor(containerEl, []);
       const empty = containerEl.querySelector('[data-packs-empty="1"]');
       if (empty) empty.remove();
-      const header = containerEl.firstElementChild;
       const row = document.createElement('div');
       row.dataset.packRow = '1';
-      row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:center;';
+      row.style.cssText = 'display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end;';
 
       const labelInput = document.createElement('input');
       labelInput.type = 'text';
       labelInput.className = 'pack-label';
       labelInput.placeholder = 'Ej: 1/2 Docena';
-      labelInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+      labelInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
       const idInput = document.createElement('input');
       idInput.type = 'text';
       idInput.className = 'pack-id';
       idInput.placeholder = 'media-docena';
-      idInput.style.cssText = 'flex:1 1 160px; min-width: 140px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+      idInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
       labelInput.addEventListener('change', () => {
         const nextId = slugifyAdminCategory(labelInput.value);
@@ -3860,7 +3887,7 @@
       priceInput.min = '0';
       priceInput.className = 'pack-price';
       priceInput.placeholder = '0';
-      priceInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+      priceInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
       const multInput = document.createElement('input');
       multInput.type = 'number';
@@ -3868,7 +3895,7 @@
       multInput.className = 'pack-multiplier';
       multInput.placeholder = '1';
       multInput.value = '1';
-      multInput.style.cssText = 'flex:0 1 120px; min-width: 110px; padding:8px; border:1px solid #ccc; border-radius:6px;';
+      multInput.style.cssText = 'width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;';
 
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
@@ -3876,17 +3903,37 @@
       delBtn.style.cssText = 'height:34px; width:90px; border:none; border-radius:8px; background:#c62828; color:#fff; cursor:pointer; font-weight:700;';
       delBtn.addEventListener('click', () => row.remove());
 
-      row.appendChild(labelInput);
-      row.appendChild(idInput);
-      row.appendChild(priceInput);
-      row.appendChild(multInput);
-      row.appendChild(delBtn);
+      const mkField = (labelText, inputEl, boxStyle) => {
+        const box = document.createElement('div');
+        box.style.cssText = boxStyle;
+        const lab = document.createElement('div');
+        lab.className = 'small';
+        lab.style.cssText = 'font-weight:700; color:#334155;';
+        lab.textContent = labelText;
+        box.appendChild(lab);
+        box.appendChild(inputEl);
+        return box;
+      };
 
-      if (header && header.parentNode === containerEl) {
-        containerEl.appendChild(row);
-      } else {
-        containerEl.appendChild(row);
-      }
+      const nameBox = mkField('Nombre', labelInput, 'display:flex; flex-direction:column; gap:4px; flex:1 1 160px; min-width: 140px;');
+      const idBox = mkField('ID', idInput, 'display:flex; flex-direction:column; gap:4px; flex:1 1 160px; min-width: 140px;');
+      const priceBox = mkField('Precio', priceInput, 'display:flex; flex-direction:column; gap:4px; flex:0 1 120px; min-width: 110px;');
+      const unitsBox = mkField('Unidades', multInput, 'display:flex; flex-direction:column; gap:4px; flex:0 1 120px; min-width: 110px;');
+      const delBox = document.createElement('div');
+      delBox.style.cssText = 'display:flex; flex-direction:column; gap:4px; width:90px;';
+      const delLab = document.createElement('div');
+      delLab.className = 'small';
+      delLab.style.cssText = 'font-weight:700; opacity:0;';
+      delLab.textContent = 'Acción';
+      delBox.appendChild(delLab);
+      delBox.appendChild(delBtn);
+
+      row.appendChild(nameBox);
+      row.appendChild(idBox);
+      row.appendChild(priceBox);
+      row.appendChild(unitsBox);
+      row.appendChild(delBox);
+      containerEl.appendChild(row);
     }
 
     function readAdminPacksFromEditor(containerEl) {
@@ -3969,6 +4016,77 @@
           break;
         }
       });
+    }
+
+    function updateAdminPacksSummary(summaryEl, packsContainerEl) {
+      if (!summaryEl || !packsContainerEl) return;
+      const total = Array.from(packsContainerEl.querySelectorAll('[data-pack-row="1"]')).length;
+      const valid = readAdminPacksFromEditor(packsContainerEl).length;
+      if (!total) {
+        summaryEl.textContent = 'Sin presentaciones configuradas.';
+        return;
+      }
+      if (valid === total) {
+        summaryEl.textContent = `${valid} presentación${valid === 1 ? '' : 'es'} configurada${valid === 1 ? '' : 's'}.`;
+        return;
+      }
+      summaryEl.textContent = `${valid}/${total} presentaciones con precio.`;
+    }
+
+    function syncPacksConfig(enabledEl, panelEl, toggleBtnEl, summaryEl, packsContainerEl) {
+      if (!panelEl) return;
+      const enabled = !!(enabledEl && enabledEl.checked);
+      if (toggleBtnEl) {
+        toggleBtnEl.disabled = !enabled;
+        toggleBtnEl.style.opacity = enabled ? '1' : '0.6';
+        toggleBtnEl.style.cursor = enabled ? 'pointer' : 'not-allowed';
+      }
+      if (!enabled) {
+        panelEl.dataset.expanded = '0';
+        panelEl.style.display = 'none';
+        if (toggleBtnEl) toggleBtnEl.textContent = 'Ver/Editar';
+        if (summaryEl) {
+          summaryEl.style.display = 'none';
+          summaryEl.textContent = '';
+        }
+        return;
+      }
+      const expanded = panelEl.dataset.expanded === '1';
+      panelEl.style.display = expanded ? 'block' : 'none';
+      if (toggleBtnEl) toggleBtnEl.textContent = expanded ? 'Minimizar' : 'Ver/Editar';
+      if (summaryEl) {
+        updateAdminPacksSummary(summaryEl, packsContainerEl);
+        summaryEl.style.display = expanded ? 'none' : 'block';
+      }
+    }
+
+    function bindAdminPacksConfigUI({ enabled, panel, toggle, summary, container }) {
+      if (!enabled || !panel) return;
+      const key = 'packsConfigBound';
+      if (enabled.dataset[key] !== '1') {
+        enabled.dataset[key] = '1';
+        enabled.addEventListener('change', () => {
+          panel.dataset.expanded = enabled.checked ? '1' : '0';
+          syncPacksConfig(enabled, panel, toggle, summary, container);
+        });
+      }
+      if (toggle && toggle.dataset.bound !== 'true') {
+        toggle.addEventListener('click', () => {
+          if (!enabled.checked) return;
+          panel.dataset.expanded = panel.dataset.expanded === '1' ? '0' : '1';
+          syncPacksConfig(enabled, panel, toggle, summary, container);
+        });
+        toggle.dataset.bound = 'true';
+      }
+      if (container) {
+        const ckey = 'packsSummaryBound';
+        if (container.dataset[ckey] !== '1') {
+          container.dataset[ckey] = '1';
+          container.addEventListener('input', () => syncPacksConfig(enabled, panel, toggle, summary, container));
+          container.addEventListener('click', () => syncPacksConfig(enabled, panel, toggle, summary, container));
+        }
+      }
+      syncPacksConfig(enabled, panel, toggle, summary, container);
     }
 
     function syncAddonsConfig(toggleEl, containerEl, titleEl, modeEl, minEl, maxEl) {
@@ -4598,6 +4716,9 @@
         const packs = normalizeAdminPackList(v.packs || v.pack_options || v.sale_packs);
         renderAdminPacksEditor(prodEditPacks, packs);
         bindAdminPackPriceSync(prodEditPrice, prodEditPacks);
+        if (prodEditPacksEnabled) prodEditPacksEnabled.checked = packs.length > 0;
+        if (prodEditPacksPanel) prodEditPacksPanel.dataset.expanded = '0';
+        bindAdminPacksConfigUI({ enabled: prodEditPacksEnabled, panel: prodEditPacksPanel, toggle: prodEditPacksToggle, summary: prodEditPacksSummary, container: prodEditPacks });
         applyAdminAddonsConfig({
           enabled: prodEditAddonsEnabled,
           wrapper: prodEditAddonsConfig,
@@ -4618,7 +4739,10 @@
         if (prodEditMixSourceCat) prodEditMixSourceCat.value = String(mixBuilder.source_category || 'pizzas');
         syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat);
         if (prodEditAddPackBtn && prodEditAddPackBtn.dataset.bound !== 'true') {
-          prodEditAddPackBtn.addEventListener('click', () => addAdminPackRow(prodEditPacks));
+          prodEditAddPackBtn.addEventListener('click', () => {
+            addAdminPackRow(prodEditPacks);
+            syncPacksConfig(prodEditPacksEnabled, prodEditPacksPanel, prodEditPacksToggle, prodEditPacksSummary, prodEditPacks);
+          });
           prodEditAddPackBtn.dataset.bound = 'true';
         }
       } catch (_) {}
@@ -4640,6 +4764,19 @@
       if (prodEditPacks) {
         prodEditPacks.innerHTML = '';
         prodEditPacks.dataset.rendered = '0';
+      }
+      if (prodEditPacksEnabled) prodEditPacksEnabled.checked = false;
+      if (prodEditPacksPanel) {
+        prodEditPacksPanel.dataset.expanded = '0';
+        prodEditPacksPanel.style.display = 'none';
+      }
+      if (prodEditPacksToggle) {
+        prodEditPacksToggle.textContent = 'Ver/Editar';
+        prodEditPacksToggle.disabled = true;
+      }
+      if (prodEditPacksSummary) {
+        prodEditPacksSummary.style.display = 'none';
+        prodEditPacksSummary.textContent = '';
       }
       if (prodEditAddonsEnabled) prodEditAddonsEnabled.checked = false;
       if (prodEditAddonsTitle) prodEditAddonsTitle.value = 'Adicionales';
@@ -4680,6 +4817,7 @@
     if (prodEditImage) prodEditImage.addEventListener('input', updatePreview);
     if (prodEditSection) prodEditSection.addEventListener('change', () => {});
     if (prodEditMixBuilder) prodEditMixBuilder.addEventListener('change', () => syncMixBuilderConfig(prodEditMixBuilder, prodEditMixConfig, prodEditMixSourceCat));
+    bindAdminPacksConfigUI({ enabled: prodEditPacksEnabled, panel: prodEditPacksPanel, toggle: prodEditPacksToggle, summary: prodEditPacksSummary, container: prodEditPacks });
     if (prodEditAddonsEnabled) prodEditAddonsEnabled.addEventListener('change', () => syncAddonsConfig(prodEditAddonsEnabled, prodEditAddonsConfig, prodEditAddonsTitle, prodEditAddonsMode, prodEditAddonsMin, prodEditAddonsMax));
 
     // Image Upload & Delete Handlers
@@ -4880,14 +5018,20 @@
                 }
             }
 
-            const packs = collectAdminPacksForSave(prodEditPacks, payload.price);
-            if (packs === null) return;
-            if (packs.length) {
-                variants.packs = packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier }));
+            if (prodEditPacksEnabled && prodEditPacksEnabled.checked) {
+              const packs = collectAdminPacksForSave(prodEditPacks, payload.price);
+              if (packs === null) return;
+              if (packs.length) {
+                  variants.packs = packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier }));
+              } else {
+                  if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
+                  if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
+                  if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
+              }
             } else {
-                if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
-                if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
-                if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
+              if (variants && typeof variants === 'object' && 'packs' in variants) delete variants.packs;
+              if (variants && typeof variants === 'object' && 'pack_options' in variants) delete variants.pack_options;
+              if (variants && typeof variants === 'object' && 'sale_packs' in variants) delete variants.sale_packs;
             }
 
             const addons = collectAdminAddonsForSave({
@@ -20160,10 +20304,18 @@
           </div>
         </div>
         <div class="edit-form-group">
-          <label>Presentaciones (Unidad / 1/2 Docena / Docena)</label>
-          <div id="create-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
-          <button type="button" id="create-prod-add-pack" style="height:34px; border:none; border-radius:10px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:800; width:fit-content; padding:0 12px;">Agregar presentación</button>
-          <small>Si configurás presentaciones, el cliente elige una y el stock se descuenta por unidades reales.</small>
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+            <input type="checkbox" id="create-prod-packs-enabled" style="width:auto;"> Habilitar presentaciones para este producto
+          </label>
+          <div style="display:flex; align-items:center; gap:10px; margin-top:6px;">
+            <button type="button" id="create-prod-packs-toggle" style="height:28px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; cursor:pointer; font-weight:700; padding:0 10px;" disabled>Ver/Editar</button>
+            <div id="create-prod-packs-summary" style="font-size:12px; color:#64748b; display:none;"></div>
+          </div>
+          <div id="create-prod-packs-panel" style="display:none; margin-top:10px;">
+            <div id="create-prod-packs" style="display:flex; flex-direction:column; gap:8px;"></div>
+            <button type="button" id="create-prod-add-pack" style="height:34px; border:none; border-radius:10px; background:#4a6fa5; color:#fff; cursor:pointer; font-weight:800; width:fit-content; padding:0 12px;">Agregar presentación</button>
+            <small>Si configurás presentaciones, el cliente elige una y el stock se descuenta por unidades reales.</small>
+          </div>
         </div>
         <div class="edit-form-group">
           <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -20872,6 +21024,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const pMixSourceCat = document.getElementById('create-prod-mix-source-cat');
   const pFile = document.getElementById('create-prod-file');
   const pImgUrl = document.getElementById('create-prod-image-url');
+  const pPacksEnabled = document.getElementById('create-prod-packs-enabled');
+  const pPacksPanel = document.getElementById('create-prod-packs-panel');
+  const pPacksToggle = document.getElementById('create-prod-packs-toggle');
+  const pPacksSummary = document.getElementById('create-prod-packs-summary');
   const pPacks = document.getElementById('create-prod-packs');
   const pAddPackBtn = document.getElementById('create-prod-add-pack');
   const pAddonsEnabled = document.getElementById('create-prod-addons-enabled');
@@ -20945,11 +21101,17 @@ document.addEventListener('DOMContentLoaded', () => {
       syncAddonsConfig(pAddonsEnabled, pAddonsConfig, pAddonsTitle, pAddonsMode, pAddonsMin, pAddonsMax);
       pFile.value = '';
       pImgUrl.value = '';
+      if (pPacksEnabled) pPacksEnabled.checked = false;
+      if (pPacksPanel) pPacksPanel.dataset.expanded = '0';
+      bindAdminPacksConfigUI({ enabled: pPacksEnabled, panel: pPacksPanel, toggle: pPacksToggle, summary: pPacksSummary, container: pPacks });
       if (pPacks) {
         renderAdminPacksEditor(pPacks, []);
         bindAdminPackPriceSync(pPrice, pPacks);
         if (pAddPackBtn && pAddPackBtn.dataset.bound !== 'true') {
-          pAddPackBtn.addEventListener('click', () => addAdminPackRow(pPacks));
+          pAddPackBtn.addEventListener('click', () => {
+            addAdminPackRow(pPacks);
+            syncPacksConfig(pPacksEnabled, pPacksPanel, pPacksToggle, pPacksSummary, pPacks);
+          });
           pAddPackBtn.dataset.bound = 'true';
         }
       }
@@ -21013,6 +21175,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (el) el.addEventListener('input', updatePreview);
   });
   if (pMixBuilder) pMixBuilder.addEventListener('change', () => syncMixBuilderConfig(pMixBuilder, pMixConfig, pMixSourceCat));
+  bindAdminPacksConfigUI({ enabled: pPacksEnabled, panel: pPacksPanel, toggle: pPacksToggle, summary: pPacksSummary, container: pPacks });
   if (pAddonsEnabled) pAddonsEnabled.addEventListener('change', () => syncAddonsConfig(pAddonsEnabled, pAddonsConfig, pAddonsTitle, pAddonsMode, pAddonsMin, pAddonsMax));
 
   if (pFile) {
@@ -21104,8 +21267,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const packs = collectAdminPacksForSave(pPacks, price);
-      if (packs === null) return;
+      let packs = [];
+      if (pPacksEnabled && pPacksEnabled.checked) {
+        packs = collectAdminPacksForSave(pPacks, price);
+        if (packs === null) return;
+      }
       
       const payload = {
         tenant_slug: tenant,
