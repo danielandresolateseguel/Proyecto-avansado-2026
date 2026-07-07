@@ -871,15 +871,27 @@ def get_tenant_prefs():
         try:
             cfg = json.loads(row[0])
             if is_super:
-                return jsonify(cfg)
+                resp = jsonify(cfg)
+                resp.headers['Cache-Control'] = 'no-store, max-age=0'
+                resp.headers['Pragma'] = 'no-cache'
+                resp.headers['Expires'] = '0'
+                return resp
             safe = {}
             for key in ('tip_percent', 'tip_default_enabled', 'ticket_format', 'payment_methods'):
                 if key in cfg:
                     safe[key] = cfg.get(key)
-            return jsonify(safe)
+            resp = jsonify(safe)
+            resp.headers['Cache-Control'] = 'no-store, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+            return resp
         except:
             pass
-    return jsonify({})
+    resp = jsonify({})
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    resp.headers['Pragma'] = 'no-cache'
+    resp.headers['Expires'] = '0'
+    return resp
 
 @bp.route('/tenant_prefs', methods=['POST'])
 def update_tenant_prefs():

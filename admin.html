@@ -7633,7 +7633,8 @@
         const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (currentTenantSlug || tenantInput.value.trim() || defaultSlug()));
         const url = new URL('/api/tenant_prefs', API_BASE);
         url.searchParams.set('tenant_slug', slug);
-        const resp = await fetch(url.toString());
+        url.searchParams.set('_', String(Date.now()));
+        const resp = await wFetch(url.toString());
         if (!resp.ok) return;
         const p = await resp.json();
         currentTipPercent = Math.max(0, Math.min(100, Number(p.tip_percent || 10)));
@@ -15053,39 +15054,157 @@
           
           const breakdown = { efectivo: openAmt, pos: 0, qr: 0, transferencia: 0, otros: 0 };
           const breakdownCounts = { efectivo: 0, pos: 0, qr: 0, transferencia: 0, otros: 0 };
+          const breakdownByMethod = {};
+          const breakdownByMethodCounts = {};
+          breakdownByMethod['contado'] = openAmt;
+          breakdownByMethodCounts['contado'] = 0;
+
+          const baseKeyFor = (base) => {
+            const b = String(base || '').trim().toLowerCase();
+            if (b === 'contado') return 'efectivo';
+            if (b === 'pos') return 'pos';
+            if (b === 'qr') return 'qr';
+            if (b === 'transferencia') return 'transferencia';
+            if (b === 'otros') return 'otros';
+            return '';
+          };
+          const inferBaseKeyFromText = (text) => {
+            const raw = String(text || '').toLowerCase();
+            if (!raw) return 'efectivo';
+            if (raw.includes('qr')) return 'qr';
+            if (raw.includes('pos') || raw.includes('tarjeta')) return 'pos';
+            if (raw.includes('transferencia') || raw.trim() === 'trans') return 'transferencia';
+            if (raw.includes('otros') || raw.includes('otro')) return 'otros';
+            return 'efectivo';
+          };
+          const normalizeMethodId = (id, baseKey) => {
+            let out = String(id || '').trim().toLowerCase();
+            if (!out) {
+              if (baseKey === 'pos') out = 'pos';
+              else if (baseKey === 'qr') out = 'qr';
+              else if (baseKey === 'transferencia') out = 'transferencia';
+              else if (baseKey === 'otros') out = 'otros';
+              else out = 'contado';
+            }
+            return out;
+          };
+
           movements.forEach(m => {
-              const mt = (m.type||'').toLowerCase();
-              const note = (m.note||'').toLowerCase();
-              const pm = (m.payment_method||'').toLowerCase();
-              const amt = Number(m.amount||0);
-              let method = 'efectivo';
-              if (pm) {
-                   if (pm.includes('qr')) method = 'qr';
-                   else if (pm.includes('pos') || pm.includes('tarjeta')) method = 'pos';
-                   else if (pm.includes('transferencia')) method = 'transferencia';
-                   else if (pm.includes('otros')) method = 'otros';
-              } else {
-                   if (note.includes('qr')) method = 'qr';
-                   else if (note.includes('pos')) method = 'pos';
-                   else if (note.includes('transferencia')) method = 'transferencia';
-              }
-              if (mt === 'entrada' || mt === 'ingreso') {
-                  if (method === 'pos') { breakdown.pos += amt; breakdownCounts.pos++; }
-                  else if (method === 'qr') { breakdown.qr += amt; breakdownCounts.qr++; }
-                  else if (method === 'transferencia') { breakdown.transferencia += amt; breakdownCounts.transferencia++; }
-                  else if (method === 'otros') { breakdown.otros += amt; breakdownCounts.otros++; }
-                  else { breakdown.efectivo += amt; breakdownCounts.efectivo++; }
-              } else if (mt === 'salida') {
-                  if (method === 'pos') { breakdown.pos -= amt; breakdownCounts.pos++; }
-                  else if (method === 'qr') { breakdown.qr -= amt; breakdownCounts.qr++; }
-                  else if (method === 'transferencia') { breakdown.transferencia -= amt; breakdownCounts.transferencia++; }
-                  else if (method === 'otros') { breakdown.otros -= amt; breakdownCounts.otros++; }
-                  else { breakdown.efectivo -= amt; breakdownCounts.efectivo++; }
-              }
+            const mt = (m.type||'').toLowerCase();
+            const noteRaw = String(m.note || '');
+            const note = noteRaw.toLowerCase();
+            const pmRaw = String(m.payment_method || '').trim().toLowerCase();
+            const amt = Number(m.amount||0);
+            const sign = (mt === 'salida') ? -1 : 1;
+            if (!(mt === 'entrada' || mt === 'ingreso' || mt === 'salida')) return;
+
+            let methodFromNote = '';
+            try {
+              const m1 = noteRaw.match(/\[([a-z0-9_:-]+)\]/i);
+              if (m1 && m1[1]) methodFromNote = String(m1[1]).trim().toLowerCase();
+            } catch (_) {}
+
+            let baseKey = '';
+            try {
+              const meta = methodFromNote ? getPaymentMethodMeta(methodFromNote) : null;
+              if (meta && meta.base) baseKey = baseKeyFor(meta.base);
+            } catch (_) {}
+            try {
+              const meta = pmRaw ? getPaymentMethodMeta(pmRaw) : null;
+              if (meta && meta.base) baseKey = baseKeyFor(meta.base);
+            } catch (_) {}
+            if (!baseKey) baseKey = inferBaseKeyFromText(pmRaw || note);
+
+            const methodId = normalizeMethodId(methodFromNote || pmRaw, baseKey);
+            if (!Object.prototype.hasOwnProperty.call(breakdown, baseKey)) breakdown[baseKey] = 0;
+            if (!Object.prototype.hasOwnProperty.call(breakdownCounts, baseKey)) breakdownCounts[baseKey] = 0;
+
+            breakdown[baseKey] += (sign * amt);
+            breakdownCounts[baseKey] += 1;
+
+            if (!Object.prototype.hasOwnProperty.call(breakdownByMethod, methodId)) breakdownByMethod[methodId] = 0;
+            if (!Object.prototype.hasOwnProperty.call(breakdownByMethodCounts, methodId)) breakdownByMethodCounts[methodId] = 0;
+            breakdownByMethod[methodId] += (sign * amt);
+            breakdownByMethodCounts[methodId] += 1;
           });
+
+          const activePaymentMethods = (() => {
+            try {
+              const cfg = getPaymentMethodsConfig();
+              const arr = Array.isArray(cfg && cfg.methods) ? cfg.methods : [];
+              return arr.filter(m => m && m.active !== false);
+            } catch (_) {
+              try { return _defaultPaymentMethods(); } catch (_) { return []; }
+            }
+          })();
+
+          const breakdownRowsHtml = (opts) => {
+            const fmt = (opts && opts.fmt) ? opts.fmt : formatMoney;
+            const dash = '<span style="color:#999;">—</span>';
+            const rows = [];
+            const baseDefs = [
+              { key: 'efectivo', label: 'Efectivo', base: 'contado' },
+              { key: 'pos', label: 'POS', base: 'pos' },
+              { key: 'qr', label: 'QR', base: 'qr' },
+              { key: 'transferencia', label: 'Transf.', base: 'transferencia' },
+              { key: 'otros', label: 'Otros', base: 'otros' },
+            ];
+            for (const bd of baseDefs) {
+              const k = bd.key;
+              const theo = breakdown[k] || 0;
+              const decl = declared[k] || 0;
+              const diff = decl - theo;
+              const color = diff === 0 ? 'green' : (diff > 0 ? 'green' : 'red');
+              const count = breakdownCounts[k] || 0;
+              rows.push(`<tr>
+                <td style="padding:6px; border-bottom:1px solid #eee;">${bd.label} <small style="color:#666">(${count})</small></td>
+                <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${fmt(theo)}</td>
+                <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${fmt(decl)}</td>
+                <td style="padding:6px; border-bottom:1px solid #eee; text-align:right; color:${color}; font-weight:bold;">${fmt(diff)}</td>
+              </tr>`);
+
+              if (bd.base === 'otros') continue;
+              const methods = activePaymentMethods.filter(m =>
+                String(m && m.base || '').trim().toLowerCase() === bd.base && !(m && m.locked)
+              );
+              for (const meta of methods) {
+                const id = String(meta && meta.id || '').trim().toLowerCase();
+                if (!id) continue;
+                const label = (() => { try { return formatPaymentMethodDisplay(meta) || getPaymentMethodLabel(id); } catch (_) { return getPaymentMethodLabel(id); } })();
+                const mTheo = breakdownByMethod[id] || 0;
+                const mCount = breakdownByMethodCounts[id] || 0;
+                const safeLabel = escapeAdminHtml(label);
+                rows.push(`<tr>
+                  <td style="padding:6px; border-bottom:1px solid #eee; color:#444;">&nbsp;&nbsp;${safeLabel} <small style="color:#888">(${mCount})</small></td>
+                  <td style="padding:6px; border-bottom:1px solid #eee; text-align:right; color:#444;">${fmt(mTheo)}</td>
+                  <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${dash}</td>
+                  <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${dash}</td>
+                </tr>`);
+              }
+            }
+            return rows.join('');
+          };
           const manualMovs = movements.filter(m => !(m.note||'').toLowerCase().includes('cobro pedido'));
           const sumManualIn = manualMovs.reduce((a,m)=>a + ((m.type==='entrada' || m.type==='ingreso') ? Number(m.amount||0) : 0), 0);
           const sumManualOut = manualMovs.reduce((a,m)=>a + (m.type==='salida' ? Number(m.amount||0) : 0), 0);
+
+          const normalizeOrderMethodId = (value) => {
+            const raw = String(value || '').trim().toLowerCase();
+            if (!raw) return 'contado';
+            if (raw === 'cash') return 'contado';
+            return raw;
+          };
+          const orderMethodAgg = new Map();
+          for (const r of orders) {
+            const mid = normalizeOrderMethodId(r && r.payment_method);
+            const hit = orderMethodAgg.get(mid) || { count: 0, total: 0 };
+            hit.count += 1;
+            hit.total += Number((r && r.total) || 0);
+            orderMethodAgg.set(mid, hit);
+          }
+          const orderMethodAggArr = Array.from(orderMethodAgg.entries())
+            .map(([methodId, data]) => ({ methodId, count: data.count, total: data.total }))
+            .sort((a,b) => (b.total - a.total) || (b.count - a.count) || String(a.methodId).localeCompare(String(b.methodId)));
 
           if (mode === 'view') {
             const modal = document.createElement('div');
@@ -15122,32 +15241,38 @@
                     </tr>
                   </thead>
                   <tbody>
-                    ${['efectivo','pos','qr','transferencia','otros'].map(k => {
-                       const theo = breakdown[k] || 0;
-                       const decl = declared[k] || 0;
-                       const diff = decl - theo;
-                       const color = diff === 0 ? 'green' : (diff > 0 ? 'green' : 'red');
-                       const label = k.charAt(0).toUpperCase() + k.slice(1);
-                       const displayLabel = k==='pos' ? 'POS' : (k==='qr' ? 'QR' : (k==='transferencia' ? 'Transf.' : label));
-                       const count = breakdownCounts[k] || 0;
-                       return `<tr>
-                         <td style="padding:6px; border-bottom:1px solid #eee;">${displayLabel} <small style="color:#666">(${count})</small></td>
-                         <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(theo)}</td>
-                         <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(decl)}</td>
-                         <td style="padding:6px; border-bottom:1px solid #eee; text-align:right; color:${color}; font-weight:bold;">${formatMoney(diff)}</td>
-                       </tr>`;
-                    }).join('')}
+                    ${breakdownRowsHtml({ fmt: formatMoney })}
                   </tbody>
                 </table>
               </div>
 
+              <div class="small" style="font-weight:700; margin-top:8px;">Pedidos por método</div>
+              <div class="small" id="hist-orders-method-totals"></div>
+              <div style="margin-bottom:8px; border:1px solid #ddd; border-radius:4px; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.9em;">
+                  <thead style="background:#f5f5f5;">
+                    <tr>
+                      <th style="text-align:left; padding:6px;">Método</th>
+                      <th style="text-align:right; padding:6px;">Pedidos</th>
+                      <th style="text-align:right; padding:6px;">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hist-orders-method-tbody"></tbody>
+                </table>
+              </div>
+
               <div class="small" style="font-weight:700; margin-top:8px;">Pedidos entregados</div>
+              <div class="small" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:6px 0;">
+                <span style="font-weight:700;">Filtro:</span>
+                <select id="hist-orders-method-filter" style="height:34px; padding:0 10px; border:1px solid #ddd; border-radius:10px; background:#fff; font-weight:900; max-width:100%;">
+                  <option value="">Todos</option>
+                </select>
+                <span class="small" id="hist-orders-filter-totals" style="color:#666;"></span>
+              </div>
               <div style="max-height:30vh; overflow:auto; border:1px solid #ddd; margin-bottom:8px;">
                 <table style="width:100%; border-collapse:collapse;">
                   <thead><tr style="background:#f5f5f5;"><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">ID</th><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">Creado</th><th style="text-align:left; padding:6px; border-bottom:1px solid #ddd;">Método</th><th style="text-align:right; padding:6px; border-bottom:1px solid #ddd;">Total</th></tr></thead>
-                  <tbody>
-                    ${orders.map(r => `<tr><td style="padding:6px; border-bottom:1px solid #eee;">${r.id}</td><td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate(r.created_at||'')}</td><td style="padding:6px; border-bottom:1px solid #eee;">${getPaymentMethodLabel(r.payment_method)}</td><td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">$${r.total||0}</td></tr>`).join('')}
-                  </tbody>
+                  <tbody id="hist-orders-tbody"></tbody>
                 </table>
               </div>
               <div class="small" style="font-weight:700;">Ingresos y salidas de dinero</div>
@@ -15175,6 +15300,74 @@
             modal.appendChild(dialog);
             document.body.appendChild(modal);
 
+            const ordersTbody = dialog.querySelector('#hist-orders-tbody');
+            const filterSel = dialog.querySelector('#hist-orders-method-filter');
+            const filterTotalsEl = dialog.querySelector('#hist-orders-filter-totals');
+            const methodTotalsEl = dialog.querySelector('#hist-orders-method-totals');
+            const methodTbody = dialog.querySelector('#hist-orders-method-tbody');
+
+            const renderOrdersTable = (filterMethodId) => {
+              const target = String(filterMethodId || '').trim().toLowerCase();
+              const filtered = !target
+                ? orders.slice()
+                : orders.filter(o => normalizeOrderMethodId(o && o.payment_method) === target);
+              const count = filtered.length;
+              const total = filtered.reduce((a, o) => a + Number((o && o.total) || 0), 0);
+              if (filterTotalsEl) {
+                filterTotalsEl.textContent = `Pedidos: ${count} · Total: ${formatMoney(total)}`;
+              }
+              if (!ordersTbody) return;
+              ordersTbody.innerHTML = filtered.map(r => {
+                const methodLabel = getPaymentMethodLabel(r && r.payment_method);
+                return `<tr>
+                  <td style="padding:6px; border-bottom:1px solid #eee;">${escapeAdminHtml(r && r.id)}</td>
+                  <td style="padding:6px; border-bottom:1px solid #eee;">${formatARDate((r && r.created_at) || '')}</td>
+                  <td style="padding:6px; border-bottom:1px solid #eee;">${escapeAdminHtml(methodLabel)}</td>
+                  <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(Number((r && r.total) || 0))}</td>
+                </tr>`;
+              }).join('');
+            };
+
+            const renderMethodAgg = () => {
+              const totalOrders = orders.length;
+              const totalAmount = orders.reduce((a, o) => a + Number((o && o.total) || 0), 0);
+              if (methodTotalsEl) methodTotalsEl.textContent = `Total: ${totalOrders} pedidos · ${formatMoney(totalAmount)}`;
+              if (methodTbody) {
+                methodTbody.innerHTML = orderMethodAggArr.map(row => {
+                  const label = getPaymentMethodLabel(row.methodId);
+                  return `<tr data-method="${escapeAdminHtml(row.methodId)}" style="cursor:pointer;">
+                    <td style="padding:6px; border-bottom:1px solid #eee;">${escapeAdminHtml(label)}</td>
+                    <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${row.count}</td>
+                    <td style="padding:6px; border-bottom:1px solid #eee; text-align:right;">${formatMoney(row.total)}</td>
+                  </tr>`;
+                }).join('');
+              }
+              if (filterSel) {
+                const opts = ['<option value="">Todos</option>'].concat(orderMethodAggArr.map(row => {
+                  const label = getPaymentMethodLabel(row.methodId);
+                  return `<option value="${escapeAdminHtml(row.methodId)}">${escapeAdminHtml(label)} (${row.count})</option>`;
+                }));
+                filterSel.innerHTML = opts.join('');
+              }
+              if (methodTbody) {
+                methodTbody.querySelectorAll('tr[data-method]').forEach(tr => {
+                  tr.addEventListener('click', () => {
+                    const mid = String(tr.getAttribute('data-method') || '').trim().toLowerCase();
+                    if (filterSel) filterSel.value = mid;
+                    renderOrdersTable(mid);
+                  });
+                });
+              }
+            };
+
+            renderMethodAgg();
+            renderOrdersTable('');
+            if (filterSel) {
+              filterSel.addEventListener('change', () => {
+                renderOrdersTable(String(filterSel.value || '').trim().toLowerCase());
+              });
+            }
+
             const cleanup = () => {
               try { document.body.removeChild(modal); } catch(_) {}
               document.removeEventListener('keydown', onKey);
@@ -15193,6 +15386,10 @@
             const fmt = (n) => {
               try { return '$' + new Intl.NumberFormat('es-AR').format(Number(n||0)); } catch(_) { return '$' + Number(n||0); }
             };
+            const orderMethodRows = orderMethodAggArr.map(row => {
+              const label = getPaymentMethodLabel(row.methodId);
+              return `<tr><td>${escapeAdminHtml(label)}</td><td style="text-align:right;">${row.count}</td><td style="text-align:right;">${fmt(row.total)}</td></tr>`;
+            }).join('');
             const doc = `<!doctype html><html><head><meta charset="utf-8"><title>Cierre #${sid}</title><style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:16px} h1{font-size:18px;margin:0 0 8px} table{width:100%;border-collapse:collapse} th,td{padding:6px;border-bottom:1px solid #ddd} th{background:#f5f5f5;text-align:left} .section{margin-top:12px}</style></head><body>
               <h1>Detalle de cierre #${sid}</h1>
               <div>Tenant: ${slug}</div>
@@ -15212,20 +15409,18 @@
                 <table>
                   <thead><tr><th>Método</th><th style="text-align:right;">Teórico</th><th style="text-align:right;">Contado</th><th style="text-align:right;">Diferencia</th></tr></thead>
                   <tbody>
-                    ${['efectivo','pos','qr','transferencia','otros'].map(k => {
-                       const theo = breakdown[k] || 0;
-                       const decl = declared[k] || 0;
-                       const diff = decl - theo;
-                       const label = k.charAt(0).toUpperCase() + k.slice(1);
-                       const displayLabel = k==='pos' ? 'POS' : (k==='qr' ? 'QR' : (k==='transferencia' ? 'Transf.' : label));
-                       const count = breakdownCounts[k] || 0;
-                       return `<tr><td>${displayLabel} <small>(${count})</small></td><td style="text-align:right;">${fmt(theo)}</td><td style="text-align:right;">${fmt(decl)}</td><td style="text-align:right;">${fmt(diff)}</td></tr>`;
-                    }).join('')}
+                    ${breakdownRowsHtml({ fmt })}
                   </tbody>
                 </table>
               </div>
-              <div class="section"><strong>Pedidos entregados</strong><table><thead><tr><th>ID</th><th>Creado</th><th style="text-align:right;">Total</th></tr></thead><tbody>
-              ${orders.map(r => `<tr><td>${escapeAdminHtml(r.id)}</td><td>${formatARDate(r.created_at||'')}</td><td style="text-align:right;">${fmt(r.total||0)}</td></tr>`).join('')}
+              <div class="section"><strong>Pedidos por método</strong>
+                <table>
+                  <thead><tr><th>Método</th><th style="text-align:right;">Pedidos</th><th style="text-align:right;">Total</th></tr></thead>
+                  <tbody>${orderMethodRows}</tbody>
+                </table>
+              </div>
+              <div class="section"><strong>Pedidos entregados</strong><table><thead><tr><th>ID</th><th>Creado</th><th>Método</th><th style="text-align:right;">Total</th></tr></thead><tbody>
+              ${orders.map(r => `<tr><td>${escapeAdminHtml(r.id)}</td><td>${formatARDate(r.created_at||'')}</td><td>${escapeAdminHtml(getPaymentMethodLabel(r.payment_method))}</td><td style="text-align:right;">${fmt(r.total||0)}</td></tr>`).join('')}
               </tbody></table></div>
               <div class="section"><strong>Ingresos y salidas de dinero</strong>
               <table><thead><tr><th>Fecha</th><th>Tipo</th><th style="text-align:right;">Monto</th><th>Nota</th><th>Actor</th></tr></thead><tbody>
