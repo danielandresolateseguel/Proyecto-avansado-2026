@@ -16501,6 +16501,11 @@
       const fieldMesa = document.getElementById('field-mesa');
       const fieldAddress = document.getElementById('field-address');
       const fieldContact = document.getElementById('field-contact');
+      const newOrderAddressEl = document.getElementById('new-order-address');
+      const newOrderLocalityEl = document.getElementById('new-order-locality');
+      const newOrderNameEl = document.getElementById('new-order-name');
+      const newOrderPhoneEl = document.getElementById('new-order-phone');
+      const newOrderNotesEl = document.getElementById('new-order-notes');
       
       let cart = [];
       let products = [];
@@ -16511,6 +16516,51 @@
           if (!s) return 'Desconocido';
           return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       };
+
+      function suppressCreateOrderAutofill() {
+        if (modal) modal.setAttribute('autocomplete', 'off');
+        const targets = [
+          newOrderAddressEl,
+          newOrderLocalityEl,
+          shippingInputEl,
+          newOrderNameEl,
+          newOrderPhoneEl,
+          newOrderNotesEl,
+          searchInput
+        ].filter(Boolean);
+        targets.forEach((el) => {
+          try {
+            el.setAttribute('autocomplete', el === newOrderNotesEl || el === searchInput ? 'off' : 'new-password');
+            el.setAttribute('data-lpignore', 'true');
+            if (el !== shippingInputEl) el.setAttribute('spellcheck', 'false');
+          } catch (_) {}
+        });
+      }
+
+      async function resetCreateOrderModalState() {
+        cart = [];
+        baseShippingCost = 0;
+        if (searchInput) searchInput.value = '';
+        if (typeSelect) typeSelect.value = 'mesa';
+        const tableSelect = document.getElementById('new-order-table');
+        if (tableSelect) tableSelect.value = '';
+        if (newOrderAddressEl) newOrderAddressEl.value = '';
+        if (newOrderLocalityEl) newOrderLocalityEl.value = '';
+        if (shippingInputEl) {
+          shippingInputEl.value = '';
+          shippingInputEl.dataset.touched = '';
+        }
+        if (newOrderNameEl) newOrderNameEl.value = '';
+        if (newOrderPhoneEl) newOrderPhoneEl.value = '';
+        if (newOrderNotesEl) newOrderNotesEl.value = '';
+        if (fieldMesa) fieldMesa.style.display = 'block';
+        if (fieldAddress) fieldAddress.style.display = 'none';
+        if (fieldContact) fieldContact.style.display = 'none';
+        try {
+          await populateTableSelect(undefined, true);
+        } catch (_) {}
+        renderCart();
+      }
 
       const escapeJsString = (value) => String(value ?? '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
@@ -17173,6 +17223,7 @@
       // Events
       if (openBtn) openBtn.addEventListener('click', async () => {
         if (!modal) return;
+        suppressCreateOrderAutofill();
         
         // Sync with current tenant before opening
         if (tenantSelect && typeof tenantInput !== 'undefined' && tenantInput.value) {
@@ -17181,9 +17232,10 @@
              tenantSelect.value = current;
         }
 
+        await resetCreateOrderModalState();
+
         modal.classList.add('active');
         modal.style.display = 'flex'; // Ensure display flex
-        await populateTableSelect(undefined, true);
         await loadProducts();
         await loadNewOrderTenantConfig();
         await window.loadQuickOrderShortcuts(true);
@@ -17194,17 +17246,12 @@
         if (!modal) return;
         modal.classList.remove('active');
         modal.style.display = 'none';
-        cart = [];
-        baseShippingCost = 0;
-        if (shippingInputEl) {
-          shippingInputEl.value = '';
-          shippingInputEl.dataset.touched = '';
-        }
-        renderCart();
+        resetCreateOrderModalState();
       };
       
       if (closeBtn) closeBtn.addEventListener('click', closeModal);
       if (overlay) overlay.addEventListener('click', closeModal);
+      suppressCreateOrderAutofill();
       
       if (typeSelect) typeSelect.addEventListener('change', async () => {
         const val = typeSelect.value;
@@ -18045,7 +18092,7 @@
   }
 </style>
 <!-- Create Order Modal -->
-<div id="create-order-modal" class="kds-modal">
+<div id="create-order-modal" class="kds-modal" autocomplete="off">
   <div class="kds-modal-overlay"></div>
   <div class="kds-modal-content" style="width: 95vw; max-width: 1000px; height: 90vh; display: flex; flex-direction: column; padding: 0;">
     <div style="padding: 16px; border-bottom: 1px solid var(--kds-border); display: flex; justify-content: space-between; align-items: center; background: #fff;">
@@ -18057,7 +18104,7 @@
       <!-- Product Selection (Left) -->
       <div class="create-order-left">
         <div style="padding: 12px; border-bottom: 1px solid var(--kds-border); background: #fff;">
-          <input type="text" id="new-order-search" placeholder="Buscar productos..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+          <input type="text" id="new-order-search" placeholder="Buscar productos..." autocomplete="off" spellcheck="false" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
         </div>
         <div id="new-order-products" style="flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; align-content: start;">
           <!-- Products will be injected here -->
@@ -18069,6 +18116,8 @@
         <div class="content-scroll" style="padding: 16px; overflow-y: auto; flex: 1;">
           <!-- Customer Info -->
           <div style="display: grid; gap: 12px; margin-bottom: 20px;">
+            <input type="text" tabindex="-1" aria-hidden="true" autocomplete="off" name="new_order_fake_user" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
+            <input type="password" tabindex="-1" aria-hidden="true" autocomplete="new-password" name="new_order_fake_pass" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
             <div>
               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Local</label>
               <select id="new-order-tenant" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; font-size: 13px;">
@@ -18093,23 +18142,23 @@
 
             <div id="field-address" class="order-type-field" style="display: none;">
               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Dirección</label>
-              <input type="text" id="new-order-address" placeholder="Calle y número" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <input type="text" id="new-order-address" name="new_order_delivery_address_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Calle y número" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Localidad</label>
-              <input type="text" id="new-order-locality" placeholder="Ej: Las Heras, Mendoza" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <input type="text" id="new-order-locality" name="new_order_delivery_locality_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Ej: Las Heras, Mendoza" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Envío</label>
-              <input type="number" id="new-order-shipping" placeholder="0" min="0" step="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <input type="number" id="new-order-shipping" name="new_order_shipping_amount_field" autocomplete="new-password" data-lpignore="true" placeholder="0" min="0" step="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
             </div>
 
             <div id="field-contact" class="order-type-field" style="display: none;">
                <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Nombre Cliente</label>
-               <input type="text" id="new-order-name" placeholder="Nombre" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+               <input type="text" id="new-order-name" name="new_order_customer_name_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Nombre" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
                <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Teléfono</label>
-               <input type="text" id="new-order-phone" placeholder="WhatsApp" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+               <input type="text" id="new-order-phone" name="new_order_customer_phone_field" autocomplete="new-password" data-lpignore="true" inputmode="tel" spellcheck="false" placeholder="WhatsApp" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
             </div>
             
             <div>
                <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Notas</label>
-               <textarea id="new-order-notes" placeholder="Notas del pedido..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical;"></textarea>
+               <textarea id="new-order-notes" name="new_order_notes_field" autocomplete="off" spellcheck="false" placeholder="Notas del pedido..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical;"></textarea>
             </div>
           </div>
 
