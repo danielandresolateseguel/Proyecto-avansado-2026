@@ -116,6 +116,7 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             if (meta.pack_id && !existingItem.pack_id) existingItem.pack_id = meta.pack_id;
             if (meta.pack_label && !existingItem.pack_label) existingItem.pack_label = meta.pack_label;
             if (Number.isFinite(meta.pack_size) && !Number.isFinite(existingItem.pack_size)) existingItem.pack_size = meta.pack_size;
+            if (Number.isFinite(meta.base_price) && !Number.isFinite(existingItem.base_price)) existingItem.base_price = meta.base_price;
             if (meta.modifiers && typeof meta.modifiers === 'object' && !existingItem.modifiers) existingItem.modifiers = meta.modifiers;
             if (meta.mix_summary && !existingItem.mix_summary) existingItem.mix_summary = String(meta.mix_summary);
             if (meta.addons_summary && !existingItem.addons_summary) existingItem.addons_summary = String(meta.addons_summary);
@@ -128,6 +129,7 @@ export function addToCart(id, name, price, imageSrc, event, showAnimationCallbac
             pack_id: m && m.pack_id ? m.pack_id : undefined,
             pack_label: m && m.pack_label ? m.pack_label : undefined,
             pack_size: m && Number.isFinite(m.pack_size) ? m.pack_size : undefined,
+            base_price: m && Number.isFinite(m.base_price) ? m.base_price : undefined,
             modifiers: m && m.modifiers && typeof m.modifiers === 'object' ? m.modifiers : undefined,
             mix_summary: m && m.mix_summary ? String(m.mix_summary) : undefined,
             addons_summary: m && m.addons_summary ? String(m.addons_summary) : undefined,

@@ -17501,21 +17501,23 @@
         const packId = pack ? String(pack.id || '').trim() : '';
         const packLabel = pack ? String(pack.label || '').trim() : '';
         const packSize = pack ? (safeAdminInt(pack.pack_size) || 1) : 1;
-        const unitPrice = meta && safeAdminInt(meta.totalPrice) > 0
-          ? safeAdminInt(meta.totalPrice)
-          : (pack ? (safeAdminInt(pack.price) || 0) : (safeAdminInt(p.price) || 0));
-        if (unitPrice <= 0) return;
+        const baseUnitPrice = pack ? (safeAdminInt(pack.price) || 0) : (safeAdminInt(p.price) || 0);
+        const displayUnitPrice = meta && safeAdminInt(meta.totalPrice) > 0 ? safeAdminInt(meta.totalPrice) : baseUnitPrice;
+        if (displayUnitPrice <= 0) return;
+        if (baseUnitPrice <= 0) return;
         const displayName = packLabel ? `${p.name} (${packLabel})` : p.name;
         const key = meta && meta.keySuffix ? `${baseId}::${meta.keySuffix}` : (packId ? `${baseId}::pack:${packId}` : baseId);
         const existing = cart.find(i => i.key === key);
         if (existing) {
           existing.qty += addQty;
+          if (!Number.isFinite(existing.base_price) || existing.base_price <= 0) existing.base_price = baseUnitPrice;
         } else {
           cart.push({
             key,
             product_id: baseId,
             name: displayName,
-            price: unitPrice,
+            price: displayUnitPrice,
+            base_price: baseUnitPrice,
             qty: addQty,
             details: p.details || '',
             pack_id: packId || '',
@@ -17698,7 +17700,7 @@
               id: i.product_id,
               product_id: i.product_id,
               name: i.name,
-              price: i.price,
+              price: safeAdminInt(i.base_price) || safeAdminInt(i.price) || 0,
               quantity: i.qty,
               details: i.details,
               notes: i.notes || '',
@@ -20570,6 +20572,24 @@ window.EditOrder = {
             }
         });
     },
+
+    _syncItemBasePrices: function() {
+        if (!Array.isArray(this.availableProducts) || !this.availableProducts.length) return;
+        const api = window.KdsProductConfig;
+        this.items.forEach((item) => {
+            if (!item || !item.id) return;
+            const prod = this.availableProducts.find(p => String(p.id) === String(item.id));
+            if (!prod) return;
+            let base = safeAdminInt(prod.price) || 0;
+            const packId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || '').trim();
+            if (packId && api && typeof api.getProductPacks === 'function') {
+                const packs = api.getProductPacks(prod) || [];
+                const match = packs.find(p => String(p && p.id || '').trim() === packId);
+                if (match && safeAdminInt(match.price) > 0) base = safeAdminInt(match.price);
+            }
+            if (base > 0) item.base_price = base;
+        });
+    },
     
     openWithFetch: async function(orderId, tableNumber) {
         if (!this.modal) this.init();
@@ -20649,6 +20669,7 @@ window.EditOrder = {
         this.modal.classList.add('active');
         this.loadProductsForOrder().then(() => {
             this._syncItemProductNames();
+            this._syncItemBasePrices();
             this.renderProducts('');
             this.renderItems();
         });
@@ -20739,6 +20760,7 @@ window.EditOrder = {
                         id: prod.id,
                         name: prod.name,
                         price: parseFloat(state.totalPrice),
+                        base_price: safeAdminInt(prod.price) || 0,
                         qty: 1,
                         notes: '',
                         modifiers,
@@ -20777,10 +20799,12 @@ window.EditOrder = {
                 if (existing) {
                     existing.qty++;
                 } else {
+                    const baseUnit = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (safeAdminInt(prod.price) || 0);
                     this.items.push({
                         id: prod.id,
                         name: prod.name,
                         price: parseFloat(state.totalPrice),
+                        base_price: baseUnit,
                         qty: 1,
                         notes: '',
                         modifiers: nextModifiers,
@@ -20844,6 +20868,7 @@ window.EditOrder = {
                 item.modifiers = nextModifiers;
                 item.mix_summary = mixSummary;
                 item.price = parseFloat(state.totalPrice);
+                item.base_price = safeAdminInt(prod.price) || 0;
                 const mixSig = this._buildMixSignature(mixParts);
                 item.config_key = mixSig ? `mix:${mixSig}` : '';
                 this.renderItems();
@@ -20881,6 +20906,7 @@ window.EditOrder = {
                 item.modifiers = nextModifiers;
                 item.addons_summary = String(state.addons_summary || '').trim();
                 item.price = parseFloat(state.totalPrice);
+                item.base_price = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (safeAdminInt(prod.price) || 0);
 
                 const keyParts = [];
                 if (item.pack_id) keyParts.push(`pack:${item.pack_id}`);
@@ -20954,12 +20980,13 @@ window.EditOrder = {
         this.saveBtn.disabled = true;
         
         try {
+            this._syncItemBasePrices();
             const payload = {
                 items: this.items.map(it => ({
                   product_id: it.id,
                   id: it.id,
                   name: it.name,
-                  price: parseInt(it.price || 0, 10) || 0,
+                  price: parseInt((it.base_price || it.price) || 0, 10) || 0,
                   qty: parseInt(it.qty || 1, 10) || 1,
                   notes: it.notes || '',
                   item_id: it.item_id || null,

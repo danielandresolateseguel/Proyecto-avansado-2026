@@ -401,7 +401,23 @@ function sendOrderToBackend(orderType, data, total) {
                 pack_label: it.pack_label || '',
                 pack_size: it.pack_size || 1,
                 name: it.name,
-                price: it.price,
+                price: (() => {
+                    const explicitBase = (typeof it.base_price === 'number' && isFinite(it.base_price) && it.base_price > 0) ? it.base_price : 0;
+                    if (explicitBase > 0) return explicitBase;
+                    const modifiers = it && it.modifiers && typeof it.modifiers === 'object' ? it.modifiers : {};
+                    const rawAddons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+                    const addonsTotal = rawAddons.reduce((sum, addon) => {
+                        const tp = parseInt(addon && addon.total_price, 10);
+                        if (Number.isFinite(tp) && tp > 0) return sum + tp;
+                        const up = parseInt(addon && addon.unit_price, 10);
+                        const qty = parseInt(addon && addon.qty, 10) || 1;
+                        if (Number.isFinite(up) && up > 0) return sum + (up * Math.max(1, qty));
+                        return sum;
+                    }, 0);
+                    const display = parseInt(it && it.price, 10) || 0;
+                    const derived = display - addonsTotal;
+                    return derived > 0 ? derived : display;
+                })(),
                 quantity: it.quantity,
                 modifiers: it.modifiers || {},
                 notes: it.notes || ''

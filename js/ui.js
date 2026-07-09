@@ -545,7 +545,7 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
             `;
         }
         if (confirmBtn) confirmBtn.disabled = !isValid || totalPrice <= 0;
-        return { currentPack, activeAddons, addonsSummary, totalPrice, isValid };
+        return { currentPack, activeAddons, addonsSummary, totalPrice, isValid, basePrice: resolvedBasePrice };
     };
 
     if (packSelect) {
@@ -568,6 +568,7 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
             const meta = {
                 product_id: productId,
                 totalPrice: current.totalPrice,
+                base_price: parseInt(current.basePrice, 10) || 0,
                 keySuffix: keyParts.join('::'),
                 modifiers: {},
                 addons_summary: current.addonsSummary
