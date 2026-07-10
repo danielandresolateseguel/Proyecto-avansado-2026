@@ -84,6 +84,107 @@ def _load_tenant_config_row(cur, slug):
         current_cfg = {}
     return current_cfg
 
+def _parse_promotion_datetime(value):
+    text = str(value or '').strip()
+    if not text:
+        return None
+    try:
+        return datetime.fromisoformat(text.replace('Z', '+00:00'))
+    except Exception:
+        return None
+
+def _is_promotion_window_active(entry_cfg):
+    if not isinstance(entry_cfg, dict):
+        return False
+    starts_at = _parse_promotion_datetime(entry_cfg.get('starts_at'))
+    ends_at = _parse_promotion_datetime(entry_cfg.get('ends_at'))
+    if starts_at is not None:
+        now = datetime.now(timezone.utc) if starts_at.tzinfo else datetime.now()
+        ref = starts_at.astimezone(timezone.utc) if starts_at.tzinfo else starts_at
+        if now < ref:
+            return False
+    if ends_at is not None:
+        now = datetime.now(timezone.utc) if ends_at.tzinfo else datetime.now()
+        ref = ends_at.astimezone(timezone.utc) if ends_at.tzinfo else ends_at
+        if now > ref:
+            return False
+    return True
+
+def _get_active_entry_promotion(tenant_slug):
+    try:
+        cfg = get_cached_tenant_config(tenant_slug) or {}
+    except Exception:
+        cfg = {}
+    if not isinstance(cfg, dict):
+        return None
+    promotions = cfg.get('promotions') if isinstance(cfg.get('promotions'), dict) else {}
+    entry_cfg = promotions.get('entry_modal') if isinstance(promotions.get('entry_modal'), dict) else {}
+    if not entry_cfg or entry_cfg.get('active') is not True:
+        return None
+    product_id = str(entry_cfg.get('product_id') or '').strip()
+    if not product_id or not _is_promotion_window_active(entry_cfg):
+        return None
+    pricing_cfg = entry_cfg.get('pricing') if isinstance(entry_cfg.get('pricing'), dict) else {}
+    return {
+        'product_id': product_id,
+        'badge_text': str(entry_cfg.get('badge_text') or '').strip(),
+        'headline': str(entry_cfg.get('headline') or '').strip(),
+        'message': str(entry_cfg.get('message') or '').strip(),
+        'pricing': {
+            'mode': str(pricing_cfg.get('mode') or 'none').strip().lower() or 'none',
+            'compare_at_price': _safe_int(pricing_cfg.get('compare_at_price'), 0),
+            'promo_price': _safe_int(pricing_cfg.get('promo_price'), 0),
+            'discount_percent': _safe_int(pricing_cfg.get('discount_percent'), 0),
+            'discount_amount': _safe_int(pricing_cfg.get('discount_amount'), 0),
+            'note': str(pricing_cfg.get('note') or '').strip(),
+        }
+    }
+
+def _apply_entry_promotion_price(product_id, current_unit_price, promotion_cfg):
+    current_price = max(0, _safe_int(current_unit_price, 0))
+    if current_price <= 0 or not isinstance(promotion_cfg, dict):
+        return current_price, None
+    if str(product_id or '').strip() != str(promotion_cfg.get('product_id') or '').strip():
+        return current_price, None
+
+    pricing = promotion_cfg.get('pricing') if isinstance(promotion_cfg.get('pricing'), dict) else {}
+    mode = str(pricing.get('mode') or 'none').strip().lower()
+    configured_compare_price = _safe_int(pricing.get('compare_at_price'), 0)
+    compare_at_price = max(current_price, configured_compare_price)
+    applied_price = current_price
+
+    if mode == 'promo_price':
+        promo_price = _safe_int(pricing.get('promo_price'), 0)
+        if promo_price >= 0:
+            applied_price = promo_price
+    elif mode == 'percent':
+        discount_percent = _safe_int(pricing.get('discount_percent'), 0)
+        if 0 < discount_percent <= 100:
+            applied_price = int(round(current_price * (1.0 - (discount_percent / 100.0))))
+    elif mode == 'amount':
+        discount_amount = _safe_int(pricing.get('discount_amount'), 0)
+        if discount_amount > 0:
+            applied_price = current_price - discount_amount
+
+    applied_price = max(0, min(current_price, int(applied_price or 0)))
+    if applied_price >= current_price:
+        return current_price, None
+
+    promotion_meta = {
+        'type': 'entry_modal',
+        'product_id': str(promotion_cfg.get('product_id') or '').strip(),
+        'mode': mode,
+        'badge_text': str(promotion_cfg.get('badge_text') or '').strip(),
+        'headline': str(promotion_cfg.get('headline') or '').strip(),
+        'note': str(pricing.get('note') or '').strip(),
+        'base_unit_price': current_price,
+        'compare_at_price': compare_at_price,
+        'configured_compare_at_price': configured_compare_price,
+        'applied_unit_price': applied_price,
+        'addons_discounted': False,
+    }
+    return applied_price, promotion_meta
+
 def _safe_float(value, default=None):
     try:
         n = float(value)
@@ -1190,6 +1291,7 @@ def create_order():
             ),
         )
 
+        active_promotion = _get_active_entry_promotion(tenant_slug)
         items_total = 0
         # Process Items
         for it in items:
@@ -1206,7 +1308,10 @@ def create_order():
             requested_price = int(it.get('price', 0) or 0)
             
             # Check/Create Product
-            cur.execute("SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
+            cur.execute(
+                "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                (tenant_slug, pid)
+            )
             row = cur.fetchone()
             if not row:
                 try:
@@ -1219,7 +1324,10 @@ def create_order():
                     )
                     conn.commit()
                     # Re-fetch
-                    cur.execute("SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, pid))
+                    cur.execute(
+                        "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                        (tenant_slug, pid)
+                    )
                     row = cur.fetchone()
                 except Exception as e:
                     print(f"Error auto-creating product {pid}: {e}")
@@ -1227,12 +1335,15 @@ def create_order():
                     return jsonify({'error': 'producto no encontrado y fallo al crear', 'product_id': pid}), 400
             
             stock = int((row[0] if row else 0) or 0)
-            variants_raw = row[1] if row and len(row) > 1 else ''
+            base_product_price = _safe_int(row[1] if row and len(row) > 1 else 0, 0)
+            variants_raw = row[2] if row and len(row) > 2 else ''
             variants = _parse_variants_json(variants_raw)
             modifiers = it.get('modifiers') or {}
             if not isinstance(modifiers, dict):
                 modifiers = {}
-            unit_price = requested_price
+            # Recalcular siempre desde el precio real en base evita descontar dos veces
+            # cuando el frontend ya envía el precio promocionado para simple display.
+            unit_price = base_product_price if base_product_price > 0 else requested_price
             try:
                 mixed_price, modifiers = _resolve_mix_price(cur, tenant_slug, pid, variants, modifiers)
                 if mixed_price is not None and mixed_price > 0:
@@ -1268,11 +1379,17 @@ def create_order():
                             break
                 except Exception:
                     pass
+            promotion_meta = None
+            if not isinstance(modifiers.get('mix'), list):
+                unit_price, promotion_meta = _apply_entry_promotion_price(pid, unit_price, active_promotion)
             try:
                 unit_price, modifiers = _resolve_addons_price(cur, tenant_slug, pid, variants, modifiers, unit_price)
             except ValueError as e:
                 conn.rollback()
                 return jsonify({'error': str(e), 'product_id': pid}), 400
+            if promotion_meta:
+                promotion_meta['final_unit_price'] = int(unit_price)
+                modifiers['promotion'] = promotion_meta
             inv_qty = qty * pack_size
             if stock < inv_qty:
                 conn.rollback()
@@ -2401,6 +2518,7 @@ def update_order_content(order_id):
         pack_size = _pack_size_from_modifiers(r[3])
         old_units_by_product[pid] = old_units_by_product.get(pid, 0) + (qty * pack_size)
 
+    active_promotion = _get_active_entry_promotion(tenant_slug)
     # Calcular nuevo total
     items_total = 0
     valid_items = []
@@ -2439,7 +2557,7 @@ def update_order_content(order_id):
                     pack_size = max(1, pack_size)
 
             cur.execute(
-                "SELECT stock, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
                 (tenant_slug, pid),
             )
             prow = cur.fetchone()
@@ -2447,8 +2565,11 @@ def update_order_content(order_id):
                 conn.rollback()
                 return jsonify({'error': 'producto no encontrado', 'product_id': pid}), 400
 
-            variants = _parse_variants_json(prow[1] if len(prow) > 1 else '')
-            unit_price = requested_price
+            base_product_price = _safe_int(prow[1] if len(prow) > 1 else 0, 0)
+            variants = _parse_variants_json(prow[2] if len(prow) > 2 else '')
+            # En edición también recalculamos desde el precio real del catálogo para
+            # que la promo afecte solo al producto base y no vuelva a tomar un valor ya descontado.
+            unit_price = base_product_price if base_product_price > 0 else requested_price
             try:
                 mixed_price, modifiers = _resolve_mix_price(cur, tenant_slug, pid, variants, modifiers)
                 if mixed_price is not None and mixed_price > 0:
@@ -2484,11 +2605,17 @@ def update_order_content(order_id):
                             break
                 except Exception:
                     pass
+            promotion_meta = None
+            if not isinstance(modifiers.get('mix'), list):
+                unit_price, promotion_meta = _apply_entry_promotion_price(pid, unit_price, active_promotion)
             try:
                 unit_price, modifiers = _resolve_addons_price(cur, tenant_slug, pid, variants, modifiers, unit_price)
             except ValueError as e:
                 conn.rollback()
                 return jsonify({'error': str(e), 'product_id': pid}), 400
+            if promotion_meta:
+                promotion_meta['final_unit_price'] = int(unit_price)
+                modifiers['promotion'] = promotion_meta
             if pack_id:
                 modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
 

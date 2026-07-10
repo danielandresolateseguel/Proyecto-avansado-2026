@@ -320,6 +320,8 @@ def get_tenant_header():
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
+        if 'promotions' in payload and isinstance(payload.get('promotions'), dict):
+            current_cfg['promotions'] = payload.get('promotions')
         if 'main_menu_categories' in payload:
             current_cfg['main_menu_categories'] = _normalize_main_menu_categories(payload.get('main_menu_categories'))
         
@@ -402,6 +404,12 @@ def get_tenant_header():
     timezone = str(cfg.get('timezone') or meta_contact.get('timezone') or 'America/Argentina/Mendoza').strip()
     currency_code = str(cfg.get('currency_code') or meta_contact.get('currency_code') or 'ARS').strip().upper()
     currency_locale = str(cfg.get('currency_locale') or meta_contact.get('currency_locale') or 'es-AR').strip()
+    promotions = cfg.get('promotions') if isinstance(cfg.get('promotions'), dict) else {}
+    promotion_banner = promotions.get('banner') if isinstance(promotions.get('banner'), dict) else {}
+    promotion_entry = promotions.get('entry_modal') if isinstance(promotions.get('entry_modal'), dict) else {}
+    announcement_active = bool(cfg.get('announcement_active', promotion_banner.get('active', False)))
+    announcement_text = cfg.get('announcement_text') or promotion_banner.get('text') or meta_branding.get('announcement_text', '')
+
     return jsonify({
         'name': cfg.get('name') or tenant_name or meta_branding.get('name', ''),
         'whatsapp': cfg.get('whatsapp') or meta_contact.get('whatsapp', ''),
@@ -420,8 +428,15 @@ def get_tenant_header():
         'currency_code': currency_code,
         'currency_locale': currency_locale,
         'logo_url': cfg.get('logo_url') or meta_branding.get('logo_url', ''),
-        'announcement_active': cfg.get('announcement_active', False),
-        'announcement_text': cfg.get('announcement_text') or meta_branding.get('announcement_text', ''),
+        'announcement_active': announcement_active,
+        'announcement_text': announcement_text,
+        'promotions': {
+            'banner': {
+                'active': announcement_active,
+                'text': announcement_text
+            },
+            'entry_modal': promotion_entry
+        },
         'theme_color': cfg.get('theme_color', '#ff6a00'),
         'header_bg_color': cfg.get('header_bg_color', '#2c1e36'),
         'featured_bg_color': cfg.get('featured_bg_color', '#0c0c0c'),

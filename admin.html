@@ -2559,6 +2559,7 @@
           <button id="car-create-btn" style="background-color:#4caf50; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">+ Nuevo Slide</button>
           <button id="car-reload">Recargar</button>
           <button id="header-config-open" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Cabecera</button>
+          <button id="promotions-config-open" style="background-color:#8b5cf6; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Promociones</button>
           <button id="footer-config-open" style="background-color:#795548; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Pie de página</button>
           <button id="whatsapp-config-btn" title="Configuración de WhatsApp" style="background:#25D366; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">
             WhatsApp
@@ -3550,6 +3551,118 @@
       <div style="text-align:right; margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
         <button type="button" id="header-save-btn" style="padding:8px 16px; background:#2196F3; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Guardar</button>
         <button type="button" id="header-close-btn" style="padding:8px 16px; background:#9e9e9e; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="promotions-config-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2001; align-items:center; justify-content:center;">
+    <div style="background:#fff; width:92%; max-width:720px; padding:20px; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.25); max-height:90vh; overflow-y:auto;">
+      <h3 style="margin-top:0; margin-bottom:6px;">Promociones de Carta Online</h3>
+      <div style="font-size:12px; color:#64748b; margin-bottom:16px;">Etapa 1: destacado visual con barra superior y modal de entrada. La base queda lista para aplicar descuento real en una etapa posterior.</div>
+
+      <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">Barra de anuncio superior</div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:10px; cursor:pointer;">
+          <input type="checkbox" id="promo-banner-active" style="width:auto;">
+          <span>Activar barra de anuncio</span>
+        </label>
+        <label style="font-size:12px; display:block; margin-bottom:4px;">Texto visible</label>
+        <textarea id="promo-banner-text" style="width:100%; min-height:72px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; resize:vertical;" placeholder="Ej: Hoy 20% OFF en milanesas hasta las 23 hs."></textarea>
+      </div>
+
+      <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; margin-bottom:16px;">
+        <div style="font-size:13px; font-weight:800; color:#0f172a; margin-bottom:10px;">Modal promocional de entrada</div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:12px; cursor:pointer;">
+          <input type="checkbox" id="promo-entry-active" style="width:auto;">
+          <span>Mostrar modal al entrar a la carta</span>
+        </label>
+        <div style="display:grid; grid-template-columns:minmax(0,1.5fr) auto; gap:8px; align-items:end; margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Producto destacado</label>
+            <select id="promo-entry-product" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+              <option value="">Seleccionar producto...</option>
+            </select>
+          </div>
+          <button type="button" id="promo-entry-reload-products" style="height:40px; padding:0 12px; border:none; border-radius:8px; background:#e2e8f0; color:#0f172a; cursor:pointer; font-weight:700;">Recargar productos</button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Sello / badge</label>
+            <input type="text" id="promo-entry-badge" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: 20% OFF">
+          </div>
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Texto del botón</label>
+            <input type="text" id="promo-entry-cta" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: Ver promoción">
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px; display:block; margin-bottom:4px;">Título del modal</label>
+          <input type="text" id="promo-entry-headline" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: Oferta destacada del día">
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px; display:block; margin-bottom:4px;">Mensaje</label>
+          <textarea id="promo-entry-message" style="width:100%; min-height:88px; padding:10px; border:1px solid #cbd5e1; border-radius:8px; resize:vertical;" placeholder="Ej: Aprovechá esta promo especial por tiempo limitado."></textarea>
+        </div>
+        <div style="border:1px dashed #d8b4fe; border-radius:10px; padding:12px; margin-bottom:12px; background:#faf5ff;">
+          <div style="font-size:12px; font-weight:800; color:#6b21a8; margin-bottom:8px;">Precio promocional visual</div>
+          <div style="font-size:12px; color:#6b7280; margin-bottom:10px;">Esto solo afecta la presentaciÃ³n del modal. El descuento real del pedido se aplicarÃ¡ en la siguiente etapa.</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">Modo</label>
+              <select id="promo-entry-pricing-mode" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+                <option value="none">Sin precio promo</option>
+                <option value="promo_price">Precio promocional</option>
+                <option value="percent">Porcentaje de descuento</option>
+                <option value="amount">Monto de descuento</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">Precio anterior</label>
+              <input type="number" id="promo-entry-compare-price" min="0" step="1" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="VacÃ­o = precio actual">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">Texto auxiliar</label>
+              <input type="text" id="promo-entry-pricing-note" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: Solo por hoy">
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">Precio promo</label>
+              <input type="number" id="promo-entry-promo-price" min="0" step="1" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: 9900">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">% descuento</label>
+              <input type="number" id="promo-entry-discount-percent" min="0" max="100" step="1" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: 20">
+            </div>
+            <div>
+              <label style="font-size:12px; display:block; margin-bottom:4px;">Monto descuento</label>
+              <input type="number" id="promo-entry-discount-amount" min="0" step="1" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;" placeholder="Ej: 3000">
+            </div>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Frecuencia</label>
+            <select id="promo-entry-frequency" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+              <option value="session">Una vez por sesión</option>
+              <option value="day">Una vez por día</option>
+              <option value="always">Siempre</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Inicio (opcional)</label>
+            <input type="datetime-local" id="promo-entry-starts-at" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+          <div>
+            <label style="font-size:12px; display:block; margin-bottom:4px;">Fin (opcional)</label>
+            <input type="datetime-local" id="promo-entry-ends-at" style="width:100%; padding:10px; border:1px solid #cbd5e1; border-radius:8px;">
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:right; margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" id="promotions-save-btn" style="padding:8px 16px; background:#8b5cf6; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Guardar</button>
+        <button type="button" id="promotions-close-btn" style="padding:8px 16px; background:#9e9e9e; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">Cerrar</button>
       </div>
     </div>
   </div>
@@ -10163,7 +10276,7 @@
       const addonsSummary = buildAddonsSummaryFromModifiers(modifiers);
       if (addonsSummary) lines.push(`Adicionales: ${addonsSummary}`);
 
-      const skip = new Set(['pack', 'mix', 'mix_summary', 'mix_builder', 'addons', 'addons_summary', 'addons_meta']);
+      const skip = new Set(['pack', 'mix', 'mix_summary', 'mix_builder', 'addons', 'addons_summary', 'addons_meta', 'promotion']);
       for (const key of Object.keys(modifiers)) {
         if (skip.has(key)) continue;
         const value = modifiers[key];
@@ -11624,6 +11737,28 @@
     const headerHoursToggleLabel = document.getElementById('header-hours-toggle-label');
     const headerSaveBtn = document.getElementById('header-save-btn');
     const headerCloseBtn = document.getElementById('header-close-btn');
+    const promotionsConfigModal = document.getElementById('promotions-config-modal');
+    const promotionsConfigOpenBtn = document.getElementById('promotions-config-open');
+    const promotionsCloseBtn = document.getElementById('promotions-close-btn');
+    const promotionsSaveBtn = document.getElementById('promotions-save-btn');
+    const promoBannerActiveInput = document.getElementById('promo-banner-active');
+    const promoBannerTextInput = document.getElementById('promo-banner-text');
+    const promoEntryActiveInput = document.getElementById('promo-entry-active');
+    const promoEntryProductInput = document.getElementById('promo-entry-product');
+    const promoEntryReloadProductsBtn = document.getElementById('promo-entry-reload-products');
+    const promoEntryBadgeInput = document.getElementById('promo-entry-badge');
+    const promoEntryHeadlineInput = document.getElementById('promo-entry-headline');
+    const promoEntryMessageInput = document.getElementById('promo-entry-message');
+    const promoEntryCtaInput = document.getElementById('promo-entry-cta');
+    const promoEntryPricingModeInput = document.getElementById('promo-entry-pricing-mode');
+    const promoEntryComparePriceInput = document.getElementById('promo-entry-compare-price');
+    const promoEntryPricingNoteInput = document.getElementById('promo-entry-pricing-note');
+    const promoEntryPromoPriceInput = document.getElementById('promo-entry-promo-price');
+    const promoEntryDiscountPercentInput = document.getElementById('promo-entry-discount-percent');
+    const promoEntryDiscountAmountInput = document.getElementById('promo-entry-discount-amount');
+    const promoEntryFrequencyInput = document.getElementById('promo-entry-frequency');
+    const promoEntryStartsAtInput = document.getElementById('promo-entry-starts-at');
+    const promoEntryEndsAtInput = document.getElementById('promo-entry-ends-at');
 
     function clearHeaderHours() {
       if (!headerHoursTable) return;
@@ -11820,6 +11955,198 @@
           alert('Cabecera actualizada');
         } catch (e) {
           alert('Error al guardar cabecera');
+        }
+      });
+    }
+
+    async function loadPromotionProductOptions(selectedProductId) {
+      if (!promoEntryProductInput) return;
+      const keepSelected = String(selectedProductId || promoEntryProductInput.value || '').trim();
+      promoEntryProductInput.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Seleccionar producto...';
+      promoEntryProductInput.appendChild(placeholder);
+
+      try {
+        const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (tenantInput.value.trim() || defaultSlug()));
+        const url = new URL('/api/products', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('include_inactive', 'true');
+        const resp = await wFetch(url.toString());
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const products = Array.isArray(data && data.products) ? data.products.slice() : [];
+        products
+          .sort((a, b) => String(a && a.name || '').localeCompare(String(b && b.name || ''), 'es'))
+          .forEach((product) => {
+            const option = document.createElement('option');
+            option.value = String(product && product.id || '').trim();
+            const isInactive = product && product.active === false;
+            const priceText = Number.isFinite(parseInt(product && product.price, 10)) ? ` - $${parseInt(product.price, 10)}` : '';
+            option.textContent = `${String(product && product.name || 'Producto')} (${option.value})${priceText}${isInactive ? ' [inactivo]' : ''}`;
+            promoEntryProductInput.appendChild(option);
+          });
+      } catch (_) {}
+
+      promoEntryProductInput.value = keepSelected;
+    }
+
+    function updatePromotionPricingFields() {
+      const mode = String(promoEntryPricingModeInput && promoEntryPricingModeInput.value || 'none');
+      if (promoEntryPromoPriceInput) promoEntryPromoPriceInput.disabled = mode !== 'promo_price';
+      if (promoEntryDiscountPercentInput) promoEntryDiscountPercentInput.disabled = mode !== 'percent';
+      if (promoEntryDiscountAmountInput) promoEntryDiscountAmountInput.disabled = mode !== 'amount';
+    }
+
+    if (promoEntryPricingModeInput) {
+      promoEntryPricingModeInput.addEventListener('change', updatePromotionPricingFields);
+    }
+
+    async function openPromotionsConfigModal() {
+      if (!promotionsConfigModal) return;
+      promotionsConfigModal.style.display = 'flex';
+      try {
+        const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (tenantInput.value.trim() || defaultSlug()));
+        const url = new URL('/api/tenant_header', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        const resp = await wFetch(url.toString());
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const promotions = data && typeof data.promotions === 'object' ? data.promotions : {};
+        const banner = promotions && typeof promotions.banner === 'object' ? promotions.banner : {};
+        const entry = promotions && typeof promotions.entry_modal === 'object' ? promotions.entry_modal : {};
+        const pricing = entry && typeof entry.pricing === 'object' ? entry.pricing : {};
+
+        if (promoBannerActiveInput) promoBannerActiveInput.checked = !!(banner.active || data.announcement_active);
+        if (promoBannerTextInput) promoBannerTextInput.value = banner.text || data.announcement_text || '';
+        if (promoEntryActiveInput) promoEntryActiveInput.checked = !!entry.active;
+        if (promoEntryBadgeInput) promoEntryBadgeInput.value = entry.badge_text || '';
+        if (promoEntryHeadlineInput) promoEntryHeadlineInput.value = entry.headline || '';
+        if (promoEntryMessageInput) promoEntryMessageInput.value = entry.message || '';
+        if (promoEntryPricingModeInput) promoEntryPricingModeInput.value = pricing.mode || 'none';
+        if (promoEntryComparePriceInput) promoEntryComparePriceInput.value = pricing.compare_at_price || '';
+        if (promoEntryPricingNoteInput) promoEntryPricingNoteInput.value = pricing.note || '';
+        if (promoEntryPromoPriceInput) promoEntryPromoPriceInput.value = pricing.promo_price || '';
+        if (promoEntryDiscountPercentInput) promoEntryDiscountPercentInput.value = pricing.discount_percent || '';
+        if (promoEntryDiscountAmountInput) promoEntryDiscountAmountInput.value = pricing.discount_amount || '';
+        if (promoEntryCtaInput) promoEntryCtaInput.value = entry.cta_text || 'Ver promoción';
+        if (promoEntryFrequencyInput) promoEntryFrequencyInput.value = entry.frequency || 'session';
+        if (promoEntryStartsAtInput) promoEntryStartsAtInput.value = entry.starts_at || '';
+        if (promoEntryEndsAtInput) promoEntryEndsAtInput.value = entry.ends_at || '';
+        updatePromotionPricingFields();
+        await loadPromotionProductOptions(entry.product_id || '');
+      } catch (_) {
+        updatePromotionPricingFields();
+        await loadPromotionProductOptions('');
+      }
+    }
+
+    if (promotionsConfigOpenBtn && promotionsConfigModal) {
+      promotionsConfigOpenBtn.addEventListener('click', openPromotionsConfigModal);
+    }
+
+    if (promotionsCloseBtn && promotionsConfigModal) {
+      promotionsCloseBtn.addEventListener('click', () => {
+        promotionsConfigModal.style.display = 'none';
+      });
+    }
+
+    if (promoEntryReloadProductsBtn) {
+      promoEntryReloadProductsBtn.addEventListener('click', () => {
+        loadPromotionProductOptions();
+      });
+    }
+
+    if (promotionsSaveBtn && promotionsConfigModal) {
+      promotionsSaveBtn.addEventListener('click', async () => {
+        try {
+          if (!isAuthed) {
+            alert('Requiere sesión de administrador');
+            return;
+          }
+          if (!window.CSRF_TOKEN) {
+            await window.fetchCsrfToken();
+          }
+          const productId = String(promoEntryProductInput && promoEntryProductInput.value || '').trim();
+          const entryActive = !!(promoEntryActiveInput && promoEntryActiveInput.checked);
+          const pricingMode = String(promoEntryPricingModeInput && promoEntryPricingModeInput.value || 'none');
+          const compareAtPrice = parseInt(promoEntryComparePriceInput && promoEntryComparePriceInput.value || '', 10);
+          const promoPrice = parseInt(promoEntryPromoPriceInput && promoEntryPromoPriceInput.value || '', 10);
+          const discountPercent = parseInt(promoEntryDiscountPercentInput && promoEntryDiscountPercentInput.value || '', 10);
+          const discountAmount = parseInt(promoEntryDiscountAmountInput && promoEntryDiscountAmountInput.value || '', 10);
+          if (entryActive && !productId) {
+            alert('Seleccioná un producto para activar el modal promocional.');
+            return;
+          }
+
+          if (pricingMode === 'promo_price' && !(Number.isFinite(promoPrice) && promoPrice >= 0)) {
+            alert('IngresÃ¡ un precio promocional vÃ¡lido.');
+            return;
+          }
+          if (pricingMode === 'percent' && !(Number.isFinite(discountPercent) && discountPercent > 0 && discountPercent <= 100)) {
+            alert('IngresÃ¡ un porcentaje de descuento entre 1 y 100.');
+            return;
+          }
+          if (pricingMode === 'amount' && !(Number.isFinite(discountAmount) && discountAmount > 0)) {
+            alert('IngresÃ¡ un monto de descuento vÃ¡lido.');
+            return;
+          }
+
+          const slug = (typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : (tenantInput.value.trim() || defaultSlug()));
+          const url = new URL('/api/tenant_header', API_BASE);
+          url.searchParams.set('tenant_slug', slug);
+
+          const promotionsPayload = {
+            banner: {
+              active: !!(promoBannerActiveInput && promoBannerActiveInput.checked),
+              text: promoBannerTextInput ? promoBannerTextInput.value.trim() : ''
+            },
+            entry_modal: {
+              active: entryActive,
+              product_id: productId,
+              badge_text: promoEntryBadgeInput ? promoEntryBadgeInput.value.trim() : '',
+              headline: promoEntryHeadlineInput ? promoEntryHeadlineInput.value.trim() : '',
+              message: promoEntryMessageInput ? promoEntryMessageInput.value.trim() : '',
+              pricing: {
+                mode: pricingMode,
+                compare_at_price: Number.isFinite(compareAtPrice) && compareAtPrice >= 0 ? compareAtPrice : '',
+                note: promoEntryPricingNoteInput ? promoEntryPricingNoteInput.value.trim() : '',
+                promo_price: Number.isFinite(promoPrice) && promoPrice >= 0 ? promoPrice : '',
+                discount_percent: Number.isFinite(discountPercent) && discountPercent >= 0 ? discountPercent : '',
+                discount_amount: Number.isFinite(discountAmount) && discountAmount >= 0 ? discountAmount : ''
+              },
+              cta_text: promoEntryCtaInput ? (promoEntryCtaInput.value.trim() || 'Ver promoción') : 'Ver promoción',
+              frequency: promoEntryFrequencyInput ? (promoEntryFrequencyInput.value || 'session') : 'session',
+              starts_at: promoEntryStartsAtInput ? promoEntryStartsAtInput.value : '',
+              ends_at: promoEntryEndsAtInput ? promoEntryEndsAtInput.value : ''
+            }
+          };
+
+          const payload = {
+            announcement_active: promotionsPayload.banner.active,
+            announcement_text: promotionsPayload.banner.text,
+            promotions: promotionsPayload
+          };
+
+          const resp = await wFetch(url.toString(), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.CSRF_TOKEN },
+            body: JSON.stringify(payload)
+          });
+          if (!resp.ok) {
+            let msg = 'No se pudieron guardar las promociones';
+            try {
+              const j = await resp.json();
+              if (j && j.error) msg = String(j.error);
+            } catch (_) {}
+            alert(msg);
+            return;
+          }
+          promotionsConfigModal.style.display = 'none';
+          alert('Promociones actualizadas');
+        } catch (_) {
+          alert('Error al guardar promociones');
         }
       });
     }
@@ -16510,12 +16837,108 @@
       let cart = [];
       let products = [];
       let baseShippingCost = 0;
+      const tenantPromotionCache = new Map();
       
       // Helper for tenant name display
       const formatTenantName = (s) => {
           if (!s) return 'Desconocido';
           return s.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       };
+
+      function parseAdminPromotionDate(value) {
+        const text = String(value || '').trim();
+        if (!text) return NaN;
+        const parsed = Date.parse(text);
+        return Number.isFinite(parsed) ? parsed : NaN;
+      }
+
+      function normalizeAdminPromotionEntry(data) {
+        const promotions = data && typeof data.promotions === 'object' ? data.promotions : {};
+        const entry = promotions && typeof promotions.entry_modal === 'object' ? promotions.entry_modal : {};
+        const pricing = entry && typeof entry.pricing === 'object' ? entry.pricing : {};
+        return {
+          active: entry.active === true,
+          product_id: String(entry.product_id || '').trim(),
+          starts_at: String(entry.starts_at || '').trim(),
+          ends_at: String(entry.ends_at || '').trim(),
+          badge_text: String(entry.badge_text || '').trim(),
+          pricing: {
+            mode: String(pricing.mode || 'none').trim().toLowerCase() || 'none',
+            compare_at_price: safeAdminInt(pricing.compare_at_price) || 0,
+            promo_price: safeAdminInt(pricing.promo_price) || 0,
+            discount_percent: safeAdminInt(pricing.discount_percent) || 0,
+            discount_amount: safeAdminInt(pricing.discount_amount) || 0,
+            note: String(pricing.note || '').trim()
+          }
+        };
+      }
+
+      function isAdminPromotionActive(entry) {
+        if (!entry || entry.active !== true || !String(entry.product_id || '').trim()) return false;
+        const now = Date.now();
+        const startsAt = parseAdminPromotionDate(entry.starts_at);
+        const endsAt = parseAdminPromotionDate(entry.ends_at);
+        if (Number.isFinite(startsAt) && now < startsAt) return false;
+        if (Number.isFinite(endsAt) && now > endsAt) return false;
+        return true;
+      }
+
+      async function loadTenantPromotionEntry(tenantSlug, forceReload) {
+        const slug = String(tenantSlug || '').trim();
+        if (!slug) return null;
+        if (!forceReload && tenantPromotionCache.has(slug)) {
+          return tenantPromotionCache.get(slug);
+        }
+        try {
+          const url = new URL('/api/tenant_header', API_BASE);
+          url.searchParams.set('tenant_slug', slug);
+          const resp = await wFetch(url.toString());
+          if (!resp.ok) throw new Error('No se pudo cargar la promocion');
+          const data = await resp.json();
+          const entry = normalizeAdminPromotionEntry(data);
+          tenantPromotionCache.set(slug, entry);
+          return entry;
+        } catch (_) {
+          tenantPromotionCache.set(slug, null);
+          return null;
+        }
+      }
+
+      function getPromotionPriceMetaForTenant(tenantSlug, productId, basePrice) {
+        const parsedBasePrice = safeAdminInt(basePrice) || 0;
+        const slug = String(tenantSlug || '').trim();
+        const entry = tenantPromotionCache.get(slug);
+        if (!parsedBasePrice || !entry || !isAdminPromotionActive(entry) || String(entry.product_id || '').trim() !== String(productId || '').trim()) {
+          return { final_price: parsedBasePrice, compare_price: 0, has_discount: false };
+        }
+        const pricing = entry.pricing && typeof entry.pricing === 'object' ? entry.pricing : {};
+        const configuredComparePrice = safeAdminInt(pricing.compare_at_price) || 0;
+        const comparePrice = Math.max(parsedBasePrice, configuredComparePrice);
+        let finalPrice = parsedBasePrice;
+        if (pricing.mode === 'promo_price' && safeAdminInt(pricing.promo_price) >= 0) {
+          finalPrice = safeAdminInt(pricing.promo_price);
+        } else if (pricing.mode === 'percent' && safeAdminInt(pricing.discount_percent) > 0 && safeAdminInt(pricing.discount_percent) <= 100) {
+          finalPrice = Math.round(parsedBasePrice * (1 - (safeAdminInt(pricing.discount_percent) / 100)));
+        } else if (pricing.mode === 'amount' && safeAdminInt(pricing.discount_amount) > 0) {
+          finalPrice = parsedBasePrice - safeAdminInt(pricing.discount_amount);
+        }
+        finalPrice = Math.max(0, Math.min(parsedBasePrice, safeAdminInt(finalPrice) || parsedBasePrice));
+        return {
+          final_price: finalPrice,
+          compare_price: finalPrice < parsedBasePrice ? ((pricing.mode === 'promo_price' && comparePrice > finalPrice) ? comparePrice : parsedBasePrice) : 0,
+          has_discount: finalPrice < parsedBasePrice
+        };
+      }
+
+      function resolveCreateOrderTenantSlug() {
+        return String(
+          window.__kdsProductConfigTenantSlug ||
+          (tenantSelect && tenantSelect.value) ||
+          currentTenantSlug ||
+          (document.getElementById('tenant-input') && document.getElementById('tenant-input').value) ||
+          defaultSlug()
+        ).trim();
+      }
 
       function suppressCreateOrderAutofill() {
         if (modal) modal.setAttribute('autocomplete', 'off');
@@ -16614,7 +17037,16 @@
             return [];
           }
         }
-        return packs;
+        const tenantSlug = resolveCreateOrderTenantSlug();
+        return packs.map((pack) => {
+          const meta = getPromotionPriceMetaForTenant(tenantSlug, product.id, pack && pack.price);
+          return Object.assign({}, pack, {
+            original_price: safeAdminInt(pack && pack.price) || 0,
+            compare_at_price: meta.compare_price || 0,
+            has_discount: !!meta.has_discount,
+            price: meta.final_price || (safeAdminInt(pack && pack.price) || 0)
+          });
+        });
       }
 
       function getProductVariants(product) {
@@ -16626,6 +17058,12 @@
           try { return JSON.parse(product.variants) || {}; } catch (_) { return {}; }
         }
         return {};
+      }
+
+      function getAdminProductPriceMeta(product, overrideBasePrice) {
+        const tenantSlug = resolveCreateOrderTenantSlug();
+        const basePrice = safeAdminInt(typeof overrideBasePrice !== 'undefined' ? overrideBasePrice : (product && product.price)) || 0;
+        return getPromotionPriceMetaForTenant(tenantSlug, product && product.id, basePrice);
       }
 
       function normalizeMixBuilder(raw) {
@@ -16650,6 +17088,28 @@
         return text.normalize ? text.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : text;
       }
 
+      function setAdminCatalogProducts(list, tenantSlug) {
+        const nextList = Array.isArray(list) ? list.slice() : [];
+        const nextTenant = String(tenantSlug || '').trim();
+        window.__tenantCatalogProducts = nextList;
+        window.__tenantCatalogProductsTenantSlug = nextTenant;
+        if (nextList.length) products = nextList.slice();
+      }
+
+      function getAdminCatalogProducts(preferredTenantSlug) {
+        const wantedTenant = String(preferredTenantSlug || window.__kdsProductConfigTenantSlug || '').trim();
+        const cachedTenant = String(window.__tenantCatalogProductsTenantSlug || '').trim();
+        if (Array.isArray(window.__tenantCatalogProducts) && window.__tenantCatalogProducts.length) {
+          if (!wantedTenant || !cachedTenant || cachedTenant === wantedTenant) {
+            return window.__tenantCatalogProducts;
+          }
+        }
+        return Array.isArray(products) ? products : [];
+      }
+
+      window.setAdminCatalogProducts = setAdminCatalogProducts;
+      window.getAdminCatalogProducts = getAdminCatalogProducts;
+
       function productMatchesMixSource(product, sourceCategory) {
         if (!sourceCategory) return true;
         const variants = getProductVariants(product);
@@ -16665,7 +17125,7 @@
       }
 
       function getMixCandidateProducts(baseProductId, mixBuilder) {
-        return (Array.isArray(products) ? products : []).filter((product) => {
+        return getAdminCatalogProducts(window.__kdsProductConfigTenantSlug).filter((product) => {
           if (!product || !product.id) return false;
           if (String(product.id) === String(baseProductId)) return false;
           if (product.active === false) return false;
@@ -16979,7 +17439,9 @@
         const summaryEl = modal.querySelector('#kds-product-options-summary');
         const priceEl = modal.querySelector('#kds-product-options-price');
         const confirmBtn = modal.querySelector('#kds-product-options-confirm');
-        const basePrice = safeAdminInt(product && product.price) || 0;
+        const basePriceMeta = getAdminProductPriceMeta(product);
+        const basePrice = basePriceMeta.final_price || 0;
+        const baseComparePrice = basePriceMeta.compare_price || 0;
         const hasPacks = Array.isArray(packs) && packs.length > 0;
         const addonCfg = normalizeAddonsConfig(addonsConfig);
         const hasAddons = !!addonCfg;
@@ -17016,6 +17478,8 @@
           const packList = section.querySelector('[data-role="pack-list"]');
           packs.forEach((pack, idx) => {
             const packId = String(pack && pack.id || '').trim();
+            const finalPackPrice = safeAdminInt(pack && pack.price) || 0;
+            const comparePackPrice = safeAdminInt(pack && (pack.compare_at_price || pack.original_price)) || 0;
             const row = document.createElement('label');
             row.style.cssText = 'display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:12px; border:1px solid #dbe2ea; background:#fff; cursor:pointer;';
             row.innerHTML = `
@@ -17023,7 +17487,10 @@
                 <input type="radio" name="kds-product-pack" value="${escapeAdminAttr(packId)}" ${idx === 0 ? 'checked' : ''} style="accent-color:#2563eb;">
                 <span style="font-weight:800; color:#0f172a;">${escapeAdminHtml(pack.label || 'Presentación')}</span>
               </span>
-              <span style="font-weight:900; color:#2e7d32;">$${safeAdminInt(pack.price) || 0}</span>
+              <span style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">
+                ${comparePackPrice > finalPackPrice ? `<span style="font-size:11px; color:#94a3b8; text-decoration:line-through; font-weight:800;">$${comparePackPrice}</span>` : ''}
+                <span style="font-weight:900; color:#2e7d32;">$${finalPackPrice}</span>
+              </span>
             `;
             const input = row.querySelector('input');
             if (input) {
@@ -17148,9 +17615,13 @@
             }
           }
           const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (safeAdminInt(addon.total_price) || 0), 0);
-          const totalPrice = (selectedPack ? (safeAdminInt(selectedPack.price) || 0) : basePrice) + addonsTotal;
+          const packBasePrice = selectedPack ? (safeAdminInt(selectedPack.price) || 0) : basePrice;
+          const totalPrice = packBasePrice + addonsTotal;
+          const compareTotalPrice = selectedPack
+            ? ((safeAdminInt(selectedPack.compare_at_price || selectedPack.original_price) || 0) + addonsTotal)
+            : (baseComparePrice > basePrice ? baseComparePrice + addonsTotal : 0);
           if (summaryEl) {
-            const packLine = selectedPack ? `<div style="margin-top:8px;"><span style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentación</span><div style="margin-top:4px; font-size:16px; font-weight:900; color:#0f172a;">${escapeAdminHtml(selectedPack.label || 'Presentación')}</div></div>` : '';
+            const packLine = selectedPack ? `<div style="margin-top:8px;"><span style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentación</span><div style="margin-top:4px; font-size:16px; font-weight:900; color:#0f172a;">${escapeAdminHtml(selectedPack.label || 'Presentación')}</div>${safeAdminInt(selectedPack.compare_at_price || selectedPack.original_price) > safeAdminInt(selectedPack.price) ? `<div style="margin-top:4px; font-size:12px; color:#94a3b8; text-decoration:line-through;">$${safeAdminInt(selectedPack.compare_at_price || selectedPack.original_price)}</div>` : ''}<div style="margin-top:4px; font-size:15px; font-weight:900; color:#2e7d32;">$${safeAdminInt(selectedPack.price) || 0}</div></div>` : '';
             const addonsLine = selectedAddons.length
               ? `<div style="margin-top:8px;"><span style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Adicionales</span><div style="margin-top:4px; font-size:15px; font-weight:800; color:#0f172a;">${escapeAdminHtml(buildAddonsSummary(selectedAddons))}</div></div>`
               : (addonCfg ? `<div style="margin-top:8px; font-size:14px; color:#64748b;">Sin adicionales seleccionados.</div>` : '');
@@ -17163,7 +17634,7 @@
             `;
           }
           if (priceEl) {
-            priceEl.innerHTML = `<div><div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#475569; font-weight:900;">Total</div><div style="margin-top:6px; font-size:28px; font-weight:900;">$${totalPrice}</div></div>`;
+            priceEl.innerHTML = `<div><div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#475569; font-weight:900;">Total</div>${compareTotalPrice > totalPrice ? `<div style="margin-top:4px; font-size:13px; color:#94a3b8; text-decoration:line-through; font-weight:800;">$${compareTotalPrice}</div>` : ''}<div style="margin-top:6px; font-size:28px; font-weight:900;">$${totalPrice}</div></div>`;
           }
           if (confirmBtn) confirmBtn.disabled = !!message || totalPrice <= 0;
           return {
@@ -17207,6 +17678,7 @@
       window.KdsProductConfig.buildAddonsSignature = buildAddonsSignature;
       window.KdsProductConfig.buildAddonsSummary = buildAddonsSummary;
       window.KdsProductConfig.buildMixSummary = buildMixSummary;
+      window.KdsProductConfig.getPromotionPriceMeta = getAdminProductPriceMeta;
       window.KdsProductConfig.getMixCandidateProducts = getMixCandidateProducts;
       window.KdsProductConfig.openPackPicker = openPackPicker;
       window.KdsProductConfig.openMixPicker = openMixPicker;
@@ -17416,9 +17888,12 @@
       async function loadProducts() {
         productsGrid.innerHTML = '<div class="small">Cargando...</div>';
         try {
+          window.__kdsProductConfigTenantSlug = resolveCreateOrderTenantSlug();
+          await loadTenantPromotionEntry(resolveCreateOrderTenantSlug());
           const allProducts = await fetchProducts(); // Uses existing function
           // No additional filtering needed as fetchProducts uses tenant_slug
           products = allProducts;
+          setAdminCatalogProducts(allProducts, resolveCreateOrderTenantSlug());
           
           renderProducts();
           if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
@@ -17449,7 +17924,11 @@
           const packs = getProductPacks(p);
           const hasPacks = packs.length > 0;
           const minPack = hasPacks ? packs.reduce((m, x) => (x.price < m.price ? x : m), packs[0]) : null;
-          const priceLabel = hasPacks ? `Desde $${minPack.price}` : `$${p.price}`;
+          const priceMeta = getAdminProductPriceMeta(p);
+          const priceLabel = hasPacks ? `Desde $${minPack.price}` : `$${priceMeta.final_price}`;
+          const compareLabel = hasPacks
+            ? (minPack && safeAdminInt(minPack.compare_at_price) > safeAdminInt(minPack.price) ? `Desde $${safeAdminInt(minPack.compare_at_price)}` : '')
+            : (priceMeta.has_discount && safeAdminInt(priceMeta.compare_price) > safeAdminInt(priceMeta.final_price) ? `$${safeAdminInt(priceMeta.compare_price)}` : '');
           el.innerHTML = `
             <div style="flex:1;">
               <div style="display:flex; align-items:center; margin-bottom: 2px;">
@@ -17460,7 +17939,10 @@
             </div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
               <div style="font-size:11px; font-weight:800; color:${hasPacks ? '#4a6fa5' : '#999'};">${hasPacks ? 'Presentaciones' : ''}</div>
-              <div style="font-weight: 700; color: #2e7d32; text-align: right;">${priceLabel}</div>
+              <div style="text-align:right;">
+                ${compareLabel ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through; font-weight:800;">${compareLabel}</div>` : ''}
+                <div style="font-weight: 700; color: #2e7d32;">${priceLabel}</div>
+              </div>
             </div>
           `;
           el.onclick = () => handleProductClick(p);
@@ -17491,7 +17973,9 @@
           }));
           return;
         }
-        addToCart(p, 1, false, null);
+        addToCart(p, 1, false, null, {
+          totalPrice: getAdminProductPriceMeta(p).final_price || 0
+        });
       }
 
       function addToCart(p, qty = 1, skipRender = false, pack = null, meta = null) {
@@ -17501,7 +17985,7 @@
         const packId = pack ? String(pack.id || '').trim() : '';
         const packLabel = pack ? String(pack.label || '').trim() : '';
         const packSize = pack ? (safeAdminInt(pack.pack_size) || 1) : 1;
-        const baseUnitPrice = pack ? (safeAdminInt(pack.price) || 0) : (safeAdminInt(p.price) || 0);
+        const baseUnitPrice = pack ? (safeAdminInt(pack.price) || 0) : (getAdminProductPriceMeta(p).final_price || 0);
         const displayUnitPrice = meta && safeAdminInt(meta.totalPrice) > 0 ? safeAdminInt(meta.totalPrice) : baseUnitPrice;
         if (displayUnitPrice <= 0) return;
         if (baseUnitPrice <= 0) return;
@@ -20562,6 +21046,99 @@ window.EditOrder = {
         return { variants, packs, mixBuilder, addonsCfg, hasMix, hasPacks, hasAddons };
     },
 
+    _inferItemPack: function(item, product, packs) {
+        const availablePacks = Array.isArray(packs) ? packs.filter(Boolean) : [];
+        if (!item || !product || !availablePacks.length) return null;
+
+        const normalizeText = (value) => String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/gi, ' ')
+            .trim()
+            .toLowerCase();
+
+        const byId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || '').trim();
+        if (byId) {
+            const match = availablePacks.find((pack) => String(pack && pack.id || '').trim() === byId);
+            if (match) return match;
+        }
+
+        const byLabel = String(item.pack_label || (item.modifiers && item.modifiers.pack && item.modifiers.pack.label) || '').trim();
+        if (byLabel) {
+            const normLabel = normalizeText(byLabel);
+            const match = availablePacks.find((pack) => {
+                const packLabel = normalizeText(pack && (pack.label || pack.name || ''));
+                const packId = normalizeText(pack && pack.id);
+                return normLabel && (normLabel === packLabel || normLabel === packId);
+            });
+            if (match) return match;
+        }
+
+        const rawName = String(item.name || '').trim();
+        const productName = String(product.name || '').trim();
+        if (rawName) {
+            let candidateLabel = '';
+            const directSuffix = rawName.match(/\(([^)]+)\)\s*$/);
+            if (directSuffix && directSuffix[1]) {
+                candidateLabel = String(directSuffix[1] || '').trim();
+            } else if (productName && rawName.toLowerCase().startsWith(productName.toLowerCase())) {
+                candidateLabel = rawName.slice(productName.length).replace(/^[\s:.-]+/, '').trim();
+            }
+            const normalizedCandidate = normalizeText(candidateLabel);
+            if (normalizedCandidate) {
+                const match = availablePacks.find((pack) => {
+                    const packLabel = normalizeText(pack && (pack.label || pack.name || ''));
+                    const packId = normalizeText(pack && pack.id);
+                    return normalizedCandidate === packLabel || normalizedCandidate === packId;
+                });
+                if (match) return match;
+            }
+        }
+
+        const candidatePrices = [
+            safeAdminInt(item.base_price),
+            safeAdminInt(item.price),
+            safeAdminInt(item.modifiers && item.modifiers.promotion && item.modifiers.promotion.base_unit_price),
+            safeAdminInt(item.modifiers && item.modifiers.promotion && item.modifiers.promotion.applied_unit_price)
+        ].filter((value) => Number.isFinite(value) && value > 0);
+
+        for (const price of candidatePrices) {
+            const matches = availablePacks.filter((pack) => {
+                const finalPrice = safeAdminInt(pack && pack.price) || 0;
+                const originalPrice = safeAdminInt(pack && (pack.original_price || pack.compare_at_price)) || 0;
+                return finalPrice === price || originalPrice === price;
+            });
+            if (matches.length === 1) return matches[0];
+        }
+
+        return null;
+    },
+
+    _syncItemPackState: function() {
+        if (!Array.isArray(this.availableProducts) || !this.availableProducts.length) return;
+        this.items.forEach((item) => {
+            if (!item || !item.id) return;
+            const prod = this._getProductById(item.id);
+            const cfg = this._getProductConfig(prod);
+            if (!cfg || !cfg.hasPacks) return;
+            const pack = this._inferItemPack(item, prod, cfg.packs);
+            if (!pack) return;
+            const packId = String(pack.id || '').trim();
+            if (!packId) return;
+            const nextModifiers = Object.assign({}, (item.modifiers && typeof item.modifiers === 'object') ? item.modifiers : {});
+            nextModifiers.pack = {
+                id: packId,
+                label: String(pack.label || '').trim(),
+                size: Math.max(1, safeAdminInt(pack.pack_size) || 1)
+            };
+            item.modifiers = nextModifiers;
+            item.pack_id = packId;
+            item.pack_label = String(pack.label || '').trim();
+            item.pack_size = Math.max(1, safeAdminInt(pack.pack_size) || 1);
+            if (safeAdminInt(pack.price) > 0) item.base_price = safeAdminInt(pack.price);
+        });
+    },
+
     _syncItemProductNames: function() {
         if (!Array.isArray(this.availableProducts) || !this.availableProducts.length) return;
         this.items.forEach((item) => {
@@ -20580,7 +21157,9 @@ window.EditOrder = {
             if (!item || !item.id) return;
             const prod = this.availableProducts.find(p => String(p.id) === String(item.id));
             if (!prod) return;
-            let base = safeAdminInt(prod.price) || 0;
+            let base = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
+                ? (window.KdsProductConfig.getPromotionPriceMeta(prod).final_price || 0)
+                : (safeAdminInt(prod.price) || 0);
             const packId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || '').trim();
             if (packId && api && typeof api.getProductPacks === 'function') {
                 const packs = api.getProductPacks(prod) || [];
@@ -20669,6 +21248,7 @@ window.EditOrder = {
         this.modal.classList.add('active');
         this.loadProductsForOrder().then(() => {
             this._syncItemProductNames();
+            this._syncItemPackState();
             this._syncItemBasePrices();
             this.renderProducts('');
             this.renderItems();
@@ -20695,14 +21275,25 @@ window.EditOrder = {
             defaultSlug()
         ).trim();
         if (!tenantSlug) {
+            window.__kdsProductConfigTenantSlug = '';
             this.availableProducts = Array.isArray(window.products) ? window.products.slice() : [];
+            if (typeof window.setAdminCatalogProducts === 'function') {
+                window.setAdminCatalogProducts(this.availableProducts, '');
+            }
             return;
         }
         try {
+            window.__kdsProductConfigTenantSlug = tenantSlug;
+            if (typeof loadTenantPromotionEntry === 'function') {
+              await loadTenantPromotionEntry(tenantSlug);
+            }
             const url = new URL('/api/products', API_BASE);
             url.searchParams.set('tenant_slug', tenantSlug);
             url.searchParams.set('include_inactive', 'true');
-            const resp = await wFetch(url.toString());
+            const fetchFn = (typeof wFetch === 'function')
+                ? wFetch
+                : ((input, init) => fetch(input, init));
+            const resp = await fetchFn(url.toString());
             if (!resp.ok) throw new Error('Error al obtener productos');
             const data = await resp.json();
             const raw = Array.isArray(data && data.products) ? data.products : [];
@@ -20715,9 +21306,15 @@ window.EditOrder = {
                 unique.push(p);
             }
             this.availableProducts = unique;
+            if (typeof window.setAdminCatalogProducts === 'function') {
+                window.setAdminCatalogProducts(unique, tenantSlug);
+            }
         } catch (e) {
             console.warn('EditOrder.loadProductsForOrder fallback:', e);
-            this.availableProducts = Array.isArray(window.products) ? window.products.slice() : [];
+            const cachedTenant = String(window.__tenantCatalogProductsTenantSlug || '').trim();
+            this.availableProducts = (cachedTenant && cachedTenant === tenantSlug && Array.isArray(window.__tenantCatalogProducts))
+                ? window.__tenantCatalogProducts.slice()
+                : [];
         }
     },
     
@@ -20727,17 +21324,29 @@ window.EditOrder = {
         const allProducts = Array.isArray(this.availableProducts) ? this.availableProducts : [];
         const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(t) || String(p.id || '').toLowerCase().includes(t));
         
-        this.productsContainer.innerHTML = filtered.map(p => `
-            <div onclick="EditOrder.addItem('${p.id}')" style="border:1px solid #eee; padding:8px; border-radius:6px; cursor:pointer; background:white; font-size:0.9rem; display:flex; flex-direction:column; justify-content:space-between;">
+        this.productsContainer.innerHTML = filtered.map(p => {
+            const safeProductId = String(p && p.id || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const meta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
+              ? window.KdsProductConfig.getPromotionPriceMeta(p)
+              : { final_price: safeAdminInt(p.price) || 0, compare_price: 0, has_discount: false };
+            return `
+            <div onclick="EditOrder.addItem('${safeProductId}')" style="border:1px solid #eee; padding:8px; border-radius:6px; cursor:pointer; background:white; font-size:0.9rem; display:flex; flex-direction:column; justify-content:space-between;">
                 <div style="font-weight:600; margin-bottom:4px; font-size:0.85rem;">${p.name}</div>
-                <div style="color:#2e7d32; font-weight:bold;">$${p.price}</div>
+                <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                    ${meta.has_discount && safeAdminInt(meta.compare_price) > safeAdminInt(meta.final_price) ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through; font-weight:800;">$${safeAdminInt(meta.compare_price)}</div>` : ''}
+                    <div style="color:#2e7d32; font-weight:bold;">$${safeAdminInt(meta.final_price) || 0}</div>
+                </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     },
     
     addItem: function(prodId) {
-        const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => p.id === prodId);
+        const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => String(p && p.id) === String(prodId));
         if (!prod) return;
+        const promoMeta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
+            ? window.KdsProductConfig.getPromotionPriceMeta(prod)
+            : { final_price: safeAdminInt(prod.price) || 0 };
 
         const cfg = this._getProductConfig(prod);
         if (cfg && cfg.hasMix && window.KdsProductConfig && typeof window.KdsProductConfig.openMixPicker === 'function') {
@@ -20760,7 +21369,7 @@ window.EditOrder = {
                         id: prod.id,
                         name: prod.name,
                         price: parseFloat(state.totalPrice),
-                        base_price: safeAdminInt(prod.price) || 0,
+                        base_price: promoMeta.final_price || 0,
                         qty: 1,
                         notes: '',
                         modifiers,
@@ -20778,7 +21387,8 @@ window.EditOrder = {
         }
 
         if (cfg && (cfg.hasPacks || cfg.hasAddons) && window.KdsProductConfig && typeof window.KdsProductConfig.openProductOptionsPicker === 'function') {
-            window.KdsProductConfig.openProductOptionsPicker(prod, cfg.packs, (cfg.variants && cfg.variants.addons) || null, (state) => {
+            const pickerPacks = Array.isArray(cfg.packs) ? cfg.packs : ((typeof window.KdsProductConfig.getProductPacks === 'function') ? window.KdsProductConfig.getProductPacks(prod) : []);
+            window.KdsProductConfig.openProductOptionsPicker(prod, pickerPacks, (cfg.variants && cfg.variants.addons) || null, (state) => {
                 if (!state || !state.totalPrice) return;
                 const nextModifiers = state.modifiers && typeof state.modifiers === 'object' ? state.modifiers : {};
                 if (state.pack && typeof state.pack === 'object') {
@@ -20799,7 +21409,7 @@ window.EditOrder = {
                 if (existing) {
                     existing.qty++;
                 } else {
-                    const baseUnit = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (safeAdminInt(prod.price) || 0);
+                    const baseUnit = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (promoMeta.final_price || 0);
                     this.items.push({
                         id: prod.id,
                         name: prod.name,
@@ -20828,7 +21438,8 @@ window.EditOrder = {
             this.items.push({
                 id: prod.id,
                 name: prod.name,
-                price: parseFloat(prod.price),
+                price: parseFloat(promoMeta.final_price || 0),
+                base_price: promoMeta.final_price || 0,
                 qty: 1,
                 notes: '',
                 modifiers: {},
@@ -20856,6 +21467,9 @@ window.EditOrder = {
             const initialParts = Array.isArray(currentMix) ? currentMix.map(p => p && (p.product_id || p.id)) : [];
             window.KdsProductConfig.openMixPicker(prod, cfg.mixBuilder, (state) => {
                 if (!state || !state.totalPrice) return;
+                const promoMeta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
+                    ? window.KdsProductConfig.getPromotionPriceMeta(prod)
+                    : { final_price: safeAdminInt(prod.price) || 0 };
                 const components = Array.isArray(state.components) ? state.components : [];
                 const mixParts = components.map((part) => ({
                     product_id: String(part.product_id || '').trim(),
@@ -20868,7 +21482,7 @@ window.EditOrder = {
                 item.modifiers = nextModifiers;
                 item.mix_summary = mixSummary;
                 item.price = parseFloat(state.totalPrice);
-                item.base_price = safeAdminInt(prod.price) || 0;
+                item.base_price = promoMeta.final_price || 0;
                 const mixSig = this._buildMixSignature(mixParts);
                 item.config_key = mixSig ? `mix:${mixSig}` : '';
                 this.renderItems();
@@ -20877,14 +21491,31 @@ window.EditOrder = {
         }
 
         if ((cfg.hasPacks || cfg.hasAddons) && typeof window.KdsProductConfig.openProductOptionsPicker === 'function') {
-            const currentPackId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || '').trim();
+            const inferredPack = cfg.hasPacks ? this._inferItemPack(item, prod, cfg.packs) : null;
+            if (inferredPack && !String(item.pack_id || '').trim()) {
+                const nextModifiers = Object.assign({}, (item.modifiers && typeof item.modifiers === 'object') ? item.modifiers : {});
+                nextModifiers.pack = {
+                    id: String(inferredPack.id || '').trim(),
+                    label: String(inferredPack.label || '').trim(),
+                    size: Math.max(1, safeAdminInt(inferredPack.pack_size) || 1)
+                };
+                item.modifiers = nextModifiers;
+                item.pack_id = String(inferredPack.id || '').trim();
+                item.pack_label = String(inferredPack.label || '').trim();
+                item.pack_size = Math.max(1, safeAdminInt(inferredPack.pack_size) || 1);
+            }
+            const currentPackId = String(item.pack_id || (item.modifiers && item.modifiers.pack && item.modifiers.pack.id) || (inferredPack && inferredPack.id) || '').trim();
             const currentAddons = item.modifiers && typeof item.modifiers === 'object' ? item.modifiers.addons : null;
             const initialState = {
                 pack_id: currentPackId,
                 addons: Array.isArray(currentAddons) ? currentAddons.map((a) => ({ id: a && (a.id || a.addon_id), qty: a && a.qty })) : []
             };
-            window.KdsProductConfig.openProductOptionsPicker(prod, cfg.packs, (cfg.variants && cfg.variants.addons) || null, (state) => {
+            const pickerPacks = Array.isArray(cfg.packs) ? cfg.packs : ((typeof window.KdsProductConfig.getProductPacks === 'function') ? window.KdsProductConfig.getProductPacks(prod) : []);
+            window.KdsProductConfig.openProductOptionsPicker(prod, pickerPacks, (cfg.variants && cfg.variants.addons) || null, (state) => {
                 if (!state || !state.totalPrice) return;
+                const promoMeta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
+                    ? window.KdsProductConfig.getPromotionPriceMeta(prod)
+                    : { final_price: safeAdminInt(prod.price) || 0 };
                 const nextModifiers = Object.assign({}, (item.modifiers && typeof item.modifiers === 'object') ? item.modifiers : {});
                 const patch = state.modifiers && typeof state.modifiers === 'object' ? state.modifiers : {};
                 Object.keys(patch).forEach((k) => { nextModifiers[k] = patch[k]; });
@@ -20906,7 +21537,7 @@ window.EditOrder = {
                 item.modifiers = nextModifiers;
                 item.addons_summary = String(state.addons_summary || '').trim();
                 item.price = parseFloat(state.totalPrice);
-                item.base_price = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (safeAdminInt(prod.price) || 0);
+                item.base_price = state.pack && safeAdminInt(state.pack.price) > 0 ? safeAdminInt(state.pack.price) : (promoMeta.final_price || 0);
 
                 const keyParts = [];
                 if (item.pack_id) keyParts.push(`pack:${item.pack_id}`);
@@ -20980,6 +21611,7 @@ window.EditOrder = {
         this.saveBtn.disabled = true;
         
         try {
+            this._syncItemPackState();
             this._syncItemBasePrices();
             const payload = {
                 items: this.items.map(it => ({
@@ -21068,6 +21700,9 @@ async function loadGlobalProducts() {
                 }
             }
             window.products = unique;
+            if (typeof window.setAdminCatalogProducts === 'function') {
+                window.setAdminCatalogProducts(unique, slug);
+            }
         }
     } catch(e) { console.error(e); }
 }

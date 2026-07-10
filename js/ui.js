@@ -102,6 +102,148 @@ function getCatalogProducts() {
     return Array.isArray(window.__tenantCatalogProducts) ? window.__tenantCatalogProducts : [];
 }
 
+function getActivePromotionEntry() {
+    const promotions = window.__tenantPromotions && typeof window.__tenantPromotions === 'object' ? window.__tenantPromotions : {};
+    const entry = promotions.entryModal && typeof promotions.entryModal === 'object' ? promotions.entryModal : null;
+    if (!entry || entry.active !== true || !String(entry.productId || '').trim()) return null;
+    const now = Date.now();
+    const startsAt = entry.startsAt ? Date.parse(entry.startsAt) : NaN;
+    const endsAt = entry.endsAt ? Date.parse(entry.endsAt) : NaN;
+    if (Number.isFinite(startsAt) && now < startsAt) return null;
+    if (Number.isFinite(endsAt) && now > endsAt) return null;
+    return entry;
+}
+
+function getPromotionPriceMeta(productId, basePrice) {
+    const parsedBasePrice = parseInt(basePrice, 10);
+    if (!Number.isFinite(parsedBasePrice) || parsedBasePrice <= 0) {
+        return {
+            basePrice: parsedBasePrice,
+            finalPrice: parsedBasePrice,
+            comparePrice: 0,
+            hasDiscount: false
+        };
+    }
+    const entry = getActivePromotionEntry();
+    if (!entry || String(entry.productId || '').trim() !== String(productId || '').trim()) {
+        return {
+            basePrice: parsedBasePrice,
+            finalPrice: parsedBasePrice,
+            comparePrice: 0,
+            hasDiscount: false
+        };
+    }
+    const pricing = entry.pricing && typeof entry.pricing === 'object' ? entry.pricing : {};
+    const mode = String(pricing.mode || 'none').trim().toLowerCase();
+    const configuredCompareAtPrice = Number.isFinite(parseInt(pricing.compareAtPrice, 10)) ? parseInt(pricing.compareAtPrice, 10) : 0;
+    const compareAtPrice = Math.max(parsedBasePrice, configuredCompareAtPrice);
+    let adjustedPrice = parsedBasePrice;
+    if (mode === 'promo_price') {
+        const promoPrice = parseInt(pricing.promoPrice, 10);
+        if (Number.isFinite(promoPrice) && promoPrice >= 0) adjustedPrice = promoPrice;
+    } else if (mode === 'percent') {
+        const discountPercent = parseInt(pricing.discountPercent, 10);
+        if (Number.isFinite(discountPercent) && discountPercent > 0 && discountPercent <= 100) {
+            adjustedPrice = Math.round(parsedBasePrice * (1 - (discountPercent / 100)));
+        }
+    } else if (mode === 'amount') {
+        const discountAmount = parseInt(pricing.discountAmount, 10);
+        if (Number.isFinite(discountAmount) && discountAmount > 0) {
+            adjustedPrice = parsedBasePrice - discountAmount;
+        }
+    }
+    const finalPrice = Math.max(0, Math.min(parsedBasePrice, parseInt(adjustedPrice, 10) || parsedBasePrice));
+    const hasDiscount = finalPrice < parsedBasePrice;
+    return {
+        basePrice: parsedBasePrice,
+        finalPrice,
+        comparePrice: hasDiscount ? ((mode === 'promo_price' && compareAtPrice > finalPrice) ? compareAtPrice : parsedBasePrice) : 0,
+        hasDiscount
+    };
+}
+
+function getPromotionAdjustedPrice(productId, basePrice) {
+    return getPromotionPriceMeta(productId, basePrice).finalPrice;
+}
+
+function getPromotionAdjustedPacks(productId, packs) {
+    if (!Array.isArray(packs) || !packs.length) return [];
+    return packs.map(pack => {
+        const meta = getPromotionPriceMeta(productId, pack && pack.price);
+        return {
+            ...pack,
+            original_price: meta.basePrice,
+            compare_at_price: meta.comparePrice,
+            has_discount: meta.hasDiscount,
+            price: meta.finalPrice
+        };
+    });
+}
+
+function upsertCardPriceDisplay(card, productId, rawPriceVal) {
+    if (!card) return;
+    const meta = getPromotionPriceMeta(productId, rawPriceVal);
+    let priceContainer = card.querySelector('.price-container');
+    if (!priceContainer) {
+        priceContainer = document.createElement('div');
+        priceContainer.className = 'price-container';
+        const info = card.querySelector('.product-info');
+        const button = info ? info.querySelector('.add-to-cart-btn') : null;
+        if (info) {
+            if (button) info.insertBefore(priceContainer, button);
+            else info.appendChild(priceContainer);
+        }
+    }
+    if (!priceContainer) return;
+    let originalEl = priceContainer.querySelector('.product-price-original');
+    let currentEl = priceContainer.querySelector('.product-price');
+    if (!currentEl) {
+        currentEl = document.createElement('p');
+        currentEl.className = 'product-price';
+        priceContainer.appendChild(currentEl);
+    }
+    if (meta.hasDiscount && meta.comparePrice > meta.finalPrice) {
+        if (!originalEl) {
+            originalEl = document.createElement('p');
+            originalEl.className = 'product-price-original';
+            priceContainer.insertBefore(originalEl, currentEl);
+        }
+        originalEl.textContent = formatMoneyWithCode(meta.comparePrice);
+    } else if (originalEl) {
+        originalEl.remove();
+    }
+    currentEl.textContent = formatMoneyWithCode(meta.finalPrice);
+}
+
+function refreshCatalogPromotionPrices() {
+    const catalog = getCatalogProducts();
+    if (!catalog.length) return;
+    const byId = new Map();
+    catalog.forEach(product => {
+        if (!product || !product.id) return;
+        byId.set(String(product.id), product);
+    });
+    document.querySelectorAll('.product-card').forEach(card => {
+        const btn = card.querySelector('.add-to-cart-btn');
+        const productId = String(card.getAttribute('data-product-id') || (btn && btn.getAttribute('data-id')) || '').trim();
+        if (!productId) return;
+        const product = byId.get(productId);
+        if (!product) return;
+        const variants = product._variants && typeof product._variants === 'object' ? product._variants : {};
+        const rawPriceVal = parseInt(product.price, 10);
+        const priceVal = getPromotionAdjustedPrice(productId, rawPriceVal);
+        upsertCardPriceDisplay(card, productId, rawPriceVal);
+        if (btn && Number.isFinite(priceVal) && priceVal > 0) {
+            btn.setAttribute('data-price', String(priceVal));
+            const packs = getPromotionAdjustedPacks(productId, normalizePackList(variants.packs || variants.pack_options || variants.sale_packs));
+            if (packs.length) btn.setAttribute('data-packs', encodeURIComponent(JSON.stringify(packs)));
+            else btn.removeAttribute('data-packs');
+        }
+    });
+}
+
+document.addEventListener('tenantPromotionsLoaded', refreshCatalogPromotionPrices);
+
 function productMatchesMixSource(product, sourceCategory) {
     if (!sourceCategory) return true;
     const variants = product && product._variants && typeof product._variants === 'object' ? product._variants : {};
@@ -359,11 +501,11 @@ function ensureProductOptionsModal() {
             <div style="padding:22px 22px 16px; background:linear-gradient(180deg, var(--gastro-accent-08, rgba(255,106,0,0.08)) 0%, #fff 100%);">
               <div id="product-options-kicker" style="display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; background:var(--gastro-accent-08, rgba(255,106,0,0.08)); color:var(--gastro-accent-dark, #c45500); font-size:12px; font-weight:900; letter-spacing:0.05em; text-transform:uppercase;">Configurar producto</div>
               <h3 id="product-options-title" style="margin:12px 0 0; font-size:28px; line-height:1.05; color:#0f172a;"></h3>
-              <p id="product-options-subtitle" style="margin:8px 0 0; font-size:14px; line-height:1.45; color:#475569;">Elegí la presentación y los adicionales antes de agregar al carrito.</p>
+              <p id="product-options-subtitle" style="margin:8px 0 0; font-size:14px; line-height:1.45; color:#475569;">Elegi la presentacion y los adicionales antes de agregar al carrito.</p>
             </div>
             <div style="display:flex; flex-direction:column; gap:16px; padding:18px 22px 22px;">
               <div id="product-options-pack-wrap" style="display:none; flex-direction:column; gap:8px;">
-                <label for="product-options-pack-select" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentación</label>
+                <label for="product-options-pack-select" style="font-size:13px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Presentacion</label>
                 <select id="product-options-pack-select" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; background:#fff; font-weight:700; color:#111827;"></select>
               </div>
               <div id="product-options-addons-wrap" style="display:none; flex-direction:column; gap:10px;">
@@ -416,8 +558,8 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
     if (titleEl) titleEl.textContent = name || 'Producto';
     if (subtitleEl) {
         subtitleEl.textContent = hasPacks && hasAddons
-            ? 'Elegí la presentación y los adicionales antes de agregar al carrito.'
-            : (hasAddons ? 'Elegí los adicionales antes de agregar al carrito.' : 'Elegí la presentación antes de agregar al carrito.');
+            ? 'Elegi la presentacion y los adicionales antes de agregar al carrito.'
+            : (hasAddons ? 'Elegi los adicionales antes de agregar al carrito.' : 'Elegi la presentacion antes de agregar al carrito.');
     }
     if (packWrap) packWrap.style.display = hasPacks ? 'flex' : 'none';
     if (addonsWrap) addonsWrap.style.display = hasAddons ? 'flex' : 'none';
@@ -433,7 +575,9 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
         (packs || []).forEach((pack) => {
             const opt = document.createElement('option');
             opt.value = String(pack.id || '');
-            opt.textContent = `${pack.label || 'Presentación'} - ${formatMoneyWithCode(parseInt(pack.price, 10) || 0)}`;
+            const finalPackPrice = parseInt(pack.price, 10) || 0;
+            const comparePackPrice = parseInt(pack.compare_at_price, 10) || parseInt(pack.original_price, 10) || 0;
+            opt.textContent = `${pack.label || 'Presentacion'} - ${comparePackPrice > finalPackPrice ? `${formatMoneyWithCode(comparePackPrice)} -> ` : ''}${formatMoneyWithCode(finalPackPrice)}`;
             packSelect.appendChild(opt);
         });
         if (state.packId) packSelect.value = state.packId;
@@ -447,6 +591,9 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
     const updateState = () => {
         const currentPack = getCurrentPack();
         const resolvedBasePrice = currentPack ? (parseInt(currentPack.price, 10) || 0) : (parseInt(basePrice, 10) || 0);
+        const currentComparePrice = currentPack
+            ? (parseInt(currentPack.compare_at_price, 10) || parseInt(currentPack.original_price, 10) || 0)
+            : (getPromotionPriceMeta(productId, basePrice).comparePrice || 0);
         const activeAddons = [];
         if (hasAddons) {
             (addonsConfig.options || []).forEach((option) => {
@@ -471,15 +618,18 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
         const isValid = !(invalidMin || invalidMax || invalidSingle);
         const addonsTotal = activeAddons.reduce((sum, addon) => sum + (parseInt(addon.total_price, 10) || 0), 0);
         const totalPrice = resolvedBasePrice + addonsTotal;
-        const packText = currentPack ? `${currentPack.label} · ${formatMoneyWithCode(currentPack.price)}` : 'Sin presentación especial';
+        const totalComparePrice = currentComparePrice > resolvedBasePrice ? currentComparePrice + addonsTotal : 0;
+        const packText = currentPack
+            ? `${currentPack.label} - ${currentComparePrice > resolvedBasePrice ? `${formatMoneyWithCode(currentComparePrice)} -> ` : ''}${formatMoneyWithCode(currentPack.price)}`
+            : 'Sin presentacion especial';
         const addonsSummary = buildAddonsSummary(activeAddons);
 
         if (addonsHelp && hasAddons) {
             const hints = [];
-            if (singleMode) hints.push('Elegí una sola opción');
-            if (minSelect > 0) hints.push(`mínimo ${minSelect}`);
-            if (maxSelect > 0) hints.push(`máximo ${maxSelect}`);
-            addonsHelp.textContent = hints.length ? hints.join(' · ') : 'Podés sumar adicionales al producto.';
+            if (singleMode) hints.push('Elegi una sola opcion');
+            if (minSelect > 0) hints.push(`minimo ${minSelect}`);
+            if (maxSelect > 0) hints.push(`maximo ${maxSelect}`);
+            addonsHelp.textContent = hints.length ? hints.join(' - ') : 'Podes sumar adicionales al producto.';
         }
         if (addonsList && hasAddons) {
             addonsList.innerHTML = '';
@@ -491,7 +641,7 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
                 row.innerHTML = `
                   <div style="flex:1; min-width:0;">
                     <div style="font-weight:800; color:#0f172a;">${escapeHtml(option.label)}</div>
-                    <div style="margin-top:4px; font-size:12px; color:#64748b;">${formatMoneyWithCode(option.price)}${maxQty > 1 ? ` · hasta ${maxQty}` : ''}</div>
+                    <div style="margin-top:4px; font-size:12px; color:#64748b;">${formatMoneyWithCode(option.price)}${maxQty > 1 ? ` - hasta ${maxQty}` : ''}</div>
                   </div>
                   <div style="display:flex; align-items:center; gap:8px;">
                     <button type="button" data-addon-action="decrease" data-addon-id="${escapeHtml(option.id)}" style="width:32px; height:32px; padding:0; border:none; border-radius:999px; background:#e2e8f0; color:#0f172a; font-weight:900; font-size:20px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">-</button>
@@ -540,6 +690,7 @@ function openProductOptionsModal({ productId, name, imageSrc, event, sourceButto
             totalEl.innerHTML = `
               <div>
                 <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.05em; color:#64748b; font-weight:900;">Total</div>
+                ${totalComparePrice > totalPrice ? `<div style="margin-top:4px; font-size:13px; line-height:1; color:#94a3b8; text-decoration:line-through;">${formatMoneyWithCode(totalComparePrice)}</div>` : ''}
                 <div style="margin-top:6px; font-size:28px; line-height:1.05; font-weight:900; color:var(--gastro-accent-dark, #c45500);">${formatMoneyWithCode(totalPrice)}</div>
               </div>
             `;
@@ -1098,6 +1249,77 @@ export function closeDialog(dialog) {
     dialog.style.display = 'none';
 }
 
+function fillProductModalFromCard(card, modal) {
+    if (!card || !modal) return false;
+    const modalImg = document.getElementById('modal-product-image');
+    const modalTitle = document.getElementById('modal-product-title');
+    const modalDesc = document.getElementById('modal-product-description');
+    const modalPrice = document.getElementById('modal-product-price');
+    const modalAddBtn = document.getElementById('modal-add-to-cart-btn');
+    const img = card.querySelector('img');
+    const title = card.querySelector('h3');
+    const desc = card.querySelector('.product-description');
+    const priceWrap = card.querySelector('.price-container');
+    const price = card.querySelector('.product-price');
+    const addBtn = card.querySelector('.add-to-cart-btn');
+
+    if (modalImg) {
+        attachTenantLogoFallback(modalImg);
+        setImageWithTenantFallback(modalImg, img ? (img.getAttribute('src') || img.src || '') : '');
+    }
+    if (modalTitle && title) modalTitle.textContent = title.textContent;
+    if (modalDesc && desc) modalDesc.textContent = desc.textContent;
+    if (modalPrice) {
+        modalPrice.innerHTML = '';
+        if (priceWrap) {
+            modalPrice.innerHTML = priceWrap.innerHTML;
+        } else if (price) {
+            modalPrice.textContent = price.textContent;
+        }
+    }
+
+    if (modalAddBtn && addBtn) {
+        modalAddBtn.setAttribute('data-id', addBtn.getAttribute('data-id'));
+        modalAddBtn.setAttribute('data-name', addBtn.getAttribute('data-name'));
+        modalAddBtn.setAttribute('data-price', addBtn.getAttribute('data-price'));
+        const packsAttr = addBtn.getAttribute('data-packs');
+        if (packsAttr) modalAddBtn.setAttribute('data-packs', packsAttr);
+        else modalAddBtn.removeAttribute('data-packs');
+        const addonsAttr = addBtn.getAttribute('data-addons');
+        if (addonsAttr) modalAddBtn.setAttribute('data-addons', addonsAttr);
+        else modalAddBtn.removeAttribute('data-addons');
+        const mixBuilderAttr = addBtn.getAttribute('data-mix-builder');
+        if (mixBuilderAttr) modalAddBtn.setAttribute('data-mix-builder', mixBuilderAttr);
+        else modalAddBtn.removeAttribute('data-mix-builder');
+        const stock = parseStockValue(card && card.dataset ? card.dataset.stock : '');
+        applyStockStateToButton(modalAddBtn, stock);
+        modalAddBtn.textContent = (Number.isFinite(stock) && stock <= 0) ? 'Sin stock' : 'Añadir al carrito';
+        modalAddBtn.classList.remove('added-to-cart');
+    }
+
+    const notesInput = document.getElementById('modal-product-notes');
+    if (notesInput) notesInput.value = '';
+    return true;
+}
+
+function findProductCardByProductId(productId) {
+    const id = String(productId || '').trim();
+    if (!id) return null;
+    const escaped = (window.CSS && typeof window.CSS.escape === 'function') ? window.CSS.escape(id) : id.replace(/"/g, '\\"');
+    return document.querySelector(`.product-card[data-product-id="${escaped}"]`)
+        || document.querySelector(`.add-to-cart-btn[data-id="${escaped}"]`)?.closest('.product-card')
+        || null;
+}
+
+export function openProductModalByProductId(productId) {
+    const modal = document.getElementById('product-modal');
+    const card = findProductCardByProductId(productId);
+    if (!modal || !card) return false;
+    fillProductModalFromCard(card, modal);
+    openDialog(modal);
+    return true;
+}
+
 // Product Modals
 export function initProductModals() {
     const modal = document.getElementById('product-modal');
@@ -1160,6 +1382,9 @@ export function initProductModals() {
     // This ensures both static "Platos Destacados" and dynamic products work immediately
 
     function openProductModal(card) {
+        fillProductModalFromCard(card, modal);
+        openDialog(modal);
+        return;
         const img = card.querySelector('img');
         const title = card.querySelector('h3');
         const desc = card.querySelector('.product-description');
@@ -1336,17 +1561,15 @@ export async function initDynamicProducts() {
             if (h && typeof prod.name === 'string') h.textContent = String(prod.name || '');
             const desc = card.querySelector('.product-description');
             if (desc && typeof prod.details === 'string') desc.textContent = prod.details;
-            const priceEl = card.querySelector('.product-price');
-            const priceVal = isFinite(parseInt(prod.price)) ? parseInt(prod.price) : 0;
-            if (priceEl && priceVal > 0) {
-                priceEl.textContent = formatMoneyWithCode(priceVal);
-            }
+            const rawPriceVal = isFinite(parseInt(prod.price)) ? parseInt(prod.price) : 0;
+            const priceVal = getPromotionAdjustedPrice(prod.id, rawPriceVal);
+            upsertCardPriceDisplay(card, prod.id, rawPriceVal);
             if (btn && priceVal > 0) {
                 btn.setAttribute('data-price', String(priceVal));
                 btn.setAttribute('data-name', String(prod.name || ''));
             }
             if (btn) {
-                const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
+                const packs = getPromotionAdjustedPacks(prod.id, normalizePackList(v.packs || v.pack_options || v.sale_packs));
                 const mixBuilder = normalizeMixBuilder(v.mix_builder);
                 const addonsConfig = normalizeAddonsConfig(v.addons);
                 if (packs.length) {
@@ -1457,13 +1680,19 @@ export async function initDynamicProducts() {
                 return s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '') : s;
             };
 
-            const priceVal = isFinite(parseInt(p.price)) ? parseInt(p.price) : 0;
+            const rawPriceVal = isFinite(parseInt(p.price)) ? parseInt(p.price) : 0;
+            const priceMeta = getPromotionPriceMeta(p.id, rawPriceVal);
+            const priceVal = priceMeta.finalPrice;
             const imgSrc = String(p.image_url || '').trim() || getTenantLogoUrl();
             let priceText = '';
             if (priceVal > 0) {
                 priceText = formatMoneyWithCode(priceVal);
             }
-            const packs = normalizePackList(v.packs || v.pack_options || v.sale_packs);
+            let originalPriceText = '';
+            if (priceMeta.hasDiscount && priceMeta.comparePrice > priceVal) {
+                originalPriceText = formatMoneyWithCode(priceMeta.comparePrice);
+            }
+            const packs = getPromotionAdjustedPacks(p.id, normalizePackList(v.packs || v.pack_options || v.sale_packs));
             const packsAttr = packs.length ? ' data-packs="' + encodeURIComponent(JSON.stringify(packs)) + '"' : '';
             const mixBuilder = normalizeMixBuilder(v.mix_builder);
             const mixAttr = mixBuilder ? ' data-mix-builder="' + encodeURIComponent(JSON.stringify(mixBuilder)) + '"' : '';
@@ -1512,6 +1741,7 @@ export async function initDynamicProducts() {
                     '<h3>' + (p.name || '') + '</h3>' +
                     '<p class="product-description">' + (p.details || '') + '</p>' +
                     '<div class="price-container">' +
+                    (originalPriceText ? '<p class="product-price-original">' + originalPriceText + '</p>' : '') +
                     (priceText ? '<p class="product-price">' + priceText + '</p>' : '') +
                     '</div>' +
                     '<button class="add-to-cart-btn" data-id="' + p.id + '" data-name="' + (p.name || '') + '" data-price="' + priceVal + '"' + packsAttr + mixAttr + addonsAttr + '>Añadir al carrito</button>' +

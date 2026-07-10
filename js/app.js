@@ -51,7 +51,8 @@ import {
     scrollDiscounts,
     initProductModals,
     initInterestFiltering,
-    initDynamicProducts
+    initDynamicProducts,
+    openProductModalByProductId
 } from './ui.js?v=10';
  
  
@@ -94,6 +95,422 @@ window.closeCartUI = closeCartUI;
 function getApiBase() {
     const origin = window.location.origin || '';
     return /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
+}
+
+let tenantHeaderData = null;
+let entryPromotionResolved = false;
+let entryPromotionOpen = false;
+
+function formatPromotionMoney(amount) {
+    const value = Number(amount || 0);
+    const locale = String(window.CURRENCY_LOCALE || 'es-AR');
+    const code = String(window.CURRENCY_CODE || 'ARS').toUpperCase();
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: code,
+            maximumFractionDigits: 0
+        }).format(value);
+    } catch (_) {
+        return `$${Math.round(value || 0)}`;
+    }
+}
+
+function normalizePromotionsConfig(data) {
+    const promotions = data && typeof data.promotions === 'object' ? data.promotions : {};
+    const banner = promotions && typeof promotions.banner === 'object' ? promotions.banner : {};
+    const entryModal = promotions && typeof promotions.entry_modal === 'object' ? promotions.entry_modal : {};
+    const pricing = entryModal && typeof entryModal.pricing === 'object' ? entryModal.pricing : {};
+    return {
+        banner: {
+            active: !!(banner.active || data && data.announcement_active),
+            text: String(banner.text || data && data.announcement_text || '').trim()
+        },
+        entryModal: {
+            active: !!entryModal.active,
+            productId: String(entryModal.product_id || '').trim(),
+            badgeText: String(entryModal.badge_text || '').trim(),
+            headline: String(entryModal.headline || '').trim(),
+            message: String(entryModal.message || '').trim(),
+            ctaText: String(entryModal.cta_text || '').trim() || 'Ver promoción',
+            pricing: {
+                mode: String(pricing.mode || 'none').trim().toLowerCase() || 'none',
+                compareAtPrice: Number.parseInt(pricing.compare_at_price, 10),
+                note: String(pricing.note || '').trim(),
+                promoPrice: Number.parseInt(pricing.promo_price, 10),
+                discountPercent: Number.parseInt(pricing.discount_percent, 10),
+                discountAmount: Number.parseInt(pricing.discount_amount, 10)
+            },
+            frequency: String(entryModal.frequency || 'session').trim().toLowerCase() || 'session',
+            startsAt: String(entryModal.starts_at || '').trim(),
+            endsAt: String(entryModal.ends_at || '').trim()
+        }
+    };
+}
+
+function getPromotionPriceDisplay(product, entryModal) {
+    const basePrice = Number.parseInt(product && product.price, 10);
+    if (!Number.isFinite(basePrice)) {
+        return {
+            currentText: '',
+            compareText: '',
+            noteText: String(entryModal && entryModal.pricing && entryModal.pricing.note || '').trim(),
+            badgeText: String(entryModal && entryModal.badgeText || '').trim()
+        };
+    }
+    const pricing = entryModal && typeof entryModal.pricing === 'object' ? entryModal.pricing : {};
+    const mode = String(pricing.mode || 'none').trim().toLowerCase();
+    const compareAtPrice = Number.isFinite(pricing.compareAtPrice) && pricing.compareAtPrice >= 0 ? pricing.compareAtPrice : basePrice;
+    let promoPrice = null;
+    let computedBadge = String(entryModal && entryModal.badgeText || '').trim();
+
+    if (mode === 'promo_price' && Number.isFinite(pricing.promoPrice) && pricing.promoPrice >= 0) {
+        promoPrice = pricing.promoPrice;
+    } else if (mode === 'percent' && Number.isFinite(pricing.discountPercent) && pricing.discountPercent > 0) {
+        promoPrice = Math.max(0, Math.round(compareAtPrice * (1 - (pricing.discountPercent / 100))));
+        if (!computedBadge) computedBadge = `${pricing.discountPercent}% OFF`;
+    } else if (mode === 'amount' && Number.isFinite(pricing.discountAmount) && pricing.discountAmount > 0) {
+        promoPrice = Math.max(0, compareAtPrice - pricing.discountAmount);
+        if (!computedBadge) computedBadge = `${formatPromotionMoney(pricing.discountAmount)} OFF`;
+    }
+
+    if (!Number.isFinite(promoPrice) || promoPrice === null || promoPrice >= compareAtPrice) {
+        return {
+            currentText: formatPromotionMoney(basePrice),
+            compareText: '',
+            noteText: String(pricing.note || '').trim(),
+            badgeText: computedBadge
+        };
+    }
+    return {
+        currentText: formatPromotionMoney(promoPrice),
+        compareText: formatPromotionMoney(compareAtPrice),
+        noteText: String(pricing.note || '').trim(),
+        badgeText: computedBadge
+    };
+}
+
+function syncWindowPromotions(data) {
+    try {
+        window.__tenantPromotions = normalizePromotionsConfig(data || {});
+        document.dispatchEvent(new CustomEvent('tenantPromotionsLoaded'));
+    } catch (_) {}
+}
+
+function isPromotionInWindow(entryModal) {
+    const now = Date.now();
+    const startsAt = entryModal && entryModal.startsAt ? Date.parse(entryModal.startsAt) : NaN;
+    const endsAt = entryModal && entryModal.endsAt ? Date.parse(entryModal.endsAt) : NaN;
+    if (Number.isFinite(startsAt) && now < startsAt) return false;
+    if (Number.isFinite(endsAt) && now > endsAt) return false;
+    return true;
+}
+
+function getEntryPromotionKey(slug, entryModal) {
+    const parts = [
+        String(slug || '').trim(),
+        String(entryModal && entryModal.productId || '').trim(),
+        String(entryModal && entryModal.badgeText || '').trim(),
+        String(entryModal && entryModal.headline || '').trim(),
+        String(entryModal && entryModal.startsAt || '').trim(),
+        String(entryModal && entryModal.endsAt || '').trim()
+    ];
+    return `entry_promo_${parts.join('_')}`;
+}
+
+function wasEntryPromotionDismissed(slug, entryModal) {
+    const key = getEntryPromotionKey(slug, entryModal);
+    const frequency = String(entryModal && entryModal.frequency || 'session');
+    try {
+        if (frequency === 'always') return false;
+        if (frequency === 'day') {
+            const last = localStorage.getItem(key);
+            const today = new Date().toISOString().slice(0, 10);
+            return last === today;
+        }
+        return sessionStorage.getItem(key) === '1';
+    } catch (_) {
+        return false;
+    }
+}
+
+function rememberEntryPromotionDismissed(slug, entryModal) {
+    const key = getEntryPromotionKey(slug, entryModal);
+    const frequency = String(entryModal && entryModal.frequency || 'session');
+    try {
+        if (frequency === 'always') return;
+        if (frequency === 'day') {
+            localStorage.setItem(key, new Date().toISOString().slice(0, 10));
+            return;
+        }
+        sessionStorage.setItem(key, '1');
+    } catch (_) {}
+}
+
+function findCatalogProductById(productId) {
+    const id = String(productId || '').trim();
+    if (!id) return null;
+    const catalog = Array.isArray(window.__tenantCatalogProducts) ? window.__tenantCatalogProducts : [];
+    return catalog.find(product => String(product && product.id || '').trim() === id) || null;
+}
+
+function ensureEntryPromotionModal() {
+    let modal = document.getElementById('entry-promotion-modal');
+    if (modal) return modal;
+    if (!document.getElementById('entry-promotion-modal-styles')) {
+        const style = document.createElement('style');
+        style.id = 'entry-promotion-modal-styles';
+        style.textContent = `
+          #entry-promotion-modal {
+            align-items: center;
+            justify-content: center;
+            padding: clamp(14px, 2.2vw, 28px);
+            background: rgba(15, 23, 42, 0.62);
+            backdrop-filter: blur(6px);
+            z-index: 3300;
+          }
+          #entry-promotion-modal .entry-promo-shell {
+            width: min(880px, 92vw);
+            max-width: 880px;
+            max-height: min(86vh, 720px);
+            overflow: hidden;
+            border-radius: 28px;
+            background:
+              radial-gradient(circle at top left, var(--gastro-accent-18, rgba(255, 106, 0, 0.18)) 0%, rgba(255,255,255,0) 34%),
+              linear-gradient(135deg, #ffffff 0%, #fffaf5 100%);
+            box-shadow: 0 35px 80px rgba(15, 23, 42, 0.42);
+            border: 1px solid rgba(255,255,255,0.7);
+            position: relative;
+          }
+          #entry-promotion-modal .entry-promo-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 1.08fr) minmax(340px, 0.92fr);
+            min-height: 460px;
+          }
+          #entry-promotion-modal .entry-promo-media {
+            position: relative;
+            min-height: 460px;
+            overflow: hidden;
+            background: linear-gradient(160deg, rgba(15,23,42,0.04) 0%, var(--gastro-accent-18, rgba(255,106,0,0.18)) 100%);
+          }
+          #entry-promotion-modal .entry-promo-media::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(15,23,42,0.08) 0%, rgba(15,23,42,0.28) 100%);
+            pointer-events: none;
+          }
+          #entry-promotion-modal #entry-promo-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+          #entry-promotion-modal .entry-promo-copy {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 14px;
+            padding: 34px 32px;
+          }
+          #entry-promotion-modal .entry-promo-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+          }
+          #entry-promotion-modal .entry-promo-price-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+          }
+          #entry-promotion-modal .entry-promo-compare {
+            font-size: 15px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-decoration: line-through;
+            min-height: 18px;
+          }
+          #entry-promotion-modal .entry-promo-current {
+            font-size: 32px;
+            line-height: 1;
+            font-weight: 950;
+            color: #111827;
+          }
+          #entry-promotion-modal .entry-promo-note {
+            font-size: 13px;
+            font-weight: 700;
+            color: #7c3aed;
+            min-height: 18px;
+          }
+          #entry-promotion-modal #entry-promo-cta,
+          #entry-promotion-modal #entry-promo-dismiss {
+            min-height: 50px;
+          }
+          @media (max-width: 768px) {
+            #entry-promotion-modal {
+              padding: 12px;
+            }
+            #entry-promotion-modal .entry-promo-shell {
+              width: min(100%, 96vw);
+              max-height: 92vh;
+              border-radius: 24px;
+            }
+            #entry-promotion-modal .entry-promo-grid {
+              grid-template-columns: 1fr;
+              min-height: auto;
+            }
+            #entry-promotion-modal .entry-promo-media {
+              min-height: 220px;
+              max-height: 260px;
+            }
+            #entry-promotion-modal .entry-promo-copy {
+              padding: 22px 18px 20px;
+            }
+            #entry-promotion-modal #entry-promo-title {
+              font-size: 28px !important;
+            }
+            #entry-promotion-modal .entry-promo-actions {
+              flex-direction: column;
+            }
+            #entry-promotion-modal #entry-promo-cta,
+            #entry-promotion-modal #entry-promo-dismiss {
+              width: 100%;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+    }
+    modal = document.createElement('div');
+    modal.id = 'entry-promotion-modal';
+    modal.className = 'product-modal';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.style.display = 'none';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.innerHTML = `
+      <div class="modal-content entry-promo-shell" style="padding:0;">
+        <button type="button" class="close-modal" aria-label="Cerrar promoción" title="Cerrar" style="z-index:2;"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div class="entry-promo-grid">
+          <div class="entry-promo-media">
+            <img id="entry-promo-image" alt="Promoción destacada">
+          </div>
+          <div class="entry-promo-copy">
+            <div id="entry-promo-badge" style="display:none; width:max-content; padding:7px 12px; border-radius:999px; background:rgba(239,68,68,0.12); color:#b91c1c; font-size:12px; font-weight:900; letter-spacing:0.04em; text-transform:uppercase;"></div>
+            <div id="entry-promo-kicker" style="font-size:12px; font-weight:800; color:#64748b; letter-spacing:0.06em; text-transform:uppercase;">Promoción destacada</div>
+            <h3 id="entry-promo-title" style="margin:0; font-size:32px; line-height:1.05; color:#0f172a;"></h3>
+            <p id="entry-promo-message" style="margin:0; font-size:15px; line-height:1.55; color:#475569;"></p>
+            <div class="entry-promo-price-stack">
+              <div id="entry-promo-compare" class="entry-promo-compare"></div>
+              <div id="entry-promo-price" class="entry-promo-current"></div>
+              <div id="entry-promo-note" class="entry-promo-note"></div>
+            </div>
+            <div class="entry-promo-actions">
+              <button type="button" id="entry-promo-cta" style="min-height:48px; padding:0 18px; border:none; border-radius:14px; background:var(--gastro-accent, #ff6a00); color:var(--gastro-accent-contrast, #fff); font-size:16px; font-weight:900; cursor:pointer;"></button>
+              <button type="button" id="entry-promo-dismiss" style="min-height:48px; padding:0 18px; border:1px solid #cbd5e1; border-radius:14px; background:#fff; color:#334155; font-size:15px; font-weight:800; cursor:pointer;">Ahora no</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    const closeModal = () => {
+        closeDialog(modal);
+        entryPromotionOpen = false;
+    };
+    const closeBtn = modal.querySelector('.close-modal');
+    const dismissBtn = modal.querySelector('#entry-promo-dismiss');
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (dismissBtn) dismissBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) closeModal();
+    });
+    return modal;
+}
+
+function tryRenderEntryPromotion() {
+    if (PAGE !== 'gastronomia') {
+        entryPromotionResolved = true;
+        return;
+    }
+    if (entryPromotionResolved || !tenantHeaderData) return;
+    const slug = getBusinessSlug() || 'gastronomia-local1';
+    const promotions = normalizePromotionsConfig(tenantHeaderData);
+    const entryModal = promotions.entryModal;
+    if (!entryModal.active || !entryModal.productId || !isPromotionInWindow(entryModal)) {
+        entryPromotionResolved = true;
+        return;
+    }
+    if (wasEntryPromotionDismissed(slug, entryModal)) {
+        entryPromotionResolved = true;
+        return;
+    }
+    const product = findCatalogProductById(entryModal.productId);
+    if (!product) return;
+
+    const modal = ensureEntryPromotionModal();
+    const imageEl = modal.querySelector('#entry-promo-image');
+    const badgeEl = modal.querySelector('#entry-promo-badge');
+    const titleEl = modal.querySelector('#entry-promo-title');
+    const messageEl = modal.querySelector('#entry-promo-message');
+    const compareEl = modal.querySelector('#entry-promo-compare');
+    const priceEl = modal.querySelector('#entry-promo-price');
+    const noteEl = modal.querySelector('#entry-promo-note');
+    const ctaBtn = modal.querySelector('#entry-promo-cta');
+    const closeBtn = modal.querySelector('.close-modal');
+    const dismissBtn = modal.querySelector('#entry-promo-dismiss');
+    const priceDisplay = getPromotionPriceDisplay(product, entryModal);
+
+    if (imageEl) imageEl.src = String(product.image_url || window.__tenantLogoUrl || 'Imagenes/Epalogo.png').trim();
+    if (badgeEl) {
+        badgeEl.textContent = priceDisplay.badgeText || 'Oferta especial';
+        badgeEl.style.display = badgeEl.textContent ? 'inline-flex' : 'none';
+    }
+    if (titleEl) titleEl.textContent = entryModal.headline || String(product.name || 'Promoción destacada');
+    if (messageEl) {
+        messageEl.textContent = entryModal.message || String(product.details || 'Descubrí este producto destacado antes de seguir viendo la carta.');
+    }
+    if (compareEl) {
+        compareEl.textContent = priceDisplay.compareText || '';
+        compareEl.style.display = priceDisplay.compareText ? 'block' : 'none';
+    }
+    if (priceEl) priceEl.textContent = priceDisplay.currentText || formatPromotionMoney(product.price);
+    if (noteEl) {
+        noteEl.textContent = priceDisplay.noteText || '';
+        noteEl.style.display = priceDisplay.noteText ? 'block' : 'none';
+    }
+    if (ctaBtn) {
+        ctaBtn.textContent = entryModal.ctaText || 'Ver promoción';
+        ctaBtn.onclick = () => {
+            rememberEntryPromotionDismissed(slug, entryModal);
+            closeDialog(modal);
+            entryPromotionOpen = false;
+            setTimeout(() => {
+                openProductModalByProductId(entryModal.productId);
+            }, 40);
+        };
+    }
+    const onDismiss = () => rememberEntryPromotionDismissed(slug, entryModal);
+    if (closeBtn) closeBtn.onclick = () => {
+        onDismiss();
+        closeDialog(modal);
+        entryPromotionOpen = false;
+    };
+    if (dismissBtn) dismissBtn.onclick = () => {
+        onDismiss();
+        closeDialog(modal);
+        entryPromotionOpen = false;
+    };
+    if (!entryPromotionOpen) {
+        entryPromotionResolved = true;
+        entryPromotionOpen = true;
+        setTimeout(() => {
+            if (!entryPromotionOpen) return;
+            openDialog(modal);
+        }, 220);
+    }
 }
 
 async function fetchAuthMe() {
@@ -939,9 +1356,11 @@ function initHeaderContact() {
             }
         } catch (_) {}
 
-        // Announcement Banner
-        const announcementActive = data.announcement_active;
-        const announcementText = (data.announcement_text || '').trim();
+        tenantHeaderData = data;
+        const promotionConfig = normalizePromotionsConfig(data);
+        syncWindowPromotions(data);
+        const announcementActive = promotionConfig.banner.active;
+        const announcementText = promotionConfig.banner.text;
         const banner = document.getElementById('announcement-banner');
         const bannerText = document.getElementById('announcement-text');
         const bannerClose = document.getElementById('announcement-close');
@@ -959,6 +1378,7 @@ function initHeaderContact() {
                 }
             }
         }
+        tryRenderEntryPromotion();
     }).catch(() => {
         // Fallback or error handling
     }).catch(() => {
@@ -975,6 +1395,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         document.addEventListener('productsLoaded', () => {
             markProductsReady();
+            tryRenderEntryPromotion();
         }, { once: true });
         setTimeout(markProductsReady, 2000);
     }
