@@ -2138,7 +2138,7 @@
     </div>
 
     <div id="restaurant-config-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10001; justify-content:center; align-items:center;">
-      <div style="background:#fff; padding:20px; border-radius:8px; width:min(560px, 94vw); box-shadow:0 2px 10px rgba(0,0,0,0.2); max-height:86vh; overflow-y:auto;">
+      <div style="background:#fff; padding:20px; border-radius:8px; width:min(760px, 96vw); box-shadow:0 2px 10px rgba(0,0,0,0.2); max-height:86vh; overflow-y:auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
           <h3 style="margin:0;">Pie de página</h3>
           <button id="cfg-restaurant-close-btn" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
@@ -2155,7 +2155,41 @@
               <input type="text" id="cfg-footer-tagline" placeholder="Sabores auténticos y platos de calidad." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
             </label>
           </div>
-          <div style="margin-top:12px;">
+          <div style="margin-top:16px; padding-top:16px; border-top:1px solid #eee;">
+            <div style="font-size:13px; font-weight:700; margin-bottom:10px;">Bloque de contacto</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Título de bloque</span>
+                <input type="text" id="cfg-footer-contact-title" placeholder="Contacto" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">WhatsApp</span>
+                <input type="text" id="cfg-footer-whatsapp" placeholder="+54 9 261 000 0000" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Correo</span>
+                <input type="text" id="cfg-footer-email" placeholder="info@resto-demo.com" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+            </div>
+          </div>
+          <div style="margin-top:16px; padding-top:16px; border-top:1px solid #eee;">
+            <div style="font-size:13px; font-weight:700; margin-bottom:10px;">Bloque de ubicación</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px;">
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Título de bloque</span>
+                <input type="text" id="cfg-footer-location-title" placeholder="Ubicación" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Dirección o texto visible</span>
+                <input type="text" id="cfg-footer-location-label" placeholder="Palacios 1600" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+              <label style="display:block;">
+                <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Horarios (texto visible)</span>
+                <input type="text" id="cfg-footer-opening-hours-label" placeholder="Lun-Dom: 12:00-23:00" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+              </label>
+            </div>
+          </div>
+          <div style="margin-top:16px; padding-top:16px; border-top:1px solid #eee;">
             <label style="display:block;">
               <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Copyright (línea final)</span>
               <input type="text" id="cfg-footer-bottom" placeholder="© 2026 Mi Restaurante. Todos los derechos reservados." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
@@ -16427,9 +16461,15 @@
                         const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : String(v)); };
                         setVal('cfg-footer-title', d.footer_title || '');
                         setVal('cfg-footer-tagline', d.footer_tagline || '');
+                        setVal('cfg-footer-contact-title', d.footer_contact_title || '');
+                        setVal('cfg-footer-whatsapp', d.whatsapp || '');
+                        setVal('cfg-footer-email', d.contact_email || '');
+                        setVal('cfg-footer-location-title', d.footer_location_title || '');
+                        setVal('cfg-footer-location-label', d.location_label || d.location || '');
+                        setVal('cfg-footer-opening-hours-label', d.opening_hours_label || '');
                         setVal('cfg-footer-bottom', d.footer_bottom || '');
                         try {
-                            const target = document.getElementById('cfg-footer-title') || document.getElementById('cfg-footer-tagline') || document.getElementById('cfg-footer-bottom');
+                            const target = document.getElementById('cfg-footer-title') || document.getElementById('cfg-footer-contact-title') || document.getElementById('cfg-footer-bottom');
                             if (target) {
                                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                                 if (typeof target.focus === 'function') target.focus();
@@ -16453,6 +16493,12 @@
                     const payload = {
                         footer_title: getVal('cfg-footer-title'),
                         footer_tagline: getVal('cfg-footer-tagline'),
+                        footer_contact_title: getVal('cfg-footer-contact-title'),
+                        whatsapp: getVal('cfg-footer-whatsapp'),
+                        contact_email: getVal('cfg-footer-email'),
+                        footer_location_title: getVal('cfg-footer-location-title'),
+                        location_label: getVal('cfg-footer-location-label'),
+                        opening_hours_label: getVal('cfg-footer-opening-hours-label'),
                         footer_bottom: getVal('cfg-footer-bottom')
                     };
 

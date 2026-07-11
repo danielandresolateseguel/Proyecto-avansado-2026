@@ -873,6 +873,8 @@ function initHeaderContact() {
         let openingHoursLabel = (data.opening_hours_label || '').trim();
         const footerTitle = (data.footer_title || '').trim();
         const footerTagline = (data.footer_tagline || '').trim();
+        const footerContactTitle = (data.footer_contact_title || '').trim();
+        const footerLocationTitle = (data.footer_location_title || '').trim();
         const footerBottom = (data.footer_bottom || '').trim();
         const contactEmail = (data.contact_email || '').trim();
         const timeZone = (data.timezone || '').trim();
@@ -1312,39 +1314,46 @@ function initHeaderContact() {
                 const bottomP = footer.querySelector('.footer-bottom p');
                 const year = new Date().getFullYear();
                 const displayName = tenantName || footerTitle || '';
+                const setFooterTextLine = (el, text) => {
+                    if (!el) return;
+                    const value = String(text || '').trim();
+                    el.textContent = value;
+                    el.style.display = value ? '' : 'none';
+                };
+                const setFooterIconLine = (el, iconClass, text) => {
+                    if (!el) return;
+                    const value = String(text || '').trim();
+                    el.textContent = '';
+                    if (!value) {
+                        el.style.display = 'none';
+                        return;
+                    }
+                    const i = document.createElement('i');
+                    i.className = iconClass;
+                    el.appendChild(i);
+                    el.appendChild(document.createTextNode(` ${value}`));
+                    el.style.display = '';
+                };
 
                 if (sections[0]) {
                     const h4 = sections[0].querySelector('h4');
                     const p = sections[0].querySelector('p');
                     if (h4 && (footerTitle || tenantName)) h4.textContent = `🍽️ ${footerTitle || tenantName}`;
-                    if (p && footerTagline) p.textContent = footerTagline;
+                    setFooterTextLine(p, footerTagline);
                 }
                 if (sections[1]) {
+                    const h4 = sections[1].querySelector('h4');
                     const ps = Array.from(sections[1].querySelectorAll('p'));
-                    ps.forEach(p => {
-                        const t = String(p.textContent || '').toLowerCase();
-                        if (t.includes('whatsapp') && whatsappValue) {
-                            p.textContent = '';
-                            const i = document.createElement('i');
-                            i.className = 'fab fa-whatsapp';
-                            p.appendChild(i);
-                            p.appendChild(document.createTextNode(` WhatsApp: ${whatsappValue}`));
-                        }
-                        if (t.includes('@') || t.includes('mail') || t.includes('correo') || t.includes('info@') || t.includes('gmail') || t.includes('email')) {
-                            if (contactEmail) {
-                                p.textContent = '';
-                                const i = document.createElement('i');
-                                i.className = 'fas fa-envelope';
-                                p.appendChild(i);
-                                p.appendChild(document.createTextNode(` ${contactEmail}`));
-                            }
-                        }
-                    });
+                    if (h4 && footerContactTitle) h4.textContent = `📞 ${footerContactTitle}`;
+                    setFooterIconLine(ps[0], 'fab fa-whatsapp', whatsappValue ? `WhatsApp: ${whatsappValue}` : '');
+                    setFooterIconLine(ps[1], 'fas fa-envelope', contactEmail);
                 }
                 if (sections[2]) {
+                    const h4 = sections[2].querySelector('h4');
                     const ps = Array.from(sections[2].querySelectorAll('p'));
-                    if (ps[0] && locationLabel) ps[0].textContent = locationLabel;
-                    if (ps[1] && openingHoursLabel) ps[1].textContent = openingHoursLabel;
+                    if (h4 && footerLocationTitle) h4.textContent = `📍 ${footerLocationTitle}`;
+                    setFooterTextLine(ps[0], locationLabel);
+                    setFooterTextLine(ps[1], openingHoursLabel);
                 }
                 if (bottomP) {
                     if (footerBottom) {

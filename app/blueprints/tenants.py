@@ -316,7 +316,7 @@ def get_tenant_header():
             except:
                 pass
                 
-        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color', 'main_menu_compact_view']
+        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_contact_title', 'footer_location_title', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color', 'main_menu_compact_view']
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
@@ -423,6 +423,8 @@ def get_tenant_header():
         'contact_email': cfg.get('contact_email') or meta_contact.get('email', ''),
         'footer_title': cfg.get('footer_title') or meta_branding.get('footer_title', ''),
         'footer_tagline': cfg.get('footer_tagline') or meta_branding.get('footer_tagline', ''),
+        'footer_contact_title': cfg.get('footer_contact_title') or meta_branding.get('footer_contact_title', ''),
+        'footer_location_title': cfg.get('footer_location_title') or meta_branding.get('footer_location_title', ''),
         'footer_bottom': cfg.get('footer_bottom') or meta_branding.get('footer_bottom', ''),
         'timezone': timezone,
         'currency_code': currency_code,
