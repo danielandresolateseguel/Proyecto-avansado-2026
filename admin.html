@@ -7468,6 +7468,13 @@
       if (ds === 'delivered') return 99;
       return 50;
     }
+    function _isPendingDeliveryRouteStop(o) {
+      const ds = _effectiveDeliveryStatus(o);
+      const mainSt = _normUser(o && o.status || '');
+      if (ds === 'delivered') return false;
+      if (mainSt === 'entregado' || mainSt === 'cancelado') return false;
+      return true;
+    }
     function _deliveryStatusLabel(dsRaw) {
       const ds = _normUser(dsRaw || 'pending');
       if (ds === 'pending') return 'Pendiente';
@@ -7508,7 +7515,7 @@
         });
         const next = ordered.find(o => {
           const ds = _effectiveDeliveryStatus(o);
-          if (ds === 'delivered') return false;
+          if (!_isPendingDeliveryRouteStop(o)) return false;
           const addr = getOrderAddressOneLine(o);
           return !!addr;
         });
@@ -7556,7 +7563,7 @@
           if (!routeOrders.length) {
             const arr = Array.isArray(window.currentDeliveryOrders) ? window.currentDeliveryOrders.slice() : [];
             const mine = arr.filter(o => String(o && o.delivery_assigned_to || '').trim().toLowerCase() === me);
-            const open = mine.filter(o => _effectiveDeliveryStatus(o) !== 'delivered');
+            const open = mine.filter(_isPendingDeliveryRouteStop);
             routeOrders = open.slice().sort((a, b) => {
               const sa = (a && a.delivery_sequence != null) ? Number(a.delivery_sequence) : 999999;
               const sb = (b && b.delivery_sequence != null) ? Number(b.delivery_sequence) : 999999;
@@ -7564,7 +7571,11 @@
               return Number(a.id) - Number(b.id);
             });
           }
-          const stopsAll = routeOrders.map(getOrderAddressOneLine).filter(Boolean);
+          const stopsAll = routeOrders
+            .filter(o => String(o && o.delivery_assigned_to || '').trim().toLowerCase() === me)
+            .filter(_isPendingDeliveryRouteStop)
+            .map(getOrderAddressOneLine)
+            .filter(Boolean);
           if (!stopsAll.length) { try { w.close(); } catch (_) {} alert('No hay direcciones para armar la ruta'); return; }
           const maxStops = 11;
           const stops = stopsAll.slice(0, maxStops);
@@ -10073,8 +10084,10 @@
             }
             const res = await setDeliveryStatus(oid, st, extras);
             await loadOrdersSafe();
-            if (autoNextEnabled) {
+            if (autoNextEnabled && !(res && res.run_closed)) {
               try { await openNextDeliveryStopInGoogleMaps(autoNextWindow, true); } catch (_) {}
+            } else if (autoNextWindow) {
+              try { autoNextWindow.close(); } catch (_) {}
             }
             if (res && res.run_closed) {
               try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}
@@ -10118,8 +10131,10 @@
             const res = await setDeliveryStatus(oid, 'delivered');
             lastDeliverySignature = '';
             await loadOrdersSafe();
-            if (autoNextEnabled) {
+            if (autoNextEnabled && !(res && res.run_closed)) {
               try { await openNextDeliveryStopInGoogleMaps(autoNextWindow, true); } catch (_) {}
+            } else if (autoNextWindow) {
+              try { autoNextWindow.close(); } catch (_) {}
             }
             if (res && res.run_closed) {
               try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}

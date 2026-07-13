@@ -796,6 +796,8 @@ def _auto_close_run_if_empty(cur, tenant_slug, driver_username):
             JOIN orders o ON o.id = ro.order_id
             WHERE ro.run_id = ?
               AND o.tenant_slug = ?
+              AND o.id NOT IN (SELECT order_id FROM archived_orders)
+              AND lower(COALESCE(o.status,'')) != 'cancelado'
               AND lower(COALESCE(o.delivery_assigned_to,'')) = lower(?)
               AND lower(COALESCE(o.delivery_status,'pending')) != 'delivered'
             """,
@@ -2212,6 +2214,12 @@ def get_active_delivery_run():
     run_id = _get_active_run_id(cur, tenant_slug, driver)
     if not run_id:
         return jsonify({'run': None, 'orders': []})
+    try:
+        if _auto_close_run_if_empty(cur, tenant_slug, driver):
+            conn.commit()
+            return jsonify({'run': None, 'orders': []})
+    except Exception:
+        pass
 
     cur.execute("SELECT id, tenant_slug, driver_username, status, started_at, closed_at FROM delivery_runs WHERE id = ?", (run_id,))
     run_row = cur.fetchone()
@@ -2224,10 +2232,14 @@ def get_active_delivery_run():
                o.delivery_assigned_to, o.delivery_status, ro.sequence AS delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at
         FROM delivery_run_orders ro
         JOIN orders o ON o.id = ro.order_id
-        WHERE ro.run_id = ? AND o.tenant_slug = ?
+        WHERE ro.run_id = ?
+          AND o.tenant_slug = ?
+          AND o.id NOT IN (SELECT order_id FROM archived_orders)
+          AND lower(COALESCE(o.status,'')) != 'cancelado'
+          AND lower(COALESCE(o.delivery_assigned_to,'')) = lower(?)
         ORDER BY ro.sequence ASC, o.id ASC
         """,
-        (run_id, tenant_slug),
+        (run_id, tenant_slug, driver),
     )
     rows = cur.fetchall()
     return jsonify({'run': run, 'orders': [dict(r) for r in rows]})
