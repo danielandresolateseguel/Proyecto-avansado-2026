@@ -4,12 +4,32 @@
  */
 
 function getAddressText(val) {
+  const normalize = (value) => String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+  const unique = (items) => {
+    const seen = new Set();
+    const out = [];
+    items.forEach((item) => {
+      const value = normalize(item);
+      if (!value) return;
+      const key = value.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push(value);
+    });
+    return out;
+  };
   const formatObj = (obj) => {
-    const address = String(obj && (obj.address || obj.street || obj.line1) || '').trim();
-    const locality = String(obj && (obj.locality || obj.city || obj.town || obj.municipality) || '').trim();
-    const province = String(obj && (obj.province || obj.state) || '').trim();
-    const country = String(obj && obj.country || '').trim();
-    const tail = [locality, province, country].filter(Boolean).join(', ');
+    const addressBase = normalize(obj && (obj.address || obj.street || obj.line1 || obj.road || obj.display_name || obj.displayName));
+    const house = normalize(obj && (obj.number || obj.house_number || obj.houseNumber));
+    const address = addressBase && house && !addressBase.toLowerCase().includes(house.toLowerCase())
+      ? `${addressBase} ${house}`.trim()
+      : addressBase;
+    const tail = unique([
+      obj && (obj.locality || obj.city || obj.town || obj.village || obj.municipality),
+      obj && (obj.neighbourhood || obj.suburb || obj.district || obj.city_district || obj.commune),
+      obj && (obj.province || obj.state),
+      obj && obj.country,
+    ]).join(', ');
     if (address && tail) return `${address}, ${tail}`;
     if (address) return address;
     if (tail) return tail;

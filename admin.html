@@ -7279,43 +7279,85 @@
       });
       updateClosedBulkButtons();
     }
+    function _normalizeAddressPiece(value) {
+      return String(value == null ? '' : value).replace(/\s+/g, ' ').trim();
+    }
+    function _uniqueAddressPieces(items) {
+      const seen = new Set();
+      const out = [];
+      (Array.isArray(items) ? items : []).forEach(item => {
+        const value = _normalizeAddressPiece(item);
+        if (!value) return;
+        const key = value.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push(value);
+      });
+      return out;
+    }
+    function _parseOrderAddressObject(raw) {
+      if (raw && typeof raw === 'object') return raw;
+      const s = _normalizeAddressPiece(raw);
+      if (!s || !s.startsWith('{')) return null;
+      try { return JSON.parse(s); }
+      catch (_) {
+        try { return JSON.parse(s.replace(/'/g, '"')); } catch (__) { return null; }
+      }
+    }
+    function _extractGeoDestination(obj) {
+      const candidates = [obj, obj && obj.geo, obj && obj.location, obj && obj.gps, obj && obj.coords, obj && obj.coordinates];
+      for (const candidate of candidates) {
+        if (!candidate || typeof candidate !== 'object') continue;
+        const lat = Number(candidate.lat ?? candidate.latitude);
+        const lng = Number(candidate.lng ?? candidate.lon ?? candidate.longitude ?? candidate.long);
+        if (Number.isFinite(lat) && Number.isFinite(lng)) return `${lat},${lng}`;
+      }
+      return '';
+    }
+    function _buildMapsAddressText(obj) {
+      if (!obj || typeof obj !== 'object') return '';
+      const lineBase = _normalizeAddressPiece(obj.address || obj.street || obj.line1 || obj.road || obj.display_name || obj.displayName);
+      const house = _normalizeAddressPiece(obj.number || obj.house_number || obj.houseNumber);
+      const line = lineBase && house && !lineBase.toLowerCase().includes(house.toLowerCase())
+        ? `${lineBase} ${house}`.trim()
+        : lineBase;
+      const localityParts = _uniqueAddressPieces([
+        obj.locality,
+        obj.city,
+        obj.town,
+        obj.village,
+        obj.municipality,
+        obj.neighbourhood,
+        obj.suburb,
+        obj.district,
+        obj.city_district,
+        obj.commune,
+        obj.province,
+        obj.state,
+        obj.country,
+      ]);
+      const parts = [];
+      if (line) parts.push(line);
+      localityParts.forEach(part => parts.push(part));
+      if (parts.length) return _uniqueAddressPieces(parts).join(', ');
+      return '';
+    }
     function getOrderAddressOneLine(o) {
       let a = '';
       try {
         const raw = o && o.address_json;
-        let obj = null;
-        if (raw && typeof raw === 'object') obj = raw;
-        else {
-          const s = String(raw || '').trim();
-          if (s && s.startsWith('{')) {
-            try { obj = JSON.parse(s); }
-            catch (_) {
-              try { obj = JSON.parse(s.replace(/'/g, '"')); } catch (__) { obj = null; }
-            }
-          }
-        }
-
-        const textAddress = String((typeof getAddressText === 'function') ? getAddressText(obj || raw) : String(raw || '')).replace(/\n+/g, ' ').trim();
-        if (textAddress) {
-          return textAddress;
-        }
-
-        if (obj && typeof obj === 'object') {
-          const g = obj.geo || obj.location || obj.gps || null;
-          if (g && typeof g === 'object') {
-            const lat = Number(g.lat ?? g.latitude);
-            const lng = Number(g.lng ?? g.lon ?? g.longitude);
-            if (Number.isFinite(lat) && Number.isFinite(lng)) {
-              return `${lat},${lng}`;
-            }
-          }
-        }
-
+        const obj = _parseOrderAddressObject(raw);
+        const geoDestination = _extractGeoDestination(obj);
+        if (geoDestination) return geoDestination;
+        const richTextAddress = _buildMapsAddressText(obj);
+        if (richTextAddress) return richTextAddress;
+        const textAddress = _normalizeAddressPiece((typeof getAddressText === 'function') ? getAddressText(obj || raw) : String(raw || ''));
+        if (textAddress) return textAddress;
         a = String(raw || '');
       } catch (_) {
         a = String((o && o.address_json) || '');
       }
-      return String(a || '').replace(/\n+/g, ' ').trim();
+      return _normalizeAddressPiece(a || '');
     }
     function buildGoogleRouteUrl(stops) {
       const arr = Array.isArray(stops) ? stops.map(s => String(s || '').trim()).filter(Boolean) : [];
@@ -7333,15 +7375,23 @@
     function _isIOS() {
       try { return /iPad|iPhone|iPod/i.test(String(navigator.userAgent || '')); } catch (_) { return false; }
     }
+    function _shouldOpenMapsOutsideAdmin() {
+      try {
+        return String(currentUserRole || '').trim().toLowerCase() === 'repartidor';
+      } catch (_) {
+        return false;
+      }
+    }
     function _shouldUseSameWindowMapsNavigation() {
       try {
+        if (_shouldOpenMapsOutsideAdmin()) return false;
         return _isAndroid() || _isIOS();
       } catch (_) {
         return false;
       }
     }
     function _shouldPreopenMapsWindow() {
-      return false;
+      return _shouldOpenMapsOutsideAdmin();
     }
     function openGoogleMapsDestination(destination, preOpenedWindow) {
       const dest = String(destination || '').trim();
@@ -7361,6 +7411,11 @@
         if (w) {
           try { w.location.href = webUrl; return; } catch (_) { try { w.close(); } catch (_) {} }
         }
+        if (_shouldOpenMapsOutsideAdmin()) {
+          const opened = window.open(webUrl, '_blank', 'noopener');
+          if (!opened) return;
+          return;
+        }
         if (_shouldUseSameWindowMapsNavigation()) {
           try { window.location.href = webUrl; return; } catch (_) {}
         }
@@ -7372,6 +7427,12 @@
       if (w) {
         openWebFallback();
         return true;
+      }
+
+      if (_shouldOpenMapsOutsideAdmin()) {
+        if (!webUrl) return false;
+        const opened = window.open(webUrl, '_blank', 'noopener');
+        return !!opened;
       }
 
       if (appUrl) {
