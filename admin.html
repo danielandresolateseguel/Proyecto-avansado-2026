@@ -7391,7 +7391,7 @@
       }
     }
     function _shouldPreopenMapsWindow() {
-      return _shouldOpenMapsOutsideAdmin();
+      return false;
     }
     function openGoogleMapsDestination(destination, preOpenedWindow) {
       const dest = String(destination || '').trim();
@@ -7544,6 +7544,17 @@
       if (ds === 'delivered') return 'Entregado';
       if (ds === 'failed') return 'Falló';
       return dsRaw ? String(dsRaw) : 'Pendiente';
+    }
+    function _focusMineDeliveryFilter() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return;
+      try {
+        const filterSel = document.getElementById('delivery-filter');
+        if (filterSel) filterSel.value = 'mine';
+      } catch (_) {}
+      deliveryFilter = 'mine';
+      deliveryStatusFilter = '';
+      lastDeliverySignature = '';
     }
     async function getMyRouteOrdersPreferRun() {
       const role = String(currentUserRole || '').trim().toLowerCase();
@@ -10144,6 +10155,7 @@
               extras = { delivery_notes: reason };
             }
             const res = await setDeliveryStatus(oid, st, extras);
+            if (st === 'delivered') _focusMineDeliveryFilter();
             await loadOrdersSafe();
             if (autoNextEnabled && !(res && res.run_closed)) {
               try { await openNextDeliveryStopInGoogleMaps(autoNextWindow, true); } catch (_) {}
@@ -10190,6 +10202,7 @@
             }
             btn.textContent = 'Entregando...';
             const res = await setDeliveryStatus(oid, 'delivered');
+            _focusMineDeliveryFilter();
             lastDeliverySignature = '';
             await loadOrdersSafe();
             if (autoNextEnabled && !(res && res.run_closed)) {
