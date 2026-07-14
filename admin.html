@@ -8390,9 +8390,10 @@
               list.innerHTML = `<div class="small">${msg}</div>`;
             }
           }
-          if (!cashCollapsed && !isCashEditing) await renderCashBox();
-          if (!cashHistoryCollapsed) await renderCashHistory();
-          await renderSalesAnalytics();
+          const cashPanelEl = document.getElementById('cash-panel');
+          const cashPanelVisible = !!(cashPanelEl && cashPanelEl.style.display !== 'none');
+          if (cashPanelVisible && !cashCollapsed && !isCashEditing) await renderCashBox();
+          if (cashPanelVisible && !cashHistoryCollapsed) await renderCashHistory();
           return;
         }
         const data = await fetchOrders();
@@ -9595,6 +9596,11 @@
     let lastDeliverySignature = '';
     let deliveryCompactMode = false;
     const selectedDeliveryIds = new Set();
+    function _isTransientDeliveryFetchError(err) {
+      const name = String(err && err.name || '').trim();
+      const msg = String(err && err.message || err || '').trim().toLowerCase();
+      return name === 'AbortError' || msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('load failed');
+    }
 
     async function fetchDeliveryOrders() {
       const slug = tenantInput.value.trim() || defaultSlug();
@@ -9610,9 +9616,21 @@
       try {
         resp = await wFetch(url.toString());
       } catch (e) {
-        const name = String(e && e.name || '');
-        if (name === 'AbortError') throw new Error('Tiempo de espera agotado al cargar repartos. Reintenta con Recargar.');
-        throw e;
+        if (_isTransientDeliveryFetchError(e)) {
+          try {
+            await new Promise(resolve => setTimeout(resolve, 350));
+            resp = await wFetch(url.toString());
+          } catch (retryErr) {
+            const retryName = String(retryErr && retryErr.name || '');
+            if (retryName === 'AbortError') throw new Error('Tiempo de espera agotado al cargar repartos. Reintenta con Recargar.');
+            if (_isTransientDeliveryFetchError(retryErr)) throw new Error('Conexión intermitente al cargar repartos. Reintenta con Recargar.');
+            throw retryErr;
+          }
+        } else {
+          const name = String(e && e.name || '');
+          if (name === 'AbortError') throw new Error('Tiempo de espera agotado al cargar repartos. Reintenta con Recargar.');
+          throw e;
+        }
       }
       if (!resp.ok) {
         let msg = 'No se pudo cargar repartos';
@@ -9702,7 +9720,8 @@
       return (Array.isArray(orders) ? orders : [])
         .filter(o => {
           const assigned = String(o && o.delivery_assigned_to || '').trim();
-          return !assigned;
+          const status = _normUser(o && o.status || '');
+          return !assigned && status === 'listo';
         })
         .map(o => Number(o && o.id || 0))
         .filter(Boolean);
@@ -9941,8 +9960,9 @@
           ? `<span class="delivery-money-pill paid">Pagado</span>`
           : `<span class="delivery-money-pill pending">Cobro pendiente</span>`;
 
-        const assignBtn = (!assigned && role === 'repartidor') ? `<button class="delivery-take-route" data-id="${safeDeliveryId}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
-        const canBulkSelect = role === 'repartidor' && !assigned;
+        const canTakeRoute = !assigned && role === 'repartidor' && kStatus === 'listo';
+        const assignBtn = canTakeRoute ? `<button class="delivery-take-route" data-id="${safeDeliveryId}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
+        const canBulkSelect = canTakeRoute;
         const bulkCheck = canBulkSelect
           ? `<label class="delivery-select-row"><input type="checkbox" class="delivery-select" data-id="${safeDeliveryId}" ${selectedDeliveryIds.has(Number(safeDeliveryId)) ? 'checked' : ''} /><span class="small" style="color:#475569; font-weight:700;">Seleccionar</span></label>`
           : '';

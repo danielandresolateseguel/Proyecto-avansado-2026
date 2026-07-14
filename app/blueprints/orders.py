@@ -1840,12 +1840,15 @@ def assign_delivery_order(order_id):
         return jsonify({'error': 'orden no encontrada'}), 404
     tenant_slug, order_type, st, current_assigned = row
     tenant_slug = str(tenant_slug or '')
+    st_norm = str(st or '').strip().lower()
     if session_tenant and tenant_slug and session_tenant != tenant_slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
     if str(order_type or '').strip().lower() != 'direccion':
         return jsonify({'error': 'orden no es de delivery'}), 400
-    if str(st or '').strip().lower() == 'cancelado':
+    if st_norm == 'cancelado':
         return jsonify({'error': 'orden cancelada'}), 400
+    if st_norm not in ('listo', 'en_camino'):
+        return jsonify({'error': 'la orden debe estar lista antes de asignarse a reparto'}), 400
 
     now = datetime.utcnow().isoformat()
     cur.execute(
