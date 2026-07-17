@@ -13630,6 +13630,13 @@
           });
           if (sel) sel.addEventListener('change', updateMixedCalcs);
           if (inp) inp.addEventListener('input', updateMixedCalcs);
+          if (inp) inp.addEventListener('blur', () => {
+            try {
+              const v = Math.max(0, Math.round(Number(inp.value) || 0));
+              inp.value = String(v);
+            } catch (_) {}
+            updateMixedCalcs();
+          });
           return row;
         }
         function ensureDefaultMixedRows(){
@@ -13646,7 +13653,7 @@
             const sel = r.querySelector('.mixed-method');
             const inp = r.querySelector('.mixed-amount');
             const method = normalizeMethod(sel && sel.value);
-            const amt = Number(inp && inp.value) || 0;
+            const amt = Math.max(0, Math.round(Number(inp && inp.value) || 0));
             if (amt > 0) out.push({ method, amount: amt });
           });
           return out;
@@ -13734,7 +13741,7 @@
               mixedRemaining.style.color = rem === 0 ? 'green' : '#d9534f';
            }
            if(confirmMixedBtn) {
-             const isValid = Math.abs(rem) <= 1; // Tolerance
+             const isValid = rem === 0;
              confirmMixedBtn.disabled = !isValid;
              confirmMixedBtn.style.opacity = isValid ? '1' : '0.5';
            }

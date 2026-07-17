@@ -593,7 +593,7 @@ def cash_session_orders():
         return jsonify({'orders': out, 'session_id': sid, 'from': opened_at, 'to': end_at})
     else:
         base = (
-            "SELECT o.id, o.created_at, o.total, o.payment_method, "
+            "SELECT o.id, o.created_at, o.total, COALESCE(o.tip_amount, 0), o.payment_method, "
             "(SELECT payload_json FROM order_events WHERE order_id = o.id AND event_type = 'payment' ORDER BY id DESC LIMIT 1) AS pay_payload "
             "FROM orders o "
             "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
@@ -610,8 +610,9 @@ def cash_session_orders():
                 continue
             created_at = r[1]
             total = int(r[2] or 0)
-            pm = (r[3] or '')
-            pay_payload = r[4] or ''
+            tip = int(r[3] or 0)
+            pm = (r[4] or '')
+            pay_payload = r[5] or ''
             details = None
             try:
                 meta = json.loads(pay_payload) if pay_payload else {}
@@ -621,10 +622,14 @@ def cash_session_orders():
                 method = meta.get('method')
                 if method:
                     pm = method
+                try:
+                    tip = int(meta.get('tip') or tip or 0)
+                except Exception:
+                    tip = int(tip or 0)
                 dets = meta.get('details')
                 if isinstance(dets, list):
                     details = dets
-            out.append({'id': oid, 'created_at': created_at, 'total': total, 'payment_method': pm, 'payment_details': details})
+            out.append({'id': oid, 'created_at': created_at, 'total': total + tip, 'payment_method': pm, 'payment_details': details})
         return jsonify({'orders': out, 'session_id': sid, 'from': opened_at, 'to': end_at})
 
 @bp.route('/sessions', methods=['GET'])
