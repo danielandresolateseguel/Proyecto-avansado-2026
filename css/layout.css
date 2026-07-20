@@ -356,31 +356,66 @@ body.sector-gastronomia .announcement-banner button:hover {
 
 @media (max-width: 768px) {
   body.sector-gastronomia header .menu-hero-summary {
-    margin-top: 10px;
+    margin-top: 8px;
+    gap: 12px;
+    padding: 12px 14px;
     border-radius: 16px;
   }
+  body.sector-gastronomia .menu-hero-eyebrow {
+    margin-bottom: 6px;
+    padding: 4px 9px;
+    font-size: 0.72rem;
+  }
   body.sector-gastronomia .menu-hero-title {
-    font-size: 1.18rem;
+    font-size: 1.06rem;
+    line-height: 1.15;
+  }
+  body.sector-gastronomia .menu-hero-links {
+    gap: 8px;
+  }
+  body.sector-gastronomia .menu-hero-link {
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 0.92rem;
   }
   body.sector-gastronomia .menu-hero-description,
   body.sector-gastronomia .section-support {
-    font-size: 0.92rem;
+    font-size: 0.88rem;
+    line-height: 1.42;
   }
   body.sector-gastronomia .section-heading-group {
-    margin-bottom: 14px;
+    margin-bottom: 12px;
+  }
+  body.sector-gastronomia #menu-gastronomia .section-heading-group {
+    margin-bottom: 16px;
   }
   body.sector-gastronomia .footer-shell {
-    padding: 18px 14px 0;
+    padding: 14px 12px 0;
   }
   body.sector-gastronomia .footer-top-summary {
     flex-direction: column;
     align-items: flex-start;
-    padding: 16px;
+    gap: 12px;
+    padding: 14px;
     border-radius: 18px;
+  }
+  body.sector-gastronomia .footer-summary-title {
+    font-size: 1.08rem;
+    line-height: 1.18;
+  }
+  body.sector-gastronomia .footer-summary-text {
+    font-size: 0.9rem;
+    line-height: 1.42;
   }
   body.sector-gastronomia .footer-summary-links {
     width: 100%;
     justify-content: flex-start;
+    gap: 8px;
+  }
+  body.sector-gastronomia .footer-summary-link {
+    min-height: 38px;
+    padding: 0 14px;
+    font-size: 0.92rem;
   }
   body.sector-gastronomia .footer-content {
     grid-template-columns: 1fr;

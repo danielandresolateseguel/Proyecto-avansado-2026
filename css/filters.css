@@ -115,9 +115,16 @@ body:not([data-tenant-theme-loaded="true"]) #category-filter.category-filter .fi
   #category-filter.category-filter .filter-btn {
     flex: 0 0 auto;
     scroll-snap-align: start;
-    padding: 7px 16px;
-    font-size: 0.95rem;
+    padding: 7px 14px;
+    font-size: 0.92rem;
     line-height: 1.15;
+    border-color: var(--gastro-accent-22);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  }
+  body.sector-gastronomia .category-filter .filter-btn.active,
+  #category-filter.category-filter .filter-btn.active {
+    border-color: var(--gastro-accent);
+    box-shadow: 0 8px 18px var(--gastro-accent-28);
   }
 }
 
@@ -151,8 +158,8 @@ body:not([data-tenant-theme-loaded="true"]) #category-filter.category-filter .fi
   }
   body.sector-gastronomia .category-filter .filter-btn,
   #category-filter.category-filter .filter-btn {
-    padding: 6px 14px;
-    font-size: 0.9rem;
+    padding: 6px 13px;
+    font-size: 0.88rem;
     line-height: 1.1;
   }
 }

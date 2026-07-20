@@ -34,11 +34,12 @@ body.sector-gastronomia:not([data-tenant-theme-loaded="true"]) .order-status-flo
 /* Adjust position on mobile if needed */
 @media (max-width: 768px) {
   .order-status-float {
-    bottom: 20px;
-    left: 15px;
-    width: 48px;
-    height: 48px;
-    font-size: 1.25rem;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    left: 10px;
+    width: 44px;
+    height: 44px;
+    font-size: 1.08rem;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.24);
   }
 }
 

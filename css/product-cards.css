@@ -129,34 +129,35 @@ body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .
 
 @media (max-width: 640px) {
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card {
-    min-height: 96px;
+    min-height: 104px;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .product-image {
-    width: 74px;
-    min-width: 74px;
-    flex-basis: 74px;
+    width: 82px;
+    min-width: 82px;
+    flex-basis: 82px;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .product-info {
-    padding: 7px 9px;
+    padding: 8px 10px;
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "badge badge"
       "title price"
       "desc action";
-    column-gap: 8px;
-    row-gap: 1px;
+    column-gap: 10px;
+    row-gap: 4px;
     align-items: start;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .product-info h3 {
     grid-area: title;
-    font-size: 0.9rem;
-    margin-bottom: 1px;
+    font-size: 0.94rem;
+    line-height: 1.18;
+    margin-bottom: 0;
     align-self: center;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .product-price {
     grid-area: price;
-    font-size: 0.88rem;
+    font-size: 0.92rem;
     margin-bottom: 0;
     text-align: right;
     white-space: nowrap;
@@ -170,27 +171,28 @@ body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .product-description {
     grid-area: desc;
-    -webkit-line-clamp: 1;
-    font-size: 0.8rem;
+    -webkit-line-clamp: 2;
+    font-size: 0.79rem;
     margin-bottom: 0;
-    line-height: 1.25;
+    line-height: 1.28;
+    color: #5b6470;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .price-container {
     grid-area: price;
     margin: 0;
-    align-self: start;
+    align-self: center;
     justify-self: end;
   }
   body.sector-gastronomia.main-menu-view-compact #menu-gastronomia .product-card .add-to-cart-btn {
     grid-area: action;
-    width: 34px;
-    min-width: 34px;
-    height: 34px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
     align-self: end;
     justify-self: end;
     padding: 0;
     margin-top: 0;
-    border-radius: 9px;
+    border-radius: 10px;
     font-size: 0;
     line-height: 1;
     display: inline-flex;
