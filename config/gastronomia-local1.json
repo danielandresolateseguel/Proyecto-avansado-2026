@@ -11,7 +11,7 @@
     "branding": {
       "name": "Gastronomía Local 1",
       "contact": {
-        "whatsapp": "+54 9 261 589-3591",
+        "whatsapp": "",
         "instagram": "resto_local1",
         "location": "https://maps.app.goo.gl/yiL4yPrTGaNHx6xc7",
         "location_label": "Lomo Mania",
@@ -45,7 +45,7 @@
   },
   "checkout": {
     "mode": "mesa",
-    "whatsappNumber": "+5492615893591",
+    "whatsappNumber": "",
     "messageTemplate": "Hola! Quiero hacer un pedido desde la web. {{orderTypeLabel}} {{orderTypeValue}}. Productos: {{items}}. Total: {{total}} ARS."
   },
   "filters": {

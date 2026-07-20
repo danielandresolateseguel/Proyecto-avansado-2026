@@ -6,6 +6,7 @@ import os
 import re
 
 bp = Blueprint('public', __name__)
+PUBLIC_MENU_BASE_FILES = ('public-menu-base.html', 'gastronomia-local1.html')
 
 def _no_store(resp):
     try:
@@ -45,7 +46,14 @@ def _render_public_shell(slug):
     title = _resolve_tenant_display_name(slug)
     safe_title = html.escape(title, quote=False)
     public_url = request.url_root.rstrip('/') + '/' + slug + '.html'
-    shell_path = os.path.join(current_app.static_folder, 'gastronomia-local1.html')
+    shell_path = None
+    for candidate in PUBLIC_MENU_BASE_FILES:
+        path = os.path.join(current_app.static_folder, candidate)
+        if os.path.exists(path):
+            shell_path = path
+            break
+    if not shell_path:
+        raise FileNotFoundError('No se encontró la plantilla base pública')
     with open(shell_path, 'r', encoding='utf-8') as f:
         content = f.read()
     content = re.sub(r'<title>.*?</title>', f'<title>{safe_title}</title>', content, count=1, flags=re.IGNORECASE | re.DOTALL)

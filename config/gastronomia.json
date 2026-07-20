@@ -5,7 +5,7 @@
     "branding": {
       "name": "Restaurante Independiente",
       "contact": {
-        "whatsapp": "+54 9 261 589-3590",
+        "whatsapp": "",
         "instagram": "resto_independiente",
         "location": "Mendoza, Argentina"
       }
@@ -13,7 +13,7 @@
   },
   "checkout": {
     "mode": "mesa",
-    "whatsappNumber": "+5492615893590",
+    "whatsappNumber": "",
     "messageTemplate": "Hola! Quiero hacer un pedido desde la web. {{orderTypeLabel}} {{orderTypeValue}}. Productos: {{items}}. Total: {{total}} ARS."
   },
   "filters": {

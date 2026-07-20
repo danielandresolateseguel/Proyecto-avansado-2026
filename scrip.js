@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getWhatsappNumber() {
         return (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.whatsappNumber)
             || window.WHATSAPP_NUMBER
-            || '+5492615893590';
+            || '';
     }
     function getCheckoutMode() {
         const modeFromConfig = (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.mode) || undefined;
@@ -4250,12 +4250,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // --- BOTÓN WHATSAPP ---
-        const whatsappNumber = '5492615893590'; 
+        const whatsappNumber = String(getWhatsappNumber() || '').replace(/\D+/g, '');
         const whatsappMsg = encodeURIComponent(`Hola, tengo una consulta sobre mi pedido #${order.id}.`);
-        const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMsg}`;
+        const whatsappUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappMsg}` : '#';
 
         const whatsappPaymentMsg = encodeURIComponent(`Hola, quiero realizar el pago del pedido #${order.id}.`);
-        const whatsappPaymentUrl = `https://wa.me/${whatsappNumber}?text=${whatsappPaymentMsg}`;
+        const whatsappPaymentUrl = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${whatsappPaymentMsg}` : '#';
 
         statusBody.innerHTML = `
             <div class="order-status-card">

@@ -4,36 +4,101 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
-    <link rel="canonical" href="http://localhost:8000/gastronomia-local3.html">
-    <title>Gastronomía Local 3</title>
+    <link rel="canonical" href="http://localhost:8000/public-menu-base.html">
+    <title>Carta Online</title>
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#ff6a00">
-    <meta property="og:title" content="Gastronomía Local 3">
+    <meta property="og:title" content="Carta Online">
     <meta property="og:description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="http://localhost:8000/gastronomia-local3.html">
-    <meta property="og:image" content="Imagenes/PIZZAMARGARITA.webp">
+    <meta property="og:url" content="http://localhost:8000/public-menu-base.html">
+    <meta property="og:image" content="Imagenes/lomo a lo pobre.webp">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Gastronomía Local 3">
+    <meta name="twitter:title" content="Carta Online">
     <meta name="twitter:description" content="Menú gastronómico independiente con carrito y checkout por WhatsApp (Mesa/Dirección).">
-    <meta name="twitter:image" content="Imagenes/PIZZAMARGARITA.webp">
+    <meta name="twitter:image" content="Imagenes/lomo a lo pobre.webp">
     <link rel="icon" href="Imagenes/Epalogo.png" type="image/png">
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          var slug = (params.get('slug') || params.get('tenant') || params.get('tenant_slug') || '').trim();
+          if (!slug) {
+            var file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').trim();
+            if (file && file !== 'index') slug = file;
+          }
+          if (!slug || slug === 'public-menu-base') slug = 'gastronomia-local1';
+
+          var cachedThemeColor = localStorage.getItem('cached_theme_color_' + slug);
+          if (!cachedThemeColor) return;
+
+          function normalizeHex(hex) {
+            var value = String(hex || '').trim().replace(/^#/, '');
+            if (value.length === 3) value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
+            return /^([0-9a-fA-F]{6})$/.test(value) ? ('#' + value) : '';
+          }
+
+          function getContrastColor(hex) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return '#121212';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return yiq >= 140 ? '#121212' : '#ffffff';
+          }
+
+          function shiftHex(hex, amount) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return hex;
+            var num = parseInt(clean, 16);
+            var clamp = function (value) { return Math.max(0, Math.min(255, value)); };
+            var r = clamp((num >> 16) + amount);
+            var g = clamp(((num >> 8) & 255) + amount);
+            var b = clamp((num & 255) + amount);
+            return '#' + [r, g, b].map(function (part) { return part.toString(16).padStart(2, '0'); }).join('');
+          }
+
+          function hexToRgba(hex, alpha) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return 'rgba(255, 106, 0, ' + alpha + ')';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+          }
+
+          var root = document.documentElement;
+          var accent = normalizeHex(cachedThemeColor);
+          var contrast = getContrastColor(accent);
+          root.style.setProperty('--gastro-accent', accent);
+          root.style.setProperty('--gastro-accent-dark', shiftHex(accent, -40));
+          root.style.setProperty('--gastro-accent-contrast', contrast);
+          [0.08, 0.18, 0.22, 0.25, 0.28, 0.35, 0.42, 0.55, 0.85].forEach(function (alpha) {
+            root.style.setProperty('--gastro-accent-' + String(alpha).replace('.', ''), hexToRgba(accent, alpha));
+          });
+
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', accent);
+        } catch (_) {}
+      })();
+    </script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="image-optimizations.css">
     <link rel="stylesheet" href="gastronomia.css?v=23">
-    <link rel="stylesheet" href="gastronomia-independiente.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="preload" as="image" href="Imagenes/lomo a lo pobre.webp">
-    <link rel="preload" as="image" href="Imagenes/hambuerguesagour.jpg">
-    <script type="application/ld+json">
+    
+  <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "Restaurant",
-      "name": "Gastronomía Local 3",
-      "url": "http://localhost:8000/gastronomia-local3.html",
+      "name": "Gastronomía Local 1",
+      "url": "http://localhost:8000/public-menu-base.html",
       "image": [
-        "Imagenes/PIZZAMARGARITA.webp",
-        "Imagenes/enpanadas.webp",
+        "Imagenes/lomo a lo pobre.webp",
+        "Imagenes/hambuerguesagour.jpg",
         "Imagenes/Epalogo.png"
       ],
       "address": {
@@ -42,11 +107,12 @@
         "addressCountry": "AR"
       },
       "sameAs": [
-        "https://www.instagram.com/resto_local3"
+        "https://www.instagram.com/resto_local1"
       ],
-      "servesCuisine": ["pizzas", "sandwich", "ensaladas", "bebidas"]
+      "servesCuisine": ["pizzas", "sandwich", "postres", "bebidas"]
     }
-    </script>
+  </script>
+
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -104,7 +170,11 @@
     }
     </script>
 </head>
-<body class="sector-gastronomia" data-category="gastronomia" data-vendor="gastronomia" data-slug="gastronomia-local3" data-page="gastronomia" data-theme="local3">
+<body class="sector-gastronomia" data-category="gastronomia" data-vendor="gastronomia" data-slug="gastronomia-local1" data-tenant="gastronomia-local1" data-page="gastronomia" data-theme="local1">
+    <div id="announcement-banner" class="announcement-banner" style="display:none;">
+        <span id="announcement-text"></span>
+        <button id="announcement-close" aria-label="Cerrar anuncio">&times;</button>
+    </div>
     <header>
         <div class="header-top">
             <h1 class="site-logo">
@@ -125,10 +195,10 @@
                     <i class="fas fa-map-marker-alt"></i>
                     <span>Mendoza, Argentina</span>
                 </a>
-            </div>
-            <div class="cart-icon">
-                <i class="fas fa-shopping-cart"></i>
-                <span id="cart-count">0</span>
+                <div class="contact-item-compact clock-status" data-tooltip="Horarios de apertura">
+                    <i class="fas fa-clock"></i>
+                    <span>Horarios</span>
+                </div>
             </div>
         </div>
 
@@ -163,6 +233,17 @@
                 </div>
             </div>
         </div>
+        <div class="menu-hero-summary" aria-label="Resumen de la carta online">
+            <div class="menu-hero-copy">
+                <span class="menu-hero-eyebrow">Carta online</span>
+                <h2 class="menu-hero-title">Pedí directo desde la carta, sin perder contexto</h2>
+                <p class="menu-hero-description">Usá el buscador para ir rápido, explorá los destacados y filtrá el menú principal por categoría para encontrar cada plato sin fricción.</p>
+            </div>
+            <div class="menu-hero-links" aria-label="Accesos rápidos">
+                <a href="#featured-dishes" class="menu-hero-link">Ver destacados</a>
+                <a href="#menu-gastronomia" class="menu-hero-link">Ir al menú</a>
+            </div>
+        </div>
     </header>
 
     <main>
@@ -175,15 +256,15 @@
         <section class="carousel-section">
             <div class="carousel-container">
                 <div class="carousel-slides"></div>
-                <button class="carousel-btn carousel-prev" onclick="previousSlide()" aria-label="Imagen anterior">
+                <button class="carousel-btn carousel-prev" aria-label="Imagen anterior">
                     <i class="fas fa-chevron-left"></i>
                 </button>
-                <button class="carousel-btn carousel-next" onclick="nextSlide()" aria-label="Siguiente imagen">
+                <button class="carousel-btn carousel-next" aria-label="Siguiente imagen">
                     <i class="fas fa-chevron-right"></i>
                 </button>
                 <div class="carousel-indicators"></div>
                 <div class="carousel-controls">
-                    <div class="carousel-play-button" onclick="toggleAutoPlay()" aria-label="Pausar/Reanudar reproducción automática del carrusel" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleAutoPlay();event.preventDefault();}" title="Click para pausar/reanudar reproducción automática">
+                    <div class="carousel-play-button" aria-label="Pausar/Reanudar reproducción automática del carrusel" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleAutoPlay();event.preventDefault();}" title="Click para pausar/reanudar reproducción automática">
                         <svg class="progress-ring" viewBox="0 0 36 36">
                             <circle class="progress-ring-circle" cx="18" cy="18" r="16" />
                             <circle class="progress-ring-progress" cx="18" cy="18" r="16" />
@@ -198,7 +279,11 @@
         </section>
 
         <section class="special-discounts" id="featured-dishes">
-            <h2 id="featured-dishes-title" class="section-title">Platos destacados</h2>
+            <div class="section-heading-group">
+                <span class="section-kicker">Selección rápida</span>
+                <h2 id="featured-dishes-title" class="section-title">Platos destacados</h2>
+                <p class="section-support">Una primera selección para decidir más rápido qué pedir apenas entrás a la carta.</p>
+            </div>
             <div class="discounts-wrapper">
                 <div class="discounts-container">
                     <div class="discounts-grid">
@@ -255,7 +340,10 @@
         </section>
         <div id="shopping-cart" class="shopping-cart" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cart-title" aria-describedby="cart-desc" tabindex="-1">
             <div class="cart-header">
-                <h2 id="cart-title">Carrito de Compras</h2>
+                <div class="cart-header-copy">
+                    <h2 id="cart-title">Carrito de Compras</h2>
+                    <p class="cart-header-subtitle">Revisá productos, completá la modalidad y cerrá el pedido sin salir de la carta.</p>
+                </div>
                 <p id="cart-desc" class="sr-only">Carrito de compras. Lista de productos y acciones disponibles.</p>
                 <button id="close-cart" class="close-cart" aria-label="Cerrar carrito" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
@@ -269,6 +357,7 @@
                     <label><input type="radio" name="orderType" value="direccion"> Dirección</label>
                     <label><input type="radio" name="orderType" value="espera"> Espera</label>
                 </div>
+                <div id="cart-order-mode-summary" class="cart-order-mode-summary" aria-live="polite">Mesa en salón · completá el número antes de enviarlo.</div>
                 <div class="order-extra order-mesa" id="order-mesa-fields">
                     <label for="mesa-number">Número de mesa</label>
                     <input type="text" id="mesa-number" placeholder="Ej: 12" inputmode="numeric">
@@ -280,6 +369,8 @@
                     <input type="text" id="delivery-locality" placeholder="Ej: Las Heras, Mendoza">
                     <label for="contact-phone" style="margin-top:8px;">Teléfono de contacto</label>
                     <input type="tel" id="contact-phone" placeholder="Ej: +54 9 261 123-4567" inputmode="tel">
+                    <label for="delivery-name" style="margin-top:8px;">Nombre (quien recibe)</label>
+                    <input type="text" id="delivery-name" placeholder="Nombre completo">
                 </div>
                 <div class="order-extra order-espera" id="order-espera-fields" style="display: none;">
                     <label for="espera-name">Nombre</label>
@@ -297,6 +388,7 @@
                     <span>Total:</span>
                     <span id="cart-total-price" aria-live="polite" aria-atomic="true">$0.00 ARS</span>
                 </div>
+                <p id="cart-checkout-hint" class="cart-checkout-hint">Confirmá la modalidad y revisá el total antes de enviar el pedido.</p>
                 <div id="cart-announcements" class="sr-only" aria-live="polite" aria-atomic="true"></div>
                 <button id="checkout-btn" class="checkout-btn">🍽️ Realizar pedido</button>
                 <button id="clear-cart-btn" class="clear-cart-btn">Vaciar carrito</button>
@@ -307,51 +399,77 @@
                 <i class="fas fa-shopping-cart"></i>
                 <span class="cart-count-float" id="floating-cart-count">0</span>
             </div>
-            <span class="cart-text">Ver carrito</span>
+            <div class="floating-cart-copy">
+                <span class="cart-text">Ver carrito</span>
+                <span class="cart-total-float" id="floating-cart-total"></span>
+            </div>
         </div>
-        <section class="category-filter" id="category-filter">
-            <button class="filter-btn active" data-filter="todos">Todos</button>
-            <button class="filter-btn" data-filter="sandwich">Sándwich</button>
-            <button class="filter-btn" data-filter="pizzas">Pizzas</button>
-            <button class="filter-btn" data-filter="comen-dos">Comen dos</button>
-            <button class="filter-btn" data-filter="al-plato">Al plato</button>
-            <button class="filter-btn" data-filter="bebidas-cocteles">Bebidas</button>
-            <button class="filter-btn" data-filter="postres">Postres</button>
-        </section>
         <section class="products searchable-section" id="menu-gastronomia">
-            <h2 class="section-title">Menú principal</h2>
+            <div class="category-filter" id="category-filter">
+                <button class="filter-btn active" data-filter="todos">Todos</button>
+                <button class="filter-btn" data-filter="sandwich">Sándwich</button>
+                <button class="filter-btn" data-filter="pizzas">Pizzas</button>
+                <button class="filter-btn" data-filter="comen-dos">Comen dos</button>
+                <button class="filter-btn" data-filter="al-plato">Al plato</button>
+                <button class="filter-btn" data-filter="bebidas">Bebidas</button>
+                <button class="filter-btn" data-filter="cocteles">Cocteles</button>
+                <button class="filter-btn" data-filter="postres">Postres</button>
+            </div>
+            <div class="section-heading-group menu-main-heading">
+                <span class="section-kicker">Carta completa</span>
+                <h2 class="section-title">Menú principal</h2>
+                <p class="section-support">Filtrá por categoría o combiná con el buscador para bajar el tiempo de decisión y llegar antes al pedido.</p>
+            </div>
             <div class="products-grid">
             </div>
         </section>
         <section class="products interest-products searchable-section">
             <h2 id="interest-products-index-title" class="section-title">Recomendados por interés</h2>
-            <div class="products-grid">
-            </div>
+            <div class="products-grid"></div>
         </section>
     </main>
     <footer>
-        <div class="footer-content">
-            <div class="footer-section">
-            <div class="footer-section">
-                <h4>🍽️ Restaurante Independiente</h4>
-                <p>Sabores auténticos y platos de calidad.</p>
+        <div class="footer-shell">
+            <div class="footer-top-summary">
+                <div class="footer-brand-badge" aria-hidden="true">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <div class="footer-top-copy">
+                    <span class="footer-kicker">Cierre de carta</span>
+                    <h3 class="footer-summary-title">Todo listo para seguir pidiendo sin perder el ritmo</h3>
+                    <p class="footer-summary-text">Revisá destacados, volvé al menú principal o retomá la búsqueda antes de cerrar tu pedido.</p>
+                </div>
+                <div class="footer-summary-links" aria-label="Accesos rápidos del footer">
+                    <a href="#featured-dishes" class="footer-summary-link">Destacados</a>
+                    <a href="#menu-gastronomia" class="footer-summary-link">Menú</a>
+                    <a href="#search-form" class="footer-summary-link">Buscar</a>
+                </div>
             </div>
-            <div class="footer-section">
-                <h4>📞 Contacto</h4>
-                <p><i class="fab fa-whatsapp"></i> WhatsApp</p>
-                <p><i class="fas fa-envelope"></i> info@resto-demo.com</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>🍽️ Restaurante Independiente</h4>
+                    <p>Sabores auténticos y platos de calidad.</p>
+                    <p class="footer-secondary-copy">Carta online lista para consultas, pedidos y navegación rápida desde cualquier dispositivo.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>📞 Contacto</h4>
+                    <p><i class="fab fa-whatsapp"></i> WhatsApp</p>
+                    <p><i class="fas fa-envelope"></i> info@resto-demo.com</p>
+                    <p class="footer-secondary-copy">Canales directos para resolver dudas o confirmar detalles del pedido.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>📍 Ubicación</h4>
+                    <p>Mendoza, Argentina</p>
+                    <p>Lun-Dom: 12:00-23:00</p>
+                    <p class="footer-secondary-copy">Información visible para que el cliente entienda rápido dónde y cuándo opera el local.</p>
+                </div>
             </div>
-            <div class="footer-section">
-                <h4>📍 Ubicación</h4>
-                <p>Mendoza, Argentina</p>
-                <p>Lun-Dom: 12:00-23:00</p>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Restaurante Independiente. Todos los derechos reservados.</p>
             </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; 2025 Restaurante Independiente. Todos los derechos reservados.</p>
         </div>
     </footer>
-    <div id="product-modal" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-product-title" aria-describedby="modal-product-description" tabindex="-1">
+    <div id="product-modal" class="product-modal" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-product-title" aria-describedby="modal-product-description" tabindex="-1">
       <div class="modal-content">
         <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
         <div class="modal-body">
@@ -359,12 +477,26 @@
             <img id="modal-product-image" alt="Imagen del producto">
           </div>
           <div class="modal-info">
+            <span class="modal-product-eyebrow">Detalle del producto</span>
             <h3 id="modal-product-title"></h3>
             <p id="modal-product-description"></p>
             <ul id="modal-product-features"></ul>
-            <div class="modal-price" id="modal-product-price"></div>
-            <textarea id="modal-product-notes" placeholder="Notas (ej: sin sal)" style="width: 100%; margin-bottom: 10px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical; min-height: 60px;"></textarea>
+            <div class="modal-purchase-card">
+                <div class="modal-price-meta">
+                    <span class="modal-price-label">Precio actual</span>
+                    <div class="modal-price" id="modal-product-price"></div>
+                </div>
+                <p id="modal-product-helper" class="modal-product-helper">Podés sumar una aclaración antes de enviarlo al carrito.</p>
+            </div>
+            <div class="modal-notes-panel">
+                <label for="modal-product-notes" class="modal-notes-label">Aclaraciones para cocina</label>
+                <p class="modal-notes-help">Ejemplo: sin sal, salsa aparte o retirar sin un ingrediente.</p>
+                <div class="notes-container">
+                    <textarea id="modal-product-notes" class="styled-textarea" placeholder="Escribí una preferencia opcional para este producto"></textarea>
+                </div>
+            </div>
             <button id="modal-add-to-cart-btn" class="add-to-cart-btn">Añadir al carrito</button>
+            <p class="modal-cta-help">Si el producto tiene presentaciones o adicionales, los elegís en el siguiente paso.</p>
           </div>
         </div>
     </div>
@@ -397,6 +529,13 @@
     <!-- Resolución dinámica del BUSINESS_SLUG según el nombre del archivo solicitado -->
     <script>
       (function(){
+        function titleFromSlug(slug) {
+          return String(slug || '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, function(ch){ return ch.toUpperCase(); })
+            .trim();
+        }
+
         // 1. Intentar obtener slug de la URL
         var urlParams = new URLSearchParams(window.location.search);
         var qsSlug = urlParams.get('slug') || urlParams.get('tenant') || urlParams.get('tenant_slug');
@@ -409,11 +548,19 @@
         if (!window.BUSINESS_SLUG) {
           try {
             var name = (window.location.pathname.split('/').pop() || '').replace(/\.html$/,'').trim();
-            window.BUSINESS_SLUG = name || 'gastronomia-local3';
+            window.BUSINESS_SLUG = (name && name !== 'public-menu-base') ? name : 'gastronomia-local1';
           } catch(e) {
-            window.BUSINESS_SLUG = 'gastronomia-local3';
+            window.BUSINESS_SLUG = 'gastronomia-local1';
           }
         }
+
+        try {
+            var cachedTitle = localStorage.getItem('cached_tenant_name_' + window.BUSINESS_SLUG);
+            document.title = (cachedTitle && cachedTitle.trim()) || titleFromSlug(window.BUSINESS_SLUG) || 'Carta Online';
+        } catch(e) {
+            document.title = titleFromSlug(window.BUSINESS_SLUG) || 'Carta Online';
+        }
+        
         // Intentar cargar color de fondo de cabecera desde cache para evitar flash
         try {
             var cachedBg = localStorage.getItem('cached_header_bg_' + window.BUSINESS_SLUG);
@@ -423,8 +570,8 @@
         } catch(e) {}
       })();
     </script>
-    <script src="theme-loader.js" defer></script>
+    <script src="theme-loader.js?v=3" defer></script>
     <script type="module" src="js/app.js?v=27"></script>
-    <script src="media-loader.js" defer></script>
+    <script src="media-loader.js?v=3" defer></script>
     </body>
     </html>

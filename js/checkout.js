@@ -203,6 +203,8 @@ export async function handleCheckout() {
     const esperaName = (document.getElementById('espera-name')?.value || '').trim();
     const esperaPhone = (document.getElementById('espera-phone')?.value || '').trim();
     const orderNotes = (document.getElementById('order-notes')?.value || '').trim();
+    const whatsappEnabled = getWhatsappEnabled();
+    const whatsappNumber = getWhatsappNumber();
     const latRaw = (document.getElementById('delivery-geo-lat')?.value || '').trim();
     const lngRaw = (document.getElementById('delivery-geo-lng')?.value || '').trim();
     const accRaw = (document.getElementById('delivery-geo-acc')?.value || '').trim();
@@ -251,6 +253,10 @@ export async function handleCheckout() {
     if (orderType === 'espera') {
         if (!esperaName) { alert('Por favor, ingresa tu nombre.'); return; }
         if (!esperaPhone) { alert('Por favor, ingresa tu teléfono.'); return; }
+    }
+    if (whatsappEnabled && !whatsappNumber) {
+        alert('Este local no tiene configurado un número de WhatsApp para recibir pedidos. Verificalo desde el panel antes de publicar la carta.');
+        return;
     }
 
     // Construcción del mensaje (Nueva Lógica con Template)
@@ -357,110 +363,103 @@ ${notas}`;
     // cleanup multiple newlines
     mensaje = mensaje.replace(/\n{3,}/g, '\n\n').trim();
 
-    // 4. Send to WhatsApp (Use api.whatsapp.com directly to avoid redirect encoding issues)
-    if (getWhatsappEnabled()) {
-        const urlWhatsApp = `https://api.whatsapp.com/send?phone=${getWhatsappNumber().replace('+', '')}&text=${encodeURIComponent(mensaje)}`;
-        window.open(urlWhatsApp, '_blank');
+    try {
+        await sendOrderToBackend(orderType, { mesaNumber, address, locality, contactPhone, esperaName, esperaPhone, deliveryName, orderNotes, geo }, totalNumber);
+
+        // 4. Send to WhatsApp (Use api.whatsapp.com directly to avoid redirect encoding issues)
+        if (whatsappEnabled) {
+            const sanitizedNumber = whatsappNumber.replace(/\D+/g, '');
+            const urlWhatsApp = `https://api.whatsapp.com/send?phone=${sanitizedNumber}&text=${encodeURIComponent(mensaje)}`;
+            const popup = window.open(urlWhatsApp, '_blank');
+            if (!popup) {
+                window.location.href = urlWhatsApp;
+            }
+        }
+
+        clearCart();
+        closeCartUI();
+    } catch (error) {
+        console.error('Error procesando checkout:', error);
+        alert('No se pudo registrar el pedido en el sistema. Tu carrito se conservó para que puedas reintentar. Detalle: ' + error.message);
     }
-
-    // Enviar al backend (background)
-    sendOrderToBackend(orderType, { mesaNumber, address, locality, contactPhone, esperaName, esperaPhone, deliveryName, orderNotes, geo }, totalNumber);
-
-    // Vaciar carrito tras iniciar proceso de pedido
-    clearCart();
-    
-    // Cerrar UI del carrito
-    closeCartUI();
 }
 
-function sendOrderToBackend(orderType, data, total) {
-    try {
-        const getTenantSlug = () => {
-            let slug = getBusinessSlug();
-            const alias = {
-                'gatrolocal1': 'gastronomia-local1',
-                'gastro-local1': 'gastronomia-local1',
-                'gastro1': 'gastronomia-local1',
-                'planeta-pancho': 'planeta-pancho'
-            };
-            slug = alias[slug] || slug || 'gastronomia-local1';
-            return slug;
+async function sendOrderToBackend(orderType, data, total) {
+    const getTenantSlug = () => {
+        let slug = getBusinessSlug();
+        const alias = {
+            'gatrolocal1': 'gastronomia-local1',
+            'gastro-local1': 'gastronomia-local1',
+            'gastro1': 'gastronomia-local1',
+            'planeta-pancho': 'planeta-pancho'
         };
+        slug = alias[slug] || slug || 'gastronomia-local1';
+        return slug;
+    };
 
-        const payload = {
-            tenant_slug: getTenantSlug(),
-            order_type: orderType,
-            table_number: orderType === 'mesa' ? data.mesaNumber : '',
-            address: orderType === 'direccion' ? { address: data.address, locality: data.locality, geo: data.geo || null } : {},
-            customer_phone: orderType === 'direccion' ? data.contactPhone : (orderType === 'espera' ? data.esperaPhone : ''),
-            customer_name: orderType === 'espera' ? data.esperaName : (orderType === 'direccion' ? data.deliveryName : ''),
-            items: cart.map(it => ({
-                id: it.id,
-                product_id: it.product_id || it.id,
-                pack_id: it.pack_id || '',
-                pack_label: it.pack_label || '',
-                pack_size: it.pack_size || 1,
-                name: it.name,
-                price: (() => {
-                    const explicitBase = (typeof it.base_price === 'number' && isFinite(it.base_price) && it.base_price > 0) ? it.base_price : 0;
-                    if (explicitBase > 0) return explicitBase;
-                    const modifiers = it && it.modifiers && typeof it.modifiers === 'object' ? it.modifiers : {};
-                    const rawAddons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
-                    const addonsTotal = rawAddons.reduce((sum, addon) => {
-                        const tp = parseInt(addon && addon.total_price, 10);
-                        if (Number.isFinite(tp) && tp > 0) return sum + tp;
-                        const up = parseInt(addon && addon.unit_price, 10);
-                        const qty = parseInt(addon && addon.qty, 10) || 1;
-                        if (Number.isFinite(up) && up > 0) return sum + (up * Math.max(1, qty));
-                        return sum;
-                    }, 0);
-                    const display = parseInt(it && it.price, 10) || 0;
-                    const derived = display - addonsTotal;
-                    return derived > 0 ? derived : display;
-                })(),
-                quantity: it.quantity,
-                modifiers: it.modifiers || {},
-                notes: it.notes || ''
-            })),
-            order_notes: data.orderNotes
-        };
+    const payload = {
+        tenant_slug: getTenantSlug(),
+        order_type: orderType,
+        table_number: orderType === 'mesa' ? data.mesaNumber : '',
+        address: orderType === 'direccion' ? { address: data.address, locality: data.locality, geo: data.geo || null } : {},
+        customer_phone: orderType === 'direccion' ? data.contactPhone : (orderType === 'espera' ? data.esperaPhone : ''),
+        customer_name: orderType === 'espera' ? data.esperaName : (orderType === 'direccion' ? data.deliveryName : ''),
+        items: cart.map(it => ({
+            id: it.id,
+            product_id: it.product_id || it.id,
+            pack_id: it.pack_id || '',
+            pack_label: it.pack_label || '',
+            pack_size: it.pack_size || 1,
+            name: it.name,
+            price: (() => {
+                const explicitBase = (typeof it.base_price === 'number' && isFinite(it.base_price) && it.base_price > 0) ? it.base_price : 0;
+                if (explicitBase > 0) return explicitBase;
+                const modifiers = it && it.modifiers && typeof it.modifiers === 'object' ? it.modifiers : {};
+                const rawAddons = Array.isArray(modifiers.addons) ? modifiers.addons : [];
+                const addonsTotal = rawAddons.reduce((sum, addon) => {
+                    const tp = parseInt(addon && addon.total_price, 10);
+                    if (Number.isFinite(tp) && tp > 0) return sum + tp;
+                    const up = parseInt(addon && addon.unit_price, 10);
+                    const qty = parseInt(addon && addon.qty, 10) || 1;
+                    if (Number.isFinite(up) && up > 0) return sum + (up * Math.max(1, qty));
+                    return sum;
+                }, 0);
+                const display = parseInt(it && it.price, 10) || 0;
+                const derived = display - addonsTotal;
+                return derived > 0 ? derived : display;
+            })(),
+            quantity: it.quantity,
+            modifiers: it.modifiers || {},
+            notes: it.notes || ''
+        })),
+        order_notes: data.orderNotes
+    };
 
-        const origin = window.location.origin || '';
-        const API_BASE = /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
-        
-        console.log('Enviando orden al backend:', payload, 'a', API_BASE);
+    const origin = window.location.origin || '';
+    const API_BASE = /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
 
-        fetch(new URL('/api/orders', API_BASE).toString(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(async response => {
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                console.error('Error del servidor:', errData);
-                throw new Error(errData.error || `HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.order_id) {
-                console.log('Orden creada con ID:', data.order_id);
-                const slug = getTenantSlug();
-                localStorage.setItem('last_order_id_' + slug, data.order_id);
-                localStorage.setItem('last_viewed_status_' + slug, 'pending');
-            } else {
-                console.warn('Backend no devolvió order_id', data);
-            }
-        })
-        .catch(error => {
-            console.error('Error enviando orden:', error);
-            alert('Atención: El pedido se generó para WhatsApp, pero hubo un error al registrarlo en el sistema: ' + error.message);
-        });
-    } catch (e) {
-        console.error('Excepción en sendOrderToBackend:', e);
-        alert('Error interno al procesar el pedido: ' + e.message);
+    console.log('Enviando orden al backend:', payload, 'a', API_BASE);
+
+    const response = await fetch(new URL('/api/orders', API_BASE).toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        console.error('Error del servidor:', errData);
+        throw new Error(errData.error || `HTTP error! status: ${response.status}`);
     }
+    const responseData = await response.json();
+    if (responseData.order_id) {
+        console.log('Orden creada con ID:', responseData.order_id);
+        const slug = getTenantSlug();
+        localStorage.setItem('last_order_id_' + slug, responseData.order_id);
+        localStorage.setItem('last_viewed_status_' + slug, responseData.status || 'pending');
+    } else {
+        console.warn('Backend no devolvió order_id', responseData);
+    }
+    return responseData;
 }
 
 function initDeliveryGeoUI() {

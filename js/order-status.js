@@ -1,5 +1,5 @@
 
-import { getBusinessSlug } from './config.js?v=8';
+import { getBusinessSlug, getWhatsappNumber } from './config.js?v=8';
 
 // Estado interno del módulo
 let pollingInterval = null;
@@ -531,7 +531,11 @@ function renderStatus(order, config = {}) {
     }
 
     // --- BOTÓN WHATSAPP ---
-    const whatsappNumber = '5492615893590'; 
+    const whatsappNumber = String(
+        (config && config.checkout && config.checkout.whatsappNumber)
+        || getWhatsappNumber()
+        || ''
+    ).replace(/\D+/g, '');
     const tenantOrderNumberRaw = (order && (order.tenant_order_number ?? order.tenant_order_number)) ?? null;
     let displayOrderNumber = String(order.id || '');
     const formatTenantOrderSeries = (index) => {
@@ -561,11 +565,12 @@ function renderStatus(order, config = {}) {
         displayOrderNumber = (isFinite(n) && n > 0) ? formatTenantOrderNumber(n) : String(tenantOrderNumberRaw);
     }
 
+    const hasWhatsappContact = !!whatsappNumber;
     const whatsappMsg = encodeURIComponent(`Hola, tengo una consulta sobre mi pedido #${displayOrderNumber}.`);
-    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${whatsappMsg}`;
+    const whatsappUrl = hasWhatsappContact ? `https://wa.me/${whatsappNumber}?text=${whatsappMsg}` : '#';
 
     const whatsappPaymentMsg = encodeURIComponent(`Hola, quiero realizar el pago del pedido #${displayOrderNumber}.`);
-    const whatsappPaymentUrl = `https://wa.me/${whatsappNumber}?text=${whatsappPaymentMsg}`;
+    const whatsappPaymentUrl = hasWhatsappContact ? `https://wa.me/${whatsappNumber}?text=${whatsappPaymentMsg}` : '#';
 
     // Lógica de totales (Propina)
     let totalSectionHtml = '';
@@ -630,7 +635,7 @@ function renderStatus(order, config = {}) {
                 </div>
             ` : ''}
 
-            <!-- Botón de Ayuda WhatsApp -->
+            ${hasWhatsappContact ? `
             <a href="${isPaymentMode ? whatsappPaymentUrl : whatsappUrl}" 
                target="_blank" 
                class="btn-whatsapp-status"
@@ -639,6 +644,11 @@ function renderStatus(order, config = {}) {
                aria-label="${isPaymentMode ? 'Realizar pago por WhatsApp' : 'Consultar pedido por WhatsApp'}">
                 ${isPaymentMode ? '<i class="fas fa-credit-card"></i> Realizar pago' : '<i class="fab fa-whatsapp"></i> Consultar por este pedido'}
             </a>
+            ` : `
+            <div class="status-alert" style="margin-top: 1rem; padding: 0.85rem 1rem; background: #fef3c7; color: #92400e; border-radius: 0.75rem; text-align: center; font-weight: 600;">
+                WhatsApp no disponible para este local.
+            </div>
+            `}
         </div>
     `;
 }

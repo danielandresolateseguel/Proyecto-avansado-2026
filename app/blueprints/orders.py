@@ -1311,34 +1311,21 @@ def create_order():
             
             # Check/Create Product
             cur.execute(
-                "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                "SELECT stock, price, COALESCE(variants_json, ''), active FROM products WHERE tenant_slug = ? AND product_id = ?",
                 (tenant_slug, pid)
             )
             row = cur.fetchone()
             if not row:
-                try:
-                    nm = str(it.get('name') or '').strip() or 'Producto'
-                    pr = requested_price
-                    # Using INSERT OR IGNORE wrapper logic in database.py
-                    cur.execute(
-                        "INSERT OR IGNORE INTO products (tenant_slug, product_id, name, price, stock, active) VALUES (?, ?, ?, ?, ?, 1)",
-                        (tenant_slug, pid, nm, max(0, pr), 1000)
-                    )
-                    conn.commit()
-                    # Re-fetch
-                    cur.execute(
-                        "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
-                        (tenant_slug, pid)
-                    )
-                    row = cur.fetchone()
-                except Exception as e:
-                    print(f"Error auto-creating product {pid}: {e}")
-                    conn.rollback()
-                    return jsonify({'error': 'producto no encontrado y fallo al crear', 'product_id': pid}), 400
+                conn.rollback()
+                return jsonify({'error': 'producto no encontrado', 'product_id': pid}), 400
             
             stock = int((row[0] if row else 0) or 0)
             base_product_price = _safe_int(row[1] if row and len(row) > 1 else 0, 0)
             variants_raw = row[2] if row and len(row) > 2 else ''
+            is_active_product = bool(row[3]) if row and len(row) > 3 else False
+            if not is_active_product:
+                conn.rollback()
+                return jsonify({'error': 'producto inactivo', 'product_id': pid}), 400
             variants = _parse_variants_json(variants_raw)
             modifiers = it.get('modifiers') or {}
             if not isinstance(modifiers, dict):
@@ -1427,6 +1414,10 @@ def create_order():
         return jsonify({'order_id': order_id, 'tenant_order_number': tenant_order_number, 'status': status, 'total': total, 'tenant_slug': tenant_slug}), 201
 
     except Exception as e:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         import traceback
         traceback.print_exc()
         print(f"CRITICAL ERROR in create_order: {e}")

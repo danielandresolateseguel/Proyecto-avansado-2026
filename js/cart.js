@@ -14,7 +14,7 @@ import { announceCart } from './utils.js';
 export let cart = [];
 
 // DOM Elements (se inicializan en initCart)
-let cartCount, floatingCartCount, cartItems, cartTotalPrice, floatingCart;
+let cartCount, floatingCartCount, cartItems, cartTotalPrice, floatingCart, floatingCartTotal, cartOrderModeSummary, cartCheckoutHint;
 
 export function initCartElements() {
     cartCount = document.getElementById('cart-count');
@@ -22,6 +22,55 @@ export function initCartElements() {
     cartItems = document.getElementById('cart-items');
     cartTotalPrice = document.getElementById('cart-total-price');
     floatingCart = document.getElementById('floating-cart');
+    floatingCartTotal = document.getElementById('floating-cart-total');
+    cartOrderModeSummary = document.getElementById('cart-order-mode-summary');
+    cartCheckoutHint = document.getElementById('cart-checkout-hint');
+}
+
+function getSelectedOrderType() {
+    const checkedRadio = document.querySelector('input[name="orderType"]:checked');
+    if (checkedRadio && checkedRadio.value) return checkedRadio.value;
+    const mode = String(getCheckoutMode() || '').trim().toLowerCase();
+    return mode === 'direccion' || mode === 'espera' ? mode : 'mesa';
+}
+
+function updateCheckoutContextUI(totalText, cartHasItems, shippingCost = 0) {
+    const orderType = getSelectedOrderType();
+    if (floatingCartTotal) {
+        floatingCartTotal.textContent = cartHasItems ? totalText : '';
+    }
+    if (cartOrderModeSummary) {
+        if (orderType === 'direccion') {
+            cartOrderModeSummary.textContent = shippingCost > 0
+                ? `Entrega a domicilio · incluye ${formatMoneyWithCode(parseInt(shippingCost, 10) || 0)} de envío.`
+                : 'Entrega a domicilio · completá dirección, nombre y teléfono.';
+        } else if (orderType === 'espera') {
+            cartOrderModeSummary.textContent = 'Retiro o espera en local · completá nombre y teléfono para avisarte cuando esté listo.';
+        } else {
+            cartOrderModeSummary.textContent = 'Mesa en salón · completá el número antes de enviar el pedido.';
+        }
+    }
+    if (cartCheckoutHint) {
+        if (!cartHasItems) {
+            cartCheckoutHint.textContent = 'Sumá productos al carrito para habilitar el cierre del pedido.';
+        } else if (orderType === 'direccion') {
+            cartCheckoutHint.textContent = 'Verificá dirección, localidad, nombre y teléfono antes de enviar el pedido.';
+        } else if (orderType === 'espera') {
+            cartCheckoutHint.textContent = 'Dejá nombre y teléfono para poder avisarte cuando el pedido esté listo.';
+        } else {
+            cartCheckoutHint.textContent = 'Confirmá la mesa y revisá el total antes de enviar el pedido.';
+        }
+    }
+    const checkoutBtn = document.getElementById('checkout-btn');
+    const clearCartBtn = document.getElementById('clear-cart-btn');
+    if (checkoutBtn) {
+        checkoutBtn.disabled = !cartHasItems;
+        checkoutBtn.setAttribute('aria-disabled', cartHasItems ? 'false' : 'true');
+    }
+    if (clearCartBtn) {
+        clearCartBtn.disabled = !cartHasItems;
+        clearCartBtn.setAttribute('aria-disabled', cartHasItems ? 'false' : 'true');
+    }
 }
 
 // Cargar carrito
@@ -185,8 +234,10 @@ export function updateCartDisplay() {
     
     if (cart.length === 0) {
         cartItems.innerHTML = '<p class="empty-cart">Tu carrito está vacío</p>';
-        cartTotalPrice.textContent = formatMoneyWithCode(0);
-        announceCart('Carrito vacío. Total ' + formatMoneyWithCode(0));
+        const emptyTotal = formatMoneyWithCode(0);
+        cartTotalPrice.textContent = emptyTotal;
+        updateCheckoutContextUI(emptyTotal, false, 0);
+        announceCart('Carrito vacío. Total ' + emptyTotal);
         return;
     }
     
@@ -391,11 +442,10 @@ export function updateCartDisplay() {
     if (shippingCost > 0) {
         const shippingText = formatMoneyWithCode(parseInt(shippingCost));
         const shippingRow = document.createElement('div');
-        shippingRow.className = 'cart-item shipping-row';
-        shippingRow.style.cssText = 'border-top: 1px dashed #eee; margin-top: 10px; padding-top: 10px; background: none;';
+        shippingRow.className = 'cart-item shipping-row cart-summary-row';
         shippingRow.innerHTML = `
-            <div class="cart-item-info" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <div class="cart-item-name" style="font-weight:bold; color: #666;">Costo de envío</div>
+            <div class="cart-item-info cart-summary-content">
+                <div class="cart-item-name cart-summary-label">Costo de envío</div>
                 <div class="cart-item-price">${shippingText}</div>
             </div>
         `;
@@ -411,11 +461,10 @@ export function updateCartDisplay() {
         
         // Mostrar subtotal (Total sin propina)
         const subtotalRow = document.createElement('div');
-        subtotalRow.className = 'cart-item subtotal-row';
-        subtotalRow.style.cssText = 'border-top: 1px solid #eee; margin-top: 10px; padding-top: 10px; background: none;';
+        subtotalRow.className = 'cart-item subtotal-row cart-summary-row';
         subtotalRow.innerHTML = `
-             <div class="cart-item-info" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <div class="cart-item-name" style="font-weight:bold;">Total (sin propina)</div>
+             <div class="cart-item-info cart-summary-content">
+                <div class="cart-item-name cart-summary-label">Total (sin propina)</div>
                 <div class="cart-item-price">${subtotalText}</div>
             </div>
         `;
@@ -423,11 +472,10 @@ export function updateCartDisplay() {
 
         // Mostrar Propina
         const tipRow = document.createElement('div');
-        tipRow.className = 'cart-item tip-row';
-        tipRow.style.cssText = 'border-top: 1px dashed #eee; margin-top: 5px; padding-top: 5px; background: none; color: #2e7d32;';
+        tipRow.className = 'cart-item tip-row cart-summary-row';
         tipRow.innerHTML = `
-            <div class="cart-item-info" style="width:100%; display:flex; justify-content:space-between; align-items:center;">
-                <div class="cart-item-name" style="font-weight:bold;">Propina sugerida (10%)</div>
+            <div class="cart-item-info cart-summary-content">
+                <div class="cart-item-name cart-summary-label">Propina sugerida (10%)</div>
                 <div class="cart-item-price">${tipText}</div>
             </div>
         `;
@@ -438,5 +486,6 @@ export function updateCartDisplay() {
     
     const totalText = formatMoneyWithCode(parseInt(totalPrice));
     cartTotalPrice.textContent = totalText;
+    updateCheckoutContextUI(totalText, true, shippingCost);
     announceCart('Total actualizado: ' + totalText);
 }

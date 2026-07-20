@@ -2,6 +2,7 @@ import re
 import os
 
 FILES = [
+    'public-menu-base.html',
     'gastronomia-local1.html',
     'gastronomia-local2.html',
     'gastronomia-local3.html',

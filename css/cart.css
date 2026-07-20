@@ -8,12 +8,14 @@ body.sector-gastronomia .shopping-cart {
   width: 100%;
   max-width: 400px;
   height: 100vh;
-  background-color: #ffffff;
-  box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(249,250,252,0.98) 100%);
+  box-shadow: -14px 0 38px rgba(0,0,0,0.18);
   z-index: 2000; /* Prioridad sobre otros elementos */
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  border-left: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 body.sector-gastronomia .shopping-cart.active {
@@ -26,7 +28,23 @@ body.sector-gastronomia .shopping-cart .cart-header {
   padding: 15px 20px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+body.sector-gastronomia .shopping-cart .cart-header-copy {
+  min-width: 0;
+}
+
+body.sector-gastronomia .shopping-cart .cart-header h2 {
+  margin: 0;
+}
+
+body.sector-gastronomia .shopping-cart .cart-header-subtitle {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.87rem;
+  line-height: 1.4;
 }
 
 body.sector-gastronomia .shopping-cart .checkout-btn {
@@ -35,6 +53,8 @@ body.sector-gastronomia .shopping-cart .checkout-btn {
   border: none;
   font-weight: bold;
   box-shadow: 0 10px 22px var(--gastro-accent-22);
+  min-height: 48px;
+  border-radius: 12px;
 }
 
 body.sector-gastronomia .shopping-cart .checkout-btn:hover {
@@ -45,13 +65,37 @@ body.sector-gastronomia .shopping-cart .clear-cart-btn {
   background: #2b2b2b;
   color: #f5f5f5;
   border: 1px solid var(--gastro-accent-28);
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+body.sector-gastronomia .shopping-cart .checkout-btn:disabled,
+body.sector-gastronomia .shopping-cart .checkout-btn[aria-disabled="true"],
+body.sector-gastronomia .shopping-cart .clear-cart-btn:disabled,
+body.sector-gastronomia .shopping-cart .clear-cart-btn[aria-disabled="true"] {
+  opacity: 0.58;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
 }
 
 /* Opciones del carrito (Inputs y Switch) */
 body.sector-gastronomia .cart-order-options {
-  padding: 15px 20px;
-  background: #ffffff;
+  padding: 16px 20px 14px;
+  background: rgba(255,255,255,0.96);
   border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #eef2f7;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.75);
+}
+
+body.sector-gastronomia .cart-order-options .order-type-label {
+  display: block;
+  margin-bottom: 10px;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 body.sector-gastronomia .order-type-switch {
@@ -95,6 +139,10 @@ body.sector-gastronomia .order-type-switch input {
 body.sector-gastronomia .order-extra {
   margin-top: 10px;
   animation: fadeIn 0.3s ease;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
 body.sector-gastronomia .order-extra label {
@@ -124,6 +172,17 @@ body.sector-gastronomia .order-extra textarea:focus {
   border-color: var(--gastro-accent);
   box-shadow: 0 0 0 3px var(--gastro-accent-18);
   background: white;
+}
+
+body.sector-gastronomia .cart-order-mode-summary {
+  margin: -2px 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--gastro-accent-18);
+  background: linear-gradient(180deg, #ffffff 0%, var(--gastro-accent-08) 100%);
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 /* Carrito flotante */
@@ -158,6 +217,177 @@ body.sector-gastronomia .floating-cart .cart-count-float {
 }
 body.sector-gastronomia .floating-cart .cart-text {
   color: #ffffff;
+}
+
+body.sector-gastronomia .floating-cart .floating-cart-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+body.sector-gastronomia .floating-cart .cart-total-float {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+body.sector-gastronomia .cart-items {
+  padding: 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+body.sector-gastronomia .cart-item {
+  margin-bottom: 14px;
+  padding: 14px;
+  padding-right: 48px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.08);
+}
+
+body.sector-gastronomia .cart-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+body.sector-gastronomia .cart-item-name {
+  color: #0f172a;
+}
+
+body.sector-gastronomia .cart-item-pack {
+  color: #64748b;
+}
+
+body.sector-gastronomia .cart-item-price {
+  color: var(--gastro-accent-dark, #c45500);
+}
+
+body.sector-gastronomia .cart-item-quantity-container {
+  margin-top: 2px;
+}
+
+body.sector-gastronomia .quantity-btn {
+  box-shadow: 0 6px 14px rgba(15,23,42,0.12);
+}
+
+body.sector-gastronomia .quantity-btn.increase {
+  background: linear-gradient(180deg, var(--gastro-accent) 0%, var(--gastro-accent-dark) 100%);
+  color: var(--gastro-accent-contrast, #121212);
+}
+
+body.sector-gastronomia .quantity-btn.decrease {
+  background: linear-gradient(180deg, #374151 0%, #111827 100%);
+}
+
+body.sector-gastronomia .remove-item-btn {
+  box-shadow: 0 8px 18px rgba(239, 68, 68, 0.22);
+}
+
+body.sector-gastronomia .cart-item-notes-container {
+  margin-top: 4px;
+}
+
+body.sector-gastronomia .cart-item-notes-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+body.sector-gastronomia .cart-item-notes-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 11px;
+  border: 1px solid #dbe3ec;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #0f172a;
+  font: inherit;
+}
+
+body.sector-gastronomia .cart-item-notes-input:focus {
+  outline: none;
+  border-color: var(--gastro-accent);
+  box-shadow: 0 0 0 3px var(--gastro-accent-18);
+  background: #ffffff;
+}
+
+body.sector-gastronomia .empty-cart {
+  margin: 0;
+  padding: 30px 16px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.72);
+  color: #64748b;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+body.sector-gastronomia .cart-summary-row {
+  padding: 12px 14px;
+  background: rgba(255,255,255,0.72);
+  box-shadow: none;
+}
+
+body.sector-gastronomia .cart-summary-content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.sector-gastronomia .cart-summary-label {
+  margin: 0;
+  font-weight: 800;
+  color: #475569;
+}
+
+body.sector-gastronomia .shipping-row {
+  border-top: 1px dashed #dbe3ec;
+}
+
+body.sector-gastronomia .subtotal-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+body.sector-gastronomia .tip-row {
+  border-top: 1px dashed #cfe7d2;
+  background: linear-gradient(180deg, rgba(240,253,244,0.92) 0%, rgba(255,255,255,0.72) 100%);
+}
+
+body.sector-gastronomia .tip-row .cart-item-price,
+body.sector-gastronomia .tip-row .cart-summary-label {
+  color: #166534;
+}
+
+body.sector-gastronomia .cart-footer {
+  padding: 14px 16px 16px;
+  background: rgba(255,255,255,0.97);
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
+}
+
+body.sector-gastronomia .cart-total {
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 0.98rem;
+}
+
+body.sector-gastronomia .cart-checkout-hint {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+body.sector-gastronomia .cart-footer .clear-cart-btn {
+  margin-bottom: 0;
 }
 
 body.sector-gastronomia .cart-item-image {
@@ -220,5 +450,35 @@ body.sector-gastronomia .cart-item-image.has-error img {
 @keyframes cart-image-shimmer {
   100% {
     transform: translateX(130%);
+  }
+}
+
+@media (max-width: 768px) {
+  body.sector-gastronomia .shopping-cart {
+    max-width: 100%;
+  }
+  body.sector-gastronomia .cart-items {
+    padding: 14px;
+  }
+  body.sector-gastronomia .cart-order-options {
+    padding: 14px;
+  }
+  body.sector-gastronomia .order-type-switch {
+    flex-wrap: wrap;
+  }
+  body.sector-gastronomia .order-type-switch label {
+    min-height: 40px;
+    flex: 1 1 calc(50% - 4px);
+  }
+  body.sector-gastronomia .cart-item {
+    padding: 12px;
+    padding-right: 44px;
+    margin-bottom: 12px;
+  }
+  body.sector-gastronomia .cart-item-summary-content {
+    gap: 8px;
+  }
+  body.sector-gastronomia .cart-footer {
+    padding: 14px;
   }
 }

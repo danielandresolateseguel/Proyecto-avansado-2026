@@ -18,13 +18,20 @@ export const KEY_NAMESPACE = [CATEGORY, (VENDOR_SLUG || VENDOR_ID || 'default'),
 export const CART_STORAGE_KEY = window.CART_STORAGE_KEY || (`${CART_KEY_PREFIX}_${KEY_NAMESPACE}`);
 
 // Helpers de configuración
+function normalizeBusinessSlugAlias(value) {
+    const slug = String(value || '').trim();
+    if (!slug) return '';
+    if (slug === 'public-menu-base') return 'gastronomia-local1';
+    return slug;
+}
+
 export function getBusinessSlug() {
     // 1) Permitir override por querystring para pruebas multi-tenant (?tenant_slug=xxx)
     try {
         const url = new URL(window.location.href);
         const qsSlug = url.searchParams.get('tenant_slug') || url.searchParams.get('slug') || url.searchParams.get('tenant');
         if (qsSlug && qsSlug.trim()) {
-            const slug = qsSlug.trim();
+            const slug = normalizeBusinessSlugAlias(qsSlug);
             // Persistir en sessionStorage para mantener el contexto en recargas
             try { sessionStorage.setItem('current_tenant_slug', slug); } catch(e){}
             return slug;
@@ -36,12 +43,13 @@ export function getBusinessSlug() {
             || VENDOR_SLUG 
             || (document.body && document.body.dataset && (document.body.dataset.slug || document.body.dataset.tenant)) 
             || '';
+    slug = normalizeBusinessSlugAlias(slug);
     
     // 3) Fallback: Recuperar de sessionStorage (útil si se recarga la página sin querystring)
     if (!slug) {
         try {
             const stored = sessionStorage.getItem('current_tenant_slug');
-            if (stored) slug = stored;
+            if (stored) slug = normalizeBusinessSlugAlias(stored);
         } catch(e) {}
     }
 
@@ -49,7 +57,7 @@ export function getBusinessSlug() {
     if (!slug) {
         try {
             const name = (window.location.pathname.split('/').pop() || '').replace(/\.html$/,'').trim();
-            if (name && name !== 'index') slug = name;
+            if (name && name !== 'index') slug = normalizeBusinessSlugAlias(name);
         } catch (e) {}
     }
     
@@ -57,9 +65,10 @@ export function getBusinessSlug() {
 }
 
 export function getWhatsappNumber() {
-    return (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.whatsappNumber)
+    const configured = (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.whatsappNumber)
         || window.WHATSAPP_NUMBER
-        || '+5492615893590';
+        || '';
+    return String(configured || '').trim();
 }
 
 export function getWhatsappEnabled() {

@@ -525,7 +525,8 @@ def _resequence_scope(cur, tenant_slug, target_product_id, scope_key, desired_po
 @bp.route('/products', methods=['GET'])
 def list_products():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
-    include_inactive = request.args.get('include_inactive') == 'true'
+    include_inactive_requested = request.args.get('include_inactive') == 'true'
+    include_inactive = bool(include_inactive_requested and is_authed())
     conn = get_db()
     cur = conn.cursor()
     

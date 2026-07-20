@@ -16,7 +16,7 @@
   },
   "checkout": {
     "mode": "whatsapp",
-    "whatsappNumber": "+5492615893590",
+    "whatsappNumber": "",
     "messageTemplate": "Hola! Me gustaría realizar el siguiente pedido:"
   },
   "filters": {

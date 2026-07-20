@@ -11,7 +11,7 @@
     "branding": {
       "name": "Planeta Pancho",
       "contact": {
-        "whatsapp": "+5492615555555",
+        "whatsapp": "",
         "instagram": "planeta_pancho",
         "location": "https://maps.google.com/?q=Planeta+Pancho",
         "opening_hours": {
@@ -28,7 +28,7 @@
   },
   "checkout": {
     "mode": "mesa",
-    "whatsappNumber": "+5492615555555",
+    "whatsappNumber": "",
     "messageTemplate": "Hola Planeta Pancho! Quiero pedir: {{items}}. Total: {{total}}. {{orderTypeLabel}}: {{orderTypeValue}}"
   },
   "filters": {

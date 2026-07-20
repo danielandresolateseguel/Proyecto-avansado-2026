@@ -1256,12 +1256,18 @@ function fillProductModalFromCard(card, modal) {
     const modalDesc = document.getElementById('modal-product-description');
     const modalPrice = document.getElementById('modal-product-price');
     const modalAddBtn = document.getElementById('modal-add-to-cart-btn');
+    const modalFeatures = document.getElementById('modal-product-features');
+    const modalHelper = document.getElementById('modal-product-helper');
     const img = card.querySelector('img');
     const title = card.querySelector('h3');
     const desc = card.querySelector('.product-description');
     const priceWrap = card.querySelector('.price-container');
     const price = card.querySelector('.product-price');
     const addBtn = card.querySelector('.add-to-cart-btn');
+    const stockBadge = card.querySelector('.stock-badge');
+    const packs = readPacksFromButton(addBtn);
+    const mixBuilder = readMixBuilderFromButton(addBtn);
+    const addonsConfig = readAddonsConfigFromButton(addBtn);
 
     if (modalImg) {
         attachTenantLogoFallback(modalImg);
@@ -1295,6 +1301,41 @@ function fillProductModalFromCard(card, modal) {
         applyStockStateToButton(modalAddBtn, stock);
         modalAddBtn.textContent = (Number.isFinite(stock) && stock <= 0) ? 'Sin stock' : 'Añadir al carrito';
         modalAddBtn.classList.remove('added-to-cart');
+    }
+
+    if (modalFeatures) {
+        const featureItems = [];
+        const pushFeature = (iconClass, text) => {
+            const value = String(text || '').trim();
+            if (!value) return;
+            featureItems.push(`<li><i class="${iconClass}" aria-hidden="true"></i><span>${escapeHtml(value)}</span></li>`);
+        };
+        if (stockBadge && stockBadge.textContent) pushFeature('fas fa-box-open', stockBadge.textContent);
+        if (packs.length) pushFeature('fas fa-layer-group', packs.length === 1 ? 'Tiene una presentacion disponible' : `Tiene ${packs.length} presentaciones disponibles`);
+        if (addonsConfig && Array.isArray(addonsConfig.options) && addonsConfig.options.length) {
+            pushFeature('fas fa-plus-circle', `${addonsConfig.title || 'Adicionales'} disponibles`);
+        }
+        if (mixBuilder) pushFeature('fas fa-pizza-slice', 'Permite combinar sabores');
+        pushFeature('fas fa-comment-dots', 'Acepta aclaraciones para cocina');
+        modalFeatures.innerHTML = featureItems.join('');
+        modalFeatures.style.display = featureItems.length ? 'flex' : 'none';
+    }
+
+    if (modalHelper) {
+        const stock = parseStockValue(card && card.dataset ? card.dataset.stock : '');
+        if (mixBuilder) {
+            modalHelper.textContent = 'Despues de agregarlo vas a elegir la combinacion antes de confirmar el item.';
+        } else if (packs.length && addonsConfig && Array.isArray(addonsConfig.options) && addonsConfig.options.length) {
+            modalHelper.textContent = 'Despues de este paso vas a poder elegir presentacion y adicionales para cerrar el producto.';
+        } else if (packs.length) {
+            modalHelper.textContent = 'Despues de este paso vas a poder elegir la presentacion del producto.';
+        } else if (addonsConfig && Array.isArray(addonsConfig.options) && addonsConfig.options.length) {
+            modalHelper.textContent = 'Despues de este paso vas a poder elegir adicionales antes de enviarlo al carrito.';
+        } else if (Number.isFinite(stock) && stock > 0 && stock <= 5) {
+            modalHelper.textContent = 'Hay pocas unidades disponibles, conviene confirmarlo si ya lo decidiste.';
+        } else {
+            modalHelper.textContent = 'Podés sumar una aclaración antes de enviarlo al carrito.';
+        }
     }
 
     const notesInput = document.getElementById('modal-product-notes');
@@ -1497,7 +1538,6 @@ export async function initDynamicProducts() {
         const base = /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
         const url = new URL('/api/products', base);
         url.searchParams.set('tenant_slug', slug);
-        url.searchParams.set('include_inactive', 'true');
         const resp = await fetch(url.toString(), { credentials: 'include' });
         if (!resp.ok) return;
         const json = await resp.json();
