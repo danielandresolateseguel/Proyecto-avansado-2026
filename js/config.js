@@ -85,6 +85,19 @@ export function getWhatsappTemplate() {
     return null;
 }
 
+export function getOrderStatusWhatsappConfig(configOverride = null) {
+    const cfg = (configOverride && typeof configOverride === 'object') ? configOverride : (window.BusinessConfig || {});
+    const checkout = (cfg && typeof cfg.checkout === 'object' && cfg.checkout) || {};
+    const orderStatusWhatsapp = (cfg && typeof cfg.orderStatusWhatsapp === 'object' && cfg.orderStatusWhatsapp) || {};
+    const enabled = Object.prototype.hasOwnProperty.call(orderStatusWhatsapp, 'enabled')
+        ? !!orderStatusWhatsapp.enabled
+        : true;
+    const number = Object.prototype.hasOwnProperty.call(orderStatusWhatsapp, 'number')
+        ? String(orderStatusWhatsapp.number || '').trim()
+        : String(checkout.whatsappNumber || window.WHATSAPP_NUMBER || '').trim();
+    return { enabled, number };
+}
+
 
 export function getCheckoutMode() {
     const modeFromConfig = (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.mode) || undefined;

@@ -1008,6 +1008,19 @@ def get_tenant_config():
     slug = request.args.get('slug') or 'gastronomia-local1'
     
     cfg = get_cached_tenant_config(slug)
+    checkout_cfg = cfg.get('checkout')
+    if not isinstance(checkout_cfg, dict):
+        checkout_cfg = {}
+    raw_order_status_whatsapp = cfg.get('orderStatusWhatsapp')
+    if not isinstance(raw_order_status_whatsapp, dict):
+        raw_order_status_whatsapp = {}
+    normalized_order_status_whatsapp = {
+        'enabled': bool(raw_order_status_whatsapp['enabled']) if 'enabled' in raw_order_status_whatsapp else True,
+        'number': str(raw_order_status_whatsapp.get('number', '') or '') if 'number' in raw_order_status_whatsapp else str(checkout_cfg.get('whatsappNumber', '') or '')
+    }
+    if cfg.get('orderStatusWhatsapp') != normalized_order_status_whatsapp:
+        cfg = cfg.copy()
+        cfg['orderStatusWhatsapp'] = normalized_order_status_whatsapp
     if 'require_order_approval' not in cfg:
         cfg = cfg.copy()
         cfg['require_order_approval'] = True

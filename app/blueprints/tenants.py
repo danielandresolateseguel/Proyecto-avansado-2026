@@ -470,6 +470,8 @@ def tenant_checkout():
         val_enabled = payload.get('whatsapp_enabled', None)
         val_number = payload.get('whatsapp_number', None)
         val_template = payload.get('whatsapp_template', None)
+        val_order_status_enabled = payload.get('order_status_whatsapp_enabled', None)
+        val_order_status_number = payload.get('order_status_whatsapp_number', None)
 
         conn = get_db()
         cur = conn.cursor()
@@ -486,6 +488,9 @@ def tenant_checkout():
         checkout = current_cfg.get('checkout')
         if not isinstance(checkout, dict):
             checkout = {}
+        order_status_whatsapp = current_cfg.get('orderStatusWhatsapp')
+        if not isinstance(order_status_whatsapp, dict):
+            order_status_whatsapp = {}
 
         if val_enabled is not None:
             checkout['whatsappEnabled'] = bool(val_enabled)
@@ -493,8 +498,14 @@ def tenant_checkout():
             checkout['whatsappNumber'] = str(val_number or '').strip()
         if val_template is not None:
             checkout['whatsappTemplate'] = str(val_template or '')
+        if val_order_status_enabled is not None:
+            order_status_whatsapp['enabled'] = bool(val_order_status_enabled)
+        if val_order_status_number is not None:
+            order_status_whatsapp['number'] = str(val_order_status_number or '').strip()
 
         current_cfg['checkout'] = checkout
+        if order_status_whatsapp:
+            current_cfg['orderStatusWhatsapp'] = order_status_whatsapp
 
         try:
             cur.execute(
@@ -503,7 +514,7 @@ def tenant_checkout():
             )
             conn.commit()
             invalidate_tenant_config(slug)
-            return jsonify({'ok': True, 'checkout': checkout})
+            return jsonify({'ok': True, 'checkout': checkout, 'orderStatusWhatsapp': order_status_whatsapp})
         except Exception as e:
             print(f"Error saving tenant checkout: {e}")
             try:
@@ -516,10 +527,18 @@ def tenant_checkout():
     checkout = cfg.get('checkout')
     if not isinstance(checkout, dict):
         checkout = {}
+    raw_order_status_whatsapp = cfg.get('orderStatusWhatsapp')
+    if not isinstance(raw_order_status_whatsapp, dict):
+        raw_order_status_whatsapp = {}
+    order_status_whatsapp = {
+        'enabled': bool(raw_order_status_whatsapp['enabled']) if 'enabled' in raw_order_status_whatsapp else True,
+        'number': str(raw_order_status_whatsapp.get('number', '') or '') if 'number' in raw_order_status_whatsapp else str(checkout.get('whatsappNumber', '') or '')
+    }
     return jsonify({
         'whatsappEnabled': bool(checkout.get('whatsappEnabled', True)),
         'whatsappNumber': str(checkout.get('whatsappNumber', '') or ''),
-        'whatsappTemplate': str(checkout.get('whatsappTemplate', '') or '')
+        'whatsappTemplate': str(checkout.get('whatsappTemplate', '') or ''),
+        'orderStatusWhatsapp': order_status_whatsapp
     })
 
 @bp.route('/tenants', methods=['GET'])

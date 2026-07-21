@@ -1,5 +1,5 @@
 
-import { getBusinessSlug, getWhatsappNumber } from './config.js?v=8';
+import { getBusinessSlug, getOrderStatusWhatsappConfig } from './config.js?v=8';
 
 // Estado interno del módulo
 let pollingInterval = null;
@@ -531,11 +531,8 @@ function renderStatus(order, config = {}) {
     }
 
     // --- BOTÓN WHATSAPP ---
-    const whatsappNumber = String(
-        (config && config.checkout && config.checkout.whatsappNumber)
-        || getWhatsappNumber()
-        || ''
-    ).replace(/\D+/g, '');
+    const orderStatusWhatsapp = getOrderStatusWhatsappConfig(config);
+    const whatsappNumber = String(orderStatusWhatsapp.number || '').replace(/\D+/g, '');
     const tenantOrderNumberRaw = (order && (order.tenant_order_number ?? order.tenant_order_number)) ?? null;
     let displayOrderNumber = String(order.id || '');
     const formatTenantOrderSeries = (index) => {
@@ -565,7 +562,7 @@ function renderStatus(order, config = {}) {
         displayOrderNumber = (isFinite(n) && n > 0) ? formatTenantOrderNumber(n) : String(tenantOrderNumberRaw);
     }
 
-    const hasWhatsappContact = !!whatsappNumber;
+    const hasWhatsappContact = !!orderStatusWhatsapp.enabled && !!whatsappNumber;
     const whatsappMsg = encodeURIComponent(`Hola, tengo una consulta sobre mi pedido #${displayOrderNumber}.`);
     const whatsappUrl = hasWhatsappContact ? `https://wa.me/${whatsappNumber}?text=${whatsappMsg}` : '#';
 

@@ -2131,6 +2131,21 @@
           <button id="cfg-whatsapp-restore-btn" style="margin-top:4px; background:none; border:none; color:#2196F3; font-size:11px; cursor:pointer; padding:0; text-decoration:underline;">Restaurar predeterminado</button>
         </label>
 
+        <div style="border-top:1px solid #eee; padding-top:16px; margin-bottom:16px;">
+          <div style="font-weight:bold; margin-bottom:8px;">WhatsApp Estado del pedido:</div>
+          <label style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+            <input type="checkbox" id="cfg-order-status-whatsapp-enabled-modal" checked>
+            <span>Habilitar contacto desde el botón flotante y el modal de estado</span>
+          </label>
+          <label style="display:block;">
+            <span style="font-size:12px; display:block; margin-bottom:2px; font-weight:bold;">Número para consultas y pagos:</span>
+            <input type="text" id="cfg-order-status-whatsapp-number-modal" placeholder="+549..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;">
+          </label>
+          <div style="font-size:11px; color:#666; margin-top:6px; line-height:1.4;">
+            Si todavía no defines un número separado, se usa el número configurado en WhatsApp Pedidos para mantener compatibilidad.
+          </div>
+        </div>
+
         <div style="text-align:right;">
           <button id="cfg-whatsapp-save-btn" style="background:#25D366; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:bold;">Guardar</button>
         </div>
@@ -16485,13 +16500,18 @@
                       .then(r => r.json())
                       .then(d => {
                          const checkout = d.checkout || {};
+                         const orderStatusWhatsapp = d.orderStatusWhatsapp || {};
                          const waEnabled = document.getElementById('cfg-whatsapp-enabled-modal');
                          const waNumber = document.getElementById('cfg-whatsapp-number-modal');
                          const waTemplate = document.getElementById('cfg-whatsapp-template-modal');
+                         const waStatusEnabled = document.getElementById('cfg-order-status-whatsapp-enabled-modal');
+                         const waStatusNumber = document.getElementById('cfg-order-status-whatsapp-number-modal');
                          
                          if (waEnabled) waEnabled.checked = (typeof checkout.whatsappEnabled !== 'undefined') ? checkout.whatsappEnabled : true;
                          if (waNumber) waNumber.value = checkout.whatsappNumber || '';
                          if (waTemplate) waTemplate.value = checkout.whatsappTemplate || DEFAULT_WHATSAPP_TEMPLATE;
+                         if (waStatusEnabled) waStatusEnabled.checked = (typeof orderStatusWhatsapp.enabled !== 'undefined') ? orderStatusWhatsapp.enabled : true;
+                         if (waStatusNumber) waStatusNumber.value = orderStatusWhatsapp.number || checkout.whatsappNumber || '';
                       })
                       .catch(e => console.error('Error loading WhatsApp config:', e));
                 };
@@ -16513,10 +16533,14 @@
                      const waEnabledIn = document.getElementById('cfg-whatsapp-enabled-modal');
                      const waNumberIn = document.getElementById('cfg-whatsapp-number-modal');
                      const waTemplateIn = document.getElementById('cfg-whatsapp-template-modal');
+                     const waStatusEnabledIn = document.getElementById('cfg-order-status-whatsapp-enabled-modal');
+                     const waStatusNumberIn = document.getElementById('cfg-order-status-whatsapp-number-modal');
                      
                      const valWaEnabled = waEnabledIn ? waEnabledIn.checked : true;
                      const valWaNumber = waNumberIn ? waNumberIn.value.trim() : '';
                      const valWaTemplate = waTemplateIn ? waTemplateIn.value : '';
+                     const valWaStatusEnabled = waStatusEnabledIn ? waStatusEnabledIn.checked : true;
+                     const valWaStatusNumber = waStatusNumberIn ? waStatusNumberIn.value.trim() : '';
                      
                      try {
                         const waResp = await fetch(new URL('/api/tenant_checkout', API_BASE).toString() + `?tenant_slug=${slug}`, {
@@ -16528,7 +16552,9 @@
                             body: JSON.stringify({ 
                                 whatsapp_enabled: valWaEnabled, 
                                 whatsapp_number: valWaNumber,
-                                whatsapp_template: valWaTemplate
+                                whatsapp_template: valWaTemplate,
+                                order_status_whatsapp_enabled: valWaStatusEnabled,
+                                order_status_whatsapp_number: valWaStatusNumber
                             })
                         });
                         
