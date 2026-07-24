@@ -23,6 +23,59 @@ def _title_from_slug(slug):
     except Exception:
         return ''
 
+def _humanize_label(value):
+    text = re.sub(r'[-_]+', ' ', str(value or '').strip())
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return ''
+    return text[0].upper() + text[1:]
+
+def _normalize_summary_text(value, max_len=160):
+    text = re.sub(r'\s+', ' ', str(value or '').strip())
+    if not text:
+        return ''
+    if len(text) <= max_len:
+        return text
+    clipped = text[:max_len].rsplit(' ', 1)[0].strip(' ,.;:-')
+    return (clipped or text[:max_len].strip()) + '...'
+
+def _collect_share_categories(cfg):
+    labels = []
+    seen = set()
+    main_menu_categories = cfg.get('main_menu_categories')
+    if isinstance(main_menu_categories, list):
+        for item in main_menu_categories:
+            if isinstance(item, dict):
+                label = item.get('label') or item.get('name') or item.get('title') or item.get('id')
+            else:
+                label = item
+            normalized = _humanize_label(label)
+            key = normalized.lower()
+            if normalized and key not in seen and key != 'todos':
+                labels.append(normalized)
+                seen.add(key)
+    filters = cfg.get('filters')
+    if isinstance(filters, dict):
+        raw_categories = filters.get('categories')
+        if isinstance(raw_categories, list):
+            for item in raw_categories:
+                normalized = _humanize_label(item)
+                key = normalized.lower()
+                if normalized and key not in seen and key != 'todos':
+                    labels.append(normalized)
+                    seen.add(key)
+    return labels[:3]
+
+def _join_labels(labels):
+    parts = [str(label or '').strip() for label in labels if str(label or '').strip()]
+    if not parts:
+        return ''
+    if len(parts) == 1:
+        return parts[0]
+    if len(parts) == 2:
+        return f'{parts[0]} y {parts[1]}'
+    return f'{parts[0]}, {parts[1]} y {parts[2]}'
+
 def _resolve_tenant_display_name(slug):
     cfg = get_cached_tenant_config(slug) or {}
     meta_branding = cfg.get('meta', {}).get('branding', {})
@@ -42,9 +95,45 @@ def _resolve_tenant_display_name(slug):
         or 'Carta Online'
     )
 
+def _build_share_title(slug):
+    cfg = get_cached_tenant_config(slug) or {}
+    configured = _normalize_summary_text(cfg.get('share_title') or '', max_len=80)
+    if configured:
+        return configured
+    name = _resolve_tenant_display_name(slug)
+    return f'{name} | Menu y pedidos online'
+
+def _build_share_description(slug):
+    cfg = get_cached_tenant_config(slug) or {}
+    configured = _normalize_summary_text(cfg.get('share_description') or '', max_len=160)
+    if configured:
+        return configured
+    name = _resolve_tenant_display_name(slug)
+    categories = _collect_share_categories(cfg)
+    tagline = (
+        cfg.get('footer_tagline')
+        or cfg.get('announcement_text')
+        or cfg.get('meta', {}).get('branding', {}).get('tagline')
+        or ''
+    )
+    cleaned_tagline = _normalize_summary_text(tagline, max_len=110)
+    if cleaned_tagline:
+        return _normalize_summary_text(f'{name}. {cleaned_tagline}', max_len=160)
+    if categories:
+        return _normalize_summary_text(
+            f'Descubri la carta online de {name}: {_join_labels(categories)}. Mira el menu y pedi directo con el local.',
+            max_len=160
+        )
+    return _normalize_summary_text(
+        f'Descubri la carta online de {name}, con especialidades de la casa, bebidas y pedidos directos desde el local.',
+        max_len=160
+    )
+
 def _render_public_shell(slug):
-    title = _resolve_tenant_display_name(slug)
+    title = _build_share_title(slug)
+    description = _build_share_description(slug)
     safe_title = html.escape(title, quote=False)
+    safe_description = html.escape(description, quote=True)
     public_url = request.url_root.rstrip('/') + '/' + slug + '.html'
     shell_path = None
     for candidate in PUBLIC_MENU_BASE_FILES:
@@ -57,8 +146,11 @@ def _render_public_shell(slug):
     with open(shell_path, 'r', encoding='utf-8') as f:
         content = f.read()
     content = re.sub(r'<title>.*?</title>', f'<title>{safe_title}</title>', content, count=1, flags=re.IGNORECASE | re.DOTALL)
+    content = re.sub(r'(<meta\s+name="description"\s+content=")([^"]*)(")', rf'\g<1>{safe_description}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<meta\s+property="og:title"\s+content=")([^"]*)(")', rf'\g<1>{safe_title}\g<3>', content, count=1, flags=re.IGNORECASE)
+    content = re.sub(r'(<meta\s+property="og:description"\s+content=")([^"]*)(")', rf'\g<1>{safe_description}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<meta\s+name="twitter:title"\s+content=")([^"]*)(")', rf'\g<1>{safe_title}\g<3>', content, count=1, flags=re.IGNORECASE)
+    content = re.sub(r'(<meta\s+name="twitter:description"\s+content=")([^"]*)(")', rf'\g<1>{safe_description}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<link\s+rel="canonical"\s+href=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<meta\s+property="og:url"\s+content=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
     resp = make_response(content)

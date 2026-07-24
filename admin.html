@@ -3501,6 +3501,36 @@
         <textarea id="header-announcement-text" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; height:60px;" placeholder="Ej: ¡Hoy 2x1 en Lomos!"></textarea>
       </div>
       <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:8px; font-weight:bold;">Presentación al compartir</label>
+        <div style="font-size:12px; color:#666; margin-bottom:8px;">Personalizá cómo se ve la carta cuando compartís el link por WhatsApp o redes. Si dejás estos campos vacíos, el sistema arma un texto automáticamente.</div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:12px; display:block; margin-bottom:4px;">Título del enlace</label>
+          <input type="text" id="header-share-title" maxlength="80" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="Ej: Lomo Mania | Carta online">
+        </div>
+        <div>
+          <label style="font-size:12px; display:block; margin-bottom:4px;">Descripción del enlace</label>
+          <textarea id="header-share-description" maxlength="160" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; height:74px;" placeholder="Ej: Lomos, pizzas y platos para compartir. Mirá la carta y pedí directo."></textarea>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
+        <label style="font-size:12px; display:block; margin-bottom:8px; font-weight:bold;">Link y QR de la carta</label>
+        <div style="font-size:12px; color:#666; margin-bottom:8px;">Copiá el enlace público del comercio o descargá el QR para imprimirlo en mesas, vidrieras o packaging.</div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+          <input type="text" id="header-public-link" readonly style="flex:1; min-width:0; padding:8px; border:1px solid #ccc; border-radius:4px; background:#f8fafc; color:#334155;">
+          <button type="button" id="header-copy-link-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Copiar</button>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <button type="button" id="header-open-link-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#0f766e; color:#fff; cursor:pointer; font-weight:700;">Abrir carta</button>
+          <button type="button" id="header-generate-qr-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#7c3aed; color:#fff; cursor:pointer; font-weight:700;">Generar QR</button>
+          <button type="button" id="header-download-qr-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#ea580c; color:#fff; cursor:pointer; font-weight:700;">Descargar QR</button>
+          <button type="button" id="header-print-qr-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#16a34a; color:#fff; cursor:pointer; font-weight:700;">Imprimir QR</button>
+        </div>
+        <div id="header-qr-display" style="display:none; flex-direction:column; align-items:center; gap:8px; padding:12px; border:1px dashed #cbd5e1; border-radius:10px; background:#f8fafc;">
+          <div id="header-qr-code"></div>
+          <div style="font-size:12px; color:#64748b; text-align:center;">Escaneá para abrir la carta online de este comercio.</div>
+        </div>
+      </div>
+      <div style="margin-bottom:16px; border-top:1px solid #eee; padding-top:12px;">
         <div id="header-hours-header" style="font-size:12px; font-weight:bold; margin-bottom:4px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;">
           <span>Horarios de apertura</span>
           <span id="header-hours-toggle-label" style="font-size:11px; color:#2196F3;">Mostrar</span>
@@ -11889,6 +11919,16 @@
     const headerMenuCategoryAdd = document.getElementById('header-menu-category-add');
     const headerAnnouncementActive = document.getElementById('header-announcement-active');
     const headerAnnouncementText = document.getElementById('header-announcement-text');
+    const headerShareTitle = document.getElementById('header-share-title');
+    const headerShareDescription = document.getElementById('header-share-description');
+    const headerPublicLinkInput = document.getElementById('header-public-link');
+    const headerCopyLinkBtn = document.getElementById('header-copy-link-btn');
+    const headerOpenLinkBtn = document.getElementById('header-open-link-btn');
+    const headerGenerateQrBtn = document.getElementById('header-generate-qr-btn');
+    const headerDownloadQrBtn = document.getElementById('header-download-qr-btn');
+    const headerPrintQrBtn = document.getElementById('header-print-qr-btn');
+    const headerQrDisplay = document.getElementById('header-qr-display');
+    const headerQrCode = document.getElementById('header-qr-code');
     const headerHoursTable = document.getElementById('header-hours-table');
     const headerHoursHeader = document.getElementById('header-hours-header');
     const headerHoursPanel = document.getElementById('header-hours-panel');
@@ -11986,6 +12026,94 @@
       return result;
     }
 
+    function getCurrentHeaderTenantSlug() {
+      try {
+        return String((typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : '') || (tenantInput && tenantInput.value) || defaultSlug() || 'gastronomia-local1').trim() || 'gastronomia-local1';
+      } catch (_) {
+        return 'gastronomia-local1';
+      }
+    }
+
+    function getPublicMenuUrlForSlug(rawSlug) {
+      const slug = String(rawSlug || '').trim().replace(/\.html$/i, '') || 'gastronomia-local1';
+      const origin = (window.location && window.location.origin) ? window.location.origin : String(API_BASE || '').replace(/\/+$/, '');
+      return `${origin}/${encodeURIComponent(slug)}.html`;
+    }
+
+    function refreshHeaderPublicLink() {
+      const url = getPublicMenuUrlForSlug(getCurrentHeaderTenantSlug());
+      if (headerPublicLinkInput) headerPublicLinkInput.value = url;
+      return url;
+    }
+
+    function renderHeaderQr(url) {
+      const targetUrl = String(url || refreshHeaderPublicLink() || '').trim();
+      if (!headerQrCode || !targetUrl || typeof QRCode === 'undefined') return '';
+      headerQrCode.innerHTML = '';
+      new QRCode(headerQrCode, {
+        text: targetUrl,
+        width: 180,
+        height: 180,
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      if (headerQrDisplay) headerQrDisplay.style.display = 'flex';
+      return targetUrl;
+    }
+
+    function getHeaderQrImageSrc() {
+      if (!headerQrCode) return '';
+      const img = headerQrCode.querySelector('img');
+      if (img && img.src) return img.src;
+      const canvas = headerQrCode.querySelector('canvas');
+      if (canvas && typeof canvas.toDataURL === 'function') return canvas.toDataURL('image/png');
+      return '';
+    }
+
+    function downloadHeaderQrImage() {
+      const url = refreshHeaderPublicLink();
+      if (headerQrDisplay && headerQrDisplay.style.display === 'none') {
+        renderHeaderQr(url);
+      }
+      const src = getHeaderQrImageSrc();
+      if (!src) {
+        alert('Generá el QR primero para descargarlo.');
+        return;
+      }
+      const slug = getCurrentHeaderTenantSlug().replace(/[^a-z0-9\-_]+/gi, '-');
+      const link = document.createElement('a');
+      link.href = src;
+      link.download = `qr-carta-${slug}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    }
+
+    function printHeaderQrImage() {
+      const url = refreshHeaderPublicLink();
+      if (headerQrDisplay && headerQrDisplay.style.display === 'none') {
+        renderHeaderQr(url);
+      }
+      const src = getHeaderQrImageSrc();
+      if (!src) {
+        alert('Generá el QR primero para imprimirlo.');
+        return;
+      }
+      const label = String((headerShareTitle && headerShareTitle.value) || '').trim() || (tenantInput && tenantInput.value) || 'Carta online';
+      const win = window.open('', 'PrintHeaderQr', 'height=720,width=720');
+      if (!win) {
+        alert('No se pudo abrir la ventana de impresión.');
+        return;
+      }
+      win.document.write('<html><head><title>QR carta online</title></head><body style="font-family: Arial, sans-serif; text-align:center; padding:32px;">');
+      win.document.write('<h1 style="margin:0 0 10px; font-size:28px;">' + String(label).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</h1>');
+      win.document.write('<p style="margin:0 0 22px; color:#475569;">Escaneá para ver la carta online</p>');
+      win.document.write('<img src="' + src + '" style="width:320px; height:320px;" />');
+      win.document.write('<p style="margin:20px 0 0; font-size:14px; color:#64748b;">' + String(url).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</p>');
+      win.document.write('<script>window.onload=function(){window.print();window.close();}<\/script>');
+      win.document.write('</body></html>');
+      win.document.close();
+    }
+
     async function openHeaderConfigModal() {
       if (!headerConfigModal) return;
       headerConfigModal.style.display = 'flex';
@@ -12016,6 +12144,11 @@
         if (interestBgColor) interestBgColor.value = data.interest_bg_color || '#121212';
         if (headerAnnouncementActive) headerAnnouncementActive.checked = data.announcement_active || false;
         if (headerAnnouncementText) headerAnnouncementText.value = data.announcement_text || '';
+        if (headerShareTitle) headerShareTitle.value = data.share_title || '';
+        if (headerShareDescription) headerShareDescription.value = data.share_description || '';
+        refreshHeaderPublicLink();
+        if (headerQrCode) headerQrCode.innerHTML = '';
+        if (headerQrDisplay) headerQrDisplay.style.display = 'none';
         if (headerHoursTable) fillHeaderHours(data.opening_hours || {});
         if (headerHoursPanel) {
           const oh = data.opening_hours || {};
@@ -12032,6 +12165,50 @@
     if (headerCloseBtn && headerConfigModal) {
       headerCloseBtn.addEventListener('click', () => {
         headerConfigModal.style.display = 'none';
+      });
+    }
+
+    if (headerCopyLinkBtn) {
+      headerCopyLinkBtn.addEventListener('click', async () => {
+        const url = refreshHeaderPublicLink();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+          } else {
+            if (headerPublicLinkInput) {
+              headerPublicLinkInput.focus();
+              headerPublicLinkInput.select();
+            }
+            document.execCommand('copy');
+          }
+          alert('Link copiado al portapapeles.');
+        } catch (_) {
+          alert('No se pudo copiar el link.');
+        }
+      });
+    }
+
+    if (headerOpenLinkBtn) {
+      headerOpenLinkBtn.addEventListener('click', () => {
+        window.open(refreshHeaderPublicLink(), '_blank', 'noopener');
+      });
+    }
+
+    if (headerGenerateQrBtn) {
+      headerGenerateQrBtn.addEventListener('click', () => {
+        renderHeaderQr(refreshHeaderPublicLink());
+      });
+    }
+
+    if (headerDownloadQrBtn) {
+      headerDownloadQrBtn.addEventListener('click', () => {
+        downloadHeaderQrImage();
+      });
+    }
+
+    if (headerPrintQrBtn) {
+      headerPrintQrBtn.addEventListener('click', () => {
+        printHeaderQrImage();
       });
     }
 
@@ -12092,7 +12269,9 @@
             main_menu_categories: getAdminMainMenuCategories(),
             interest_bg_color: interestBgColor ? interestBgColor.value : '#121212',
             announcement_active: headerAnnouncementActive ? headerAnnouncementActive.checked : false,
-            announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : ''
+            announcement_text: headerAnnouncementText ? headerAnnouncementText.value.trim() : '',
+            share_title: headerShareTitle ? headerShareTitle.value.trim() : '',
+            share_description: headerShareDescription ? headerShareDescription.value.trim() : ''
           };
           const resp = await wFetch(url.toString(), {
             method: 'PATCH',

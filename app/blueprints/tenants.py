@@ -316,7 +316,7 @@ def get_tenant_header():
             except:
                 pass
                 
-        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_contact_title', 'footer_location_title', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color', 'main_menu_compact_view']
+        fields = ['name', 'whatsapp', 'instagram', 'instagram_label', 'location_label', 'location_url', 'opening_hours', 'opening_hours_label', 'contact_email', 'footer_title', 'footer_tagline', 'footer_contact_title', 'footer_location_title', 'footer_bottom', 'timezone', 'currency_code', 'currency_locale', 'logo_url', 'announcement_text', 'announcement_active', 'theme_color', 'header_bg_color', 'featured_bg_color', 'menu_bg_color', 'interest_bg_color', 'main_menu_compact_view', 'share_title', 'share_description']
         for f in fields:
             if f in payload:
                 current_cfg[f] = payload[f]
@@ -444,6 +444,8 @@ def get_tenant_header():
         'featured_bg_color': cfg.get('featured_bg_color', '#0c0c0c'),
         'menu_bg_color': cfg.get('menu_bg_color', '#0f0f0f'),
         'interest_bg_color': cfg.get('interest_bg_color', '#121212'),
+        'share_title': str(cfg.get('share_title') or '').strip(),
+        'share_description': str(cfg.get('share_description') or '').strip(),
         'main_menu_compact_view': bool(cfg.get('main_menu_compact_view', False)),
         'main_menu_categories': _normalize_main_menu_categories(cfg.get('main_menu_categories'))
     })
