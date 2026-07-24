@@ -155,6 +155,17 @@ def _build_share_description(slug):
         max_len=160
     )
 
+def _build_share_image(slug, fallback_url=''):
+    cfg = get_cached_tenant_config(slug) or {}
+    meta_branding = cfg.get('meta', {}).get('branding', {})
+    configured = (
+        cfg.get('logo_url')
+        or cfg.get('share_image_url')
+        or meta_branding.get('logo_url')
+        or fallback_url
+    )
+    return _absolutize_public_asset(configured)
+
 def _render_public_shell(slug):
     title = _build_share_title(slug)
     description = _build_share_description(slug)
@@ -180,7 +191,7 @@ def _render_public_shell(slug):
     content = re.sub(r'(<link\s+rel="canonical"\s+href=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<meta\s+property="og:url"\s+content=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
     og_image_match = re.search(r'<meta\s+property="og:image"\s+content="([^"]*)"', content, flags=re.IGNORECASE)
-    og_image_url = _absolutize_public_asset(og_image_match.group(1) if og_image_match else '')
+    og_image_url = _build_share_image(slug, og_image_match.group(1) if og_image_match else '')
     if og_image_url:
         safe_og_image_url = html.escape(og_image_url, quote=True)
         content = re.sub(r'(<meta\s+property="og:image"\s+content=")([^"]*)(")', rf'\g<1>{safe_og_image_url}\g<3>', content, count=1, flags=re.IGNORECASE)
