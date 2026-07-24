@@ -7836,21 +7836,48 @@
           });
       }
 
-      if (!resp.ok) throw new Error('Error al actualizar estado');
+      if (!resp.ok) {
+        let msg = 'Error al actualizar estado';
+        try {
+          const j = await resp.json();
+          if (j && j.error) msg = String(j.error);
+        } catch (_) {}
+        throw new Error(msg);
+      }
+      let result = {};
+      try {
+        result = await resp.json();
+      } catch (_) {
+        result = { order_id: orderId, status };
+      }
 
-      const patchLocalOrderStatus = (oid, st) => {
+      const patchLocalOrderStatus = (oid, st, paymentStatus) => {
         const idStr = String(oid);
         const newSt = String(st || '').trim();
+        const newPaymentStatus = String(paymentStatus || '').trim();
         const patchArr = (arr) => {
           if (!Array.isArray(arr)) return;
           const found = arr.find(x => x && String(x.id) === idStr);
-          if (found) found.status = newSt;
+          if (found) {
+            found.status = newSt;
+            if (newPaymentStatus) found.payment_status = newPaymentStatus;
+          }
         };
         try { patchArr(window.currentOrders); } catch (_) {}
         try { patchArr(window.currentOrdersForTables); } catch (_) {}
         try { if (window.__lastOrdersData && Array.isArray(window.__lastOrdersData.orders)) patchArr(window.__lastOrdersData.orders); } catch (_) {}
       };
-      try { patchLocalOrderStatus(orderId, status); } catch (_) {}
+      try { patchLocalOrderStatus(orderId, status, result && result.payment_status); } catch (_) {}
+
+      try {
+        const refund = result && result.refund;
+        if (refund && refund.applied) {
+          const methodLabel = String(refund.payment_method || '').trim();
+          const methodText = methodLabel ? ` por ${methodLabel}` : '';
+          const totalText = Number(refund.refund_total || 0);
+          alert(`Pedido cancelado y reembolso registrado correctamente${methodText} por $${totalText}.`);
+        }
+      } catch (_) {}
 
       // Sync with Table Management
       if (status === 'preparacion') {
@@ -8746,7 +8773,19 @@
         const totalPages = Math.max(1, Math.ceil(total / currentLimit));
         // Construir una firma ligera del estado actual + filtros para detectar cambios reales (y evitar parpadeo)
         // Importante: incluir el filtro rápido, porque cambiar de pestaña no cambia el "estado" del pedido, pero sí lo que se debe renderizar.
-        const newSignature = JSON.stringify(orders.map(o => ({id:o.id, s:o.status, t:o.total, p:o.payment_status})))
+        const newSignature = JSON.stringify(orders.map(o => ({
+          id: o.id,
+          s: o.status,
+          t: o.total,
+          p: o.payment_status,
+          ty: o.order_type,
+          tb: o.table_number,
+          ph: o.customer_phone,
+          nm: o.customer_name,
+          ad: (typeof o.address_json === 'string') ? o.address_json : JSON.stringify(o.address_json || {}),
+          nt: o.order_notes,
+          sh: o.shipping_cost
+        })))
           + '|qf:' + String(ordersQuickStatusFilter || '')
           + '|type:' + JSON.stringify(ordersConfig && ordersConfig.filters ? ordersConfig.filters : {})
           + '|q:' + String(currentSearch || '')
@@ -14927,7 +14966,7 @@
         return false;
       }
       await renderCashBox();
-      return true;
+      return result || true;
     }
     async function closeCash() {
       const slug = tenantInput.value.trim() || defaultSlug();
@@ -18173,8 +18212,8 @@
         } catch (_) {}
       }
 
-      async function populateTableSelect(preselectValue, forceRefresh) {
-        const tableSelect = document.getElementById('new-order-table');
+      async function populateTableSelect(preselectValue, forceRefresh, targetSelectId) {
+        const tableSelect = document.getElementById(targetSelectId || 'new-order-table');
         if (!tableSelect || tableSelect.tagName !== 'SELECT') return;
         
         const currentVal = (preselectValue != null ? String(preselectValue) : tableSelect.value);
@@ -21171,28 +21210,61 @@
   </div>
 </div>
 <!-- Edit Order Modal -->
-<div id="edit-order-modal" class="kds-modal" style="display: none; z-index: 2100;">
+<div id="edit-order-modal" class="kds-modal" style="display: none; z-index: 2100;" autocomplete="off">
   <div class="kds-modal-overlay"></div>
-  <div class="kds-modal-content" style="width: 95vw; max-width: 800px; height: 85vh; display: flex; flex-direction: column; padding: 0;">
+  <div class="kds-modal-content" style="width: 95vw; max-width: 800px; height: 85vh; max-height: 85vh; display: flex; flex-direction: column; padding: 0; min-height: 0;">
     <div class="kds-modal-header" style="padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
         <h2 style="margin: 0;">Editar Pedido #<span id="eom-id"></span></h2>
         <button id="eom-close" style="width:38px; height:38px; background:#1f2937; color:#fff; border:1px solid #111827; border-radius:10px; font-size:24px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-weight:700; box-shadow:0 2px 8px rgba(0,0,0,0.18);">&times;</button>
     </div>
-    <div class="kds-modal-body" style="flex: 1; display: flex; overflow: hidden;">
+    <div class="kds-modal-body" style="flex: 1; display: flex; overflow: hidden; min-height: 0; min-width: 0;">
         <!-- Products Column -->
-        <div style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid #eee; padding: 10px;">
-            <input type="text" id="eom-search" placeholder="Buscar productos..." style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; width: 100%; box-sizing: border-box;">
-            <div id="eom-products" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; align-content: start;"></div>
+        <div style="flex: 1; display: flex; flex-direction: column; border-right: 1px solid #eee; padding: 10px; min-height: 0; min-width: 0; overflow: hidden;">
+            <input type="text" id="eom-search" placeholder="Buscar productos..." autocomplete="off" spellcheck="false" style="padding: 10px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px; width: 100%; box-sizing: border-box;">
+            <div id="eom-products" style="flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; align-content: start; min-height: 0; padding-right: 4px;"></div>
         </div>
         <!-- Cart Column -->
-        <div style="width: 350px; display: flex; flex-direction: column; padding: 10px; background: #f9fafb;">
-            <h3 style="margin: 0 0 10px 0; font-size: 1rem;">Items del Pedido</h3>
-            <div id="eom-items" style="flex: 1; overflow-y: auto; gap: 8px; display: flex; flex-direction: column;"></div>
-            <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+        <div style="width: 350px; display: flex; flex-direction: column; padding: 10px; background: #f9fafb; min-height: 0; overflow: hidden;">
+            <div style="flex: 1; min-height: 0; overflow-y: auto; padding-right: 4px;">
+                <input type="text" tabindex="-1" aria-hidden="true" autocomplete="off" name="edit_order_fake_user" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
+                <input type="password" tabindex="-1" aria-hidden="true" autocomplete="new-password" name="edit_order_fake_pass" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
+                <div id="eom-paid-lock-hint" style="display:none; margin-bottom:10px; padding:10px 12px; border:1px solid #fde68a; border-radius:10px; background:#fffbeb; color:#92400e; font-size:0.85rem; line-height:1.4;">
+                    Pedido con pago registrado: productos, cantidades, configuraciones y notas por item quedan bloqueados. Solo se pueden corregir datos operativos.
+                </div>
+                <h3 style="margin: 0 0 10px 0; font-size: 1rem;">Items del Pedido</h3>
+                <div id="eom-items" style="overflow-y: auto; gap: 8px; display: flex; flex-direction: column; min-height: 0; max-height: min(28vh, 240px); padding-right: 4px;"></div>
+                <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px;">
+                <div id="eom-contact-fields" style="display:flex; flex-direction:column; gap:10px; margin-bottom:10px;">
+                    <div id="eom-table-wrap">
+                        <label for="eom-table-number" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Mesa</label>
+                        <select id="eom-table-number" autocomplete="off" data-lpignore="true" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; background: #fff;">
+                            <option value="">Seleccionar Mesa...</option>
+                        </select>
+                    </div>
+                    <div id="eom-name-wrap">
+                        <label for="eom-customer-name" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Cliente</label>
+                        <input type="text" id="eom-customer-name" name="edit_order_customer_name_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;" placeholder="Nombre del cliente">
+                    </div>
+                    <div id="eom-phone-wrap">
+                        <label for="eom-customer-phone" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Teléfono</label>
+                        <input type="tel" id="eom-customer-phone" name="edit_order_customer_phone_field" autocomplete="new-password" data-lpignore="true" inputmode="tel" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;" placeholder="WhatsApp o teléfono de contacto">
+                    </div>
+                    <div id="eom-address-wrap">
+                        <label for="eom-address" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Dirección</label>
+                        <input type="text" id="eom-address" name="edit_order_delivery_address_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;" placeholder="Calle y número">
+                    </div>
+                    <div id="eom-locality-wrap">
+                        <label for="eom-locality" style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Localidad</label>
+                        <input type="text" id="eom-locality" name="edit_order_delivery_locality_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;" placeholder="Barrio o localidad">
+                    </div>
+                </div>
                 <div style="margin-bottom: 10px;">
                     <label style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Detalle adicional (Orden)</label>
-                    <textarea id="eom-notes" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;" placeholder="Notas generales del pedido..."></textarea>
+                    <textarea id="eom-notes" rows="2" name="edit_order_notes_field" autocomplete="off" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;" placeholder="Notas generales del pedido..."></textarea>
                 </div>
+            </div>
+            </div>
+            <div style="border-top: 1px solid #ddd; padding-top: 10px; margin-top: 10px; background: #f9fafb;">
                 <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 1.2rem; margin-bottom: 10px;">
                     <span>Total:</span>
                     <span id="eom-total">$0</span>
@@ -21397,12 +21469,76 @@ window.EditOrder = {
         this.totalEl = document.getElementById('eom-total');
         this.saveBtn = document.getElementById('eom-save');
         this.notesEl = document.getElementById('eom-notes');
+        this.tableNumberEl = document.getElementById('eom-table-number');
+        this.customerNameEl = document.getElementById('eom-customer-name');
+        this.customerPhoneEl = document.getElementById('eom-customer-phone');
+        this.addressEl = document.getElementById('eom-address');
+        this.localityEl = document.getElementById('eom-locality');
+        this.contactFieldsEl = document.getElementById('eom-contact-fields');
+        this.tableWrapEl = document.getElementById('eom-table-wrap');
+        this.nameWrapEl = document.getElementById('eom-name-wrap');
+        this.phoneWrapEl = document.getElementById('eom-phone-wrap');
+        this.addressWrapEl = document.getElementById('eom-address-wrap');
+        this.localityWrapEl = document.getElementById('eom-locality-wrap');
+        this.paidLockHintEl = document.getElementById('eom-paid-lock-hint');
         
         if(this.closeBtn) this.closeBtn.onclick = () => this.close();
         const overlay = this.modal.querySelector('.kds-modal-overlay');
         if(overlay) overlay.onclick = () => this.close();
         if(this.search) this.search.oninput = (e) => this.renderProducts(e.target.value);
         if(this.saveBtn) this.saveBtn.onclick = () => this.save();
+    },
+
+    _getCurrentOrderType: function() {
+        return String((this.currentOrder && this.currentOrder.order_type) || '').trim().toLowerCase();
+    },
+
+    _isPaidEditLocked: function() {
+        return String((this.currentOrder && this.currentOrder.payment_status) || '').trim().toLowerCase() === 'paid';
+    },
+
+    _syncPaidEditMode: function() {
+        const isLocked = this._isPaidEditLocked();
+        if (this.paidLockHintEl) this.paidLockHintEl.style.display = isLocked ? 'block' : 'none';
+        if (this.search) {
+            this.search.disabled = isLocked;
+            this.search.placeholder = isLocked ? 'Productos bloqueados por pago registrado' : 'Buscar productos...';
+            this.search.style.background = isLocked ? '#f8fafc' : '#fff';
+            this.search.style.cursor = isLocked ? 'not-allowed' : 'text';
+        }
+        if (this.productsContainer) {
+            this.productsContainer.style.pointerEvents = isLocked ? 'none' : 'auto';
+            this.productsContainer.style.opacity = isLocked ? '0.55' : '1';
+        }
+    },
+
+    _parseAddressValue: function(raw) {
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+            return raw;
+        }
+        const text = String(raw || '').trim();
+        if (!text) return {};
+        try {
+            const parsed = JSON.parse(text);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed;
+            }
+        } catch (_) {}
+        return { address: text };
+    },
+
+    _syncContactFieldsVisibility: function() {
+        const orderType = this._getCurrentOrderType();
+        const isTable = orderType === 'mesa';
+        const isDelivery = orderType === 'direccion';
+        const isPickup = orderType === 'espera';
+        const showContact = isTable || isDelivery || isPickup;
+        if (this.contactFieldsEl) this.contactFieldsEl.style.display = showContact ? 'flex' : 'none';
+        if (this.tableWrapEl) this.tableWrapEl.style.display = isTable ? 'block' : 'none';
+        if (this.nameWrapEl) this.nameWrapEl.style.display = (isDelivery || isPickup) ? 'block' : 'none';
+        if (this.phoneWrapEl) this.phoneWrapEl.style.display = (isDelivery || isPickup) ? 'block' : 'none';
+        if (this.addressWrapEl) this.addressWrapEl.style.display = isDelivery ? 'block' : 'none';
+        if (this.localityWrapEl) this.localityWrapEl.style.display = isDelivery ? 'block' : 'none';
     },
 
     _buildAddonsSignature: function(addons) {
@@ -21574,12 +21710,16 @@ window.EditOrder = {
             // detail has structure { order: {...}, items: [...] }
             this.open({
                 id: orderId, 
-                table_number: tableNumber,
+                table_number: detail.order ? detail.order.table_number : tableNumber,
                 order_notes: detail.order ? detail.order.order_notes : '', // Access via detail.order
                 tenant_slug: detail.order ? detail.order.tenant_slug : '',
                 display_order_number: detail.order ? displayOrderNumber(detail.order) : String(orderId),
                 order_type: detail.order ? detail.order.order_type : '',
-                shipping_cost: detail.order ? detail.order.shipping_cost : 0
+                shipping_cost: detail.order ? detail.order.shipping_cost : 0,
+                payment_status: detail.order ? detail.order.payment_status : '',
+                customer_name: detail.order ? detail.order.customer_name : '',
+                customer_phone: detail.order ? detail.order.customer_phone : '',
+                address_json: detail.order ? detail.order.address_json : {}
             }, detail.items || []);
             try { window.kdsLastOrderId = orderId; } catch (_) {}
         } catch(e) {
@@ -21637,6 +21777,27 @@ window.EditOrder = {
         const idEl = document.getElementById('eom-id');
         if(idEl) idEl.textContent = order.display_order_number || order.id;
         
+        const addressData = this._parseAddressValue(order.address_json);
+        if (this.customerNameEl) this.customerNameEl.value = String(order.customer_name || '').trim();
+        if (this.customerPhoneEl) this.customerPhoneEl.value = String(order.customer_phone || '').trim();
+        if (this.addressEl) this.addressEl.value = String(addressData.address || addressData.street || addressData.line1 || '').trim();
+        if (this.localityEl) this.localityEl.value = String(addressData.locality || addressData.city || addressData.neighbourhood || addressData.neighborhood || '').trim();
+        this._syncContactFieldsVisibility();
+        this._syncPaidEditMode();
+        if (this.tableNumberEl) {
+            this.tableNumberEl.innerHTML = '<option value="">Seleccionar Mesa...</option>';
+            const tableValue = String(order.table_number || '').trim();
+            if (tableValue) {
+                this.tableNumberEl.innerHTML += `<option value="${escapeAdminAttr(tableValue)}">${escapeAdminHtml(tableValue)}</option>`;
+                this.tableNumberEl.value = tableValue;
+            }
+            if (this._getCurrentOrderType() === 'mesa' && typeof window.kdsPopulateTableSelect === 'function') {
+                window.kdsPopulateTableSelect(tableValue, true, 'eom-table-number').catch((err) => {
+                    console.warn('No se pudo cargar selector de mesas para edición:', err);
+                });
+            }
+        }
+
         if (this.notesEl) {
             this.notesEl.value = order.order_notes || '';
         }
@@ -21660,6 +21821,12 @@ window.EditOrder = {
         this.currentOrder = null;
         this.items = [];
         this.availableProducts = [];
+        if (this.tableNumberEl) this.tableNumberEl.value = '';
+        if (this.customerNameEl) this.customerNameEl.value = '';
+        if (this.customerPhoneEl) this.customerPhoneEl.value = '';
+        if (this.addressEl) this.addressEl.value = '';
+        if (this.localityEl) this.localityEl.value = '';
+        this._syncPaidEditMode();
     },
 
     loadProductsForOrder: async function() {
@@ -21718,6 +21885,7 @@ window.EditOrder = {
     renderProducts: function(term) {
         if (!this.productsContainer) return;
         const t = String(term || '').toLowerCase();
+        const isLocked = this._isPaidEditLocked();
         const allProducts = Array.isArray(this.availableProducts) ? this.availableProducts : [];
         const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(t) || String(p.id || '').toLowerCase().includes(t));
         
@@ -21726,8 +21894,10 @@ window.EditOrder = {
             const meta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
               ? window.KdsProductConfig.getPromotionPriceMeta(p)
               : { final_price: safeAdminInt(p.price) || 0, compare_price: 0, has_discount: false };
+            const cardCursor = isLocked ? 'not-allowed' : 'pointer';
+            const clickAttr = isLocked ? '' : `onclick="EditOrder.addItem('${safeProductId}')"`;
             return `
-            <div onclick="EditOrder.addItem('${safeProductId}')" style="border:1px solid #eee; padding:8px; border-radius:6px; cursor:pointer; background:white; font-size:0.9rem; display:flex; flex-direction:column; justify-content:space-between;">
+            <div ${clickAttr} style="border:1px solid #eee; padding:8px; border-radius:6px; cursor:${cardCursor}; background:white; font-size:0.9rem; display:flex; flex-direction:column; justify-content:space-between;">
                 <div style="font-weight:600; margin-bottom:4px; font-size:0.85rem;">${p.name}</div>
                 <div style="display:flex; flex-direction:column; align-items:flex-start;">
                     ${meta.has_discount && safeAdminInt(meta.compare_price) > safeAdminInt(meta.final_price) ? `<div style="font-size:11px; color:#94a3b8; text-decoration:line-through; font-weight:800;">$${safeAdminInt(meta.compare_price)}</div>` : ''}
@@ -21739,6 +21909,7 @@ window.EditOrder = {
     },
     
     addItem: function(prodId) {
+        if (this._isPaidEditLocked()) return;
         const prod = (Array.isArray(this.availableProducts) ? this.availableProducts : []).find(p => String(p && p.id) === String(prodId));
         if (!prod) return;
         const promoMeta = (window.KdsProductConfig && typeof window.KdsProductConfig.getPromotionPriceMeta === 'function')
@@ -21852,6 +22023,7 @@ window.EditOrder = {
     },
 
     configureItem: function(idx) {
+        if (this._isPaidEditLocked()) return;
         const item = this.items[idx];
         if (!item) return;
         const prod = this._getProductById(item.id);
@@ -21949,6 +22121,7 @@ window.EditOrder = {
     },
     
     updateQty: function(idx, delta) {
+        if (this._isPaidEditLocked()) return;
         const item = this.items[idx];
         item.qty += delta;
         if (item.qty <= 0) {
@@ -21958,6 +22131,7 @@ window.EditOrder = {
     },
 
     updateItemNote: function(idx, val) {
+        if (this._isPaidEditLocked()) return;
         if (this.items[idx]) {
             this.items[idx].notes = val;
         }
@@ -21966,6 +22140,7 @@ window.EditOrder = {
     renderItems: function() {
         if (!this.itemsContainer) return;
         let total = 0;
+        const isLocked = this._isPaidEditLocked();
         const orderType = String((this.currentOrder && this.currentOrder.order_type) || '').trim().toLowerCase();
         let shipping = 0;
         try { shipping = parseInt((this.currentOrder && this.currentOrder.shipping_cost) || 0, 10) || 0; } catch (_) { shipping = 0; }
@@ -21974,7 +22149,7 @@ window.EditOrder = {
             total += item.price * item.qty;
             const prod = this._getProductById(item.id);
             const cfg = this._getProductConfig(prod);
-            const showConfig = !!cfg;
+            const showConfig = !!cfg && !isLocked;
             return `
                 <div style="background:white; padding:8px; border-radius:6px; border:1px solid #eee; display:flex; flex-direction:column; gap:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -21987,13 +22162,13 @@ window.EditOrder = {
                         </div>
                         <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                             ${showConfig ? `<button onclick="EditOrder.configureItem(${idx})" style="height:28px; padding:0 10px; background:#f1f5f9; color:#0f172a; border:1px solid #e2e8f0; border-radius:6px; cursor:pointer; font-weight:900; font-size:12px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">Configurar</button>` : ''}
-                            <button onclick="EditOrder.updateQty(${idx}, -1)" style="width:28px; height:28px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">-</button>
+                            ${isLocked ? '<span style="font-size:0.72rem; color:#92400e; font-weight:800; background:#fffbeb; border:1px solid #fde68a; border-radius:999px; padding:4px 8px;">Cobrado</span>' : `<button onclick="EditOrder.updateQty(${idx}, -1)" style="width:28px; height:28px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">-</button>`}
                             <span style="width:20px; text-align:center; font-size:0.9rem;">${item.qty}</span>
-                            <button onclick="EditOrder.updateQty(${idx}, 1)" style="width:28px; height:28px; background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">+</button>
+                            ${isLocked ? '' : `<button onclick="EditOrder.updateQty(${idx}, 1)" style="width:28px; height:28px; background:#dbeafe; color:#1d4ed8; border:1px solid #bfdbfe; border-radius:6px; cursor:pointer; font-weight:800; font-size:16px; line-height:1; display:inline-flex; align-items:center; justify-content:center;">+</button>`}
                         </div>
                     </div>
                     <div>
-                        <input type="text" placeholder="Nota del producto..." value="${item.notes || ''}" onchange="EditOrder.updateItemNote(${idx}, this.value)" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:0.85rem;">
+                        <input type="text" placeholder="Nota del producto..." value="${item.notes || ''}" ${isLocked ? 'readonly' : ''} onchange="EditOrder.updateItemNote(${idx}, this.value)" style="width:100%; padding:4px; border:1px solid #ddd; border-radius:4px; font-size:0.85rem; background:${isLocked ? '#f8fafc' : '#fff'}; cursor:${isLocked ? 'not-allowed' : 'text'};">
                     </div>
                 </div>
             `;
@@ -22010,6 +22185,8 @@ window.EditOrder = {
         try {
             this._syncItemPackState();
             this._syncItemBasePrices();
+            const currentOrderId = String(this.currentOrder.id || '');
+            const currentOrderType = this._getCurrentOrderType();
             const payload = {
                 items: this.items.map(it => ({
                   product_id: it.id,
@@ -22026,6 +22203,29 @@ window.EditOrder = {
                 })),
                 order_notes: this.notesEl ? this.notesEl.value : ''
             };
+            const orderType = currentOrderType;
+            if (orderType === 'mesa') {
+                payload.table_number = this.tableNumberEl ? String(this.tableNumberEl.value || '').trim() : '';
+                if (!payload.table_number) {
+                    alert('Ingresa la mesa del pedido.');
+                    return;
+                }
+            }
+            if (orderType === 'direccion' || orderType === 'espera') {
+                payload.customer_name = this.customerNameEl ? String(this.customerNameEl.value || '').trim() : '';
+                payload.customer_phone = this.customerPhoneEl ? String(this.customerPhoneEl.value || '').trim() : '';
+            }
+            if (orderType === 'direccion') {
+                const currentAddress = this._parseAddressValue(this.currentOrder && this.currentOrder.address_json);
+                payload.address = Object.assign({}, currentAddress, {
+                    address: this.addressEl ? String(this.addressEl.value || '').trim() : '',
+                    locality: this.localityEl ? String(this.localityEl.value || '').trim() : ''
+                });
+                if (!String(payload.address.address || payload.address.street || payload.address.line1 || '').trim()) {
+                    alert('Ingresa una dirección para el pedido.');
+                    return;
+                }
+            }
 
             if (!window.CSRF_TOKEN || window.CSRF_TOKEN === '') {
               try { await window.fetchCsrfToken(); } catch (_) {}
@@ -22045,6 +22245,30 @@ window.EditOrder = {
             }
             
             if (resp.ok) {
+                const result = await resp.json();
+                const patchLocalOrder = (arr) => {
+                    if (!Array.isArray(arr)) return;
+                    const found = arr.find(o => o && String(o.id || '') === currentOrderId);
+                    if (!found) return;
+                    if (orderType === 'mesa') found.table_number = payload.table_number || found.table_number || '';
+                    if (orderType === 'direccion') found.address_json = payload.address || found.address_json || {};
+                    if (orderType === 'direccion' || orderType === 'espera') {
+                        found.customer_name = payload.customer_name || '';
+                        found.customer_phone = payload.customer_phone || '';
+                    }
+                    if (typeof payload.order_notes !== 'undefined') found.order_notes = payload.order_notes;
+                    if (result && typeof result.total !== 'undefined') found.total = result.total;
+                };
+                try { patchLocalOrder(window.currentOrders); } catch (_) {}
+                try { patchLocalOrder(window.currentOrdersForTables); } catch (_) {}
+                try { if (window.__lastOrdersData && Array.isArray(window.__lastOrdersData.orders)) patchLocalOrder(window.__lastOrdersData.orders); } catch (_) {}
+
+                try {
+                  if (window.__lastOrdersData && typeof renderOrders === 'function') {
+                    await renderOrders(window.__lastOrdersData);
+                  }
+                } catch (_) {}
+
                 // Refresh logic
                 alert('Pedido actualizado correctamente');
                 this.close();
@@ -22059,6 +22283,17 @@ window.EditOrder = {
                 try {
                   if (typeof loadOrdersSafe === 'function') await loadOrdersSafe();
                   else if (typeof load === 'function') load();
+                } catch (_) {}
+                try {
+                  if (orderType === 'mesa' && typeof fetchOrdersForTables === 'function') {
+                    await fetchOrdersForTables(true);
+                  }
+                  if (typeof window.__kdsReloadTables === 'function') {
+                    await window.__kdsReloadTables();
+                  } else if (typeof renderTables === 'function') {
+                    renderTables();
+                  }
+                  try { window.dispatchEvent(new Event('kds-tables-changed')); } catch (_) {}
                 } catch (_) {}
             } else {
                 const err = await resp.json();

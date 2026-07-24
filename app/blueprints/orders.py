@@ -1676,20 +1676,39 @@ def update_order_status(order_id):
     cur = conn.cursor()
     
     # Security Check: Prevent modifying finalized orders
-    cur.execute("SELECT status, tenant_slug, order_type, COALESCE(delivery_status,''), delivered_at FROM orders WHERE id = ?", (order_id,))
+    cur.execute(
+        "SELECT status, tenant_slug, order_type, COALESCE(delivery_status,''), delivered_at, "
+        "COALESCE(payment_status,''), COALESCE(payment_method,''), COALESCE(tip_amount,0), COALESCE(total,0) "
+        "FROM orders WHERE id = ?",
+        (order_id,),
+    )
     row_check = cur.fetchone()
     if row_check and row_check[0] == 'entregado' and new_status != 'entregado':
          return jsonify({'error': 'no se puede cambiar el estado de una orden entregada. Utilice la función de anulación/reembolso si es necesario.'}), 400
     if not row_check:
         return jsonify({'error': 'orden no encontrada'}), 404
-    current_status, tenant_slug, order_type, current_delivery_status, delivered_at = row_check
+    current_status, tenant_slug, order_type, current_delivery_status, delivered_at, current_pay_status, current_pay_method, current_tip_amount, current_total = row_check
     tenant_slug = str(tenant_slug or '')
     order_type = str(order_type or '').strip().lower()
     current_status = str(current_status or '').strip().lower()
+    pay_status_norm = str(current_pay_status or '').strip().lower()
+    pay_method_norm = str(current_pay_method or '').strip().lower()
+    try:
+        tip_amount = int(current_tip_amount or 0)
+    except Exception:
+        tip_amount = 0
+    try:
+        order_total = int(current_total or 0)
+    except Exception:
+        order_total = 0
+    refund_total = max(0, order_total + max(0, tip_amount))
 
     # Cuando el tenant exige aprobación, la transición inicial debe pasar por pendiente.
     if current_status == 'por_aprobar' and new_status not in ('pendiente', 'cancelado'):
         return jsonify({'error': 'el pedido debe aprobarse antes de avanzar de estado'}), 400
+
+    if new_status == 'cancelado' and current_status == 'cancelado' and pay_status_norm != 'paid':
+        return jsonify({'order_id': order_id, 'status': new_status}), 200
 
     if new_status == 'entregado':
         if session_tenant and tenant_slug and session_tenant != tenant_slug:
@@ -1704,6 +1723,51 @@ def update_order_status(order_id):
             cur.execute("SELECT id FROM cash_sessions WHERE tenant_slug = ? AND scope = 'tenant' AND closed_at IS NULL ORDER BY opened_at DESC LIMIT 1", (tenant_slug,))
         if not cur.fetchone():
             return jsonify({'error': 'no hay sesión de caja abierta'}), 400
+
+    refund_info = None
+
+    if new_status == 'cancelado' and pay_status_norm == 'paid':
+        if not _has_perm(perms, owner, role, 'cash_manage'):
+            return jsonify({'error': 'sin permisos para reembolso'}), 403
+        if session_tenant and tenant_slug and session_tenant != tenant_slug:
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        scope = _scope_for(role, owner=owner)
+        if scope == 'user':
+            cur.execute(
+                "SELECT id FROM cash_sessions WHERE tenant_slug = ? AND scope = 'user' AND closed_at IS NULL AND lower(opened_by) = lower(?) ORDER BY opened_at DESC LIMIT 1",
+                (tenant_slug, actor or ''),
+            )
+        else:
+            cur.execute("SELECT id FROM cash_sessions WHERE tenant_slug = ? AND scope = 'tenant' AND closed_at IS NULL ORDER BY opened_at DESC LIMIT 1", (tenant_slug,))
+        sess = cur.fetchone()
+        if not sess:
+            return jsonify({'error': 'no hay sesión de caja abierta'}), 400
+        session_id = sess[0]
+        refund_note = f"Reembolso pedido #{order_id}"
+        if pay_method_norm:
+            refund_note += f" ({pay_method_norm})"
+        cur.execute(
+            "INSERT INTO cash_movements (session_id, type, amount, note, actor, created_at, payment_method) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (session_id, 'salida', refund_total, refund_note, actor or '', datetime.utcnow().isoformat(), pay_method_norm),
+        )
+        cur.execute("UPDATE orders SET payment_status = 'refunded' WHERE id = ?", (order_id,))
+        refund_info = {
+            'applied': True,
+            'amount': order_total,
+            'tip_amount': tip_amount,
+            'refund_total': refund_total,
+            'payment_method': pay_method_norm,
+        }
+        try:
+            meta = {'method': pay_method_norm, 'amount': order_total, 'tip': tip_amount, 'refund_total': refund_total}
+            if reason:
+                meta['reason'] = reason
+            cur.execute(
+                "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (order_id, 'refund', actor or '', 0, json.dumps(meta, ensure_ascii=False), datetime.utcnow().isoformat()),
+            )
+        except Exception:
+            pass
             
     if new_status == 'entregado' and order_type == 'direccion':
         now = datetime.utcnow().isoformat()
@@ -1733,7 +1797,12 @@ def update_order_status(order_id):
     except:
         pass
         
-    return jsonify({'order_id': order_id, 'status': new_status})
+    return jsonify({
+        'order_id': order_id,
+        'status': new_status,
+        'payment_status': 'refunded' if refund_info else pay_status_norm,
+        'refund': refund_info,
+    })
 
 @bp.route('/delivery/orders', methods=['GET'])
 def list_delivery_orders():
@@ -2309,13 +2378,13 @@ def pay_order(order_id):
     cur = conn.cursor()
     try:
         if is_postgres():
-            cur.execute("SELECT id, tenant_slug, total, payment_status, order_type FROM orders WHERE id = ? FOR UPDATE", (order_id,))
+            cur.execute("SELECT id, tenant_slug, total, payment_status, order_type, status FROM orders WHERE id = ? FOR UPDATE", (order_id,))
         else:
             try:
                 cur.execute("BEGIN IMMEDIATE")
             except Exception:
                 pass
-            cur.execute("SELECT id, tenant_slug, total, payment_status, order_type FROM orders WHERE id = ?", (order_id,))
+            cur.execute("SELECT id, tenant_slug, total, payment_status, order_type, status FROM orders WHERE id = ?", (order_id,))
 
         row = cur.fetchone()
         if not row:
@@ -2323,11 +2392,15 @@ def pay_order(order_id):
             except Exception: pass
             return jsonify({'error': 'orden no encontrada'}), 404
 
-        oid, tenant, total, current_pay_status, order_type = row
+        oid, tenant, total, current_pay_status, order_type, current_status = row
         if session_tenant and tenant and session_tenant != tenant:
             try: conn.rollback()
             except Exception: pass
             return jsonify({'error': 'acceso denegado al tenant'}), 403
+        if str(current_status or '').strip().lower() == 'cancelado':
+            try: conn.rollback()
+            except Exception: pass
+            return jsonify({'error': 'no se puede cobrar una orden cancelada'}), 400
 
         if str(current_pay_status or '').strip().lower() == 'paid':
             try: conn.rollback()
@@ -2477,13 +2550,33 @@ def update_order_content(order_id):
     conn = get_db()
     cur = conn.cursor()
     
+    def _parse_address_for_update(raw):
+        if isinstance(raw, dict):
+            return dict(raw)
+        if isinstance(raw, str):
+            text = raw.strip()
+            if not text:
+                return {'address': ''}
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, dict):
+                    return dict(parsed)
+            except Exception:
+                pass
+            return {'address': text}
+        return {}
+
     # Verificar existencia y estado
-    cur.execute("SELECT status, tenant_slug, payment_status, order_type, shipping_cost FROM orders WHERE id = ?", (order_id,))
+    cur.execute(
+        "SELECT status, tenant_slug, payment_status, order_type, shipping_cost, customer_phone, customer_name, address_json, table_number "
+        "FROM orders WHERE id = ?",
+        (order_id,)
+    )
     row = cur.fetchone()
     if not row:
         return jsonify({'error': 'orden no encontrada'}), 404
     
-    status, tenant_slug, _, order_type, shipping_cost = row
+    status, tenant_slug, payment_status, order_type, shipping_cost, current_phone, current_name, current_address_raw, current_table_number = row
     session_tenant = str(session.get('tenant_slug') or '').strip()
     if session_tenant and tenant_slug and session_tenant != tenant_slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
@@ -2499,8 +2592,36 @@ def update_order_content(order_id):
         base_shipping = 0
     if order_type_norm != 'direccion':
         base_shipping = 0
+    current_address_json = _parse_address_for_update(current_address_raw)
+    next_table_number = str(current_table_number or '').strip()
+    next_customer_phone = str(current_phone or '').strip()
+    next_customer_name = str(current_name or '').strip()
+    next_address_json = current_address_json
 
-    cur.execute("SELECT id, product_id, qty, modifiers_json FROM order_items WHERE order_id = ?", (order_id,))
+    if 'table_number' in payload:
+        next_table_number = str(payload.get('table_number') or '').strip()
+    if 'customer_phone' in payload:
+        next_customer_phone = str(payload.get('customer_phone') or '').strip()
+    if 'customer_name' in payload:
+        next_customer_name = str(payload.get('customer_name') or '').strip()
+    if 'address' in payload and order_type_norm == 'direccion':
+        incoming_address = _parse_address_for_update(payload.get('address'))
+        merged_address = dict(current_address_json) if isinstance(current_address_json, dict) else {}
+        merged_address.update(incoming_address)
+        next_address_json = merged_address
+    if order_type_norm == 'direccion':
+        address_line = str(
+            (next_address_json or {}).get('address')
+            or (next_address_json or {}).get('street')
+            or (next_address_json or {}).get('line1')
+            or ''
+        ).strip()
+        if not address_line:
+            return jsonify({'error': 'Dirección requerida'}), 400
+    if order_type_norm == 'mesa' and not next_table_number:
+        return jsonify({'error': 'Número de mesa requerido'}), 400
+
+    cur.execute("SELECT id, product_id, name, qty, unit_price, modifiers_json, notes FROM order_items WHERE order_id = ?", (order_id,))
     old_rows = cur.fetchall()
 
     def _pack_size_from_modifiers(raw):
@@ -2523,18 +2644,70 @@ def update_order_content(order_id):
         except Exception:
             return 1
 
+    def _normalize_locked_item_entry(raw):
+        if isinstance(raw, dict):
+            product_id = str(raw.get('product_id') or raw.get('id') or '').strip()
+            name = str(raw.get('name') or '').strip()
+            notes = str(raw.get('notes') or '').strip()
+            try:
+                qty = int(raw.get('qty', raw.get('quantity', 0)) or 0)
+            except Exception:
+                qty = 0
+            try:
+                unit_price = int(raw.get('price', raw.get('unit_price', 0)) or 0)
+            except Exception:
+                unit_price = 0
+            modifiers_raw = raw.get('modifiers_json')
+            if modifiers_raw is None:
+                modifiers_raw = raw.get('modifiers')
+        else:
+            product_id = str(raw[1] or '').strip()
+            name = str(raw[2] or '').strip()
+            notes = str(raw[6] or '').strip()
+            try:
+                qty = int(raw[3] or 0)
+            except Exception:
+                qty = 0
+            try:
+                unit_price = int(raw[4] or 0)
+            except Exception:
+                unit_price = 0
+            modifiers_raw = raw[5]
+
+        modifiers_obj = {}
+        if isinstance(modifiers_raw, dict):
+            modifiers_obj = modifiers_raw
+        elif isinstance(modifiers_raw, str):
+            text = modifiers_raw.strip()
+            if text:
+                try:
+                    parsed = json.loads(text)
+                    if isinstance(parsed, dict):
+                        modifiers_obj = parsed
+                except Exception:
+                    modifiers_obj = {}
+
+        return {
+            'product_id': product_id,
+            'name': name,
+            'qty': max(0, qty),
+            'unit_price': unit_price,
+            'notes': notes,
+            'modifiers': json.dumps(modifiers_obj, ensure_ascii=False, sort_keys=True),
+        }
+
     old_units_by_product = {}
     for r in old_rows:
         pid = str(r[1] or '').strip()
         if not pid:
             continue
         try:
-            qty = int(r[2] or 0)
+            qty = int(r[3] or 0)
         except Exception:
             qty = 0
         if qty <= 0:
             continue
-        pack_size = _pack_size_from_modifiers(r[3])
+        pack_size = _pack_size_from_modifiers(r[5])
         old_units_by_product[pid] = old_units_by_product.get(pid, 0) + (qty * pack_size)
 
     active_promotion = _get_active_entry_promotion(tenant_slug)
@@ -2654,6 +2827,35 @@ def update_order_content(order_id):
             
     # Obtener notas generales
     order_notes = payload.get('order_notes')
+
+    is_paid_order = str(payment_status or '').strip().lower() == 'paid'
+    if is_paid_order:
+        locked_before = sorted(
+            (_normalize_locked_item_entry(row_item) for row_item in old_rows),
+            key=lambda item: (
+                item['product_id'],
+                item['name'],
+                item['qty'],
+                item['unit_price'],
+                item['notes'],
+                item['modifiers'],
+            ),
+        )
+        locked_after = sorted(
+            (_normalize_locked_item_entry(item) for item in valid_items),
+            key=lambda item: (
+                item['product_id'],
+                item['name'],
+                item['qty'],
+                item['unit_price'],
+                item['notes'],
+                item['modifiers'],
+            ),
+        )
+        if locked_before != locked_after:
+            return jsonify({
+                'error': 'El pedido ya fue cobrado. Solo puedes editar mesa, contacto, direccion y nota general.'
+            }), 400
             
     try:
         deltas = {}
@@ -2720,21 +2922,51 @@ def update_order_content(order_id):
                     (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], item['modifiers_json'], item['notes'])
                 )
             
+        order_sets = ["total = ?", "shipping_cost = ?", "customer_phone = ?", "customer_name = ?", "table_number = ?"]
+        order_params = [total, base_shipping, next_customer_phone, next_customer_name, next_table_number]
+        if order_type_norm == 'direccion':
+            order_sets.append("address_json = ?")
+            order_params.append(json.dumps(next_address_json, ensure_ascii=False))
+
         # Actualizar Total Orden y Notas Generales si se proveen
         if order_notes is not None:
-            cur.execute("UPDATE orders SET total = ?, order_notes = ?, shipping_cost = ? WHERE id = ?", (total, order_notes, base_shipping, order_id))
-        else:
-            cur.execute("UPDATE orders SET total = ?, shipping_cost = ? WHERE id = ?", (total, base_shipping, order_id))
+            order_sets.append("order_notes = ?")
+            order_params.append(order_notes)
+        order_params.append(order_id)
+        cur.execute(f"UPDATE orders SET {', '.join(order_sets)} WHERE id = ?", tuple(order_params))
         
         # Registrar Evento
         actor = session.get('admin_user') or 'admin'
         cur.execute(
             "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (order_id, 'order_updated', actor, 0, json.dumps({'new_total': total, 'items_count': len(valid_items)}), datetime.utcnow().isoformat())
+            (
+                order_id,
+                'order_updated',
+                actor,
+                0,
+                json.dumps({
+                    'new_total': total,
+                    'items_count': len(valid_items),
+                    'table_number': next_table_number,
+                    'customer_phone': next_customer_phone,
+                    'customer_name': next_customer_name,
+                    'address': next_address_json if order_type_norm == 'direccion' else None,
+                }, ensure_ascii=False),
+                datetime.utcnow().isoformat()
+            )
         )
         
         conn.commit()
-        return jsonify({'ok': True, 'order_id': order_id, 'total': total, 'items': valid_items})
+        return jsonify({
+            'ok': True,
+            'order_id': order_id,
+            'total': total,
+            'items': valid_items,
+            'table_number': next_table_number,
+            'customer_phone': next_customer_phone,
+            'customer_name': next_customer_name,
+            'address': next_address_json if order_type_norm == 'direccion' else None,
+        })
         
     except Exception as e:
         conn.rollback()
