@@ -3518,6 +3518,7 @@
         <div style="display:flex; gap:8px; margin-bottom:8px;">
           <input type="text" id="header-public-link" readonly style="flex:1; min-width:0; padding:8px; border:1px solid #ccc; border-radius:4px; background:#f8fafc; color:#334155;">
           <button type="button" id="header-copy-link-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#2563eb; color:#fff; cursor:pointer; font-weight:700;">Copiar</button>
+          <button type="button" id="header-copy-link-fresh-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#1d4ed8; color:#fff; cursor:pointer; font-weight:700;">Copiar link anti-cache</button>
         </div>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
           <button type="button" id="header-open-link-btn" style="padding:8px 12px; border:none; border-radius:6px; background:#0f766e; color:#fff; cursor:pointer; font-weight:700;">Abrir carta</button>
@@ -11923,6 +11924,7 @@
     const headerShareDescription = document.getElementById('header-share-description');
     const headerPublicLinkInput = document.getElementById('header-public-link');
     const headerCopyLinkBtn = document.getElementById('header-copy-link-btn');
+    const headerCopyLinkFreshBtn = document.getElementById('header-copy-link-fresh-btn');
     const headerOpenLinkBtn = document.getElementById('header-open-link-btn');
     const headerGenerateQrBtn = document.getElementById('header-generate-qr-btn');
     const headerDownloadQrBtn = document.getElementById('header-download-qr-btn');
@@ -12044,6 +12046,12 @@
       const url = getPublicMenuUrlForSlug(getCurrentHeaderTenantSlug());
       if (headerPublicLinkInput) headerPublicLinkInput.value = url;
       return url;
+    }
+
+    function getFreshHeaderPublicLink() {
+      const baseUrl = refreshHeaderPublicLink();
+      const joiner = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+      return `${baseUrl}${joiner}v=${Date.now()}`;
     }
 
     function renderHeaderQr(url) {
@@ -12184,6 +12192,28 @@
           alert('Link copiado al portapapeles.');
         } catch (_) {
           alert('No se pudo copiar el link.');
+        }
+      });
+    }
+
+    if (headerCopyLinkFreshBtn) {
+      headerCopyLinkFreshBtn.addEventListener('click', async () => {
+        const url = getFreshHeaderPublicLink();
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(url);
+          } else {
+            if (headerPublicLinkInput) {
+              headerPublicLinkInput.value = url;
+              headerPublicLinkInput.focus();
+              headerPublicLinkInput.select();
+            }
+            document.execCommand('copy');
+            refreshHeaderPublicLink();
+          }
+          alert('Link anti-cache copiado al portapapeles.');
+        } catch (_) {
+          alert('No se pudo copiar el link anti-cache.');
         }
       });
     }
