@@ -76,6 +76,32 @@ def _join_labels(labels):
         return f'{parts[0]} y {parts[1]}'
     return f'{parts[0]}, {parts[1]} y {parts[2]}'
 
+def _preferred_public_url():
+    try:
+        current_url = str(request.url or '').strip()
+    except Exception:
+        current_url = ''
+    if current_url:
+        return re.sub(r'^http://', 'https://', current_url, count=1, flags=re.IGNORECASE)
+    try:
+        fallback = str(request.url_root or '').rstrip('/') + '/' + str(request.path or '').lstrip('/')
+    except Exception:
+        fallback = ''
+    return re.sub(r'^http://', 'https://', fallback, count=1, flags=re.IGNORECASE)
+
+def _absolutize_public_asset(url):
+    raw = str(url or '').strip()
+    if not raw:
+        return ''
+    if re.match(r'^https?://', raw, flags=re.IGNORECASE):
+        return re.sub(r'^http://', 'https://', raw, count=1, flags=re.IGNORECASE)
+    if raw.startswith('//'):
+        return 'https:' + raw
+    base = re.sub(r'^http://', 'https://', str(request.url_root or '').rstrip('/'), count=1, flags=re.IGNORECASE)
+    if raw.startswith('/'):
+        return base + raw
+    return base + '/' + raw.lstrip('./')
+
 def _resolve_tenant_display_name(slug):
     cfg = get_cached_tenant_config(slug) or {}
     meta_branding = cfg.get('meta', {}).get('branding', {})
@@ -134,7 +160,7 @@ def _render_public_shell(slug):
     description = _build_share_description(slug)
     safe_title = html.escape(title, quote=False)
     safe_description = html.escape(description, quote=True)
-    public_url = request.url_root.rstrip('/') + '/' + slug + '.html'
+    public_url = _preferred_public_url()
     shell_path = None
     for candidate in PUBLIC_MENU_BASE_FILES:
         path = os.path.join(current_app.static_folder, candidate)
@@ -153,6 +179,12 @@ def _render_public_shell(slug):
     content = re.sub(r'(<meta\s+name="twitter:description"\s+content=")([^"]*)(")', rf'\g<1>{safe_description}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<link\s+rel="canonical"\s+href=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
     content = re.sub(r'(<meta\s+property="og:url"\s+content=")([^"]*)(")', rf'\g<1>{html.escape(public_url, quote=True)}\g<3>', content, count=1, flags=re.IGNORECASE)
+    og_image_match = re.search(r'<meta\s+property="og:image"\s+content="([^"]*)"', content, flags=re.IGNORECASE)
+    og_image_url = _absolutize_public_asset(og_image_match.group(1) if og_image_match else '')
+    if og_image_url:
+        safe_og_image_url = html.escape(og_image_url, quote=True)
+        content = re.sub(r'(<meta\s+property="og:image"\s+content=")([^"]*)(")', rf'\g<1>{safe_og_image_url}\g<3>', content, count=1, flags=re.IGNORECASE)
+        content = re.sub(r'(<meta\s+name="twitter:image"\s+content=")([^"]*)(")', rf'\g<1>{safe_og_image_url}\g<3>', content, count=1, flags=re.IGNORECASE)
     resp = make_response(content)
     resp.headers['Content-Type'] = 'text/html; charset=utf-8'
     return _no_store(resp)
