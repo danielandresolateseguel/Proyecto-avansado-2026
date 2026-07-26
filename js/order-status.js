@@ -599,6 +599,13 @@ function renderStatus(order, config = {}) {
         `;
     }
 
+    let readyMessage = '¡Tu pedido está listo! Por favor acércate al mostrador.';
+    if (order.order_type === 'mesa') {
+        readyMessage = '¡Tu pedido está listo! En breve te lo llevamos a la mesa.';
+    } else if (order.order_type === 'direccion') {
+        readyMessage = '¡Tu pedido está listo! En breve saldrá rumbo a tu dirección.';
+    }
+
     statusBody.innerHTML = `
         <div class="order-status-card">
             <!-- Header con Badge -->
@@ -628,7 +635,7 @@ function renderStatus(order, config = {}) {
 
             ${order.status === 'listo' ? `
                 <div class="status-alert ready" style="margin-top: 1.5rem; padding: 1rem; background-color: #d1fae5; color: #065f46; border-radius: 0.5rem; text-align: center; font-weight: 600;">
-                    <i class="fas fa-bell"></i> ¡Tu pedido está listo! Por favor acércate al mostrador.
+                    <i class="fas fa-bell"></i> ${readyMessage}
                 </div>
             ` : ''}
 
