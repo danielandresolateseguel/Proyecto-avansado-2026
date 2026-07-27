@@ -1291,6 +1291,37 @@
       box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
       background: #ffffff;
     }
+    .delivery-filter-pills {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px;
+      border: 1px solid #d6e0ee;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 6px 16px rgba(59, 130, 246, 0.06);
+    }
+    .delivery-filter-pill {
+      border: 1px solid transparent;
+      background: transparent;
+      color: #475569;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+    .delivery-filter-pill:hover {
+      background: #f8fafc;
+      color: #0f172a;
+    }
+    .delivery-filter-pill.active {
+      background: #1d4ed8;
+      color: #fff;
+      border-color: #1d4ed8;
+      box-shadow: 0 8px 18px rgba(29, 78, 216, 0.22);
+    }
     .delivery-toolbar-group.route-actions button {
       white-space: nowrap;
       flex: 0 0 auto;
@@ -1318,7 +1349,8 @@
       display: flex;
     }
     .delivery-toolbar-info .delivery-run-chip,
-    .delivery-toolbar-info .delivery-count-chip {
+    .delivery-toolbar-info .delivery-count-chip,
+    .delivery-toolbar-info .delivery-filter-chip {
       display: inline-flex;
       align-items: center;
       min-height: 32px;
@@ -1328,7 +1360,8 @@
       color: #4338ca;
     }
     .delivery-toolbar-info .delivery-run-chip:empty,
-    .delivery-toolbar-info .delivery-count-chip:empty {
+    .delivery-toolbar-info .delivery-count-chip:empty,
+    .delivery-toolbar-info .delivery-filter-chip:empty {
       display: none;
     }
     .delivery-summary {
@@ -2302,19 +2335,23 @@
       <div class="delivery-toolbar">
         <div class="delivery-toolbar-row">
           <div class="delivery-toolbar-group filters">
-            <span class="delivery-toolbar-title">Filtro</span>
-            <label class="delivery-filter-field">
-              <span>Ver</span>
+            <span class="delivery-toolbar-title">Bandeja</span>
+            <div class="delivery-filter-pills" id="delivery-filter-pills" style="display:none;">
+              <button id="delivery-mine" type="button" class="delivery-filter-pill">Mi salida</button>
+              <button id="delivery-unassigned" type="button" class="delivery-filter-pill">Sin asignar</button>
+            </div>
+            <label class="delivery-filter-field" id="delivery-filter-select-field">
+              <span>Bandeja</span>
               <select id="delivery-filter">
-                <option value="mine">Mis pedidos</option>
+                <option value="mine">Mi salida</option>
                 <option value="unassigned">Sin asignar</option>
                 <option value="assigned">Asignados</option>
-                <option value="open">Abiertos</option>
+                <option value="open">Activos</option>
                 <option value="all">Todos</option>
               </select>
             </label>
-            <label class="delivery-filter-field">
-              <span>Estado</span>
+            <label class="delivery-filter-field" id="delivery-status-filter-field">
+              <span id="delivery-status-filter-label">Etapa</span>
               <select id="delivery-status-filter">
                 <option value="">Todos</option>
                 <option value="pending">Pendiente</option>
@@ -2346,6 +2383,7 @@
           </div>
           <div class="delivery-toolbar-info">
             <span id="delivery-count" class="delivery-count-chip"></span>
+            <span id="delivery-filter-summary" class="delivery-filter-chip"></span>
             <span id="delivery-run-label" class="delivery-run-chip"></span>
           </div>
         </div>
@@ -6370,14 +6408,6 @@
 
       if (isRepartidor && canDelivery) {
         try {
-          const sel = document.getElementById('delivery-filter');
-          if (sel && !sel.dataset.lockedDefault) {
-            sel.dataset.lockedDefault = '1';
-            sel.value = 'unassigned';
-            deliveryFilter = 'unassigned';
-          }
-        } catch (_) {}
-        try {
           if (!window.__repartidorDeliveryAutoOpened) {
             window.__repartidorDeliveryAutoOpened = true;
             const box = document.getElementById('delivery-box');
@@ -6385,6 +6415,7 @@
           }
         } catch (_) {}
       }
+      try { updateDeliveryFilterControls(); } catch (_) {}
 
       document.querySelectorAll('.pager').forEach(el => {
         if (!el.dataset.origDisplay) el.dataset.origDisplay = el.style.display || '';
@@ -7545,11 +7576,97 @@
     function refreshDeliveryToolbarInfoVisibility() {
       const box = document.querySelector('#delivery-box .delivery-toolbar-info');
       const countEl = document.getElementById('delivery-count');
+      const filterEl = document.getElementById('delivery-filter-summary');
       const runEl = document.getElementById('delivery-run-label');
       if (!box) return;
       const hasCount = !!String(countEl && countEl.textContent || '').trim();
+      const hasFilter = !!String(filterEl && filterEl.textContent || '').trim();
       const hasRun = !!String(runEl && runEl.textContent || '').trim();
-      box.classList.toggle('has-content', hasCount || hasRun);
+      box.classList.toggle('has-content', hasCount || hasFilter || hasRun);
+    }
+    function _deliveryFilterLabel(filterRaw) {
+      const filter = _normUser(filterRaw || 'unassigned');
+      if (filter === 'mine') return 'Mi salida';
+      if (filter === 'unassigned') return 'Sin asignar';
+      if (filter === 'assigned') return 'Asignados';
+      if (filter === 'open') return 'Activos';
+      if (filter === 'all') return 'Todos';
+      return 'Sin asignar';
+    }
+    function _deliveryStageLabel(statusRaw) {
+      const status = _normUser(statusRaw || '');
+      if (!status) return 'Todas las etapas';
+      if (status === 'pending') return 'Pendiente';
+      if (status === 'assigned') return 'Asignado';
+      if (status === 'en_route') return 'En camino';
+      if (status === 'delivered') return 'Entregado';
+      if (status === 'failed') return 'Falló';
+      return String(statusRaw || '');
+    }
+    function refreshDeliveryFilterSummary() {
+      const el = document.getElementById('delivery-filter-summary');
+      if (!el) return;
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (!isAuthed || !role) {
+        el.textContent = '';
+        refreshDeliveryToolbarInfoVisibility();
+        return;
+      }
+      const base = _deliveryFilterLabel(deliveryFilter || 'unassigned');
+      const stage = _deliveryStageLabel(deliveryStatusFilter || '');
+      el.textContent = role === 'repartidor' ? `${base} · ${stage}` : `${base} · ${stage}`;
+      refreshDeliveryToolbarInfoVisibility();
+    }
+    function updateDeliveryFilterControls() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const isRepartidor = role === 'repartidor';
+      const pills = document.getElementById('delivery-filter-pills');
+      const selectField = document.getElementById('delivery-filter-select-field');
+      const statusField = document.getElementById('delivery-status-filter-field');
+      const mineBtn = document.getElementById('delivery-mine');
+      const unassignedBtn = document.getElementById('delivery-unassigned');
+      if (pills) pills.style.display = isRepartidor ? 'inline-flex' : 'none';
+      if (selectField) selectField.style.display = isRepartidor ? 'none' : '';
+      if (statusField) statusField.style.display = '';
+      if (mineBtn) mineBtn.classList.toggle('active', String(deliveryFilter || '') === 'mine');
+      if (unassignedBtn) unassignedBtn.classList.toggle('active', String(deliveryFilter || '') === 'unassigned');
+      refreshDeliveryFilterSummary();
+    }
+    function _syncDeliveryFilterInputs() {
+      const filterSel = document.getElementById('delivery-filter');
+      const statusSel = document.getElementById('delivery-status-filter');
+      if (filterSel) filterSel.value = String(deliveryFilter || 'unassigned');
+      if (statusSel) statusSel.value = String(deliveryStatusFilter || '');
+      updateDeliveryFilterControls();
+    }
+    function setDeliveryView(filterValue, opts) {
+      const options = (opts && typeof opts === 'object') ? opts : {};
+      deliveryFilter = String(filterValue || 'unassigned');
+      if (options.resetStage) deliveryStatusFilter = '';
+      lastDeliverySignature = '';
+      _syncDeliveryFilterInputs();
+    }
+    async function chooseInitialDeliveryViewForDriver() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (role !== 'repartidor') return;
+      if (window.__deliveryDriverDefaultResolved) {
+        _syncDeliveryFilterInputs();
+        return;
+      }
+      let nextFilter = 'unassigned';
+      try {
+        const runData = await fetchActiveDeliveryRun();
+        const runOrders = Array.isArray(runData && runData.orders) ? runData.orders : [];
+        if (runOrders.some(o => _deliveryMine(o) && _isPendingDeliveryRouteStop(o))) nextFilter = 'mine';
+      } catch (_) {}
+      if (nextFilter !== 'mine') {
+        try {
+          const mine = await fetchMineDeliveryOrders();
+          if (Array.isArray(mine) && mine.length) nextFilter = 'mine';
+        } catch (_) {}
+      }
+      window.__deliveryDriverDefaultResolved = true;
+      setDeliveryView(nextFilter, { resetStage: true });
     }
     function _normUser(s) {
       return String(s || '').trim().toLowerCase();
@@ -7594,13 +7711,7 @@
     function _focusMineDeliveryFilter() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       if (role !== 'repartidor') return;
-      try {
-        const filterSel = document.getElementById('delivery-filter');
-        if (filterSel) filterSel.value = 'mine';
-      } catch (_) {}
-      deliveryFilter = 'mine';
-      deliveryStatusFilter = '';
-      lastDeliverySignature = '';
+      setDeliveryView('mine', { resetStage: true });
     }
     async function getMyRouteOrdersPreferRun() {
       const role = String(currentUserRole || '').trim().toLowerCase();
@@ -8452,6 +8563,7 @@
         const r0 = String(currentUserRole || '').trim().toLowerCase();
         if (r0 === 'repartidor') {
           try {
+            await chooseInitialDeliveryViewForDriver();
             const data = await fetchDeliveryOrders();
             await renderDeliveryOrders(data);
           } catch (e) {
@@ -12866,6 +12978,7 @@
         const resp = await wFetch(new URL('/api/auth/me', API_BASE).toString());
         const data = await resp.json();
         if (data && data.authenticated) {
+          window.__deliveryDriverDefaultResolved = false;
           updateServiceBanner(String(data.tenant_status || ''), String(data.tenant_message || ''));
           if (data.suspended) {
             try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
@@ -12874,6 +12987,7 @@
             currentTenantSlug = '';
             document.getElementById('login-box').style.display = 'block';
             setAuthUI();
+            try { updateDeliveryFilterControls(); } catch (_) {}
             return false;
           }
           isAuthed = true;
@@ -12907,6 +13021,7 @@
           return true;
         }
       } catch (_) {}
+      window.__deliveryDriverDefaultResolved = false;
       isAuthed = false;
       currentUserName = '';
       currentTenantSlug = '';
@@ -12923,6 +13038,7 @@
       setAuthUI();
       updateKitchenVisibility();
       applyRoleUI();
+      try { updateDeliveryFilterControls(); } catch (_) {}
       return false;
     }
 
@@ -13061,6 +13177,7 @@
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
         try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
+        window.__deliveryDriverDefaultResolved = false;
         isAuthed = false;
         csrfToken = '';
         updateServiceBanner('', '');
@@ -13068,6 +13185,7 @@
         document.getElementById('login-box').style.display = 'block';
         document.body.classList.add('show-login');
         setAuthUI();
+        try { updateDeliveryFilterControls(); } catch (_) {}
       });
     }
 
@@ -13151,8 +13269,7 @@
       }
       if (filterSel) {
         filterSel.addEventListener('change', async () => {
-          deliveryFilter = String(filterSel.value || 'mine');
-          lastDeliverySignature = '';
+          setDeliveryView(String(filterSel.value || 'mine'));
           await loadOrdersSafe();
         });
       }
@@ -13160,15 +13277,14 @@
         statusSel.addEventListener('change', async () => {
           deliveryStatusFilter = String(statusSel.value || '');
           lastDeliverySignature = '';
+          _syncDeliveryFilterInputs();
           await loadOrdersSafe();
         });
       }
       if (mineBtn && filterSel) {
         mineBtn.addEventListener('click', async (e) => {
           e.preventDefault();
-          filterSel.value = 'mine';
-          deliveryFilter = 'mine';
-          lastDeliverySignature = '';
+          setDeliveryView('mine', { resetStage: true });
           await loadOrdersSafe();
           try { refreshDeliveryRunLabel(); } catch (_) {}
         });
@@ -13176,12 +13292,11 @@
       if (unassignedBtn && filterSel) {
         unassignedBtn.addEventListener('click', async (e) => {
           e.preventDefault();
-          filterSel.value = 'unassigned';
-          deliveryFilter = 'unassigned';
-          lastDeliverySignature = '';
+          setDeliveryView('unassigned', { resetStage: true });
           await loadOrdersSafe();
         });
       }
+      try { _syncDeliveryFilterInputs(); } catch (_) {}
       if (selectVisibleBtn) {
         selectVisibleBtn.addEventListener('click', async (e) => {
           e.preventDefault();
