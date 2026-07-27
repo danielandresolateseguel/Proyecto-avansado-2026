@@ -293,6 +293,9 @@
     #inventory-box > summary,
     #carousel-box > summary,
     #analytics-panel > summary { display: none; }
+    #delivery-box {
+      overflow: visible;
+    }
     #delivery-box:not([open]),
     #orders-history-group:not([open]),
     #inventory-box:not([open]),
@@ -1207,7 +1210,19 @@
       margin: 10px 0 8px;
       min-width: 0;
       max-width: 100%;
-      overflow-x: hidden;
+      overflow: visible;
+    }
+    .delivery-toolbar-sticky {
+      position: sticky;
+      top: 8px;
+      z-index: 35;
+      align-self: start;
+      margin: 10px 0 8px;
+      padding: 4px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(248,250,252,0.96) 0%, rgba(241,245,249,0.94) 100%);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.10);
     }
     .delivery-toolbar-row {
       display: flex;
@@ -1233,6 +1248,7 @@
     .delivery-toolbar-group.filters {
       background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       border-color: #dbe4f3;
+      padding: 6px 8px;
     }
     .delivery-toolbar-group.route-actions {
       background: #f8fbff;
@@ -1385,14 +1401,20 @@
     }
     .delivery-toolbar-info {
       display: none;
-      flex-wrap: wrap;
-      gap: 8px;
+      flex-wrap: nowrap;
+      gap: 6px;
       align-items: center;
       color: #64748b;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       min-width: 0;
       max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 0 2px 2px;
+    }
+    .delivery-toolbar-info::-webkit-scrollbar {
+      display: none;
     }
     .delivery-toolbar-info.has-content {
       display: flex;
@@ -1402,11 +1424,12 @@
     .delivery-toolbar-info .delivery-filter-chip {
       display: inline-flex;
       align-items: center;
-      min-height: 32px;
-      padding: 0 10px;
+      min-height: 24px;
+      padding: 0 8px;
       border-radius: 999px;
-      background: #eef2ff;
+      background: rgba(238, 242, 255, 0.72);
       color: #4338ca;
+      white-space: nowrap;
     }
     .delivery-toolbar-info .delivery-run-chip:empty,
     .delivery-toolbar-info .delivery-count-chip:empty,
@@ -1612,6 +1635,14 @@
       }
       .delivery-toolbar-group.route-actions {
         width: 100%;
+      }
+      .delivery-toolbar {
+        gap: 8px;
+      }
+      .delivery-toolbar-sticky {
+        top: 6px;
+        margin: 8px 0 6px;
+        padding: 3px;
       }
       .delivery-toolbar-menu {
         width: 100%;
@@ -2443,7 +2474,7 @@
     </details>
     <details class="delivered module-panel" id="delivery-box" style="display:none;">
       <summary>Repartos</summary>
-      <div class="delivery-toolbar">
+      <div class="delivery-toolbar-sticky">
         <div class="delivery-toolbar-row">
           <div class="delivery-toolbar-group filters">
             <span class="delivery-toolbar-title">Bandeja</span>
@@ -2473,6 +2504,10 @@
               </select>
             </label>
           </div>
+        </div>
+      </div>
+      <div class="delivery-toolbar">
+        <div class="delivery-toolbar-row">
           <div class="delivery-toolbar-group route-actions">
             <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
             <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
