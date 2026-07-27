@@ -9959,7 +9959,22 @@
       updateDeliverySelectionUI(orders);
       if (!list) return;
       list.classList.toggle('compact-view', compactMode);
-      const sig = JSON.stringify({ compactMode, orders: orders.map(o => ({ id: o.id, ds: o.delivery_status, a: o.delivery_assigned_to, s: o.status, seq: o.delivery_sequence, pay: o.payment_status })) });
+      const sig = JSON.stringify({
+        compactMode,
+        orders: orders.map(o => ({
+          id: o.id,
+          ds: o.delivery_status,
+          a: o.delivery_assigned_to,
+          s: o.status,
+          seq: o.delivery_sequence,
+          pay: o.payment_status,
+          customer: o.customer_name,
+          phone: o.customer_phone,
+          total: o.total,
+          addr: o.address_json,
+          notes: o.delivery_notes
+        }))
+      });
       if (sig === lastDeliverySignature && list.children.length > 0) return;
       lastDeliverySignature = sig;
       list.innerHTML = '';

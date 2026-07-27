@@ -1,6 +1,7 @@
 import json
 import re
 import math
+import logging
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
@@ -9,6 +10,7 @@ import io
 import csv
 
 bp = Blueprint('orders', __name__, url_prefix='/api')
+logger = logging.getLogger(__name__)
 
 def _parse_perms_json(s):
     if not s:
@@ -784,33 +786,36 @@ def _get_active_run_id(cur, tenant_slug, driver_username):
     row = cur.fetchone()
     return int(row[0]) if row and row[0] is not None else None
 
+def _count_driver_active_delivery_orders(cur, tenant_slug, driver_username):
+    cur.execute(
+        """
+        SELECT COUNT(1)
+        FROM orders o
+        WHERE o.tenant_slug = ?
+          AND lower(trim(COALESCE(o.order_type,''))) = 'direccion'
+          AND o.id NOT IN (SELECT order_id FROM archived_orders)
+          AND lower(COALESCE(o.status,'')) NOT IN ('cancelado', 'entregado')
+          AND lower(COALESCE(o.delivery_assigned_to,'')) = lower(?)
+          AND lower(COALESCE(o.delivery_status,'pending')) != 'delivered'
+        """,
+        (tenant_slug, driver_username),
+    )
+    row = cur.fetchone()
+    return int(row[0] or 0) if row else 0
+
 def _auto_close_run_if_empty(cur, tenant_slug, driver_username):
     try:
         rid = _get_active_run_id(cur, tenant_slug, driver_username)
         if not rid:
             return False
-        cur.execute(
-            """
-            SELECT COUNT(1)
-            FROM delivery_run_orders ro
-            JOIN orders o ON o.id = ro.order_id
-            WHERE ro.run_id = ?
-              AND o.tenant_slug = ?
-              AND o.id NOT IN (SELECT order_id FROM archived_orders)
-              AND lower(COALESCE(o.status,'')) != 'cancelado'
-              AND lower(COALESCE(o.delivery_assigned_to,'')) = lower(?)
-              AND lower(COALESCE(o.delivery_status,'pending')) != 'delivered'
-            """,
-            (rid, tenant_slug, driver_username),
-        )
-        row = cur.fetchone()
-        cnt = int(row[0] or 0) if row else 0
+        cnt = _count_driver_active_delivery_orders(cur, tenant_slug, driver_username)
         if cnt > 0:
             return False
         now = datetime.utcnow().isoformat()
         cur.execute("UPDATE delivery_runs SET status = 'closed', closed_at = ? WHERE id = ?", (now, rid))
         return True
     except Exception:
+        logger.exception("No se pudo auto cerrar la salida activa", extra={'tenant_slug': tenant_slug, 'driver_username': driver_username})
         return False
 
 def _create_run(conn, cur, tenant_slug, driver_username):
@@ -833,6 +838,26 @@ def _get_or_create_active_run(conn, cur, tenant_slug, driver_username):
     if rid:
         return rid
     return _create_run(conn, cur, tenant_slug, driver_username)
+
+def _sync_order_into_active_run(conn, cur, tenant_slug, driver_username, order_id, previous_driver=None):
+    ensure_delivery_run_tables(conn, cur)
+    prev_driver = str(previous_driver or '').strip()
+    if prev_driver and prev_driver.lower() != str(driver_username or '').strip().lower():
+        prev_run_id = _get_active_run_id(cur, tenant_slug, prev_driver)
+        if prev_run_id:
+            cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (prev_run_id, order_id))
+    run_id = _get_or_create_active_run(conn, cur, tenant_slug, driver_username)
+    seq = _upsert_run_order(conn, cur, run_id, order_id, None)
+    cur.execute("UPDATE orders SET delivery_sequence = ? WHERE id = ? AND tenant_slug = ?", (seq, order_id, tenant_slug))
+    return run_id, seq
+
+def _remove_order_from_active_run(conn, cur, tenant_slug, driver_username, order_id):
+    ensure_delivery_run_tables(conn, cur)
+    run_id = _get_active_run_id(cur, tenant_slug, str(driver_username or '').strip())
+    if not run_id:
+        return False
+    cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (run_id, order_id))
+    return True
 
 def _next_run_sequence(cur, run_id):
     cur.execute("SELECT COALESCE(MAX(sequence), 0) FROM delivery_run_orders WHERE run_id = ?", (run_id,))
@@ -1931,16 +1956,11 @@ def assign_delivery_order(order_id):
         (assigned_to, now, order_id),
     )
     try:
-        ensure_delivery_run_tables(conn, cur)
-        if str(current_assigned or '').strip() and str(current_assigned or '').strip().lower() != assigned_to.lower():
-            prev_run_id = _get_active_run_id(cur, tenant_slug, str(current_assigned or '').strip())
-            if prev_run_id:
-                cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (prev_run_id, order_id))
-        run_id = _get_or_create_active_run(conn, cur, tenant_slug, assigned_to)
-        seq = _upsert_run_order(conn, cur, run_id, order_id, None)
-        cur.execute("UPDATE orders SET delivery_sequence = ? WHERE id = ? AND tenant_slug = ?", (seq, order_id, tenant_slug))
+        _sync_order_into_active_run(conn, cur, tenant_slug, assigned_to, order_id, previous_driver=current_assigned)
     except Exception:
-        pass
+        conn.rollback()
+        logger.exception("Fallo al sincronizar la orden con la salida activa", extra={'tenant_slug': tenant_slug, 'order_id': order_id, 'assigned_to': assigned_to})
+        return jsonify({'error': 'no se pudo sincronizar la orden con la salida activa'}), 500
     try:
         cur.execute(
             "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -2108,6 +2128,7 @@ def update_delivery_status(order_id):
         if driver_for_run:
             closed = _auto_close_run_if_empty(cur, tenant_slug, driver_for_run)
     except Exception:
+        logger.exception("Fallo al evaluar el cierre automatico de la salida", extra={'tenant_slug': tenant_slug, 'order_id': order_id})
         closed = False
 
     conn.commit()
@@ -2162,13 +2183,12 @@ def unassign_delivery_order(order_id):
         )
 
     try:
-        ensure_delivery_run_tables(conn, cur)
         if str(assigned_to or '').strip():
-            run_id = _get_active_run_id(cur, tenant_slug, str(assigned_to or '').strip())
-            if run_id:
-                cur.execute("DELETE FROM delivery_run_orders WHERE run_id = ? AND order_id = ?", (run_id, order_id))
+            _remove_order_from_active_run(conn, cur, tenant_slug, str(assigned_to or '').strip(), order_id)
     except Exception:
-        pass
+        conn.rollback()
+        logger.exception("Fallo al quitar la orden de la salida activa", extra={'tenant_slug': tenant_slug, 'order_id': order_id, 'assigned_to': str(assigned_to or '').strip()})
+        return jsonify({'error': 'no se pudo actualizar la salida activa'}), 500
 
     try:
         cur.execute(
@@ -2184,6 +2204,7 @@ def unassign_delivery_order(order_id):
         if str(assigned_to or '').strip():
             closed = _auto_close_run_if_empty(cur, tenant_slug, str(assigned_to or '').strip())
     except Exception:
+        logger.exception("Fallo al evaluar el cierre automatico tras devolver la orden", extra={'tenant_slug': tenant_slug, 'order_id': order_id})
         closed = False
 
     conn.commit()
@@ -2346,11 +2367,15 @@ def close_active_delivery_run():
     try:
         ensure_delivery_run_tables(conn, cur)
     except Exception:
-        pass
+        logger.exception("Fallo al preparar las tablas de salidas", extra={'tenant_slug': tenant_slug, 'driver_username': driver})
+        return jsonify({'error': 'no se pudo preparar la salida activa'}), 500
 
     run_id = _get_active_run_id(cur, tenant_slug, driver)
     if not run_id:
         return jsonify({'ok': True, 'closed': False})
+    pending_count = _count_driver_active_delivery_orders(cur, tenant_slug, driver)
+    if pending_count > 0:
+        return jsonify({'error': f'todavia hay {pending_count} pedido(s) pendientes en la salida', 'pending_orders': pending_count}), 409
 
     now = datetime.utcnow().isoformat()
     cur.execute("UPDATE delivery_runs SET status = 'closed', closed_at = ? WHERE id = ?", (now, run_id))
