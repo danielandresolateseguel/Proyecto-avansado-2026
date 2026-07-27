@@ -1806,6 +1806,40 @@
       background: #b91c1c;
       color: #fff;
     }
+    .delivery-incident-reassign {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+    }
+    .delivery-incident-reassign select {
+      min-width: 0;
+      height: 36px;
+      border-radius: 10px;
+      border: 1px solid #fbcfe8;
+      background: #fff;
+      color: #881337;
+      padding: 0 10px;
+      font-weight: 700;
+    }
+    .delivery-incident-reassign button {
+      min-height: 36px;
+      padding: 0 12px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #334155;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .delivery-incident-reassign-hint {
+      margin-top: 6px;
+      font-size: 11px;
+      color: #7f1d1d;
+      font-weight: 600;
+    }
     .delivery-more {
       margin-top: 8px;
     }
@@ -8249,6 +8283,10 @@
       if (!!isOwnerUser || role === 'admin' || role === 'caja') return true;
       return role === 'repartidor' && _deliveryMine(order);
     }
+    function _canReassignDeliveryIncident(order) {
+      if (!_canResolveDeliveryIncident(order)) return false;
+      return !!isAuthed && (!!isOwnerUser || !!canManageUsers || String(currentUserRole || '').trim().toLowerCase() === 'admin');
+    }
     function _getDeliveryIncidentRetryStatus(order) {
       return String(order && order.delivery_assigned_to || '').trim() ? 'assigned' : 'pending';
     }
@@ -8506,23 +8544,43 @@
         result = { order_id: orderId, status };
       }
 
-      const patchLocalOrderStatus = (oid, st, paymentStatus) => {
+      const patchLocalOrderStatus = (oid, st, paymentStatus, extra) => {
         const idStr = String(oid);
         const newSt = String(st || '').trim();
         const newPaymentStatus = String(paymentStatus || '').trim();
+        const patchExtra = (found) => {
+          if (!found || !extra || typeof extra !== 'object') return;
+          if (Object.prototype.hasOwnProperty.call(extra, 'delivery_status')) {
+            found.delivery_status = String(extra.delivery_status || '').trim();
+          }
+          if (Object.prototype.hasOwnProperty.call(extra, 'delivery_assigned_to')) {
+            found.delivery_assigned_to = String(extra.delivery_assigned_to || '').trim();
+          }
+          if (Object.prototype.hasOwnProperty.call(extra, 'delivery_notes')) {
+            found.delivery_notes = extra.delivery_notes == null ? null : String(extra.delivery_notes);
+          }
+        };
         const patchArr = (arr) => {
           if (!Array.isArray(arr)) return;
           const found = arr.find(x => x && String(x.id) === idStr);
           if (found) {
             found.status = newSt;
             if (newPaymentStatus) found.payment_status = newPaymentStatus;
+            patchExtra(found);
           }
         };
         try { patchArr(window.currentOrders); } catch (_) {}
         try { patchArr(window.currentOrdersForTables); } catch (_) {}
+        try { patchArr(window.currentDeliveryOrders); } catch (_) {}
         try { if (window.__lastOrdersData && Array.isArray(window.__lastOrdersData.orders)) patchArr(window.__lastOrdersData.orders); } catch (_) {}
       };
-      try { patchLocalOrderStatus(orderId, status, result && result.payment_status); } catch (_) {}
+      try {
+        const localDeliveryPatch = {};
+        if (result && Object.prototype.hasOwnProperty.call(result, 'delivery_status')) localDeliveryPatch.delivery_status = result.delivery_status;
+        if (result && Object.prototype.hasOwnProperty.call(result, 'delivery_assigned_to')) localDeliveryPatch.delivery_assigned_to = result.delivery_assigned_to;
+        if (result && Object.prototype.hasOwnProperty.call(result, 'delivery_notes')) localDeliveryPatch.delivery_notes = result.delivery_notes;
+        patchLocalOrderStatus(orderId, status, result && result.payment_status, localDeliveryPatch);
+      } catch (_) {}
 
       try {
         const refund = result && result.refund;
@@ -10465,13 +10523,15 @@
       return !!me && a === me;
     }
 
-    async function assignDelivery(orderId) {
+    async function assignDelivery(orderId, assignedToOverride) {
       if (!csrfToken) await fetchCSRF();
+      const assignedTo = String((typeof assignedToOverride !== 'undefined' ? assignedToOverride : (currentUserName || '')) || '').trim();
+      if (!assignedTo) throw new Error('assigned_to requerido');
       const url = new URL(`/api/delivery/orders/${orderId}/assign`, API_BASE);
       const resp = await wFetch(url.toString(), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-        body: JSON.stringify({ assigned_to: String(currentUserName || '').trim() })
+        body: JSON.stringify({ assigned_to: assignedTo })
       });
       if (!resp.ok) {
         let msg = 'No se pudo asignar';
@@ -10479,6 +10539,32 @@
         throw new Error(msg);
       }
       return await resp.json();
+    }
+
+    async function fetchAssignableDeliveryDrivers(forceReload) {
+      if (!isAuthed || !(!!isOwnerUser || !!canManageUsers || String(currentUserRole || '').trim().toLowerCase() === 'admin')) return [];
+      const slug = currentTenantSlug || (document.getElementById('tenant-input') ? document.getElementById('tenant-input').value : '') || 'gastronomia-local1';
+      const cache = window.__deliveryAssignableDriversCache || null;
+      const now = Date.now();
+      if (!forceReload && cache && cache.slug === slug && Array.isArray(cache.list) && (now - Number(cache.ts || 0)) < 15000) {
+        return cache.list.slice();
+      }
+      const url = new URL('/api/admin_users', API_BASE);
+      url.searchParams.set('tenant_slug', slug);
+      const resp = await wFetch(url.toString());
+      const data = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(String(data && data.error || 'No se pudo cargar repartidores'));
+      }
+      const list = (Array.isArray(data && data.users) ? data.users : [])
+        .map(u => ({
+          username: String(u && u.username || '').trim(),
+          role: String(u && u.role || '').trim().toLowerCase()
+        }))
+        .filter(u => !!u.username && u.role === 'repartidor')
+        .sort((a, b) => a.username.localeCompare(b.username, 'es', { sensitivity: 'base' }));
+      window.__deliveryAssignableDriversCache = { slug, list: list.slice(), ts: now };
+      return list;
     }
 
     async function unassignDelivery(orderId) {
@@ -10807,6 +10893,12 @@
         orders = orders.filter(o => _effectiveDeliveryStatus(o) !== 'delivered');
       }
       window.currentDeliveryOrders = orders;
+      let assignableDrivers = [];
+      try {
+        assignableDrivers = await fetchAssignableDeliveryDrivers();
+      } catch (_) {
+        assignableDrivers = [];
+      }
       const list = document.getElementById('delivery-list');
       const countEl = document.getElementById('delivery-count');
       const compactMode = !!deliveryCompactMode;
@@ -10991,6 +11083,11 @@
         const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Detalle</button>`;
         const canResolveIncident = dStatus === 'failed' && _canResolveDeliveryIncident(o);
         const canCancelIncident = canResolveIncident && _canSeeCashFollowupSignal();
+        const canReassignIncident = dStatus === 'failed' && _canReassignDeliveryIncident(o);
+        const currentAssignedNorm = String(o.delivery_assigned_to || '').trim().toLowerCase();
+        const reassignDrivers = canReassignIncident
+          ? assignableDrivers.filter(driver => String(driver && driver.username || '').trim().toLowerCase() !== currentAssignedNorm)
+          : [];
         const orderIdNum = Number(o.id || 0);
         const isCurrentStop = currentPriorityId > 0 && orderIdNum === currentPriorityId;
         const isNextStop = nextPriorityId > 0 && orderIdNum === nextPriorityId && !isCurrentStop;
@@ -11052,6 +11149,16 @@
               ${canCancelIncident ? `<button type="button" class="delivery-incident-action" data-id="${safeDeliveryId}" data-action="cancel">Cancelar pedido</button>` : ''}
               <button type="button" class="delivery-incident-action" data-id="${safeDeliveryId}" data-action="detail">Ver detalle</button>
             </div>
+            ${canReassignIncident ? `
+              <div class="delivery-incident-reassign">
+                <select class="delivery-incident-driver" data-id="${safeDeliveryId}">
+                  <option value="">Reasignar a...</option>
+                  ${reassignDrivers.map(driver => `<option value="${escapeAdminAttr(String(driver && driver.username || ''))}">${escapeAdminHtml(String(driver && driver.username || ''))}</option>`).join('')}
+                </select>
+                <button type="button" class="delivery-incident-reassign-btn" data-id="${safeDeliveryId}">Reasignar</button>
+              </div>
+              ${!reassignDrivers.length ? `<div class="delivery-incident-reassign-hint">No hay otro repartidor disponible para reasignar.</div>` : ''}
+            ` : ''}
           </div>
         ` : '';
         const secondaryActions = [enRouteBtn, payDeliveredBtn, deliveredBtn, payBtn, failedBtn, unassignBtn, notesBtn, viewBtn, upBtn, downBtn]
@@ -11346,6 +11453,49 @@
             alert(String(err && err.message || 'No se pudo resolver la incidencia'));
           } finally {
             btn.disabled = false;
+            btn.style.opacity = '';
+            btn.textContent = originalText;
+          }
+        });
+      });
+      list.querySelectorAll('.delivery-incident-reassign-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const oid = Number(btn.dataset.id || 0);
+          if (!oid || btn.disabled) return;
+          const o = (orders || []).find(x => Number(x.id) === oid) || null;
+          if (!o) return;
+          const wrap = btn.closest('.delivery-incident-reassign') || btn.parentElement;
+          const select = wrap ? wrap.querySelector('.delivery-incident-driver') : null;
+          const nextDriver = String(select && select.value || '').trim();
+          if (!nextDriver) {
+            try { showToast('Selecciona un repartidor para reasignar', 'info'); } catch(_) {}
+            return;
+          }
+          const currentDriver = String(o.delivery_assigned_to || '').trim();
+          if (currentDriver && currentDriver.trim().toLowerCase() === nextDriver.toLowerCase()) {
+            try { showToast('El pedido ya esta asignado a ese repartidor', 'info'); } catch(_) {}
+            return;
+          }
+          const orderLabel = getDeliveryOrderLabel(o);
+          const ok = await askConfirm(`¿Reasignar ${orderLabel} a ${nextDriver}?`);
+          if (!ok) return;
+          const originalText = btn.textContent;
+          btn.disabled = true;
+          if (select) select.disabled = true;
+          btn.style.opacity = '0.6';
+          btn.textContent = 'Reasignando...';
+          try {
+            await setDeliveryStatus(oid, currentDriver ? 'assigned' : 'pending', { delivery_notes: null });
+            await assignDelivery(oid, nextDriver);
+            lastDeliverySignature = '';
+            await loadOrdersSafe();
+            try { showToast(`${orderLabel} reasignado a ${nextDriver}`, 'success'); } catch(_) {}
+          } catch (err) {
+            alert(String(err && err.message || 'No se pudo reasignar la incidencia'));
+          } finally {
+            btn.disabled = false;
+            if (select) select.disabled = false;
             btn.style.opacity = '';
             btn.textContent = originalText;
           }

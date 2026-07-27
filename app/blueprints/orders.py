@@ -1703,7 +1703,8 @@ def update_order_status(order_id):
     # Security Check: Prevent modifying finalized orders
     cur.execute(
         "SELECT status, tenant_slug, order_type, COALESCE(delivery_status,''), delivered_at, "
-        "COALESCE(payment_status,''), COALESCE(payment_method,''), COALESCE(tip_amount,0), COALESCE(total,0) "
+        "COALESCE(delivery_assigned_to,''), COALESCE(payment_status,''), COALESCE(payment_method,''), "
+        "COALESCE(tip_amount,0), COALESCE(total,0) "
         "FROM orders WHERE id = ?",
         (order_id,),
     )
@@ -1712,10 +1713,12 @@ def update_order_status(order_id):
          return jsonify({'error': 'no se puede cambiar el estado de una orden entregada. Utilice la función de anulación/reembolso si es necesario.'}), 400
     if not row_check:
         return jsonify({'error': 'orden no encontrada'}), 404
-    current_status, tenant_slug, order_type, current_delivery_status, delivered_at, current_pay_status, current_pay_method, current_tip_amount, current_total = row_check
+    current_status, tenant_slug, order_type, current_delivery_status, delivered_at, current_delivery_assigned_to, current_pay_status, current_pay_method, current_tip_amount, current_total = row_check
     tenant_slug = str(tenant_slug or '')
     order_type = str(order_type or '').strip().lower()
     current_status = str(current_status or '').strip().lower()
+    current_delivery_status_norm = str(current_delivery_status or '').strip().lower()
+    current_delivery_assigned_to = str(current_delivery_assigned_to or '').strip()
     pay_status_norm = str(current_pay_status or '').strip().lower()
     pay_method_norm = str(current_pay_method or '').strip().lower()
     try:
@@ -1801,6 +1804,44 @@ def update_order_status(order_id):
             "UPDATE orders SET status = ?, delivery_status = 'delivered', delivered_at = ? WHERE id = ?",
             (new_status, delivered_ts, order_id),
         )
+    elif order_type == 'direccion' and new_status == 'listo' and current_delivery_status_norm == 'failed':
+        cur.execute(
+            "UPDATE orders SET status = ?, delivery_status = 'pending', delivery_notes = NULL, "
+            "delivery_assigned_to = NULL, delivery_assigned_at = NULL, delivery_sequence = NULL, delivered_at = NULL "
+            "WHERE id = ?",
+            (new_status, order_id),
+        )
+        try:
+            if current_delivery_assigned_to:
+                _remove_order_from_active_run(conn, cur, tenant_slug, current_delivery_assigned_to, order_id)
+        except Exception:
+            conn.rollback()
+            logger.exception(
+                "Fallo al quitar la orden de la salida activa al resolver incidencia desde estados",
+                extra={'tenant_slug': tenant_slug, 'order_id': order_id, 'assigned_to': current_delivery_assigned_to}
+            )
+            return jsonify({'error': 'no se pudo actualizar la salida activa'}), 500
+        try:
+            cur.execute(
+                "INSERT INTO order_events (order_id, event_type, actor, amount_delta, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    order_id,
+                    'delivery_status_change',
+                    actor or '',
+                    0,
+                    json.dumps({
+                        'from': str(current_delivery_status or 'pending'),
+                        'to': 'pending',
+                        'order_status': new_status,
+                        'delivery_notes': None,
+                        'resolved_via': 'order_status_ready',
+                        'prev_assigned_to': current_delivery_assigned_to,
+                    }, ensure_ascii=False),
+                    datetime.utcnow().isoformat(),
+                ),
+            )
+        except Exception:
+            pass
     else:
         cur.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
     if new_status == 'cancelado' and reason:
@@ -1822,12 +1863,19 @@ def update_order_status(order_id):
     except:
         pass
         
-    return jsonify({
+    response = {
         'order_id': order_id,
         'status': new_status,
         'payment_status': 'refunded' if refund_info else pay_status_norm,
         'refund': refund_info,
-    })
+    }
+    if order_type == 'direccion' and new_status == 'listo' and current_delivery_status_norm == 'failed':
+        response.update({
+            'delivery_status': 'pending',
+            'delivery_assigned_to': '',
+            'delivery_notes': None,
+        })
+    return jsonify(response)
 
 @bp.route('/delivery/orders', methods=['GET'])
 def list_delivery_orders():
