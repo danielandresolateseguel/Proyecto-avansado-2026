@@ -1377,6 +1377,23 @@
       padding: 10px 12px;
       box-shadow: 0 8px 18px rgba(74, 111, 165, 0.08);
     }
+    .delivery-summary-card.primary {
+      grid-column: 1 / -1;
+      padding: 14px 14px 13px;
+      border-color: #bfdbfe;
+      background: linear-gradient(180deg, #eff6ff 0%, #ffffff 100%);
+      box-shadow: 0 12px 26px rgba(37, 99, 235, 0.14);
+    }
+    .delivery-summary-card.primary.tone-success {
+      border-color: #bbf7d0;
+      background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+      box-shadow: 0 12px 26px rgba(22, 163, 74, 0.12);
+    }
+    .delivery-summary-card.primary.tone-warn {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%);
+      box-shadow: 0 12px 26px rgba(217, 119, 6, 0.12);
+    }
     .delivery-summary-card .label {
       display: block;
       font-size: 11px;
@@ -1392,6 +1409,17 @@
       font-weight: 800;
       color: #0f172a;
       line-height: 1.1;
+    }
+    .delivery-summary-card.primary .value {
+      font-size: 24px;
+      line-height: 1.05;
+    }
+    .delivery-summary-card .meta {
+      display: block;
+      margin-top: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e293b;
     }
     .delivery-summary-card .hint {
       display: block;
@@ -9953,6 +9981,7 @@
           ? 'Quitar visibles'
           : 'Seleccionar visibles';
       }
+      try { renderDeliverySummary(orders); } catch (_) {}
     }
 
     async function fetchMineDeliveryOrders() {
@@ -10004,45 +10033,147 @@
       await loadOrdersSafe();
     }
 
+    function _sortDeliveryOrdersForSummary(list) {
+      return (Array.isArray(list) ? list.slice() : []).sort((a, b) => {
+        const ra = _statusRank(_effectiveDeliveryStatus(a));
+        const rb = _statusRank(_effectiveDeliveryStatus(b));
+        if (ra !== rb) return ra - rb;
+        return _sortStops(a, b);
+      });
+    }
+    function _deliverySummaryPrimaryCard(label, value, hint, meta, toneClass) {
+      const safeTone = String(toneClass || '').trim();
+      return `
+        <div class="delivery-summary-card primary ${safeTone}">
+          <span class="label">${escapeLocalHtml(label || '')}</span>
+          <span class="value">${escapeLocalHtml(value || '')}</span>
+          ${meta ? `<span class="meta">${escapeLocalHtml(meta)}</span>` : ''}
+          ${hint ? `<span class="hint">${escapeLocalHtml(hint)}</span>` : ''}
+        </div>
+      `;
+    }
+    function _deliverySummaryMetricCard(label, value, hint) {
+      return `
+        <div class="delivery-summary-card">
+          <span class="label">${escapeLocalHtml(label || '')}</span>
+          <span class="value">${escapeLocalHtml(value || '')}</span>
+          ${hint ? `<span class="hint">${escapeLocalHtml(hint)}</span>` : ''}
+        </div>
+      `;
+    }
     function renderDeliverySummary(orders) {
       const summaryEl = document.getElementById('delivery-summary');
       if (!summaryEl) return;
       const role = String(currentUserRole || '').trim().toLowerCase();
       const visibleOrders = Array.isArray(orders) ? orders : [];
-      if (!visibleOrders.length || role !== 'repartidor') {
+      if (role !== 'repartidor') {
         summaryEl.style.display = 'none';
         summaryEl.innerHTML = '';
         return;
       }
+      const filterKey = _normUser(deliveryFilter || 'unassigned');
+      const selectedVisible = getBulkSelectableDeliveryIds(visibleOrders).filter(id => selectedDeliveryIds.has(id));
+      const listos = visibleOrders.filter(o => _normUser(o && o.status || '') === 'listo');
+      const listosTotal = listos.reduce((sum, o) => sum + Number(o && o.total || 0), 0);
+      const porCobrarOrders = visibleOrders.filter(o => String(o && o.payment_status || '').trim().toLowerCase() !== 'paid');
+      const porCobrarCount = porCobrarOrders.length;
+      const porCobrarTotal = porCobrarOrders.reduce((sum, o) => sum + Number(o && o.total || 0), 0);
+      const failedOrders = visibleOrders.filter(o => _effectiveDeliveryStatus(o) === 'failed');
       const enRuta = visibleOrders.filter(o => _effectiveDeliveryStatus(o) === 'en_route').length;
-      const porCobrar = visibleOrders.filter(o => String(o && o.payment_status || '').trim().toLowerCase() !== 'paid').length;
-      const totalCobro = visibleOrders.reduce((sum, o) => {
-        if (String(o && o.payment_status || '').trim().toLowerCase() === 'paid') return sum;
-        return sum + Number(o && o.total || 0);
-      }, 0);
-      const listos = visibleOrders.filter(o => _normUser(o && o.status || '') === 'listo').length;
-      summaryEl.innerHTML = `
-        <div class="delivery-summary-card">
-          <span class="label">Paradas</span>
-          <span class="value">${visibleOrders.length}</span>
-          <span class="hint">Pedidos visibles en tu salida</span>
-        </div>
-        <div class="delivery-summary-card">
-          <span class="label">En camino</span>
-          <span class="value">${enRuta}</span>
-          <span class="hint">Pedidos ya iniciados</span>
-        </div>
-        <div class="delivery-summary-card">
-          <span class="label">Pendientes de cobro</span>
-          <span class="value">${porCobrar}</span>
-          <span class="hint">Pedidos que faltan cobrar</span>
-        </div>
-        <div class="delivery-summary-card">
-          <span class="label">A cobrar</span>
-          <span class="value">$${Math.round(totalCobro || 0)}</span>
-          <span class="hint">${listos} pedido(s) listos para salir</span>
-        </div>
-      `;
+      let html = '';
+
+      if (filterKey === 'mine') {
+        const remainingStops = _sortDeliveryOrdersForSummary(visibleOrders.filter(_isPendingDeliveryRouteStop));
+        const next = remainingStops.find(o => !!getOrderAddressOneLine(o)) || remainingStops[0] || null;
+        if (next) {
+          const nextNumber = displayOrderNumber(next);
+          const nextCustomer = String(next && next.customer_name || '').trim();
+          const nextAddress = getOrderAddressOneLine(next) || 'Revisa la dirección del pedido';
+          const nextStatus = _effectiveDeliveryStatus(next) === 'en_route' ? 'Entrega en curso' : 'Siguiente parada';
+          html += _deliverySummaryPrimaryCard(
+            nextStatus,
+            `Pedido #${nextNumber}`,
+            nextAddress,
+            nextCustomer || 'Cliente sin nombre',
+            _effectiveDeliveryStatus(next) === 'en_route' ? 'tone-warn' : ''
+          );
+        } else {
+          html += _deliverySummaryPrimaryCard(
+            'Salida al día',
+            'Sin entregas pendientes',
+            'No quedan pedidos activos en esta bandeja',
+            '',
+            'tone-success'
+          );
+        }
+        html += _deliverySummaryMetricCard(
+          'Restantes',
+          String(remainingStops.length),
+          remainingStops.length === 1 ? 'Queda 1 entrega activa' : `${remainingStops.length} entregas activas`
+        );
+        html += _deliverySummaryMetricCard(
+          failedOrders.length ? 'Incidencias' : 'En curso',
+          String(failedOrders.length ? failedOrders.length : enRuta),
+          failedOrders.length
+            ? 'Pedidos que necesitan revisión'
+            : (enRuta === 1 ? '1 pedido ya salió' : `${enRuta} pedidos ya salieron`)
+        );
+        html += _deliverySummaryMetricCard(
+          'Por cobrar',
+          `${porCobrarCount} · ${formatMoney(Math.round(porCobrarTotal || 0))}`,
+          porCobrarCount ? 'Cobros pendientes en tu salida visible' : 'Todo lo visible ya está cobrado'
+        );
+      } else {
+        if (selectedVisible.length) {
+          html += _deliverySummaryPrimaryCard(
+            'Listo para tomar',
+            `${selectedVisible.length} pedido(s) seleccionado(s)`,
+            'Puedes sumarlos a tu salida con un toque',
+            `${listos.length} listo(s) para salir en esta bandeja`,
+            'tone-success'
+          );
+        } else if (listos.length) {
+          html += _deliverySummaryPrimaryCard(
+            'Pedidos listos',
+            `${listos.length} listo(s) para salir`,
+            'Selecciona los que quieras sumar a tu salida',
+            `${visibleOrders.length} pedido(s) visibles sin asignar`,
+            ''
+          );
+        } else if (visibleOrders.length) {
+          html += _deliverySummaryPrimaryCard(
+            'Sin pedidos listos',
+            `${visibleOrders.length} pedido(s) en espera`,
+            'Todavía no hay pedidos listos para tomar',
+            'Revisa esta bandeja cuando cocina los marque como listos',
+            'tone-warn'
+          );
+        } else {
+          html += _deliverySummaryPrimaryCard(
+            'Bandeja vacía',
+            'Sin pedidos sin asignar',
+            'No hay repartos esperando asignación',
+            '',
+            'tone-success'
+          );
+        }
+        html += _deliverySummaryMetricCard(
+          'Sin asignar',
+          String(visibleOrders.length),
+          visibleOrders.length === 1 ? '1 pedido visible en esta bandeja' : `${visibleOrders.length} pedidos visibles en esta bandeja`
+        );
+        html += _deliverySummaryMetricCard(
+          'Listos',
+          String(listos.length),
+          listos.length ? `${formatMoney(Math.round(listosTotal || 0))} en pedidos listos` : 'Aún no hay pedidos listos para salir'
+        );
+        html += _deliverySummaryMetricCard(
+          'Seleccionados',
+          String(selectedVisible.length),
+          selectedVisible.length ? 'Se tomarán al pulsar "Tomar seleccionados"' : 'Marca pedidos para preparar tu siguiente salida'
+        );
+      }
+      summaryEl.innerHTML = html;
       summaryEl.style.display = '';
     }
 
