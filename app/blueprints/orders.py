@@ -213,6 +213,112 @@ def _parse_variants_json(raw):
     except Exception:
         return {}
 
+def _normalize_table_text(value):
+    return re.sub(r'\s+', ' ', str(value or '').strip().lower())
+
+def _extract_table_number_token(value):
+    match = re.search(r'(\d+)', _normalize_table_text(value))
+    if not match:
+        return ''
+    return str(int(match.group(1)))
+
+def _table_identity_candidates(value):
+    text = _normalize_table_text(value)
+    if not text:
+        return set()
+    candidates = {text}
+    number = _extract_table_number_token(text)
+    if number:
+        candidates.add(number)
+        candidates.add(f'mesa {number}')
+    return candidates
+
+def _table_values_match(left, right):
+    left_candidates = _table_identity_candidates(left)
+    right_candidates = _table_identity_candidates(right)
+    if not left_candidates or not right_candidates:
+        return False
+    if left_candidates & right_candidates:
+        return True
+    left_number = _extract_table_number_token(left)
+    right_number = _extract_table_number_token(right)
+    return bool(left_number and right_number and left_number == right_number)
+
+def _iter_configured_tables(cfg):
+    tables_cfg = cfg.get('tables') if isinstance(cfg, dict) else {}
+    zones = tables_cfg.get('zones') if isinstance(tables_cfg, dict) else []
+    out = []
+    if not isinstance(zones, list):
+        return out
+    for zone in zones:
+        if not isinstance(zone, dict):
+            continue
+        for table in zone.get('tables') or []:
+            if not isinstance(table, dict):
+                continue
+            label = str(table.get('label') or '').strip()
+            if not label:
+                continue
+            out.append({
+                'zone_id': zone.get('id'),
+                'zone_name': str(zone.get('name') or '').strip(),
+                'label': label,
+            })
+    return out
+
+def _resolve_table_label(cfg, raw_value):
+    raw_text = str(raw_value or '').strip()
+    configured_tables = _iter_configured_tables(cfg)
+    if not configured_tables:
+        return raw_text, None
+    matches = []
+    seen_labels = set()
+    for table in configured_tables:
+        label = str(table.get('label') or '').strip()
+        if not label or not _table_values_match(raw_text, label):
+            continue
+        norm_label = _normalize_table_text(label)
+        if norm_label in seen_labels:
+            continue
+        seen_labels.add(norm_label)
+        matches.append(label)
+    if len(matches) == 1:
+        return matches[0], None
+    if len(matches) > 1:
+        return None, 'La mesa indicada es ambigua. Corrige la configuración de mesas antes de continuar.'
+    return None, 'La mesa indicada no existe en la configuración actual.'
+
+def _find_active_table_conflict(cur, tenant_slug, table_value, exclude_order_id=None):
+    cur.execute(
+        """
+        SELECT id, tenant_order_number, table_number, status, payment_status
+        FROM orders
+        WHERE tenant_slug = ? AND order_type = 'mesa'
+        """,
+        (tenant_slug,)
+    )
+    rows = cur.fetchall()
+    exclude_id = str(exclude_order_id or '').strip()
+    for row in rows:
+        order_id = row[0]
+        if exclude_id and str(order_id) == exclude_id:
+            continue
+        status = str(row[3] or '').strip().lower()
+        payment_status = str(row[4] or '').strip().lower()
+        if status == 'cancelado':
+            continue
+        if status == 'entregado' and payment_status == 'paid':
+            continue
+        if _table_values_match(table_value, row[2]):
+            return {
+                'id': order_id,
+                'tenant_order_number': row[1],
+                'table_number': str(row[2] or '').strip(),
+                'status': status,
+                'payment_status': payment_status,
+            }
+    return None
+
 def _normalize_food_categories_local(value):
     if isinstance(value, list):
         return [str(v or '').strip().lower() for v in value if str(v or '').strip()]
@@ -1247,6 +1353,20 @@ def create_order():
             cfg = get_cached_tenant_config(tenant_slug) or {}
         except Exception:
             cfg = {}
+
+        if order_type == 'mesa':
+            resolved_table_number, table_error = _resolve_table_label(cfg, table_number)
+            if table_error:
+                return jsonify({'error': table_error}), 400
+            table_number = resolved_table_number
+            conflict = _find_active_table_conflict(cur, tenant_slug, table_number)
+            if conflict:
+                order_ref = conflict.get('tenant_order_number') or conflict.get('id')
+                return jsonify({
+                    'error': f'La mesa {table_number} ya tiene un pedido activo.',
+                    'conflict_order_id': conflict.get('id'),
+                    'conflict_order_number': order_ref,
+                }), 409
 
         is_admin_origin = False
         try:
@@ -2702,6 +2822,23 @@ def update_order_content(order_id):
             return jsonify({'error': 'Dirección requerida'}), 400
     if order_type_norm == 'mesa' and not next_table_number:
         return jsonify({'error': 'Número de mesa requerido'}), 400
+    if order_type_norm == 'mesa':
+        try:
+            cfg = get_cached_tenant_config(tenant_slug) or {}
+        except Exception:
+            cfg = {}
+        resolved_table_number, table_error = _resolve_table_label(cfg, next_table_number)
+        if table_error:
+            return jsonify({'error': table_error}), 400
+        next_table_number = resolved_table_number
+        conflict = _find_active_table_conflict(cur, tenant_slug, next_table_number, exclude_order_id=order_id)
+        if conflict:
+            order_ref = conflict.get('tenant_order_number') or conflict.get('id')
+            return jsonify({
+                'error': f'La mesa {next_table_number} ya tiene un pedido activo.',
+                'conflict_order_id': conflict.get('id'),
+                'conflict_order_number': order_ref,
+            }), 409
 
     cur.execute("SELECT id, product_id, name, qty, unit_price, modifiers_json, notes FROM order_items WHERE order_id = ?", (order_id,))
     old_rows = cur.fetchall()

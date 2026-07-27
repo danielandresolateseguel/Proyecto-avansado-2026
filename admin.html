@@ -19467,11 +19467,13 @@
         } catch (_) {}
       }
 
-      async function populateTableSelect(preselectValue, forceRefresh, targetSelectId) {
+      async function populateTableSelect(preselectValue, forceRefresh, targetSelectId, options) {
+        const opts = (options && typeof options === 'object') ? options : {};
         const tableSelect = document.getElementById(targetSelectId || 'new-order-table');
         if (!tableSelect || tableSelect.tagName !== 'SELECT') return;
         
         const currentVal = (preselectValue != null ? String(preselectValue) : tableSelect.value);
+        const currentOrderId = String(opts.currentOrderId || '').trim();
         tableSelect.innerHTML = '<option value="">Seleccionar Mesa...</option>';
         
         const slug = (typeof currentTenantSlug !== 'undefined' && currentTenantSlug) ? currentTenantSlug : 
@@ -19514,25 +19516,6 @@
           activeOrders = Array.isArray(window.currentOrdersForTables) ? window.currentOrdersForTables : (Array.isArray(window.currentOrders) ? window.currentOrders : []);
         }
 
-        const findOrderForTable = (tableLabel) => {
-          const tLbl = String(tableLabel || '').trim().toLowerCase();
-          const nLbl = (tLbl.match(/\d+/) || [null])[0];
-          return activeOrders.find(o => {
-            if ((o.order_type || '').toLowerCase() !== 'mesa') return false;
-            if (String(o.status || '').toLowerCase() === 'cancelado') return false;
-            if (String(o.status || '').toLowerCase() === 'entregado' && String(o.payment_status || '').toLowerCase() === 'paid') return false;
-            const tNum = String(o.table_number || '').trim().toLowerCase();
-            if (!tNum) return false;
-            if (tNum === tLbl) return true;
-            const nNum = (tNum.match(/\d+/) || [null])[0];
-            if (nLbl && nNum && parseInt(nLbl, 10) === parseInt(nNum, 10)) return true;
-            if (!nLbl && !nNum) {
-              if (tLbl.includes(tNum) || tNum.includes(tLbl)) return true;
-            }
-            return false;
-          });
-        };
-
         try {
             const data = JSON.parse(stored);
             const zones = data.zones || [];
@@ -19550,14 +19533,12 @@
                     const opt = document.createElement('option');
                     opt.value = table.label; 
                     const statusMap = { 'free': 'Libre', 'occupied': 'Ocupada', 'reserved': 'Reservada', 'bill': 'Cuenta' };
-                    const matched = findOrderForTable(table.label);
-                    let effectiveStatus = table.status;
-                    if (matched) {
-                      effectiveStatus = (String(matched.status || '').toLowerCase() === 'entregado' && String(matched.payment_status || '').toLowerCase() !== 'paid') ? 'bill' : 'occupied';
-                    } else if (effectiveStatus === 'occupied' || effectiveStatus === 'bill') {
-                      effectiveStatus = 'free';
-                    }
-                    opt.textContent = `${table.label} (${statusMap[effectiveStatus] || effectiveStatus})`;
+                    const isCurrentValue = normalizeTableIdentity(currentVal) === normalizeTableIdentity(table.label);
+                    const effectiveState = getEffectiveTableState(table, activeOrders, { excludeOrderId: currentOrderId });
+                    const effectiveStatus = effectiveState.status;
+                    const blocked = !isCurrentValue && tableBlocksNewAssignment(table, activeOrders, { currentOrderId, excludeOrderId: currentOrderId });
+                    opt.disabled = blocked;
+                    opt.textContent = `${table.label} (${statusMap[effectiveStatus] || effectiveStatus}${blocked ? ' · no disponible' : ''})`;
                     group.appendChild(opt);
                 });
                 
@@ -20430,6 +20411,113 @@
     let tablesLoadPromise = Promise.resolve();
     let tablesLocalRevision = 0;
 
+    function normalizeTableIdentity(value) {
+      return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function extractTableIdentityNumber(value) {
+      const match = normalizeTableIdentity(value).match(/(\d+)/);
+      return match ? String(parseInt(match[1], 10)) : '';
+    }
+
+    function tableIdentityMatches(orderTableValue, tableLabel) {
+      const orderValue = normalizeTableIdentity(orderTableValue);
+      const labelValue = normalizeTableIdentity(tableLabel);
+      if (!orderValue || !labelValue) return false;
+      if (orderValue === labelValue) return true;
+      const orderNumber = extractTableIdentityNumber(orderValue);
+      const labelNumber = extractTableIdentityNumber(labelValue);
+      if (orderNumber && labelNumber) return orderNumber === labelNumber;
+      if (!orderNumber && !labelNumber) {
+        return labelValue.includes(orderValue) || orderValue.includes(labelValue);
+      }
+      return false;
+    }
+
+    function isMesaOrderActiveForTables(order, excludeOrderId) {
+      if (!order) return false;
+      if (excludeOrderId != null && String(order.id || '') === String(excludeOrderId || '')) return false;
+      if (String(order.order_type || '').toLowerCase() !== 'mesa') return false;
+      if (String(order.status || '').toLowerCase() === 'cancelado') return false;
+      if (String(order.status || '').toLowerCase() === 'entregado' && String(order.payment_status || '').toLowerCase() === 'paid') return false;
+      return true;
+    }
+
+    function getTablesActiveOrdersSnapshot() {
+      return Array.isArray(window.currentOrdersForTables)
+        ? window.currentOrdersForTables
+        : (Array.isArray(window.currentOrders) ? window.currentOrders : []);
+    }
+
+    function findActiveMesaOrderForTable(tableLike, options) {
+      const opts = (options && typeof options === 'object') ? options : {};
+      const label = typeof tableLike === 'string'
+        ? tableLike
+        : String((tableLike && tableLike.label) || '').trim();
+      if (!label) return null;
+      const activeOrders = Array.isArray(opts.activeOrders) ? opts.activeOrders : getTablesActiveOrdersSnapshot();
+      return activeOrders.find((order) => {
+        if (!isMesaOrderActiveForTables(order, opts.excludeOrderId)) return false;
+        return tableIdentityMatches(order && order.table_number, label);
+      }) || null;
+    }
+
+    function getEffectiveTableState(table, activeOrders, options) {
+      const opts = (options && typeof options === 'object') ? options : {};
+      const order = findActiveMesaOrderForTable(table, { activeOrders, excludeOrderId: opts.excludeOrderId });
+      let status = normalizeTableIdentity(table && table.status) || 'free';
+      if (order) {
+        status = (String(order.status || '').toLowerCase() === 'entregado' && String(order.payment_status || '').toLowerCase() !== 'paid')
+          ? 'bill'
+          : 'occupied';
+      }
+      return { status, order };
+    }
+
+    function tableBlocksNewAssignment(table, activeOrders, options) {
+      const opts = (options && typeof options === 'object') ? options : {};
+      const state = getEffectiveTableState(table, activeOrders, opts);
+      if (opts.currentOrderId != null && state.order && String(state.order.id || '') === String(opts.currentOrderId || '')) {
+        return false;
+      }
+      return state.status === 'occupied' || state.status === 'bill' || state.status === 'reserved';
+    }
+
+    function getOrderConflictRef(order) {
+      if (!order) return '';
+      try {
+        if (typeof displayOrderNumber === 'function') return displayOrderNumber(order);
+      } catch (_) {}
+      return String(order.tenant_order_number || order.id || '').trim();
+    }
+
+    function validateTableLayoutData(layoutData) {
+      const zones = Array.isArray(layoutData && layoutData.zones) ? layoutData.zones : [];
+      const seenLabels = new Map();
+      const seenNumbers = new Map();
+      for (const zone of zones) {
+        const tables = Array.isArray(zone && zone.tables) ? zone.tables : [];
+        for (const table of tables) {
+          const label = String(table && table.label || '').trim();
+          const normLabel = normalizeTableIdentity(label);
+          if (!normLabel) return 'Todas las mesas deben tener un nombre.';
+          if (seenLabels.has(normLabel)) {
+            return `Las mesas "${seenLabels.get(normLabel)}" y "${label}" comparten el mismo nombre operativo.`;
+          }
+          seenLabels.set(normLabel, label);
+          const numberToken = extractTableIdentityNumber(label);
+          if (numberToken) {
+            const previousLabel = seenNumbers.get(numberToken);
+            if (previousLabel && normalizeTableIdentity(previousLabel) !== normLabel) {
+              return `Las mesas "${previousLabel}" y "${label}" comparten el número operativo ${numberToken}.`;
+            }
+            seenNumbers.set(numberToken, label);
+          }
+        }
+      }
+      return '';
+    }
+
     function zoneIdKey(value) {
       return String(value == null ? '' : value).trim();
     }
@@ -20630,6 +20718,16 @@
           return;
         }
         if (confirm('¿Estás seguro de eliminar este salón y todas sus mesas?')) {
+          const zone = getCurrentZone();
+          const activeOrders = getTablesActiveOrdersSnapshot();
+          const blockingTable = zone && Array.isArray(zone.tables)
+            ? zone.tables.find(table => !!findActiveMesaOrderForTable(table, { activeOrders }))
+            : null;
+          const blockingOrder = blockingTable ? findActiveMesaOrderForTable(blockingTable, { activeOrders }) : null;
+          if (blockingTable && blockingOrder) {
+            alert(`No puedes eliminar el salón porque ${blockingTable.label} tiene un pedido activo (${getOrderConflictRef(blockingOrder)}).`);
+            return;
+          }
           data.zones = data.zones.filter(z => zoneIdKey(z.id) !== zoneIdKey(currentZoneId));
           currentZoneId = data.zones[0].id;
           selectedTableId = null;
@@ -20673,9 +20771,15 @@
               if (!zone) return;
 
               const tablesToMerge = zone.tables.filter(t => mergeState.selectedIds.includes(t.id));
-              const busy = tablesToMerge.find(t => t.status !== 'free');
+              const activeOrders = getTablesActiveOrdersSnapshot();
+              const busy = tablesToMerge.find(t => tableBlocksNewAssignment(t, activeOrders));
               if (busy) {
-                  alert('Solo se pueden unir mesas libres.');
+                  const busyOrder = findActiveMesaOrderForTable(busy, { activeOrders });
+                  if (busyOrder) {
+                    alert(`No puedes unir ${busy.label} porque tiene un pedido activo (${getOrderConflictRef(busyOrder)}).`);
+                  } else {
+                    alert('Solo se pueden unir mesas libres.');
+                  }
                   return;
               }
 
@@ -20698,6 +20802,17 @@
                   merged_ids: mergeState.selectedIds,
                   original_tables: JSON.parse(JSON.stringify(tablesToMerge))
               };
+
+              const draftData = JSON.parse(JSON.stringify(data));
+              const draftZone = (draftData.zones || []).find(z => zoneIdKey(z.id) === zoneIdKey(currentZoneId));
+              if (!draftZone) return;
+              draftZone.tables = (draftZone.tables || []).filter(t => !mergeState.selectedIds.includes(t.id));
+              draftZone.tables.push(newTable);
+              const layoutError = validateTableLayoutData(draftData);
+              if (layoutError) {
+                  alert(layoutError);
+                  return;
+              }
 
               zone.tables = zone.tables.filter(t => !mergeState.selectedIds.includes(t.id));
               zone.tables.push(newTable);
@@ -20729,7 +20844,8 @@
         let nextNum = 1;
         
         // Extract numbers from existing labels of the same type
-        const existingNums = zone.tables
+        const allTables = (Array.isArray(data.zones) ? data.zones : []).flatMap(z => Array.isArray(z && z.tables) ? z.tables : []);
+        const existingNums = allTables
           .map(t => {
             const match = t.label.match(new RegExp(`^${prefix}\\s+(\\d+)$`));
             return match ? parseInt(match[1]) : null;
@@ -20761,6 +20877,15 @@
           status: 'free',
           rotation: 0
         };
+        const draftData = JSON.parse(JSON.stringify(data));
+        const draftZone = (draftData.zones || []).find(z => zoneIdKey(z.id) === zoneIdKey(currentZoneId));
+        if (!draftZone) return;
+        draftZone.tables = (draftZone.tables || []).concat([newTable]);
+        const layoutError = validateTableLayoutData(draftData);
+        if (layoutError) {
+          alert(layoutError);
+          return;
+        }
         zone.tables = zone.tables.concat([newTable]);
         
         selectedTableId = newId;
@@ -20793,6 +20918,12 @@
         if (confirm('¿Eliminar esta mesa?')) {
           const zone = getCurrentZone();
           if (!zone) return;
+          const table = zone.tables.find(t => t.id === selectedTableId);
+          const activeOrder = table ? findActiveMesaOrderForTable(table) : null;
+          if (activeOrder) {
+            alert(`No puedes eliminar ${table.label} porque tiene un pedido activo (${getOrderConflictRef(activeOrder)}).`);
+            return;
+          }
           zone.tables = zone.tables.filter(t => t.id !== selectedTableId);
           selectedTableId = null;
           renderTables();
@@ -21043,6 +21174,11 @@
       const opts = (options && typeof options === 'object') ? options : {};
       const showSuccessNotice = !!opts.showSuccessNotice;
       const showErrorAlert = !!opts.showErrorAlert;
+      const layoutError = validateTableLayoutData(data);
+      if (layoutError) {
+        if (showErrorAlert || !opts.silentValidation) alert(layoutError);
+        return false;
+      }
       const slug = getTablesTenantSlug();
       const canSave = !!(typeof isAuthed !== 'undefined' && isAuthed) && (
         (typeof isOwnerUser !== 'undefined' && isOwnerUser) ||
@@ -21955,6 +22091,7 @@
         const closeBtn = document.getElementById('tdm-close');
         const overlay = modal.querySelector('.kds-modal-overlay');
         const btns = modal.querySelectorAll('.btn-status');
+        const statusTitle = modal.querySelector('.tm-status-controls h3');
         
         // QR Elements
         const qrBtn = document.getElementById('tdm-generate-qr');
@@ -21977,6 +22114,11 @@
              sepBtn.textContent = 'Separar Mesas';
              sepBtn.style.cssText = 'background: #f57c00; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 12px;';
              sepBtn.onclick = () => {
+                  const activeOrder = findActiveMesaOrderForTable(table);
+                  if (activeOrder) {
+                      alert(`No puedes separar ${table.label} porque tiene un pedido activo (${getOrderConflictRef(activeOrder)}).`);
+                      return;
+                  }
                  if (confirm('¿Separar las mesas y restaurar las originales?')) {
                     const zone = getCurrentZone();
                      if (zone) {
@@ -22061,8 +22203,16 @@
         // Fallback for click outside content if overlay doesn't catch it
         modal.onclick = (e) => { if(e.target === modal) close(); };
         
+        const activeOrder = findActiveMesaOrderForTable(table);
+        if (statusTitle) {
+            statusTitle.textContent = activeOrder ? 'Estado controlado por el pedido activo' : 'Cambiar Estado:';
+        }
         btns.forEach(btn => {
+            btn.disabled = !!activeOrder;
+            btn.style.opacity = activeOrder ? '0.5' : '1';
+            btn.style.cursor = activeOrder ? 'not-allowed' : 'pointer';
             btn.onclick = () => {
+                if (activeOrder) return;
                 table.status = btn.dataset.status;
                 saveData();
                 renderTables();
@@ -22072,36 +22222,7 @@
         
         container.innerHTML = '<div class="small" style="text-align: center; color: #888; padding: 20px;">Buscando pedido...</div>';
         
-        const activeOrders = window.currentOrdersForTables || window.currentOrders || [];
-        const order = activeOrders.find(o => {
-            if ((o.order_type || '').toLowerCase() !== 'mesa') return false;
-            // Permitir ver pedidos entregados si la mesa sigue ocupada/cuenta (opcional, pero por ahora mantenemos filtro activo)
-            // Si queremos mostrar la cuenta pendiente, deberíamos incluir 'entregado' si payment_status != 'paid'
-            // Pero el usuario dice "Sin pedido activo", asumamos que busca pedidos en curso (pendiente/preparacion/listo)
-            if (o.status === 'cancelado') return false;
-            if (o.status === 'entregado' && (o.payment_status||'').toLowerCase() === 'paid') return false; 
-
-            const tNum = String(o.table_number || '').trim().toLowerCase();
-            const tLbl = String(table.label || '').trim().toLowerCase();
-            
-            if (!tNum) return false;
-            
-            // Exact or number match
-            if (tNum === tLbl) return true;
-            
-            const n1 = tNum.match(/\d+/);
-            const n2 = tLbl.match(/\d+/);
-
-            if (n1 && n2) {
-                // Both have numbers -> Compare numeric values strictly
-                if (parseInt(n1[0], 10) === parseInt(n2[0], 10)) return true;
-            } else if (!n1 && !n2) {
-                 // Neither has numbers -> Fuzzy string match (e.g. "Barra")
-                 if (tLbl.includes(tNum) || tNum.includes(tLbl)) return true;
-            }
-            
-            return false;
-        });
+        const order = activeOrder;
         
         if (order) {
             if (typeof fetchOrderDetail === 'function') {
@@ -22153,9 +22274,7 @@
       const zone = getCurrentZone();
       if (!zone) return;
 
-      const activeOrders = Array.isArray(window.currentOrdersForTables)
-        ? window.currentOrdersForTables
-        : (Array.isArray(window.currentOrders) ? window.currentOrders : []);
+      const activeOrders = getTablesActiveOrdersSnapshot();
       const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
       zone.tables.forEach(table => {
@@ -22163,48 +22282,10 @@
         const el = document.createElement('div');
         
         // --- Logic to check for active order ---
-        let displayStatus = table.status;
-        let displayTotal = null;
-        
-        // Find matching active order
-        // Logic similar to openTableDetails
-        const order = activeOrders.find(o => {
-            if ((o.order_type || '').toLowerCase() !== 'mesa') return false;
-            if (o.status === 'cancelado') return false;
-            // If delivered but unpaid, it is still occupied (cuenta)
-            // If delivered and paid, it should be free visually unless manual status says otherwise?
-            // Usually 'entregado' + 'paid' = customer left.
-            if (o.status === 'entregado' && (o.payment_status||'').toLowerCase() === 'paid') return false; 
-
-            const tNum = String(o.table_number || '').trim().toLowerCase();
-            const tLbl = String(table.label || '').trim().toLowerCase();
-            if (!tNum) return false;
-            
-            // Exact or number match
-            if (tNum === tLbl) return true;
-            
-            const n1 = tNum.match(/\d+/);
-            const n2 = tLbl.match(/\d+/);
-
-            if (n1 && n2) {
-                // Both have numbers -> Compare numeric values strictly
-                if (parseInt(n1[0], 10) === parseInt(n2[0], 10)) return true;
-            } else if (!n1 && !n2) {
-                 // Neither has numbers -> Fuzzy string match (e.g. "Barra")
-                 if (tLbl.includes(tNum) || tNum.includes(tLbl)) return true;
-            }
-            
-            return false;
-        });
-        
-        if (order) {
-            displayStatus = 'occupied';
-            // If waiting for payment (entregado but not paid), maybe blue?
-            if (order.status === 'entregado' && (order.payment_status||'').toLowerCase() !== 'paid') {
-                displayStatus = 'bill'; // Blue
-            }
-            displayTotal = order.total;
-        }
+        const effectiveState = getEffectiveTableState(table, activeOrders);
+        const order = effectiveState.order;
+        let displayStatus = effectiveState.status;
+        let displayTotal = order ? order.total : null;
         // ---------------------------------------
 
         el.className = `table-item ${table.type} status-${displayStatus}`;
@@ -22365,8 +22446,13 @@
               if (idx >= 0) {
                   mergeState.selectedIds.splice(idx, 1);
               } else {
-                  if (table.status !== 'free' && table.status !== 'libre') {
-                      alert('Solo se pueden seleccionar mesas libres.');
+                   const activeOrder = findActiveMesaOrderForTable(table, { activeOrders });
+                   if (tableBlocksNewAssignment(table, activeOrders)) {
+                       if (activeOrder) {
+                           alert(`No puedes unir ${table.label} porque tiene un pedido activo (${getOrderConflictRef(activeOrder)}).`);
+                       } else {
+                           alert('Solo se pueden seleccionar mesas libres.');
+                       }
                       return;
                   }
                   mergeState.selectedIds.push(table.id);
@@ -23052,7 +23138,7 @@ window.EditOrder = {
                 this.tableNumberEl.value = tableValue;
             }
             if (this._getCurrentOrderType() === 'mesa' && typeof window.kdsPopulateTableSelect === 'function') {
-                window.kdsPopulateTableSelect(tableValue, true, 'eom-table-number').catch((err) => {
+                window.kdsPopulateTableSelect(tableValue, true, 'eom-table-number', { currentOrderId: order.id }).catch((err) => {
                     console.warn('No se pudo cargar selector de mesas para edición:', err);
                 });
             }

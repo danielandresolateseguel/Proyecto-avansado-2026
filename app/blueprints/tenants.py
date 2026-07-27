@@ -126,6 +126,111 @@ def _normalize_main_menu_categories(value):
         item['position'] = idx
     return out
 
+def _normalize_table_text(value):
+    return ' '.join(str(value or '').strip().lower().split())
+
+def _extract_table_number_token(value):
+    text = _normalize_table_text(value)
+    digits = ''.join(ch for ch in text if ch.isdigit() or ch == ' ')
+    for part in digits.split():
+        if part.isdigit():
+            try:
+                return str(int(part))
+            except Exception:
+                return part
+    return ''
+
+def _table_identity_candidates(value):
+    text = _normalize_table_text(value)
+    if not text:
+        return set()
+    candidates = {text}
+    number = _extract_table_number_token(text)
+    if number:
+        candidates.add(number)
+        candidates.add(f'mesa {number}')
+    return candidates
+
+def _table_values_match(left, right):
+    left_candidates = _table_identity_candidates(left)
+    right_candidates = _table_identity_candidates(right)
+    if not left_candidates or not right_candidates:
+        return False
+    if left_candidates & right_candidates:
+        return True
+    left_number = _extract_table_number_token(left)
+    right_number = _extract_table_number_token(right)
+    return bool(left_number and right_number and left_number == right_number)
+
+def _iter_layout_tables(payload):
+    zones = payload.get('zones') if isinstance(payload, dict) else []
+    if not isinstance(zones, list):
+        return []
+    out = []
+    for zone in zones:
+        if not isinstance(zone, dict):
+            continue
+        zone_name = str(zone.get('name') or '').strip() or 'Salón'
+        for table in zone.get('tables') or []:
+            if not isinstance(table, dict):
+                continue
+            label = str(table.get('label') or '').strip()
+            if not label:
+                continue
+            out.append({
+                'zone_id': zone.get('id'),
+                'zone_name': zone_name,
+                'table_id': table.get('id'),
+                'label': label,
+            })
+    return out
+
+def _validate_tables_payload(cur, slug, payload):
+    tables = _iter_layout_tables(payload)
+    seen_labels = {}
+    seen_numbers = {}
+    for table in tables:
+        label = str(table.get('label') or '').strip()
+        norm_label = _normalize_table_text(label)
+        if not norm_label:
+            return 400, 'Todas las mesas deben tener nombre.'
+        previous_label = seen_labels.get(norm_label)
+        if previous_label and previous_label != label:
+            return 400, f'Las mesas "{previous_label}" y "{label}" comparten el mismo nombre operativo.'
+        seen_labels[norm_label] = label
+
+        number_token = _extract_table_number_token(label)
+        if number_token:
+            previous_number = seen_numbers.get(number_token)
+            if previous_number and previous_number != label:
+                return 400, f'Las mesas "{previous_number}" y "{label}" comparten el número operativo {number_token}.'
+            seen_numbers[number_token] = label
+
+    cur.execute(
+        """
+        SELECT id, tenant_order_number, table_number, status, payment_status
+        FROM orders
+        WHERE tenant_slug = ? AND order_type = 'mesa'
+        """,
+        (slug,)
+    )
+    for order_id, tenant_order_number, table_number, status, payment_status in cur.fetchall():
+        status_text = str(status or '').strip().lower()
+        payment_text = str(payment_status or '').strip().lower()
+        if status_text == 'cancelado':
+            continue
+        if status_text == 'entregado' and payment_text == 'paid':
+            continue
+        matches = [table for table in tables if _table_values_match(table_number, table.get('label'))]
+        if not matches:
+            order_ref = tenant_order_number or order_id
+            return 409, f'No puedes guardar la distribución porque el pedido #{order_ref} sigue apuntando a la mesa "{table_number}".'
+        if len(matches) > 1:
+            order_ref = tenant_order_number or order_id
+            labels = ', '.join(sorted({str(table.get("label") or "").strip() for table in matches if str(table.get("label") or "").strip()}))
+            return 409, f'No puedes guardar la distribución porque el pedido #{order_ref} coincide con varias mesas: {labels}.'
+    return None, None
+
 def ensure_tenants_status_message_column(conn, cur):
     if is_postgres():
         try:
@@ -850,6 +955,10 @@ def update_tenant_tables():
     # payload should be the 'data' object from frontend: { zones: [...] }
     if not isinstance(payload, dict) or 'zones' not in payload:
          return jsonify({'error': 'formato inválido'}), 400
+
+    validation_status, validation_error = _validate_tables_payload(cur, slug, payload)
+    if validation_error:
+         return jsonify({'error': validation_error}), validation_status
          
     current_cfg['tables'] = payload
     
