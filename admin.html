@@ -1252,6 +1252,55 @@
     .delivery-toolbar-group.utilities {
       background: #ffffff;
     }
+    .delivery-toolbar-menu {
+      position: relative;
+    }
+    .delivery-toolbar-menu summary {
+      list-style: none;
+      cursor: pointer;
+      border: 1px solid #d6e0ee;
+      border-radius: 10px;
+      background: #ffffff;
+      color: #0f172a;
+      font-weight: 800;
+      font-size: 13px;
+      padding: 8px 12px;
+      box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+      user-select: none;
+    }
+    .delivery-toolbar-menu summary::-webkit-details-marker { display: none; }
+    .delivery-toolbar-menu[open] summary {
+      border-color: #93c5fd;
+      box-shadow: 0 8px 18px rgba(59, 130, 246, 0.14);
+    }
+    .delivery-toolbar-menu-panel {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      z-index: 20;
+      min-width: 250px;
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid #dbe4f3;
+      border-radius: 14px;
+      background: #ffffff;
+      box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+    }
+    .delivery-toolbar-menu-panel button {
+      width: 100%;
+    }
+    .delivery-toolbar-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: #475569;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .delivery-toolbar-option input[type="checkbox"] {
+      margin-top: 2px;
+    }
     .delivery-filter-field {
       display: inline-flex;
       align-items: center;
@@ -1421,6 +1470,27 @@
       font-weight: 700;
       color: #1e293b;
     }
+    .delivery-summary-card .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .delivery-summary-action {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      color: #ffffff;
+      background: #1d4ed8;
+      box-shadow: 0 8px 18px rgba(29, 78, 216, 0.2);
+    }
+    .delivery-summary-action.secondary {
+      background: #475569;
+      box-shadow: 0 8px 18px rgba(71, 85, 105, 0.16);
+    }
     .delivery-summary-card .hint {
       display: block;
       margin-top: 3px;
@@ -1542,6 +1612,19 @@
       }
       .delivery-toolbar-group.route-actions {
         width: 100%;
+      }
+      .delivery-toolbar-menu {
+        width: 100%;
+      }
+      .delivery-toolbar-menu summary {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .delivery-toolbar-menu-panel {
+        position: static;
+        min-width: 0;
+        margin-top: 8px;
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
       }
     }
 
@@ -2391,23 +2474,27 @@
             </label>
           </div>
           <div class="delivery-toolbar-group route-actions">
-            <span class="delivery-toolbar-title">Salida</span>
-            <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Empezar ruta</button>
-            <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
             <button id="delivery-next-stop" style="background:#6a1b9a; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Siguiente parada</button>
-            <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Cerrar salida</button>
+            <button id="delivery-open-route" style="background:#455a64; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Abrir ruta</button>
           </div>
           <div class="delivery-toolbar-group utilities">
-            <span class="delivery-toolbar-title">Opciones</span>
-            <button id="delivery-reload">Recargar</button>
-            <label class="small" style="display:flex; align-items:center; gap:6px; color:#666;">
-              <input type="checkbox" id="delivery-auto-next" />
-              Auto siguiente
-            </label>
-            <label class="small delivery-compact-toggle">
-              <input type="checkbox" id="delivery-compact-mode" />
-              Salida simple
-            </label>
+            <span class="delivery-toolbar-title">Más</span>
+            <details class="delivery-toolbar-menu">
+              <summary>Más opciones</summary>
+              <div class="delivery-toolbar-menu-panel">
+                <button id="delivery-start-route" style="background:#2e7d32; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer;">Iniciar pedidos listos</button>
+                <button id="delivery-reload" style="padding:8px 10px; border-radius:8px;">Recargar ahora</button>
+                <label class="delivery-toolbar-option">
+                  <input type="checkbox" id="delivery-auto-next" />
+                  <span>Abrir siguiente parada al entregar</span>
+                </label>
+                <label class="delivery-toolbar-option delivery-compact-toggle">
+                  <input type="checkbox" id="delivery-compact-mode" />
+                  <span>Vista compacta</span>
+                </label>
+                <button id="delivery-close-run" style="background:#b71c1c; color:#fff; border:none; padding:8px 10px; border-radius:8px; cursor:pointer;">Cerrar salida</button>
+              </div>
+            </details>
           </div>
           <div class="delivery-toolbar-info">
             <span id="delivery-count" class="delivery-count-chip"></span>
@@ -10041,7 +10128,7 @@
         return _sortStops(a, b);
       });
     }
-    function _deliverySummaryPrimaryCard(label, value, hint, meta, toneClass) {
+    function _deliverySummaryPrimaryCard(label, value, hint, meta, toneClass, actionHtml) {
       const safeTone = String(toneClass || '').trim();
       return `
         <div class="delivery-summary-card primary ${safeTone}">
@@ -10049,6 +10136,7 @@
           <span class="value">${escapeLocalHtml(value || '')}</span>
           ${meta ? `<span class="meta">${escapeLocalHtml(meta)}</span>` : ''}
           ${hint ? `<span class="hint">${escapeLocalHtml(hint)}</span>` : ''}
+          ${actionHtml ? `<div class="actions">${actionHtml}</div>` : ''}
         </div>
       `;
     }
@@ -10081,6 +10169,7 @@
       const failedOrders = visibleOrders.filter(o => _effectiveDeliveryStatus(o) === 'failed');
       const enRuta = visibleOrders.filter(o => _effectiveDeliveryStatus(o) === 'en_route').length;
       let html = '';
+      let primaryAction = '';
 
       if (filterKey === 'mine') {
         const remainingStops = _sortDeliveryOrdersForSummary(visibleOrders.filter(_isPendingDeliveryRouteStop));
@@ -10090,12 +10179,14 @@
           const nextCustomer = String(next && next.customer_name || '').trim();
           const nextAddress = getOrderAddressOneLine(next) || 'Revisa la dirección del pedido';
           const nextStatus = _effectiveDeliveryStatus(next) === 'en_route' ? 'Entrega en curso' : 'Siguiente parada';
+          primaryAction = '<button type="button" class="delivery-summary-action" data-summary-action="next-stop">Ir a siguiente parada</button>';
           html += _deliverySummaryPrimaryCard(
             nextStatus,
             `Pedido #${nextNumber}`,
             nextAddress,
             nextCustomer || 'Cliente sin nombre',
-            _effectiveDeliveryStatus(next) === 'en_route' ? 'tone-warn' : ''
+            _effectiveDeliveryStatus(next) === 'en_route' ? 'tone-warn' : '',
+            primaryAction
           );
         } else {
           html += _deliverySummaryPrimaryCard(
@@ -10103,7 +10194,8 @@
             'Sin entregas pendientes',
             'No quedan pedidos activos en esta bandeja',
             '',
-            'tone-success'
+            'tone-success',
+            ''
           );
         }
         html += _deliverySummaryMetricCard(
@@ -10125,20 +10217,24 @@
         );
       } else {
         if (selectedVisible.length) {
+          primaryAction = '<button type="button" class="delivery-summary-action" data-summary-action="take-selected">Tomar seleccionados</button>';
           html += _deliverySummaryPrimaryCard(
             'Listo para tomar',
             `${selectedVisible.length} pedido(s) seleccionado(s)`,
             'Puedes sumarlos a tu salida con un toque',
             `${listos.length} listo(s) para salir en esta bandeja`,
-            'tone-success'
+            'tone-success',
+            primaryAction
           );
         } else if (listos.length) {
+          primaryAction = '<button type="button" class="delivery-summary-action secondary" data-summary-action="select-visible">Seleccionar visibles</button>';
           html += _deliverySummaryPrimaryCard(
             'Pedidos listos',
             `${listos.length} listo(s) para salir`,
             'Selecciona los que quieras sumar a tu salida',
             `${visibleOrders.length} pedido(s) visibles sin asignar`,
-            ''
+            '',
+            primaryAction
           );
         } else if (visibleOrders.length) {
           html += _deliverySummaryPrimaryCard(
@@ -10146,7 +10242,8 @@
             `${visibleOrders.length} pedido(s) en espera`,
             'Todavía no hay pedidos listos para tomar',
             'Revisa esta bandeja cuando cocina los marque como listos',
-            'tone-warn'
+            'tone-warn',
+            ''
           );
         } else {
           html += _deliverySummaryPrimaryCard(
@@ -10154,7 +10251,8 @@
             'Sin pedidos sin asignar',
             'No hay repartos esperando asignación',
             '',
-            'tone-success'
+            'tone-success',
+            ''
           );
         }
         html += _deliverySummaryMetricCard(
@@ -10175,6 +10273,27 @@
       }
       summaryEl.innerHTML = html;
       summaryEl.style.display = '';
+      summaryEl.querySelectorAll('[data-summary-action]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const action = String(btn.getAttribute('data-summary-action') || '');
+          if (action === 'next-stop') {
+            const shouldPreopen = _shouldPreopenMapsWindow();
+            const w = shouldPreopen ? window.open('about:blank', '_blank', 'noopener') : null;
+            await openNextDeliveryStopInGoogleMaps(w, false);
+            return;
+          }
+          if (action === 'select-visible') {
+            const selectBtn = document.getElementById('delivery-select-visible');
+            if (selectBtn && !selectBtn.disabled) selectBtn.click();
+            return;
+          }
+          if (action === 'take-selected') {
+            const takeBtn = document.getElementById('delivery-take-selected');
+            if (takeBtn && !takeBtn.disabled) takeBtn.click();
+          }
+        });
+      });
     }
 
     async function renderDeliveryOrders(data) {
