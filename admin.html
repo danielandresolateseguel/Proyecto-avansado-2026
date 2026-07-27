@@ -1522,13 +1522,156 @@
     }
     #delivery-list.compact-view .card {
       border: 1px solid #dbe4f3;
-      border-left: 4px solid #4f46e5;
+      border-left: 1px solid #dbe4f3;
       border-radius: 14px;
       box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+    }
+    #delivery-list .card.delivery-card {
+      border: 1px solid #dbe4f3;
+      border-radius: 16px;
+      box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+      gap: 10px;
+    }
+    #delivery-list .card.delivery-card--current {
+      border-left: 4px solid #0f766e;
+      box-shadow: 0 12px 26px rgba(15, 118, 110, 0.16);
+    }
+    #delivery-list .card.delivery-card--next {
+      border-left: 4px solid #2563eb;
+      box-shadow: 0 12px 26px rgba(37, 99, 235, 0.14);
+    }
+    #delivery-list .card.delivery-card--attention {
+      border-left: 4px solid #b91c1c;
     }
     #delivery-list.compact-view .card-content {
       display: grid;
       gap: 6px;
+    }
+    .delivery-card-header {
+      display: grid;
+      gap: 6px;
+    }
+    .delivery-card-title-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    .delivery-card-order {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .delivery-priority-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .delivery-priority-badge.current {
+      background: #dcfce7;
+      color: #166534;
+    }
+    .delivery-priority-badge.next {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+    .delivery-priority-badge.available {
+      background: #ffedd5;
+      color: #c2410c;
+    }
+    .delivery-priority-badge.attention {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+    .delivery-card-main {
+      display: grid;
+      gap: 8px;
+    }
+    .delivery-card-address {
+      font-size: 17px;
+      font-weight: 800;
+      color: #111827;
+      line-height: 1.25;
+    }
+    .delivery-card-customer {
+      font-size: 14px;
+      font-weight: 700;
+      color: #334155;
+      line-height: 1.3;
+    }
+    .delivery-card-step {
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #dbe4f3;
+      background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+    }
+    .delivery-card-step-label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .delivery-card-step-text {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    .delivery-card-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .delivery-card-meta-item {
+      min-width: 0;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+    }
+    .delivery-card-meta-item.total {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .delivery-card-meta-label {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+    .delivery-card-meta-value {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e293b;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+    .delivery-card-bottom-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+    }
+    .delivery-card-bottom-meta .sep {
+      opacity: 0.55;
     }
     .delivery-inline-flags {
       display: flex;
@@ -1536,15 +1679,49 @@
       gap: 6px;
       align-items: center;
     }
-    .delivery-primary-actions {
+    .delivery-actions-main {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px;
+      gap: 8px;
     }
-    .delivery-primary-actions button,
+    .delivery-actions-main button,
+    .delivery-actions-main a,
     .delivery-secondary-actions button {
       width: 100%;
       min-width: 0;
+    }
+    .delivery-focus-action {
+      grid-column: 1 / -1;
+      min-height: 42px;
+      font-weight: 800;
+    }
+    .delivery-action-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+    .delivery-action-link.map {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+      color: #3730a3;
+    }
+    .delivery-action-link.call {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #047857;
+    }
+    .delivery-action-link.whatsapp {
+      background: #dcfce7;
+      border-color: #86efac;
+      color: #166534;
     }
     .delivery-more {
       margin-top: 8px;
@@ -1695,8 +1872,19 @@
       #delivery-list .actions .delivery-up,
       #delivery-list .actions .delivery-down { width: 44px; padding: 0; flex: 0 0 auto; }
       .delivery-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .delivery-primary-actions,
-      .delivery-secondary-actions { grid-template-columns: 1fr; }
+      .delivery-card-address {
+        font-size: 16px;
+      }
+      .delivery-card-meta-grid {
+        grid-template-columns: 1fr;
+      }
+      .delivery-actions-main,
+      .delivery-secondary-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .delivery-focus-action {
+        grid-column: 1 / -1;
+      }
 
       #orders-table { display: none !important; }
       #orders-mobile { display: grid; grid-template-columns: 1fr; gap: 12px; }
@@ -10380,6 +10568,21 @@
         return;
       }
       const canReorder = (o) => role !== 'repartidor' || _deliveryMine(o);
+      const currentPriorityOrder = orders.find(o => _deliveryMine(o) && _effectiveDeliveryStatus(o) === 'en_route') || null;
+      const nextPriorityOrder = (() => {
+        const minePending = orders.filter(o => _deliveryMine(o) && !['delivered', 'failed'].includes(_effectiveDeliveryStatus(o)));
+        if (!minePending.length) return null;
+        if (currentPriorityOrder) {
+          return minePending.find(o => Number(o.id || 0) !== Number(currentPriorityOrder.id || 0) && _effectiveDeliveryStatus(o) !== 'en_route') || null;
+        }
+        return minePending.find(o => ['assigned', 'pending'].includes(_effectiveDeliveryStatus(o))) || minePending[0] || null;
+      })();
+      const currentPriorityId = Number(currentPriorityOrder && currentPriorityOrder.id || 0);
+      const nextPriorityId = Number(nextPriorityOrder && nextPriorityOrder.id || 0);
+      const withExtraClass = (html, extraClass) => {
+        if (!html || !extraClass) return html;
+        return html.replace(/class="([^"]*)"/, `class="$1 ${extraClass}"`);
+      };
       const ensureCashOpen = async () => {
         try {
           const cs = await fetchCashSession();
@@ -10401,7 +10604,7 @@
 
       orders.forEach((o, idx) => {
         const card = document.createElement('div');
-        card.className = 'card';
+        card.className = 'card delivery-card';
         const reorderOk = canReorder(o);
         card.draggable = !!reorderOk;
         if (reorderOk) {
@@ -10453,9 +10656,13 @@
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
         const safeMetaBits = escapeAdminHtml(metaBits || '');
         const isPaid = String(o.payment_status || '').trim().toLowerCase() === 'paid';
+        const totalText = escapeAdminHtml(formatMoney(Math.round(Number(o.total || 0) || 0)));
+        const createdText = escapeAdminHtml(formatARDate(o.created_at || ''));
         const paymentPill = isPaid
           ? `<span class="delivery-money-pill paid">Pagado</span>`
           : `<span class="delivery-money-pill pending">Cobro pendiente</span>`;
+        const callHref = phoneDigits ? `tel:${phoneDigits}` : '';
+        const safeCallHref = escapeAdminAttr(callHref);
 
         const canTakeRoute = !assigned && role === 'repartidor' && kStatus === 'listo';
         const assignBtn = canTakeRoute ? `<button class="delivery-take-route" data-id="${safeDeliveryId}" style="background:#ff6f00; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Tomar + ruta</button>` : '';
@@ -10492,66 +10699,99 @@
           : '';
         const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${safeDeliveryId}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
         const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Detalle</button>`;
-
-        if (compactMode) {
-          const primaryActions = [assignBtn, enRouteBtn, payDeliveredBtn, deliveredBtn, payBtn, mapBtn].filter(Boolean).join('');
-          const secondaryActions = [failedBtn, unassignBtn, notesBtn, viewBtn, upBtn, downBtn].filter(Boolean).join('');
-          if (selectedDeliveryIds.has(Number(safeDeliveryId))) card.classList.add('delivery-selected');
-          card.innerHTML = `
-            <div class="card-content">
-              ${bulkCheck}
-              <div class="title">Pedido #${safeOrderNumber}${stopPill}</div>
+        const orderIdNum = Number(o.id || 0);
+        const isCurrentStop = currentPriorityId > 0 && orderIdNum === currentPriorityId;
+        const isNextStop = nextPriorityId > 0 && orderIdNum === nextPriorityId && !isCurrentStop;
+        if (isCurrentStop) card.classList.add('delivery-card--current');
+        else if (isNextStop) card.classList.add('delivery-card--next');
+        if (dStatus === 'failed') card.classList.add('delivery-card--attention');
+        const priorityBadge = isCurrentStop
+          ? '<span class="delivery-priority-badge current">Actual</span>'
+          : (isNextStop
+            ? '<span class="delivery-priority-badge next">Siguiente</span>'
+            : (canTakeRoute
+              ? '<span class="delivery-priority-badge available">Disponible</span>'
+              : (dStatus === 'failed' ? '<span class="delivery-priority-badge attention">Incidencia</span>' : '')));
+        const nextStepText = (() => {
+          if (canTakeRoute) return 'Tomar pedido y abrir tu salida';
+          if (!assigned && !canTakeRoute) return routeReady ? 'Disponible para asignar' : 'Esperando que cocina lo deje listo';
+          if (dStatus === 'en_route') return isPaid ? 'Confirmar entrega en destino' : 'Cobrar y entregar';
+          if (dStatus === 'assigned' && _deliveryMine(o)) return routeReady ? 'Marcar en camino cuando salgas' : 'Esperando que cocina lo deje listo';
+          if (dStatus === 'assigned' && assigned) return `Pedido tomado por ${escapeAdminHtml(assigned)}`;
+          if (dStatus === 'pending' && _deliveryMine(o)) return routeReady ? 'Marcar en camino' : 'Esperando que cocina lo deje listo';
+          if (dStatus === 'delivered') return 'Pedido finalizado';
+          if (dStatus === 'failed') return 'Revisar incidencia y definir siguiente paso';
+          return 'Revisar detalle del pedido';
+        })();
+        const routeMeta = [stopNum ? `Parada ${stopNum}` : '', seq ? `Ruta ${escapeAdminHtml(seq)}` : '', assigned ? `Con ${escapeAdminHtml(assigned)}` : 'Sin asignar'].filter(Boolean).join(' · ');
+        const focusActionBase = assignBtn
+          || payDeliveredBtn
+          || (canEnRouteClick ? enRouteBtn : '')
+          || ((canFinishDelivery && isPaid) ? deliveredBtn : '')
+          || payBtn
+          || mapBtn
+          || viewBtn;
+        const focusAction = withExtraClass(focusActionBase, 'delivery-focus-action');
+        const mapQuickLink = mapBtn ? withExtraClass(mapBtn, 'delivery-action-link map') : '';
+        const callBtn = callHref ? `<a class="delivery-action-link call" href="${safeCallHref}">Llamar</a>` : '';
+        const waBtn = safeWaUrl ? `<a class="delivery-action-link whatsapp" href="${safeWaUrl}" target="_blank" rel="noopener">WhatsApp</a>` : '';
+        const supportActions = [focusActionBase === mapBtn ? '' : mapQuickLink, callBtn, waBtn].filter(Boolean);
+        const secondaryActions = [enRouteBtn, payDeliveredBtn, deliveredBtn, payBtn, failedBtn, unassignBtn, notesBtn, viewBtn, upBtn, downBtn]
+          .filter(Boolean)
+          .filter(action => action !== focusActionBase && action !== mapBtn)
+          .join('');
+        if (selectedDeliveryIds.has(Number(safeDeliveryId))) card.classList.add('delivery-selected');
+        card.innerHTML = `
+          <div class="card-content">
+            ${bulkCheck}
+            <div class="delivery-card-header">
+              <div class="delivery-card-title-row">
+                <span class="delivery-card-order">Pedido #${safeOrderNumber}</span>
+                ${priorityBadge}
+                ${stopPill}
+              </div>
               <div class="delivery-inline-flags">
                 <span class="pill">${safeDeliveryStatus}</span>
                 ${kStatusPill}
                 ${paymentPill}
               </div>
-              <div class="meta" style="font-size:15px; font-weight:700; color:#111;">${safeCustomerName}</div>
-              <div class="meta" style="font-size:16px; font-weight:700; color:#111;">${safeAddrOneLine}</div>
-              <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
-              <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href="${safeWaUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
-              <div class="meta">${safeMetaBits}</div>
             </div>
-            <div class="delivery-primary-actions">
-              ${primaryActions || viewBtn}
-            </div>
-            ${secondaryActions ? `
-              <details class="delivery-more">
-                <summary>Mas opciones</summary>
-                <div class="delivery-secondary-actions">
-                  ${secondaryActions}
+            <div class="delivery-card-main">
+              <div class="delivery-card-address">${safeAddrOneLine}</div>
+              <div class="delivery-card-customer">${safeCustomerName}${phoneRaw ? ` · ${safePhoneText}` : ''}</div>
+              <div class="delivery-card-step">
+                <span class="delivery-card-step-label">Acción siguiente</span>
+                <span class="delivery-card-step-text">${nextStepText}</span>
+              </div>
+              <div class="delivery-card-meta-grid">
+                <div class="delivery-card-meta-item total">
+                  <span class="delivery-card-meta-label">${isPaid ? 'Pagado' : 'A cobrar'}</span>
+                  <span class="delivery-card-meta-value">${totalText}</span>
                 </div>
-              </details>
-            ` : ''}
-          `;
-          list.appendChild(card);
-          return;
-        }
-
-        if (selectedDeliveryIds.has(Number(safeDeliveryId))) card.classList.add('delivery-selected');
-        card.innerHTML = `
-          <div class="card-content">
-            ${bulkCheck}
-            <div class="title">Pedido #${safeOrderNumber} <span class="pill" style="margin-left:6px;">${safeDeliveryStatus}</span>${kStatusPill}${stopPill}</div>
-            <div class="meta">${formatARDate(o.created_at || '')} · $${o.total || 0}</div>
-            <div class="meta" style="font-size:16px; font-weight:700; color:#111;">Destino: <span style="font-weight:700;">${safeAddrOneLine}</span></div>
-            <div class="meta">${phoneRaw ? `Tel: ${safePhoneText}` : ''} ${safeWaUrl ? `<a href="${safeWaUrl}" target="_blank" rel="noopener" style="margin-left:6px;">WhatsApp</a>` : ''}</div>
-            <div class="meta">${safeMetaBits}</div>
+                <div class="delivery-card-meta-item">
+                  <span class="delivery-card-meta-label">Ruta</span>
+                  <span class="delivery-card-meta-value">${routeMeta}</span>
+                </div>
+                <div class="delivery-card-meta-item">
+                  <span class="delivery-card-meta-label">Creado</span>
+                  <span class="delivery-card-meta-value">${createdText}</span>
+                </div>
+              </div>
+              ${compactMode ? '' : `<div class="delivery-card-bottom-meta">${safeMetaBits ? `<span>${safeMetaBits}</span><span class="sep">•</span>` : ''}<span>${createdText}</span></div>`}
+            </div>
           </div>
-          <div class="actions" style="display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:6px;">
-            ${assignBtn}
-            ${enRouteBtn}
-            ${payDeliveredBtn}
-            ${deliveredBtn}
-            ${payBtn}
-            ${mapBtn}
-            ${failedBtn}
-            ${unassignBtn}
-            ${notesBtn}
-            ${viewBtn}
-            ${upBtn}
-            ${downBtn}
+          <div class="delivery-actions-main">
+            ${focusAction || ''}
+            ${supportActions.join('')}
           </div>
+          ${secondaryActions ? `
+            <details class="delivery-more">
+              <summary>Más opciones</summary>
+              <div class="delivery-secondary-actions">
+                ${secondaryActions}
+              </div>
+            </details>
+          ` : ''}
         `;
         list.appendChild(card);
       });
