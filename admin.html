@@ -59,6 +59,7 @@
     .status-listo { background:#2e7d32; }
     .status-en_camino { background:#fb8c00; }
     .status-entregado { background:#6a1b9a; }
+    .status-failed { background:#b91c1c; }
     .status-cancelado { background:#c62828; }
     .status-por_aprobar { background:#455a64; }
     table { width:100%; border-collapse: collapse; }
@@ -1179,6 +1180,7 @@
     .orders-quick-filters button.qf-en-camino { background:#607d8b; }
     .orders-quick-filters button.qf-entregado { background:#607d8b; }
     .orders-quick-filters button.qf-cash-followup { background:#c2410c; }
+    .orders-quick-filters button.qf-incidents { background:#b91c1c; }
     .orders-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
     .orders-quick-filters .qf-count { display:none; align-items:center; justify-content:center; height:18px; min-width:18px; padding:0 6px; margin-left:6px; border-radius:999px; background: rgba(255,255,255,0.22); color:#fff; font-size:11px; font-weight:800; }
     .orders-quick-filters button.has-count .qf-count { display:inline-flex; }
@@ -1819,6 +1821,29 @@
       white-space: nowrap;
     }
     .cash-followup-badge::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.85;
+    }
+    .incident-followup-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid #fca5a5;
+      background: #fef2f2;
+      color: #b91c1c;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+    .incident-followup-badge::before {
       content: '';
       width: 8px;
       height: 8px;
@@ -2479,6 +2504,7 @@
         <button type="button" id="orders-qf-en-camino" class="qf-en-camino" title="En camino (Delivery)" aria-label="En camino (Delivery)">En camino<span class="qf-count" id="orders-qf-en-camino-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-entregado" class="qf-entregado" title="Entregados" aria-label="Entregados">Entregados<span class="qf-count" id="orders-qf-entregado-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-cash-followup" class="qf-cash-followup" title="Entregados pendientes de cobro" aria-label="Entregados pendientes de cobro" style="display:none;">Cobrar en caja<span class="qf-count" id="orders-qf-cash-followup-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
+        <button type="button" id="orders-qf-incidents" class="qf-incidents" title="Pedidos con incidencia de reparto" aria-label="Pedidos con incidencia de reparto" style="display:none;">Incidencias<span class="qf-count" id="orders-qf-incidents-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
       </div>
       <button id="tables-open" class="orders-secondary-cta" style="background:#673ab7; color:#fff; border:none; padding:6px 12px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; margin-left:auto;">Gestión Mesas</button>
     </div>
@@ -4307,6 +4333,7 @@
       listo: 'status-listo',
       en_camino: 'status-en_camino',
       entregado: 'status-entregado',
+      failed: 'status-failed',
       cancelado: 'status-cancelado'
     };
     const statusOptions = Object.keys(statusClasses);
@@ -6342,6 +6369,7 @@
       if (idx === 4) return clickById('orders-qf-en-camino');
       if (idx === 5) return clickById('orders-qf-entregado');
       if (idx === 6) return clickById('orders-qf-cash-followup');
+      if (idx === 7) return clickById('orders-qf-incidents');
       return false;
     }
     function toggleCashPanel() {
@@ -6456,7 +6484,7 @@
 
       if (e.ctrlKey && e.altKey && !e.metaKey) {
         const n = parseInt(key, 10);
-        if (Number.isFinite(n) && n >= 1 && n <= 5) { e.preventDefault(); quickFilterOrders(n); return; }
+        if (Number.isFinite(n) && n >= 1 && n <= 7) { e.preventDefault(); quickFilterOrders(n); return; }
         const k = key.toLowerCase();
         if (k === 'e') {
           e.preventDefault();
@@ -8139,13 +8167,46 @@
     function _renderCashFollowupSignal(order) {
       return _needsCashFollowupSignal(order) ? '<span class="cash-followup-badge">Cobrar en caja</span>' : '';
     }
+    function _needsDeliveryIncidentSignal(order) {
+      if (!_canSeeCashFollowupSignal()) return false;
+      return _normUser(order && order.delivery_status || '') === 'failed';
+    }
+    function _renderDeliveryIncidentSignal(order) {
+      if (!_needsDeliveryIncidentSignal(order)) return '';
+      const note = String(order && order.delivery_notes || '').trim();
+      const titleAttr = note ? ` title="${escapeAdminAttr(note)}"` : '';
+      return `<span class="incident-followup-badge"${titleAttr}>Revisar incidencia</span>`;
+    }
+    function _renderOrderFollowupSignals(order) {
+      return `${_renderCashFollowupSignal(order)}${_renderDeliveryIncidentSignal(order)}`;
+    }
     function _syncCashFollowupSignal(order) {
       const id = safeAdminInt(order && order.id);
       if (!id) return;
-      const html = _renderCashFollowupSignal(order);
+      const html = _renderOrderFollowupSignals(order);
       document.querySelectorAll(`[data-cash-followup-extra="${id}"]`).forEach(slot => {
         slot.innerHTML = html;
       });
+    }
+    function _getOrdersBoardStageKey(order) {
+      const mainSt = _normUser(order && order.status || '');
+      const deliverySt = _normUser(order && order.delivery_status || '');
+      if (mainSt === 'cancelado' || mainSt === 'entregado') return mainSt;
+      if (deliverySt === 'failed') return 'failed';
+      return mainSt || 'pendiente';
+    }
+    function _getOrdersBoardStatusLabel(order, opts) {
+      const options = (opts && typeof opts === 'object') ? opts : {};
+      const stage = _getOrdersBoardStageKey(order);
+      if (stage === 'failed') return 'Incidencia reparto';
+      if (stage === 'por_aprobar') return 'por aprobar';
+      if (stage === 'en_camino' && options.isMesa) return 'mesa';
+      return stage || 'pendiente';
+    }
+    function _getOrdersDetailStatusLabel(order) {
+      const stage = _getOrdersBoardStageKey(order);
+      if (stage === 'entregado' || stage === 'cancelado') return getClosedOrderStatusLabel(order);
+      return _getOrdersBoardStatusLabel(order, { isMesa: _normUser(order && order.order_type || '') === 'mesa' });
     }
     function _focusMineDeliveryFilter() {
       const role = String(currentUserRole || '').trim().toLowerCase();
@@ -8862,12 +8923,11 @@
           }
         }
         
+        const boardStageKey = _getOrdersBoardStageKey(order);
         const isDelivered = String(order.status || '').trim().toLowerCase() === 'entregado';
         const isCanceled = String(order.status || '').trim().toLowerCase() === 'cancelado';
         const isPaid = String(order.payment_status || '').trim().toLowerCase() === 'paid';
-        const statusLabelText = (order.order_type === 'mesa' && order.status === 'en_camino')
-          ? 'mesa'
-          : ((isDelivered || isCanceled) ? getClosedOrderStatusLabel(order) : order.status);
+        const statusLabelText = _getOrdersDetailStatusLabel(order);
         const safeOrderNumber = escapeHtml(displayOrderNumber(order));
         const safeOrderId = escapeHtml(order.id);
         const safeTenantSlug = escapeHtml(order.tenant_slug);
@@ -8875,6 +8935,8 @@
         const safeDestino = escapeHtml(destino);
         const safeTelefono = escapeHtml(telefono);
         const safeStatusLabel = escapeHtml(statusLabelText);
+        const incidentNote = (boardStageKey === 'failed') ? String(order.delivery_notes || '').trim() : '';
+        const safeIncidentNote = incidentNote ? escapeHtml(incidentNote) : '';
         const rawOrderNotes = String(order.order_notes || '');
         const displayOrderNotes = rawOrderNotes.replace(/\s*\[\s*Cancelado:\s*.*?\s*\]\s*$/i, '').trim();
         const safeOrderNotes = displayOrderNotes ? escapeHtml(displayOrderNotes) : '';
@@ -8924,6 +8986,7 @@
           <p class="d-dest">Destino: ${(order.order_type === 'mesa' || order.order_type === 'espera') ? `<span class="pill pill-mesa">${safeDestino}</span>` : safeDestino}</p>
           ${telefono ? `<p class="d-phone">Teléfono de contacto: ${safeTelefono}</p>` : ''}
           <p class="d-status">Estado: ${safeStatusLabel}</p>
+          ${incidentNote ? `<p class="d-notes" style="color:#b91c1c;"><strong>Incidencia reparto:</strong> ${safeIncidentNote}</p>` : ''}
           ${displayOrderNotes ? `<p class="d-notes">Detalle adicional: ${safeOrderNotes}</p>` : ''}
           ${itemsHtml}
           ${tipBlock}
@@ -9133,7 +9196,8 @@
       listo: new Set(),
       en_camino_delivery: new Set(),
       entregado: new Set(),
-      cash_followup: new Set()
+      cash_followup: new Set(),
+      failed: new Set()
     };
     function getOrdersQuickBuckets(activeAll) {
       const buckets = {
@@ -9142,13 +9206,14 @@
         listo: new Set(),
         en_camino_delivery: new Set(),
         entregado: new Set(),
-        cash_followup: new Set()
+        cash_followup: new Set(),
+        failed: new Set()
       };
       const arr = Array.isArray(activeAll) ? activeAll : [];
       for (const o of arr) {
         const id = (o && o.id != null) ? String(o.id) : '';
         if (!id) continue;
-        const st = String(o && o.status || '').trim().toLowerCase();
+        const st = _getOrdersBoardStageKey(o);
         const ot = String(o && o.order_type || '').trim().toLowerCase();
         const pay = String(o && o.payment_status || '').trim().toLowerCase();
         if (st === 'pendiente' || st === 'por_aprobar') buckets.pending.add(id);
@@ -9157,6 +9222,7 @@
         if (st === 'en_camino' && ot === 'direccion') buckets.en_camino_delivery.add(id);
         if (st === 'entregado') buckets.entregado.add(id);
         if (st === 'entregado' && pay !== 'paid') buckets.cash_followup.add(id);
+        if (st === 'failed') buckets.failed.add(id);
       }
       return buckets;
     }
@@ -9199,6 +9265,7 @@
       setDot('orders-qf-en-camino', 'en_camino_delivery');
       setDot('orders-qf-entregado', 'entregado');
       setDot('orders-qf-cash-followup', 'cash_followup');
+      setDot('orders-qf-incidents', 'failed');
     }
     function updateOrdersQuickCounts(buckets) {
       const setCount = (btnId, countId, key) => {
@@ -9221,6 +9288,7 @@
       setCount('orders-qf-en-camino', 'orders-qf-en-camino-count', 'en_camino_delivery');
       setCount('orders-qf-entregado', 'orders-qf-entregado-count', 'entregado');
       setCount('orders-qf-cash-followup', 'orders-qf-cash-followup-count', 'cash_followup');
+      setCount('orders-qf-incidents', 'orders-qf-incidents-count', 'failed');
     }
     window.setOrdersQuickStatusFilter = function(key) {
       const k = String(key || '').trim();
@@ -9252,10 +9320,17 @@
     window.updateOrdersQuickFilterUI = function() {
       const box = document.getElementById('orders-quick-filters');
       if (!box) return;
+      const buckets = (window.__ordersQuickBuckets && typeof window.__ordersQuickBuckets === 'object') ? window.__ordersQuickBuckets : null;
       const cashBtn = document.getElementById('orders-qf-cash-followup');
-      const allowCashFollowup = _canSeeCashFollowupSignal();
-      if (cashBtn) cashBtn.style.display = allowCashFollowup ? '' : 'none';
-      if (!allowCashFollowup && ordersQuickStatusFilter === 'cash_followup') {
+      const incidentsBtn = document.getElementById('orders-qf-incidents');
+      const allowFollowup = _canSeeCashFollowupSignal();
+      const hasCashFollowup = !!(buckets && buckets.cash_followup && buckets.cash_followup.size);
+      const hasIncidents = !!(buckets && buckets.failed && buckets.failed.size);
+      const showCashFollowup = allowFollowup && hasCashFollowup;
+      const showIncidents = allowFollowup && hasIncidents;
+      if (cashBtn) cashBtn.style.display = showCashFollowup ? '' : 'none';
+      if (incidentsBtn) incidentsBtn.style.display = showIncidents ? '' : 'none';
+      if ((ordersQuickStatusFilter === 'cash_followup' && !showCashFollowup) || (ordersQuickStatusFilter === 'failed' && !showIncidents)) {
         ordersQuickStatusFilter = '';
       }
       const setActive = (id, on) => {
@@ -9269,6 +9344,7 @@
       setActive('orders-qf-en-camino', ordersQuickStatusFilter === 'en_camino_delivery');
       setActive('orders-qf-entregado', ordersQuickStatusFilter === 'entregado');
       setActive('orders-qf-cash-followup', ordersQuickStatusFilter === 'cash_followup');
+      setActive('orders-qf-incidents', ordersQuickStatusFilter === 'failed');
     };
     (function bindOrdersQuickFilters(){
       const p = document.getElementById('orders-qf-pending');
@@ -9277,12 +9353,14 @@
       const c = document.getElementById('orders-qf-en-camino');
       const e = document.getElementById('orders-qf-entregado');
       const cf = document.getElementById('orders-qf-cash-followup');
+      const fi = document.getElementById('orders-qf-incidents');
       if (p) p.addEventListener('click', () => window.setOrdersQuickStatusFilter('pending'));
       if (pr) pr.addEventListener('click', () => window.setOrdersQuickStatusFilter('preparacion'));
       if (r) r.addEventListener('click', () => window.setOrdersQuickStatusFilter('listo'));
       if (c) c.addEventListener('click', () => window.setOrdersQuickStatusFilter('en_camino_delivery'));
       if (e) e.addEventListener('click', () => window.setOrdersQuickStatusFilter('entregado'));
       if (cf) cf.addEventListener('click', () => window.setOrdersQuickStatusFilter('cash_followup'));
+      if (fi) fi.addEventListener('click', () => window.setOrdersQuickStatusFilter('failed'));
       try { window.updateOrdersQuickFilterUI(); } catch (_) {}
     })();
 
@@ -9305,7 +9383,12 @@
             return true;
         });
         const buckets = getOrdersQuickBuckets(activeAll);
-        if (ordersQuickStatusFilter === 'cash_followup' && !_canSeeCashFollowupSignal()) {
+        window.__ordersQuickBuckets = buckets;
+        const allowFollowup = _canSeeCashFollowupSignal();
+        const hasCashFollowup = !!(buckets && buckets.cash_followup && buckets.cash_followup.size);
+        const hasIncidents = !!(buckets && buckets.failed && buckets.failed.size);
+        if ((ordersQuickStatusFilter === 'cash_followup' && (!allowFollowup || !hasCashFollowup))
+            || (ordersQuickStatusFilter === 'failed' && (!allowFollowup || !hasIncidents))) {
           ordersQuickStatusFilter = '';
         }
         if (!ordersQuickDotsInitialized) {
@@ -9316,6 +9399,7 @@
           markOrdersQuickSeenFor('en_camino_delivery', buckets);
           markOrdersQuickSeenFor('entregado', buckets);
           markOrdersQuickSeenFor('cash_followup', buckets);
+          markOrdersQuickSeenFor('failed', buckets);
         }
         if (ordersQuickStatusFilter) {
           markOrdersQuickSeenFor(ordersQuickStatusFilter, buckets);
@@ -9328,12 +9412,13 @@
           const f = String(ordersQuickStatusFilter || '').trim();
           if (f) {
             active = activeAll.filter(o => {
-              const st = String(o && o.status || '').trim().toLowerCase();
+              const st = _getOrdersBoardStageKey(o);
               const ot = String(o && o.order_type || '').trim().toLowerCase();
               const pay = String(o && o.payment_status || '').trim().toLowerCase();
               if (f === 'pending') return (st === 'pendiente' || st === 'por_aprobar');
               if (f === 'en_camino_delivery') return (st === 'en_camino' && ot === 'direccion');
               if (f === 'cash_followup') return (st === 'entregado' && pay !== 'paid');
+              if (f === 'failed') return st === 'failed';
               return st === f;
             });
           }
@@ -9348,6 +9433,8 @@
         const newSignature = JSON.stringify(orders.map(o => ({
           id: o.id,
           s: o.status,
+          ds: o.delivery_status,
+          dn: o.delivery_notes,
           t: o.total,
           p: o.payment_status,
           ty: o.order_type,
@@ -9444,8 +9531,9 @@
         const phoneDigits = phoneRaw.replace(/\D/g, '');
         const waUrl = getWaLink(o, phoneDigits);
 
-        const statusClass = statusClasses[o.status] || 'status-pendiente';
-        const statusLabelText = (o.status === 'por_aprobar') ? 'por aprobar' : ((isMesa && o.status === 'en_camino') ? 'mesa' : o.status);
+        const boardStageKey = _getOrdersBoardStageKey(o);
+        const statusClass = statusClasses[boardStageKey] || 'status-pendiente';
+        const statusLabelText = _getOrdersBoardStatusLabel(o, { isMesa });
         
         let pDisabled = '';
         let lDisabled = '';
@@ -9508,7 +9596,7 @@
         const safeTableArg = escapeAdminAttr(JSON.stringify(String(o.table_number || '')));
         const safeOrderId = safeAdminInt(o.id);
         const safeTotal = Number(o.total || 0);
-        const cashFollowupHtml = _renderCashFollowupSignal(o);
+        const cashFollowupHtml = _renderOrderFollowupSignals(o);
 
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
@@ -9548,7 +9636,7 @@
             <button class="ver-detalle">Ver</button>
           </td>
         `;
-        tr.classList.add(`card-${o.status}`);
+        tr.classList.add(`card-${boardStageKey}`);
         frag.appendChild(tr);
         try { if (!window.itemsPreviewTimers) window.itemsPreviewTimers = {}; } catch(_) {}
         const itemsPreviewEl = tr.querySelector('.items-preview .small');
@@ -9585,7 +9673,7 @@
           const baseTotal2 = Number(o.total || 0);
           const safePhoneText2 = escapeAdminHtml(phoneRaw2);
           const safeWaUrl2 = escapeAdminAttr(safeWhatsAppHref(waUrl2));
-          const cashFollowupHtml2 = _renderCashFollowupSignal(o);
+          const cashFollowupHtml2 = _renderOrderFollowupSignals(o);
           card.className = 'card';
           card.innerHTML = `
               <div class="card-content">
@@ -10067,6 +10155,7 @@
           if (f === 'en_camino_delivery') return 'En camino';
           if (f === 'entregado') return 'Entregados';
           if (f === 'cash_followup') return 'Cobrar en caja';
+          if (f === 'failed') return 'Incidencias';
           return f;
         })();
         const typesLabel = (() => {
@@ -10093,7 +10182,8 @@
           listo: buckets && buckets.listo ? buckets.listo.size : 0,
           en_camino_delivery: buckets && buckets.en_camino_delivery ? buckets.en_camino_delivery.size : 0,
           entregado: buckets && buckets.entregado ? buckets.entregado.size : 0,
-          cash_followup: buckets && buckets.cash_followup ? buckets.cash_followup.size : 0
+          cash_followup: buckets && buckets.cash_followup ? buckets.cash_followup.size : 0,
+          failed: buckets && buckets.failed ? buckets.failed.size : 0
         };
         const kpiHtml = `
           <div class="orders-empty-kpis">
@@ -10101,6 +10191,7 @@
             <div class="orders-empty-kpi"><div class="k">Preparación</div><div class="v">${counts.preparacion}</div></div>
             <div class="orders-empty-kpi"><div class="k">Listos</div><div class="v">${counts.listo}</div></div>
             <div class="orders-empty-kpi"><div class="k">En camino</div><div class="v">${counts.en_camino_delivery}</div></div>
+            ${_canSeeCashFollowupSignal() ? `<div class="orders-empty-kpi"><div class="k">Incidencias</div><div class="v">${counts.failed}</div></div>` : ''}
             ${_canSeeCashFollowupSignal() ? `<div class="orders-empty-kpi"><div class="k">Cobrar en caja</div><div class="v">${counts.cash_followup}</div></div>` : ''}
           </div>
         `;
@@ -10515,7 +10606,7 @@
       }
       const filterKey = _normUser(deliveryFilter || 'unassigned');
       const selectedVisible = getBulkSelectableDeliveryIds(visibleOrders).filter(id => selectedDeliveryIds.has(id));
-      const listos = visibleOrders.filter(o => _normUser(o && o.status || '') === 'listo');
+      const listos = visibleOrders.filter(o => _getOrdersBoardStageKey(o) === 'listo');
       const listosTotal = listos.reduce((sum, o) => sum + Number(o && o.total || 0), 0);
       const porCobrarOrders = visibleOrders.filter(o => String(o && o.payment_status || '').trim().toLowerCase() !== 'paid');
       const porCobrarCount = porCobrarOrders.length;
@@ -21382,8 +21473,9 @@
          const phoneDigits = phoneRaw.replace(/\D/g, '');
          const waUrl = getWaLink(o, phoneDigits);
          
-         const statusClass = (typeof statusClasses !== 'undefined' && statusClasses[o.status]) ? statusClasses[o.status] : 'status-pendiente';
-         const statusLabelText = (isMesa && o.status === 'en_camino') ? 'mesa' : o.status;
+         const boardStageKey = _getOrdersBoardStageKey(o);
+         const statusClass = (typeof statusClasses !== 'undefined' && statusClasses[boardStageKey]) ? statusClasses[boardStageKey] : 'status-pendiente';
+         const statusLabelText = _getOrdersBoardStatusLabel(o, { isMesa });
          
          // Buttons logic
          let pDisabled = '', lDisabled = '', eDisabled = '', cDisabled = '';
@@ -21425,7 +21517,7 @@
              : '';
          
          const card = document.createElement('div');
-         card.className = 'card';
+         card.className = `card card-${boardStageKey}`;
          
         const itemsHtml = (detail.items || []).map(it => {
             const qty = Number(it.qty || 0);
@@ -21438,9 +21530,12 @@
         const safePhoneText = escapeAdminHtml(phoneRaw);
         const safeWaUrl = escapeAdminAttr(safeWhatsAppHref(waUrl));
         const safeStatusLabel = escapeAdminHtml(statusLabelText);
+        const incidentNote = (boardStageKey === 'failed') ? String(o.delivery_notes || '').trim() : '';
+        const safeIncidentNote = incidentNote ? escapeAdminHtml(incidentNote) : '';
         const safeEditOrderId = safeAdminInt(o.id);
         const safeEditTableArg = escapeAdminAttr(JSON.stringify(String(o.table_number || '')));
         const safeEditItemsArg = escapeAdminAttr(JSON.stringify(detail.items || []));
+        const followupHtml = _renderOrderFollowupSignals(o);
 
          card.innerHTML = `
             <div class="card-content">
@@ -21454,8 +21549,9 @@
               <div class="items-preview" style="margin-top:10px; border-top:1px solid #eee; padding-top:5px;">
                   ${itemsHtml}
               </div>
+              ${incidentNote ? `<div class="small" style="margin-top:10px; color:#b91c1c;"><span style="font-weight:700;">Incidencia reparto:</span> ${safeIncidentNote}</div>` : ''}
             </div>
-            <div class="state-line"><span class="status-badge ${statusClass}">${safeStatusLabel}</span>${(typeof renderSLA === 'function')?renderSLA(o):''}</div>
+            <div class="state-line"><span class="cash-followup-slot"><span class="status-badge ${statusClass}">${safeStatusLabel}</span><span data-cash-followup-extra="${safeEditOrderId}">${followupHtml}</span></span>${(typeof renderSLA === 'function')?renderSLA(o):''}</div>
             <div class="actions">
               <div class="status-quick">
                 ${aprobarBtn}
