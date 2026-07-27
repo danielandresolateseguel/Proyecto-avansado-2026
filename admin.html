@@ -1771,6 +1771,41 @@
       font-weight: 700;
       line-height: 1.35;
     }
+    .delivery-incident-resolve {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid #fecaca;
+      background: linear-gradient(180deg, #fff7f7 0%, #fff1f2 100%);
+    }
+    .delivery-incident-resolve-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #991b1b;
+    }
+    .delivery-incident-resolve-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .delivery-incident-resolve-actions button {
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid #fbcfe8;
+      background: #fff;
+      color: #881337;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .delivery-incident-resolve-actions button.primary {
+      border-color: #fca5a5;
+      background: #b91c1c;
+      color: #fff;
+    }
     .delivery-more {
       margin-top: 8px;
     }
@@ -8208,6 +8243,15 @@
       if (stage === 'entregado' || stage === 'cancelado') return getClosedOrderStatusLabel(order);
       return _getOrdersBoardStatusLabel(order, { isMesa: _normUser(order && order.order_type || '') === 'mesa' });
     }
+    function _canResolveDeliveryIncident(order) {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      if (!isAuthed) return false;
+      if (!!isOwnerUser || role === 'admin' || role === 'caja') return true;
+      return role === 'repartidor' && _deliveryMine(order);
+    }
+    function _getDeliveryIncidentRetryStatus(order) {
+      return String(order && order.delivery_assigned_to || '').trim() ? 'assigned' : 'pending';
+    }
     function _focusMineDeliveryFilter() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       if (role !== 'repartidor') return;
@@ -8827,6 +8871,21 @@
                     label = 'Asignado';
                 }
                 combinedHistory.push({ label, date: e.created_at, actor: e.actor, type: 'event' });
+            }
+            if (e.event_type === 'delivery_status_change') {
+                try {
+                    const payload = JSON.parse(e.payload_json || '{}') || {};
+                    const from = String(payload.from || '').trim().toLowerCase();
+                    const to = String(payload.to || '').trim().toLowerCase();
+                    if (from === 'failed' && to && to !== 'failed') {
+                        if (to === 'assigned') label = 'Incidencia resuelta: vuelve a reparto';
+                        else if (to === 'pending') label = 'Incidencia resuelta: vuelve a bandeja';
+                        else if (to === 'en_route') label = 'Incidencia resuelta: vuelve en camino';
+                        else if (to === 'delivered') label = 'Incidencia resuelta: entrega confirmada';
+                        else label = `Incidencia resuelta: ${to}`;
+                        combinedHistory.push({ label, date: e.created_at, actor: e.actor, type: 'event' });
+                    }
+                } catch (_) {}
             }
         });
         combinedHistory.sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -10930,6 +10989,8 @@
           : '';
         const notesBtn = (role !== 'repartidor' || _deliveryMine(o)) ? `<button class="delivery-notes" data-id="${safeDeliveryId}" style="background:#f3f4f6; color:#374151; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; cursor:pointer;">Notas</button>` : '';
         const viewBtn = `<button class="delivery-view" data-id="${safeDeliveryId}" style="padding:4px 8px; border-radius:4px;">Detalle</button>`;
+        const canResolveIncident = dStatus === 'failed' && _canResolveDeliveryIncident(o);
+        const canCancelIncident = canResolveIncident && _canSeeCashFollowupSignal();
         const orderIdNum = Number(o.id || 0);
         const isCurrentStop = currentPriorityId > 0 && orderIdNum === currentPriorityId;
         const isNextStop = nextPriorityId > 0 && orderIdNum === nextPriorityId && !isCurrentStop;
@@ -10951,7 +11012,9 @@
           if (dStatus === 'assigned' && assigned) return `Pedido tomado por ${escapeAdminHtml(assigned)}`;
           if (dStatus === 'pending' && _deliveryMine(o)) return routeReady ? 'Marcar en camino' : 'Esperando que cocina lo deje listo';
           if (dStatus === 'delivered') return 'Pedido finalizado';
-          if (dStatus === 'failed') return failNoteText ? `Incidencia registrada: ${failNoteText}` : 'Revisar incidencia y definir siguiente paso';
+          if (dStatus === 'failed') return canResolveIncident
+            ? 'Resolver incidencia: reintentar reparto, devolver a bandeja o cancelar'
+            : (failNoteText ? `Incidencia registrada: ${failNoteText}` : 'Revisar incidencia y definir siguiente paso');
           return 'Revisar detalle del pedido';
         })();
         const routeMeta = [stopNum ? `Parada ${stopNum}` : '', seq ? `Ruta ${escapeAdminHtml(seq)}` : '', assigned ? `Con ${escapeAdminHtml(assigned)}` : 'Sin asignar'].filter(Boolean).join(' · ');
@@ -10977,6 +11040,17 @@
             <div class="delivery-fail-quick-actions">
               ${quickFailReasons.map(reason => `<button type="button" class="delivery-fail-quick-btn" data-id="${safeDeliveryId}" data-reason="${escapeAdminAttr(reason)}">${escapeAdminHtml(reason)}</button>`).join('')}
               <button type="button" class="delivery-fail-quick-btn" data-id="${safeDeliveryId}" data-reason="__other__">Otro motivo</button>
+            </div>
+          </div>
+        ` : '';
+        const incidentResolveHtml = canResolveIncident ? `
+          <div class="delivery-incident-resolve">
+            <span class="delivery-incident-resolve-label">Resolver incidencia</span>
+            <div class="delivery-incident-resolve-actions">
+              <button type="button" class="delivery-incident-action primary" data-id="${safeDeliveryId}" data-action="retry">Reintentar</button>
+              <button type="button" class="delivery-incident-action" data-id="${safeDeliveryId}" data-action="return_ready">Volver a listo</button>
+              ${canCancelIncident ? `<button type="button" class="delivery-incident-action" data-id="${safeDeliveryId}" data-action="cancel">Cancelar pedido</button>` : ''}
+              <button type="button" class="delivery-incident-action" data-id="${safeDeliveryId}" data-action="detail">Ver detalle</button>
             </div>
           </div>
         ` : '';
@@ -11010,6 +11084,7 @@
                 <span class="delivery-card-step-text">${nextStepText}</span>
               </div>
               ${dStatus === 'failed' && failNoteText ? `<div class="delivery-fail-note">${failNoteText}</div>` : ''}
+              ${incidentResolveHtml}
               <div class="delivery-card-meta-grid">
                 <div class="delivery-card-meta-item total">
                   <span class="delivery-card-meta-label">${isPaid ? 'Pagado' : 'A cobrar'}</span>
@@ -11208,6 +11283,67 @@
             await loadOrdersSafe();
           } catch (err) {
             alert(String(err && err.message || 'No se pudo registrar la incidencia'));
+          } finally {
+            btn.disabled = false;
+            btn.style.opacity = '';
+            btn.textContent = originalText;
+          }
+        });
+      });
+      list.querySelectorAll('.delivery-incident-action').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const oid = Number(btn.dataset.id || 0);
+          const action = String(btn.dataset.action || '').trim();
+          if (!oid || !action || btn.disabled) return;
+          const o = (orders || []).find(x => Number(x.id) === oid) || null;
+          if (!o) return;
+          if (action === 'detail') {
+            openOrderDetailModal(oid);
+            return;
+          }
+          const orderLabel = getDeliveryOrderLabel(o);
+          const originalText = btn.textContent;
+          btn.disabled = true;
+          btn.style.opacity = '0.6';
+          try {
+            if (action === 'retry') {
+              const targetStatus = _getDeliveryIncidentRetryStatus(o);
+              const confirmText = targetStatus === 'assigned'
+                ? `¿Reintentar el reparto de ${orderLabel} con ${String(o.delivery_assigned_to || 'el repartidor asignado')}?`
+                : `¿Reactivar ${orderLabel} para que vuelva a la bandeja operativa?`;
+              const ok = await askConfirm(confirmText);
+              if (!ok) return;
+              await setDeliveryStatus(oid, targetStatus, { delivery_notes: null });
+              lastDeliverySignature = '';
+              await loadOrdersSafe();
+              try { showToast(targetStatus === 'assigned' ? `${orderLabel} vuelve a reparto` : `${orderLabel} reactivado para reasignar`, 'success'); } catch(_) {}
+              return;
+            }
+            if (action === 'return_ready') {
+              const ok = await askConfirm(`¿Devolver ${orderLabel} a "Sin asignar" para que vuelva a listo?`);
+              if (!ok) return;
+              const res = await unassignDelivery(oid);
+              lastDeliverySignature = '';
+              await loadOrdersSafe();
+              try { showToast(`${orderLabel} volvió a listo`, 'info'); } catch(_) {}
+              if (res && res.run_closed) {
+                try { showToast('Salida finalizada (sin pedidos pendientes).', 'success'); } catch(_) {}
+              }
+              return;
+            }
+            if (action === 'cancel') {
+              const ok = await askConfirm(`¿Cancelar ${orderLabel}?`);
+              if (!ok) return;
+              let reason = '';
+              try { reason = String(prompt('Motivo de cancelación (opcional):') || '').trim(); } catch(_) {}
+              await updateStatus(oid, 'cancelado', reason);
+              lastDeliverySignature = '';
+              await loadOrdersSafe();
+              try { showToast(`${orderLabel} cancelado`, 'warning'); } catch(_) {}
+            }
+          } catch (err) {
+            alert(String(err && err.message || 'No se pudo resolver la incidencia'));
           } finally {
             btn.disabled = false;
             btn.style.opacity = '';

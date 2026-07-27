@@ -1994,6 +1994,7 @@ def update_delivery_status(order_id):
     if new_status not in ('pending', 'assigned', 'en_route', 'delivered', 'failed'):
         return jsonify({'error': 'delivery_status inválido'}), 400
 
+    delivery_notes_provided = ('delivery_notes' in payload) or ('notes' in payload)
     delivery_notes = payload.get('delivery_notes')
     if delivery_notes is None:
         delivery_notes = payload.get('notes')
@@ -2053,7 +2054,7 @@ def update_delivery_status(order_id):
     if delivered_at:
         sets.append("delivered_at = ?")
         params.append(delivered_at)
-    if delivery_notes is not None:
+    if delivery_notes_provided:
         sets.append("delivery_notes = ?")
         params.append(delivery_notes)
     if seq_val is not None:
@@ -2170,8 +2171,16 @@ def unassign_delivery_order(order_id):
         return jsonify({'error': 'no se puede devolver una orden entregada'}), 400
 
     now = datetime.utcnow().isoformat()
+    unassign_sets = [
+        "delivery_assigned_to = NULL",
+        "delivery_assigned_at = NULL",
+        "delivery_sequence = NULL",
+        "delivery_status = 'pending'",
+    ]
+    if ds_norm == 'failed':
+        unassign_sets.append("delivery_notes = NULL")
     cur.execute(
-        "UPDATE orders SET delivery_assigned_to = NULL, delivery_assigned_at = NULL, delivery_sequence = NULL, delivery_status = 'pending' WHERE id = ?",
+        f"UPDATE orders SET {', '.join(unassign_sets)} WHERE id = ?",
         (order_id,),
     )
 
