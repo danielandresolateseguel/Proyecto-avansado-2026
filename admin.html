@@ -19420,7 +19420,14 @@
         const val = typeSelect.value;
         if (fieldMesa) {
             fieldMesa.style.display = (val === 'mesa') ? 'block' : 'none';
-            if (val === 'mesa') await populateTableSelect(undefined, true);
+            if (val === 'mesa') {
+              const pendingTableValue = typeSelect.dataset.pendingTableValue;
+              const preselectValue = pendingTableValue != null && String(pendingTableValue).trim()
+                ? String(pendingTableValue).trim()
+                : undefined;
+              await populateTableSelect(preselectValue, true);
+              if (preselectValue) delete typeSelect.dataset.pendingTableValue;
+            }
         }
         if (fieldAddress) fieldAddress.style.display = (val === 'direccion') ? 'block' : 'none';
         if (fieldContact) fieldContact.style.display = (val !== 'mesa') ? 'block' : 'none';
@@ -19438,6 +19445,11 @@
       if (tenantSelect) tenantSelect.addEventListener('change', loadProducts);
       if (tenantSelect) tenantSelect.addEventListener('change', async () => {
         await loadNewOrderTenantConfig();
+        if (typeSelect && String(typeSelect.value || '') === 'mesa') {
+          try {
+            await populateTableSelect(undefined, true);
+          } catch (_) {}
+        }
         renderCart();
       });
       if (searchInput) searchInput.addEventListener('input', renderProducts);
@@ -19476,16 +19488,33 @@
         const currentOrderId = String(opts.currentOrderId || '').trim();
         tableSelect.innerHTML = '<option value="">Seleccionar Mesa...</option>';
         
-        const slug = (typeof currentTenantSlug !== 'undefined' && currentTenantSlug) ? currentTenantSlug : 
-                     (document.getElementById('tenant-input')?.value || 'gastronomia-local1');
+        const slug = String(
+          opts.tenantSlug ||
+          (typeof resolveCreateOrderTenantSlug === 'function' ? resolveCreateOrderTenantSlug() : '') ||
+          currentTenantSlug ||
+          document.getElementById('tenant-input')?.value ||
+          'gastronomia-local1'
+        ).trim() || 'gastronomia-local1';
 
         let stored = localStorage.getItem('kds_tables_' + slug);
         if (!stored) stored = localStorage.getItem('kds_tables');
 
-        if (!stored) {
+        let parsedStored = null;
+        try {
+          parsedStored = stored ? JSON.parse(stored) : null;
+        } catch (_) {
+          parsedStored = null;
+          stored = '';
+        }
+        const storedZones = Array.isArray(parsedStored && parsedStored.zones) ? parsedStored.zones : [];
+        const storedHasTables = storedZones.some(z => Array.isArray(z.tables) && z.tables.length > 0);
+
+        if (!storedHasTables || !!forceRefresh) {
             try {
                 const url = new URL('/api/tenant_tables', window.location.origin);
                 url.searchParams.set('tenant_slug', slug);
+                url.searchParams.set('__dbg', '1');
+                url.searchParams.set('__dbg_ctx', 'create-order.select');
                 const res = await fetch(url.toString(), { cache: 'no-store', credentials: 'include' });
                 if (res && res.ok) {
                     const serverData = await res.json();
@@ -19494,6 +19523,8 @@
                     if (hasTables) {
                         stored = JSON.stringify(serverData);
                         try { localStorage.setItem('kds_tables_' + slug, stored); } catch (_) {}
+                    } else if (!storedHasTables) {
+                        stored = '';
                     }
                 }
             } catch (_) {}
@@ -19506,11 +19537,19 @@
         
         let activeOrders = [];
         try {
-          if (typeof fetchOrdersForTables === 'function') {
+          if (typeof fetchOrdersForTables === 'function' && slug === String(document.getElementById('tenant-input')?.value || '').trim()) {
             const r = await fetchOrdersForTables(!!forceRefresh);
             activeOrders = (r && Array.isArray(r.orders)) ? r.orders : (Array.isArray(window.currentOrdersForTables) ? window.currentOrdersForTables : []);
           } else {
-            activeOrders = Array.isArray(window.currentOrders) ? window.currentOrders : [];
+            const url = new URL('/api/orders', API_BASE);
+            url.searchParams.set('tenant_slug', slug);
+            url.searchParams.set('exclude_archived', 'true');
+            url.searchParams.set('limit', '500');
+            url.searchParams.set('offset', '0');
+            const resp = await fetch(url.toString(), { cache: 'no-store', credentials: 'include' });
+            if (!resp.ok) throw new Error('Error al obtener pedidos de mesas');
+            const data = await resp.json().catch(() => ({}));
+            activeOrders = Array.isArray(data && data.orders) ? data.orders : [];
           }
         } catch (_) {
           activeOrders = Array.isArray(window.currentOrdersForTables) ? window.currentOrdersForTables : (Array.isArray(window.currentOrders) ? window.currentOrders : []);
@@ -21088,6 +21127,8 @@
       try {
         const url = new URL('/api/tenant_tables', window.location.origin);
         url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('__dbg', '1');
+        url.searchParams.set('__dbg_ctx', 'tables.loadData');
         
         const res = await fetch(url, { credentials: 'include' });
         if (res.ok) {
@@ -22248,17 +22289,10 @@
                 setTimeout(() => {
                     const typeSelect = document.getElementById('new-order-type');
                     if(typeSelect) {
+                        typeSelect.dataset.pendingTableValue = table.label;
                         typeSelect.value = 'mesa';
                         typeSelect.dispatchEvent(new Event('change'));
                     }
-                    try {
-                        if (window.kdsPopulateTableSelect) {
-                            window.kdsPopulateTableSelect(table.label, true);
-                        } else {
-                            const tableSelect = document.getElementById('new-order-table');
-                            if (tableSelect) tableSelect.value = table.label;
-                        }
-                    } catch (_) {}
                 }, 200);
             };
             container.appendChild(createBtn);

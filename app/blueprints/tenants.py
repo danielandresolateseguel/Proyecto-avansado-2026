@@ -12,6 +12,33 @@ bp = Blueprint('tenants', __name__, url_prefix='/api')
 
 _SLUG_ALLOWED = set("abcdefghijklmnopqrstuvwxyz0123456789-_")
 
+def _dbg_should_log():
+    try:
+        return str(request.args.get('__dbg') or '').strip() == '1'
+    except Exception:
+        return False
+
+def _dbg_log(event_name, payload=None):
+    if not _dbg_should_log():
+        return
+    try:
+        root_dir = os.path.abspath(os.path.join(current_app.root_path, os.pardir))
+        out_dir = os.path.join(root_dir, '.dbg')
+        os.makedirs(out_dir, exist_ok=True)
+        out_path = os.path.join(out_dir, 'trae-debug-log-tables-not-loading.ndjson')
+        entry = {
+            'ts': datetime.utcnow().isoformat() + 'Z',
+            'event': str(event_name or '').strip() or 'event',
+            'path': request.path,
+            'method': request.method,
+            'query': dict(request.args or {}),
+            'payload': payload if isinstance(payload, dict) else {},
+        }
+        with open(out_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+    except Exception:
+        return
+
 def _norm_slug(v):
     return str(v or '').strip().lower()
 
@@ -902,9 +929,19 @@ def create_demo_tenant():
 @bp.route('/tenant_tables', methods=['GET'])
 def get_tenant_tables():
     slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    _dbg_log('tenant_tables.enter', {
+        'tenant_slug': slug,
+        'is_authed': bool(is_authed()),
+        'session_tenant': str(session.get('tenant_slug') or '').strip(),
+        'admin_role': str(session.get('admin_role') or '').strip(),
+        'admin_owner': bool(session.get('admin_owner')),
+        'has_admin_perms': bool(session.get('admin_perms')),
+    })
     if not is_authed():
+        _dbg_log('tenant_tables.reject', {'reason': 'not_authed'})
         return jsonify({'error': 'no autorizado'}), 401
     if not _can_view_tenant_slug(slug, required_perm='tables_manage'):
+        _dbg_log('tenant_tables.reject', {'reason': 'no_perm'})
         return jsonify({'error': 'no autorizado'}), 403
     j = get_cached_tenant_config(slug)
     tables = []
@@ -918,7 +955,14 @@ def get_tenant_tables():
     if isinstance(tables, list):
          # Convert legacy flat list to zones structure
          tables = {'zones': [{'id': 1, 'name': 'Salón Principal', 'tables': tables}]}
-         
+    zones = (tables or {}).get('zones') if isinstance(tables, dict) else []
+    zone_count = len(zones) if isinstance(zones, list) else 0
+    table_count = 0
+    if isinstance(zones, list):
+        for z in zones:
+            if isinstance(z, dict) and isinstance(z.get('tables'), list):
+                table_count += len(z.get('tables') or [])
+    _dbg_log('tenant_tables.respond', {'tenant_slug': slug, 'zone_count': zone_count, 'table_count': table_count})
     return jsonify(tables)
 
 @bp.route('/tenant_tables', methods=['POST'])
