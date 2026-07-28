@@ -20057,123 +20057,208 @@
     });
   </script>
 <style>
-  /* Mobile responsiveness for Create Order Modal */
-  #create-order-modal .create-order-body {
+  /* Create Order Modal */
+  #create-order-modal.kds-modal.active {
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+  }
+  #create-order-modal .kds-modal-content.create-order-modal-content {
+    width: min(96vw, 1120px);
+    height: min(92vh, 920px);
+    max-width: 1120px;
+    max-height: 92vh;
     display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+  }
+  #create-order-modal .create-order-header,
+  #create-order-modal .create-order-body,
+  #create-order-modal .create-order-left,
+  #create-order-modal .create-order-right,
+  #create-order-modal .content-scroll,
+  #create-order-modal #new-order-products {
+    min-width: 0;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+  #create-order-modal .create-order-header {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--kds-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+  }
+  #create-order-modal .create-order-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
     flex: 1;
     overflow: hidden;
     height: 100%;
-    flex-wrap: wrap; /* Fallback for responsiveness */
   }
-  
   #create-order-modal .create-order-left {
-    flex: 1 1 400px; /* Grow, shrink, base 400px */
     display: flex;
     flex-direction: column;
     border-right: 1px solid var(--kds-border);
-    background: #f9fafb;
-    min-height: 300px;
-    min-height: 0; /* Allow inner scroll areas to shrink */
-  }
-
-  #create-order-modal .create-order-right {
-    flex: 0 0 320px; /* Fixed width on desktop */
-    width: 320px;
-    display: grid;
-    grid-template-rows: 1fr auto;
-    position: relative;
-    background: #fff;
-    border-left: 1px solid var(--kds-border);
-    box-shadow: -2px 0 10px rgba(0,0,0,0.05);
-    z-index: 2;
-    min-height: 0; /* Enable child overflow scrollbars */
+    background: #f8fafc;
     overflow: hidden;
-    height: 100%;
   }
-  #create-order-modal .create-order-right > div {
-    min-height: 0; /* Ensure the scroll container can actually scroll */
+  #create-order-modal .create-order-search {
+    padding: 12px;
+    border-bottom: 1px solid var(--kds-border);
+    background: #fff;
   }
-  #create-order-modal .create-order-body { min-height: 0; }
-  #create-order-modal .create-order-right .content-scroll { min-height: 0; overflow-y: auto; }
+  #create-order-modal .create-order-right {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    background: #fff;
+    overflow: hidden;
+  }
+  #create-order-modal .content-scroll {
+    padding: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  #create-order-modal .create-order-fields {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  #create-order-modal .create-order-footer {
+    padding: 16px;
+    border-top: 1px solid var(--kds-border);
+    background: #f5f7fb;
+  }
+  #create-order-modal .create-order-footer .totals-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #666;
+  }
+  #create-order-modal .create-order-footer .totals-row.total-strong {
+    margin-bottom: 16px;
+    font-weight: 800;
+    font-size: 1.25rem;
+    color: #333;
+  }
+  #create-order-modal #btn-create-order-confirm {
+    width: 100%;
+    padding: 12px;
+    font-weight: 600;
+    font-size: 16px;
+    background: #2e7d32;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(46,125,50,0.3);
+  }
   #new-order-products {
-    height: 100%;
-    min-height: 0;
-    overflow-y: scroll;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+    align-content: start;
     -webkit-overflow-scrolling: touch;
     scrollbar-gutter: stable;
     scrollbar-width: thin;
     scrollbar-color: #c1c1c1 #eeeeee;
   }
-  #new-order-products::-webkit-scrollbar { width: 12px; }
-  #new-order-products::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 6px; }
-  #new-order-products::-webkit-scrollbar-track { background: #eeeeee; }
-  #create-order-modal .create-order-right .content-scroll {
-    scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 #eeeeee;
-    padding-bottom: 16px;
-    max-height: none;
+  #new-order-products::-webkit-scrollbar,
+  #create-order-modal .content-scroll::-webkit-scrollbar {
+    width: 12px;
   }
-  #create-order-modal .create-order-right > div:first-child {
-    height: 100%;
-    min-height: 0;
-    overflow-y: scroll;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-gutter: stable;
+  #new-order-products::-webkit-scrollbar-thumb,
+  #create-order-modal .content-scroll::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 6px;
   }
-  #create-order-modal .create-order-right .content-scroll::-webkit-scrollbar { width: 12px; }
-  #create-order-modal .create-order-right .content-scroll::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 6px; }
-  #create-order-modal .create-order-right .content-scroll::-webkit-scrollbar-track { background: #eeeeee; }
-  #create-order-modal .create-order-right > div:last-child {
-    position: static;
-    z-index: 3;
+  #new-order-products::-webkit-scrollbar-track,
+  #create-order-modal .content-scroll::-webkit-scrollbar-track {
+    background: #eeeeee;
   }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1180px) {
+    #create-order-modal .kds-modal-content.create-order-modal-content {
+      width: min(98vw, 980px);
+      height: min(94vh, 900px);
+    }
     #create-order-modal .create-order-body {
-      flex-direction: column;
-      overflow: hidden;
+      grid-template-columns: minmax(0, 1fr) 320px;
+    }
+    #new-order-products {
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+  }
+
+  @media (max-width: 920px) {
+    #create-order-modal.kds-modal.active {
+      align-items: stretch !important;
+      justify-content: stretch !important;
+      padding: 0;
+    }
+    #create-order-modal .kds-modal-content.create-order-modal-content {
+      width: 100vw;
+      max-width: 100vw;
+      height: 100vh;
+      max-height: 100vh;
+      border-radius: 0;
+      border: 0;
+    }
+    #create-order-modal .create-order-body {
+      grid-template-columns: 1fr;
+      grid-template-rows: minmax(210px, 0.72fr) minmax(0, 1.28fr);
     }
     #create-order-modal .create-order-left {
-      flex: 1 1 0% !important; /* Force equal split using flex-grow/shrink/basis */
-      height: auto !important;
-      width: 100%;
       border-right: none;
-      border-bottom: 4px solid #e0e0e0; /* Distinct separator */
-      min-height: 0;
-      overflow-y: auto;
+      border-bottom: 1px solid var(--kds-border);
     }
     #create-order-modal .create-order-right {
-      flex: 1 1 0% !important; /* Force equal split */
-      height: auto !important;
-      max-height: none !important;
-      width: 100%;
-      min-width: 0;
-      border-left: none;
-      box-shadow: none; /* Remove shadow in mobile to avoid confusion */
-      overflow-y: auto;
-      background: #fff;
-      display: flex;
-      flex-direction: column;
+      grid-template-rows: minmax(0, 1fr) auto;
     }
-    #create-order-modal.kds-modal.active { 
-      align-items: stretch !important; 
-      justify-content: stretch !important; 
+    #create-order-modal .content-scroll {
+      padding: 14px;
     }
-    #create-order-modal .kds-modal-content {
-      width: 100% !important;
-      height: 100vh !important;
-      max-width: 100% !important;
-      border-radius: 0 !important;
-      padding: 0 !important;
-      border: 0 !important;
+    #create-order-modal .create-order-fields {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
     }
-
-    /* Compact List Mode for Mobile */
+    #field-mesa,
+    #field-address,
+    #field-contact,
+    #create-order-modal .create-order-fields > div:last-of-type {
+      grid-column: 1 / -1;
+    }
+    #create-order-modal .create-order-footer {
+      padding: 12px 14px;
+    }
+    #create-order-modal .create-order-footer .totals-row {
+      margin-bottom: 2px;
+      font-size: 13px;
+    }
+    #create-order-modal .create-order-footer .totals-row.total-strong {
+      margin-bottom: 10px;
+      font-size: 1.05rem;
+    }
+    #create-order-modal #btn-create-order-confirm {
+      padding: 10px 12px;
+      font-size: 15px;
+      border-radius: 7px;
+    }
     #new-order-products {
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 0 !important;
-      padding: 0 !important;
+      grid-template-columns: 1fr;
+      gap: 0;
+      padding: 0;
     }
     #new-order-products .product-card-simple {
       border-radius: 0 !important;
@@ -20190,40 +20275,17 @@
     #new-order-products .product-card-simple > div:first-child {
       flex: 1;
       margin-right: 12px;
+      min-width: 0;
     }
     #new-order-products .product-card-simple > div:first-child > div:first-child {
       margin-bottom: 2px !important;
       font-size: 14px !important;
     }
     #new-order-products .product-card-simple .prod-detail-text {
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      font-size: 11px;
-      color: #888;
+      display: none;
     }
     #new-order-products .product-card-simple .prod-detail-text.visible {
       display: block !important;
-      -webkit-line-clamp: unset;
-    }
-  }
-
-  @media (max-width: 900px) {
-    #create-order-modal .create-order-body {
-      flex-direction: column;
-      overflow: hidden;
-    }
-    /* ... (rest of media query) ... */
-    #new-order-products .product-card-simple > div:first-child > div:first-child {
-      margin-bottom: 2px !important;
-      font-size: 14px !important;
-    }
-    #new-order-products .product-card-simple .prod-detail-text {
-      display: none; /* Hide description for compact view */
-    }
-    #new-order-products .product-card-simple .prod-detail-text.visible {
-      display: block !important; /* Visible when toggled */
       margin-top: 4px;
       white-space: normal;
     }
@@ -20231,6 +20293,59 @@
       margin-top: 0 !important;
       font-size: 14px !important;
       font-weight: 700 !important;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  }
+
+  @media (max-width: 640px) {
+    #create-order-modal .create-order-header,
+    #create-order-modal .content-scroll,
+    #create-order-modal .create-order-footer,
+    #create-order-modal .create-order-search {
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+    #create-order-modal .create-order-body {
+      grid-template-rows: minmax(180px, 32vh) minmax(0, 1fr);
+    }
+    #create-order-modal .create-order-header {
+      padding-top: 14px;
+      padding-bottom: 14px;
+    }
+    #create-order-modal .create-order-search {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    #new-order-products .product-card-simple {
+      padding: 10px 14px !important;
+    }
+    #create-order-modal .create-order-footer {
+      padding-top: 10px;
+      padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    }
+    #create-order-modal .create-order-footer .totals-row {
+      font-size: 12px;
+    }
+    #create-order-modal .create-order-footer .totals-row.total-strong {
+      margin-bottom: 8px;
+      font-size: 0.98rem;
+    }
+    #create-order-modal #btn-create-order-confirm {
+      padding: 9px 12px;
+      font-size: 14px;
+    }
+  }
+
+  @media (max-width: 520px) {
+    #create-order-modal .create-order-fields {
+      grid-template-columns: 1fr;
+    }
+    #field-mesa,
+    #field-address,
+    #field-contact,
+    #create-order-modal .create-order-fields > div:last-of-type {
+      grid-column: auto;
     }
   }
 
@@ -20355,8 +20470,8 @@
 <!-- Create Order Modal -->
 <div id="create-order-modal" class="kds-modal" autocomplete="off">
   <div class="kds-modal-overlay"></div>
-  <div class="kds-modal-content" style="width: 95vw; max-width: 1000px; height: 90vh; display: flex; flex-direction: column; padding: 0;">
-    <div style="padding: 16px; border-bottom: 1px solid var(--kds-border); display: flex; justify-content: space-between; align-items: center; background: #fff;">
+  <div class="kds-modal-content create-order-modal-content">
+    <div class="create-order-header">
       <h2 style="margin: 0; font-size: 1.25rem; color: #333;">Nuevo Pedido</h2>
       <button class="close-modal-btn" style="background: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: auto; box-shadow: none;">&times;</button>
     </div>
@@ -20364,19 +20479,19 @@
     <div class="create-order-body">
       <!-- Product Selection (Left) -->
       <div class="create-order-left">
-        <div style="padding: 12px; border-bottom: 1px solid var(--kds-border); background: #fff;">
+        <div class="create-order-search">
           <input type="text" id="new-order-search" placeholder="Buscar productos..." autocomplete="off" spellcheck="false" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
         </div>
-        <div id="new-order-products" style="flex: 1; overflow-y: auto; padding: 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; align-content: start;">
+        <div id="new-order-products">
           <!-- Products will be injected here -->
         </div>
       </div>
 
       <!-- Order Details (Right) -->
       <div class="create-order-right">
-        <div class="content-scroll" style="padding: 16px; overflow-y: auto; flex: 1;">
+        <div class="content-scroll">
           <!-- Customer Info -->
-          <div style="display: grid; gap: 12px; margin-bottom: 20px;">
+          <div class="create-order-fields">
             <input type="text" tabindex="-1" aria-hidden="true" autocomplete="off" name="new_order_fake_user" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
             <input type="password" tabindex="-1" aria-hidden="true" autocomplete="new-password" name="new_order_fake_pass" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
             <div>
@@ -20438,20 +20553,20 @@
         </div>
 
         <!-- Footer / Totals -->
-        <div style="padding: 16px; border-top: 1px solid var(--kds-border); background: #f5f7fb;">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 14px; color: #666;">
+        <div class="create-order-footer">
+          <div class="totals-row">
             <span>Subtotal:</span>
             <span id="new-order-subtotal">$0</span>
           </div>
-          <div id="new-order-shipping-row" style="display:none; justify-content: space-between; margin-bottom: 4px; font-size: 14px; color: #666;">
+          <div id="new-order-shipping-row" class="totals-row" style="display:none;">
             <span>Envío:</span>
             <span id="new-order-shipping-total">$0</span>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 16px; font-weight: 800; font-size: 1.25rem; color: #333;">
+          <div class="totals-row total-strong">
             <span>Total:</span>
             <span id="new-order-total">$0</span>
           </div>
-          <button id="btn-create-order-confirm" style="width: 100%; padding: 12px; font-weight: 600; font-size: 16px; background: #2e7d32; color: #fff; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 2px 6px rgba(46,125,50,0.3);">Confirmar Pedido</button>
+          <button id="btn-create-order-confirm">Confirmar Pedido</button>
         </div>
       </div>
     </div>
