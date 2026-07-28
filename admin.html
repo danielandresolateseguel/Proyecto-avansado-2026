@@ -18631,6 +18631,69 @@
         ).trim();
       }
 
+      function normalizeCreateOrderTableIdentity(value) {
+        return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      }
+
+      function extractCreateOrderTableIdentityNumber(value) {
+        const match = normalizeCreateOrderTableIdentity(value).match(/(\d+)/);
+        return match ? String(parseInt(match[1], 10)) : '';
+      }
+
+      function tableIdentityMatchesForCreateOrder(orderTableValue, tableLabel) {
+        const orderValue = normalizeCreateOrderTableIdentity(orderTableValue);
+        const labelValue = normalizeCreateOrderTableIdentity(tableLabel);
+        if (!orderValue || !labelValue) return false;
+        if (orderValue === labelValue) return true;
+        const orderNumber = extractCreateOrderTableIdentityNumber(orderValue);
+        const labelNumber = extractCreateOrderTableIdentityNumber(labelValue);
+        if (orderNumber && labelNumber) return orderNumber === labelNumber;
+        if (!orderNumber && !labelNumber) {
+          return labelValue.includes(orderValue) || orderValue.includes(labelValue);
+        }
+        return false;
+      }
+
+      function isMesaOrderActiveForCreateOrder(order, excludeOrderId) {
+        if (!order) return false;
+        if (excludeOrderId != null && String(order.id || '') === String(excludeOrderId || '')) return false;
+        if (String(order.order_type || '').toLowerCase() !== 'mesa') return false;
+        if (String(order.status || '').toLowerCase() === 'cancelado') return false;
+        if (String(order.status || '').toLowerCase() === 'entregado' && String(order.payment_status || '').toLowerCase() === 'paid') return false;
+        return true;
+      }
+
+      function findActiveMesaOrderForCreateOrder(tableLike, activeOrders, excludeOrderId) {
+        const label = typeof tableLike === 'string'
+          ? tableLike
+          : String((tableLike && tableLike.label) || '').trim();
+        if (!label) return null;
+        const orders = Array.isArray(activeOrders) ? activeOrders : [];
+        return orders.find((order) => {
+          if (!isMesaOrderActiveForCreateOrder(order, excludeOrderId)) return false;
+          return tableIdentityMatchesForCreateOrder(order && order.table_number, label);
+        }) || null;
+      }
+
+      function getEffectiveCreateOrderTableState(table, activeOrders, excludeOrderId) {
+        const order = findActiveMesaOrderForCreateOrder(table, activeOrders, excludeOrderId);
+        let status = normalizeCreateOrderTableIdentity(table && table.status) || 'free';
+        if (order) {
+          status = (String(order.status || '').toLowerCase() === 'entregado' && String(order.payment_status || '').toLowerCase() !== 'paid')
+            ? 'bill'
+            : 'occupied';
+        }
+        return { status, order };
+      }
+
+      function tableBlocksCreateOrderAssignment(table, activeOrders, currentOrderId) {
+        const state = getEffectiveCreateOrderTableState(table, activeOrders, currentOrderId);
+        if (currentOrderId != null && state.order && String(state.order.id || '') === String(currentOrderId || '')) {
+          return false;
+        }
+        return state.status === 'occupied' || state.status === 'bill' || state.status === 'reserved';
+      }
+
       function suppressCreateOrderAutofill() {
         if (modal) modal.setAttribute('autocomplete', 'off');
         const targets = [
@@ -19572,10 +19635,10 @@
                     const opt = document.createElement('option');
                     opt.value = table.label; 
                     const statusMap = { 'free': 'Libre', 'occupied': 'Ocupada', 'reserved': 'Reservada', 'bill': 'Cuenta' };
-                    const isCurrentValue = normalizeTableIdentity(currentVal) === normalizeTableIdentity(table.label);
-                    const effectiveState = getEffectiveTableState(table, activeOrders, { excludeOrderId: currentOrderId });
+                    const isCurrentValue = normalizeCreateOrderTableIdentity(currentVal) === normalizeCreateOrderTableIdentity(table.label);
+                    const effectiveState = getEffectiveCreateOrderTableState(table, activeOrders, currentOrderId);
                     const effectiveStatus = effectiveState.status;
-                    const blocked = !isCurrentValue && tableBlocksNewAssignment(table, activeOrders, { currentOrderId, excludeOrderId: currentOrderId });
+                    const blocked = !isCurrentValue && tableBlocksCreateOrderAssignment(table, activeOrders, currentOrderId);
                     opt.disabled = blocked;
                     opt.textContent = `${table.label} (${statusMap[effectiveStatus] || effectiveStatus}${blocked ? ' · no disponible' : ''})`;
                     group.appendChild(opt);
@@ -19888,6 +19951,7 @@
           
           const payload = {
             tenant_slug: tenant,
+            __dbg: '1',
             order_type: type,
             customer_name: name,
             customer_phone: phone,
@@ -20635,8 +20699,84 @@
       const snapGridPx = 20;
       const snapVal = (n) => Math.round((Number(n) || 0) / snapGridPx) * snapGridPx;
       const clampVal = (v, min, max) => Math.max(min, Math.min(max, v));
+      const defaultTableSpawnPadding = 16;
       let pendingTablesRender = false;
       mapCanvas.appendChild(snapGuideEl);
+
+      function getTableFootprint(tableLike) {
+        const table = (tableLike && typeof tableLike === 'object') ? tableLike : {};
+        let w = 100;
+        let h = 80;
+        const sizeMultiplier = { small: 0.7, medium: 1, large: 1.3, xlarge: 1.6 };
+        const mult = sizeMultiplier[table.size || 'medium'] || 1;
+        if (table.type === 'round') {
+          w = 80 * mult;
+          h = 80 * mult;
+        } else if (table.type === 'bar') {
+          w = 160 * mult;
+          h = 60 * mult;
+        } else {
+          w = 100 * mult;
+          h = 80 * mult;
+        }
+        return { width: w, height: h };
+      }
+
+      function rectsOverlap(left, right, padding) {
+        const gap = Math.max(0, Number(padding) || 0);
+        return !(
+          (left.x + left.width + gap) <= right.x ||
+          (right.x + right.width + gap) <= left.x ||
+          (left.y + left.height + gap) <= right.y ||
+          (right.y + right.height + gap) <= left.y
+        );
+      }
+
+      function getNextOperationalTableNumber() {
+        const allTables = (Array.isArray(data.zones) ? data.zones : [])
+          .flatMap((zone) => Array.isArray(zone && zone.tables) ? zone.tables : []);
+        const usedNumbers = new Set(
+          allTables
+            .map((table) => extractTableIdentityNumber(table && table.label))
+            .filter(Boolean)
+        );
+        let nextNum = 1;
+        while (usedNumbers.has(String(nextNum))) nextNum += 1;
+        return nextNum;
+      }
+
+      function findAvailableTablePlacement(zone, tableLike) {
+        const zoneTables = Array.isArray(zone && zone.tables) ? zone.tables : [];
+        const newFootprint = getTableFootprint(tableLike);
+        const mapWidth = Math.max(240, mapCanvas && mapCanvas.offsetWidth ? mapCanvas.offsetWidth : 1200);
+        const mapHeight = Math.max(240, mapCanvas && mapCanvas.offsetHeight ? mapCanvas.offsetHeight : 800);
+        const maxX = Math.max(0, mapWidth - newFootprint.width);
+        const maxY = Math.max(0, mapHeight - newFootprint.height);
+        const startX = snapVal(60);
+        const startY = snapVal(60);
+
+        for (let y = startY; y <= maxY; y += snapGridPx) {
+          for (let x = startX; x <= maxX; x += snapGridPx) {
+            const candidate = { x, y, width: newFootprint.width, height: newFootprint.height };
+            const collides = zoneTables.some((table) => {
+              const current = getTableFootprint(table);
+              return rectsOverlap(candidate, {
+                x: snapVal(table && table.x),
+                y: snapVal(table && table.y),
+                width: current.width,
+                height: current.height,
+              }, defaultTableSpawnPadding);
+            });
+            if (!collides) return { x, y };
+          }
+        }
+
+        const fallbackOffset = snapVal((zoneTables.length % 8) * (snapGridPx * 2));
+        return {
+          x: clampVal(startX + fallbackOffset, 0, maxX),
+          y: clampVal(startY + fallbackOffset, 0, maxY),
+        };
+      }
       
       // Listen for external updates
       window.addEventListener('kds-tables-changed', () => {
@@ -20878,41 +21018,27 @@
         const shape = shapeSelect.value;
         const size = sizeSelect.value;
         
-        // Smart Naming Logic (Fill gaps)
         const prefix = shape === 'bar' ? 'Barra' : 'Mesa';
-        let nextNum = 1;
-        
-        // Extract numbers from existing labels of the same type
-        const allTables = (Array.isArray(data.zones) ? data.zones : []).flatMap(z => Array.isArray(z && z.tables) ? z.tables : []);
-        const existingNums = allTables
-          .map(t => {
-            const match = t.label.match(new RegExp(`^${prefix}\\s+(\\d+)$`));
-            return match ? parseInt(match[1]) : null;
-          })
-          .filter(n => n !== null)
-          .sort((a, b) => a - b);
-
-        // Find first gap
-        for (const num of existingNums) {
-          if (num === nextNum) {
-            nextNum++;
-          } else if (num > nextNum) {
-            break; // Found a gap
-          }
-        }
-        
+        const nextNum = getNextOperationalTableNumber();
         const defaultLabel = `${prefix} ${nextNum}`;
-        const label = prompt('Nombre de la mesa:', defaultLabel);
-        
-        if (!label) return; // User cancelled
+        const rawLabel = prompt('Nombre de la mesa:', defaultLabel);
+        if (rawLabel == null) return;
+        const label = String(rawLabel).trim();
+        if (!label) {
+          alert('La mesa debe tener un nombre.');
+          return;
+        }
+        const placement = findAvailableTablePlacement(zone, { type: shape, size });
+        const previousData = JSON.parse(JSON.stringify(data));
+        const previousSelectedTableId = selectedTableId;
 
         const newTable = {
           id: newId,
           label: label,
           type: shape,
           size: size,
-          x: snapVal(60),
-          y: snapVal(60),
+          x: placement.x,
+          y: placement.y,
           status: 'free',
           rotation: 0
         };
@@ -20931,10 +21057,14 @@
         markTablesLocalChange();
         renderZones();
         renderTables();
-        const ok = await saveData({ showErrorAlert: false });
+        const ok = await saveData({ showErrorAlert: true });
         if (ok) {
           await queueLoadData();
         } else {
+          data = previousData;
+          selectedTableId = previousSelectedTableId;
+          markTablesLocalChange();
+          renderZones();
           renderTables();
         }
       });

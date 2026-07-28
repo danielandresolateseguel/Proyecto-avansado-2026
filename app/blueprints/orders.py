@@ -213,6 +213,37 @@ def _parse_variants_json(raw):
     except Exception:
         return {}
 
+def _dbg_should_log():
+    try:
+        payload = request.get_json(silent=True) or {}
+    except Exception:
+        payload = {}
+    try:
+        return str(request.args.get('__dbg') or payload.get('__dbg') or '').strip() == '1'
+    except Exception:
+        return False
+
+def _dbg_log(event_name, payload=None):
+    if not _dbg_should_log():
+        return
+    try:
+        root_dir = os.path.abspath(os.path.join(current_app.root_path, os.pardir))
+        out_dir = os.path.join(root_dir, '.dbg')
+        os.makedirs(out_dir, exist_ok=True)
+        out_path = os.path.join(out_dir, 'trae-debug-log-tables-not-loading.ndjson')
+        entry = {
+            'ts': datetime.utcnow().isoformat() + 'Z',
+            'event': str(event_name or '').strip() or 'event',
+            'path': request.path,
+            'method': request.method,
+            'query': dict(request.args or {}),
+            'payload': payload if isinstance(payload, dict) else {},
+        }
+        with open(out_path, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+    except Exception:
+        return
+
 def _normalize_table_text(value):
     return re.sub(r'\s+', ' ', str(value or '').strip().lower())
 
@@ -299,17 +330,59 @@ def _find_active_table_conflict(cur, tenant_slug, table_value, exclude_order_id=
     )
     rows = cur.fetchall()
     exclude_id = str(exclude_order_id or '').strip()
+    _dbg_log('orders.table_conflict.scan', {
+        'tenant_slug': tenant_slug,
+        'table_value': str(table_value or '').strip(),
+        'exclude_order_id': exclude_id,
+        'row_count': len(rows),
+    })
     for row in rows:
         order_id = row[0]
         if exclude_id and str(order_id) == exclude_id:
+            _dbg_log('orders.table_conflict.skip', {
+                'reason': 'exclude_order_id',
+                'order_id': order_id,
+            })
             continue
         status = str(row[3] or '').strip().lower()
         payment_status = str(row[4] or '').strip().lower()
         if status == 'cancelado':
+            _dbg_log('orders.table_conflict.skip', {
+                'reason': 'cancelado',
+                'order_id': order_id,
+                'table_number': str(row[2] or '').strip(),
+                'status': status,
+                'payment_status': payment_status,
+            })
             continue
         if status == 'entregado' and payment_status == 'paid':
+            _dbg_log('orders.table_conflict.skip', {
+                'reason': 'delivered_paid',
+                'order_id': order_id,
+                'table_number': str(row[2] or '').strip(),
+                'status': status,
+                'payment_status': payment_status,
+            })
             continue
-        if _table_values_match(table_value, row[2]):
+        matches = _table_values_match(table_value, row[2])
+        _dbg_log('orders.table_conflict.compare', {
+            'order_id': order_id,
+            'tenant_order_number': row[1],
+            'incoming_table': str(table_value or '').strip(),
+            'row_table': str(row[2] or '').strip(),
+            'status': status,
+            'payment_status': payment_status,
+            'matches': bool(matches),
+        })
+        if matches:
+            _dbg_log('orders.table_conflict.hit', {
+                'order_id': order_id,
+                'tenant_order_number': row[1],
+                'incoming_table': str(table_value or '').strip(),
+                'row_table': str(row[2] or '').strip(),
+                'status': status,
+                'payment_status': payment_status,
+            })
             return {
                 'id': order_id,
                 'tenant_order_number': row[1],
@@ -1356,6 +1429,12 @@ def create_order():
 
         if order_type == 'mesa':
             resolved_table_number, table_error = _resolve_table_label(cfg, table_number)
+            _dbg_log('orders.create.table_resolved', {
+                'tenant_slug': tenant_slug,
+                'raw_table_number': str(table_number or '').strip(),
+                'resolved_table_number': str(resolved_table_number or '').strip(),
+                'table_error': str(table_error or '').strip(),
+            })
             if table_error:
                 return jsonify({'error': table_error}), 400
             table_number = resolved_table_number
@@ -2828,6 +2907,13 @@ def update_order_content(order_id):
         except Exception:
             cfg = {}
         resolved_table_number, table_error = _resolve_table_label(cfg, next_table_number)
+        _dbg_log('orders.update.table_resolved', {
+            'tenant_slug': tenant_slug,
+            'order_id': order_id,
+            'raw_table_number': str(next_table_number or '').strip(),
+            'resolved_table_number': str(resolved_table_number or '').strip(),
+            'table_error': str(table_error or '').strip(),
+        })
         if table_error:
             return jsonify({'error': table_error}), 400
         next_table_number = resolved_table_number
