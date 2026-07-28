@@ -322,9 +322,11 @@ def _resolve_table_label(cfg, raw_value):
 def _find_active_table_conflict(cur, tenant_slug, table_value, exclude_order_id=None):
     cur.execute(
         """
-        SELECT id, tenant_order_number, table_number, status, payment_status
-        FROM orders
-        WHERE tenant_slug = ? AND order_type = 'mesa'
+        SELECT o.id, o.tenant_order_number, o.table_number, o.status, o.payment_status
+        FROM orders o
+        LEFT JOIN archived_orders a
+          ON a.order_id = o.id AND a.tenant_slug = o.tenant_slug
+        WHERE o.tenant_slug = ? AND o.order_type = 'mesa' AND a.order_id IS NULL
         """,
         (tenant_slug,)
     )

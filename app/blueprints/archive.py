@@ -756,8 +756,8 @@ def reset_active_orders():
     cur.execute("""
         SELECT id FROM orders 
         WHERE tenant_slug = ? 
-        AND id NOT IN (SELECT order_id FROM archived_orders)
-    """, (tenant_slug,))
+        AND id NOT IN (SELECT order_id FROM archived_orders WHERE tenant_slug = ?)
+    """, (tenant_slug, tenant_slug))
     
     rows = cur.fetchall()
     count = 0
