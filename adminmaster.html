@@ -196,6 +196,17 @@
         </div>
         <div class="hint">“Aviso” muestra un mensaje sin bloquear. “Suspendido” bloquea el acceso al KDS para ese comercio.</div>
         <div class="sep"></div>
+        <strong>Pedidos públicos</strong>
+        <div class="row">
+          <div class="field" style="flex:1; min-width:240px;">
+            <label>Token</label>
+            <input id="tenant-public-token" placeholder="Cargando..." readonly />
+          </div>
+          <button id="tenant-public-token-copy" class="btn muted">Copiar token</button>
+          <button id="tenant-public-token-rotate" class="btn danger">Generar / Rotar token</button>
+        </div>
+        <div class="hint">El token se usa en páginas públicas (miprueba.html) para autorizar POST /api/orders. Si el campo está vacío, podés generarlo acá y luego copiarlo al frontend público.</div>
+        <div class="sep"></div>
         <strong>Usuarios</strong>
         <div class="hint" id="tenant-users-limit"></div>
         <div style="overflow:auto;">
@@ -353,6 +364,7 @@
 
     let SETTINGS_TENANT = '';
     let SETTINGS_OWNERS_COUNT = 0;
+    let SETTINGS_PUBLIC_TOKEN = '';
 
     function formatLastSeen(s){
       const v = String(s||'').trim();
@@ -560,6 +572,7 @@
 
     function openTenantSettings(tenant){
       SETTINGS_TENANT = String(tenant||'').trim();
+      SETTINGS_PUBLIC_TOKEN = '';
       const modal = document.getElementById('tenant-settings-modal');
       const title = document.getElementById('tenant-settings-title');
       const subtitle = document.getElementById('tenant-settings-subtitle');
@@ -567,6 +580,7 @@
       if (subtitle) subtitle.textContent = SETTINGS_TENANT ? `Comercio: ${SETTINGS_TENANT}` : '';
       try{
         const t = (TENANTS_CACHE || []).find(x => String(x && x.slug || '') === SETTINGS_TENANT) || null;
+        const tokenEl = document.getElementById('tenant-public-token');
         const stSel = document.getElementById('tenant-status-select');
         const msgEl = document.getElementById('tenant-status-message');
         const planEl = document.getElementById('tenant-plan-select');
@@ -578,15 +592,74 @@
         if (planEl) planEl.value = (plan === 'pro') ? 'pro' : 'standard';
         const mu = t && t.max_users ? parseInt(t.max_users,10) : (plan === 'pro' ? 6 : 3);
         if (maxEl) maxEl.value = String(mu || 3);
+        const tk = t && t.public_order_token ? String(t.public_order_token) : '';
+        SETTINGS_PUBLIC_TOKEN = tk;
+        if (tokenEl) tokenEl.value = tk || 'Cargando...';
       }catch(e){}
       if (modal) modal.style.display = 'flex';
+      loadTenantPublicToken();
       loadTenantUsers();
     }
 
     function closeTenantSettings(){
       SETTINGS_TENANT = '';
+      SETTINGS_PUBLIC_TOKEN = '';
       const modal = document.getElementById('tenant-settings-modal');
       if (modal) modal.style.display = 'none';
+    }
+
+    async function loadTenantPublicToken(){
+      const slug = SETTINGS_TENANT;
+      const tokenEl = document.getElementById('tenant-public-token');
+      if (!slug) return;
+      if (tokenEl) tokenEl.value = SETTINGS_PUBLIC_TOKEN || 'Cargando...';
+      try{
+        const url = new URL('/api/master/tenants/public_token', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        const r = await fetch(url.toString(), { cache:'no-store', credentials:'include' });
+        if (r.status === 401){
+          showToast('Sesión master requerida','error');
+          return;
+        }
+        if (!r.ok) return;
+        const j = await r.json();
+        const tk = j && j.public_order_token ? String(j.public_order_token) : '';
+        if (tk){
+          SETTINGS_PUBLIC_TOKEN = tk;
+          if (tokenEl) tokenEl.value = tk;
+        }
+      }catch(e){}
+    }
+
+    async function rotateTenantPublicToken(){
+      const slug = SETTINGS_TENANT;
+      const tokenEl = document.getElementById('tenant-public-token');
+      if (!slug) return;
+      if (!confirm('¿Generar o rotar token? Las páginas públicas con el token anterior van a fallar hasta que las actualices.')) return;
+      try{
+        await fetchCsrfToken();
+        const url = new URL('/api/master/tenants/public_token', API_BASE);
+        const r = await fetch(url.toString(), {
+          method:'POST',
+          headers: headersJSON(),
+          credentials:'include',
+          body: JSON.stringify({ tenant_slug: slug })
+        });
+        if (!r.ok){
+          let msg = 'No se pudo rotar token';
+          try{ const j = await r.json(); if (j.error) msg = j.error; }catch(_){}
+          showToast(msg,'error');
+          return;
+        }
+        const j = await r.json();
+        const tk = j && j.public_order_token ? String(j.public_order_token) : '';
+        SETTINGS_PUBLIC_TOKEN = tk;
+        if (tokenEl) tokenEl.value = tk || '';
+        showToast('Token generado/actualizado','success');
+        loadTenants();
+      }catch(e){
+        showToast('Error de red','error');
+      }
     }
 
     function validSlug(s){
@@ -792,6 +865,18 @@
       document.getElementById('btn-reload-tenants').addEventListener('click', loadTenants);
       document.getElementById('tenant-settings-close').addEventListener('click', closeTenantSettings);
       document.getElementById('tenant-settings-modal').addEventListener('click', (e)=>{ if (e.target && e.target.id === 'tenant-settings-modal') closeTenantSettings(); });
+      document.getElementById('tenant-public-token-copy').addEventListener('click', async ()=>{
+        const el = document.getElementById('tenant-public-token');
+        let tk = String((el && el.value) || SETTINGS_PUBLIC_TOKEN || '').trim();
+        if (!tk || tk.toLowerCase() === 'cargando...'){
+          await loadTenantPublicToken();
+          tk = String((el && el.value) || SETTINGS_PUBLIC_TOKEN || '').trim();
+        }
+        if (!tk || tk.toLowerCase() === 'cargando...'){ showToast('Todavía no hay token. Usá \"Generar / Rotar token\" primero.','error'); return; }
+        try{ navigator.clipboard.writeText(tk); }catch(_){}
+        showToast('Token copiado','info');
+      });
+      document.getElementById('tenant-public-token-rotate').addEventListener('click', rotateTenantPublicToken);
       document.getElementById('tenant-status-save').addEventListener('click', async ()=>{
         const slug = SETTINGS_TENANT;
         const planEl = document.getElementById('tenant-plan-select');

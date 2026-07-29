@@ -233,6 +233,7 @@ def init_db_postgres(cur):
             contact_phone TEXT,
             status TEXT NOT NULL DEFAULT 'active',
             status_message TEXT DEFAULT '',
+            public_order_token TEXT NOT NULL DEFAULT '',
             plan TEXT NOT NULL DEFAULT 'standard',
             max_users INTEGER NOT NULL DEFAULT 3,
             created_at TEXT NOT NULL
@@ -242,6 +243,10 @@ def init_db_postgres(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_tenants_status ON tenants(status)")
     try:
         cur.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status_message TEXT DEFAULT ''")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS public_order_token TEXT NOT NULL DEFAULT ''")
     except Exception:
         pass
     try:
@@ -641,6 +646,7 @@ def init_db_sqlite(cur):
             contact_phone TEXT,
             status TEXT NOT NULL DEFAULT 'active',
             status_message TEXT DEFAULT '',
+            public_order_token TEXT NOT NULL DEFAULT '',
             plan TEXT NOT NULL DEFAULT 'standard',
             max_users INTEGER NOT NULL DEFAULT 3,
             created_at TEXT NOT NULL
@@ -653,6 +659,8 @@ def init_db_sqlite(cur):
         cols = [r[1] for r in cur.fetchall()]
         if 'status_message' not in cols:
             cur.execute("ALTER TABLE tenants ADD COLUMN status_message TEXT DEFAULT ''")
+        if 'public_order_token' not in cols:
+            cur.execute("ALTER TABLE tenants ADD COLUMN public_order_token TEXT NOT NULL DEFAULT ''")
     except Exception:
         pass
     # Tabla de pedidos

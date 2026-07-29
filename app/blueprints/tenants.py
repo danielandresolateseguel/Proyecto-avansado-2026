@@ -4,6 +4,7 @@ from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidat
 import os
 import json
 import unicodedata
+import secrets
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash
 
@@ -311,6 +312,29 @@ def ensure_tenants_plan_columns(conn, cur):
             cur.execute("ALTER TABLE tenants ADD COLUMN max_users INTEGER NOT NULL DEFAULT 3")
             changed = True
         if changed:
+            conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+def ensure_tenants_public_order_token_column(conn, cur):
+    if is_postgres():
+        try:
+            cur.execute("ALTER TABLE tenants ADD COLUMN IF NOT EXISTS public_order_token TEXT NOT NULL DEFAULT ''")
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return
+    try:
+        cur.execute("PRAGMA table_info(tenants)")
+        cols = [r[1] for r in cur.fetchall()]
+        if 'public_order_token' not in cols:
+            cur.execute("ALTER TABLE tenants ADD COLUMN public_order_token TEXT NOT NULL DEFAULT ''")
             conn.commit()
     except Exception:
         try:
@@ -747,13 +771,17 @@ def master_get_tenants():
         except Exception:
             pass
         try:
-            cur.execute("SELECT id FROM tenants WHERE tenant_slug = ?", (slug,))
+            ensure_tenants_public_order_token_column(conn, cur)
+        except Exception:
+            pass
+        try:
+            cur.execute("SELECT id, COALESCE(public_order_token, '') AS public_order_token FROM tenants WHERE tenant_slug = ?", (slug,))
             row = cur.fetchone()
             if not row:
                 name = slug.replace('-', ' ').replace('_', ' ').title()
                 cur.execute(
-                    "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, status_message, plan, max_users, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (slug, name, None, None, status, status_message, plan or 'standard', int(max_users) if max_users is not None else 3, now)
+                    "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, status_message, public_order_token, plan, max_users, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (slug, name, None, None, status, status_message, '', plan or 'standard', int(max_users) if max_users is not None else 3, now)
                 )
             else:
                 if plan:
@@ -768,7 +796,14 @@ def master_get_tenants():
             except Exception:
                 pass
             return jsonify({'error': 'no se pudo actualizar el comercio'}), 500
-        return jsonify({'ok': True, 'tenant_slug': slug, 'status': status, 'status_message': status_message, 'plan': plan or None, 'max_users': max_users})
+        cur2 = conn.cursor()
+        try:
+            cur2.execute("SELECT COALESCE(public_order_token, '') AS public_order_token FROM tenants WHERE tenant_slug = ?", (slug,))
+            token_row = cur2.fetchone()
+            public_order_token = str(token_row[0] or '').strip() if token_row else ''
+        except Exception:
+            public_order_token = ''
+        return jsonify({'ok': True, 'tenant_slug': slug, 'status': status, 'status_message': status_message, 'plan': plan or None, 'max_users': max_users, 'public_order_token': public_order_token})
 
     tenants_list = []
     try:
@@ -782,10 +817,14 @@ def master_get_tenants():
             ensure_tenants_plan_columns(conn, cur)
         except Exception:
             pass
-        cur.execute("SELECT tenant_slug, name, status, COALESCE(status_message, '') AS status_message, COALESCE(plan, 'standard') AS plan, COALESCE(max_users, 3) AS max_users FROM tenants ORDER BY created_at DESC")
+        try:
+            ensure_tenants_public_order_token_column(conn, cur)
+        except Exception:
+            pass
+        cur.execute("SELECT tenant_slug, name, status, COALESCE(status_message, '') AS status_message, COALESCE(plan, 'standard') AS plan, COALESCE(max_users, 3) AS max_users, COALESCE(public_order_token, '') AS public_order_token FROM tenants ORDER BY created_at DESC")
         rows = cur.fetchall()
         for r in rows:
-            tenants_list.append({'slug': r[0], 'name': r[1] or r[0], 'status': r[2] or 'active', 'status_message': r[3] or '', 'plan': r[4] or 'standard', 'max_users': int(r[5] or 3)})
+            tenants_list.append({'slug': r[0], 'name': r[1] or r[0], 'status': r[2] or 'active', 'status_message': r[3] or '', 'plan': r[4] or 'standard', 'max_users': int(r[5] or 3), 'public_order_token': r[6] or ''})
     except Exception:
         tenants_list = []
 
@@ -805,6 +844,70 @@ def master_get_tenants():
             pass
 
     return jsonify({'tenants': tenants_list})
+
+@bp.route('/master/tenants/public_token', methods=['GET', 'POST'])
+def master_tenant_public_token():
+    if not session.get('master_auth'):
+        return jsonify({'error': 'no autorizado'}), 401
+
+    slug = _norm_slug(request.args.get('tenant_slug') or request.args.get('slug') or '')
+    if request.method == 'POST':
+        if not check_csrf():
+            return jsonify({'error': 'csrf inválido'}), 403
+        payload = request.get_json(silent=True) or {}
+        slug = _norm_slug(payload.get('tenant_slug') or payload.get('slug') or slug)
+
+    if not slug:
+        return jsonify({'error': 'tenant_slug requerido'}), 400
+    if not _is_valid_slug(slug):
+        return jsonify({'error': 'tenant_slug inválido. Usa letras, números, - y _.'}), 400
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        ensure_tenants_status_message_column(conn, cur)
+    except Exception:
+        pass
+    try:
+        ensure_tenants_plan_columns(conn, cur)
+    except Exception:
+        pass
+    try:
+        ensure_tenants_public_order_token_column(conn, cur)
+    except Exception:
+        pass
+
+    try:
+        cur.execute("SELECT id, name, status, COALESCE(status_message, '') AS status_message, COALESCE(plan, 'standard') AS plan, COALESCE(max_users, 3) AS max_users, COALESCE(public_order_token, '') AS public_order_token FROM tenants WHERE tenant_slug = ?", (slug,))
+        row = cur.fetchone()
+    except Exception:
+        row = None
+
+    if request.method == 'POST':
+        new_token = secrets.token_urlsafe(32)
+        now = datetime.utcnow().isoformat()
+        try:
+            if not row:
+                name = slug.replace('-', ' ').replace('_', ' ').title()
+                cur.execute(
+                    "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, status_message, public_order_token, plan, max_users, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (slug, name, None, None, 'active', '', new_token, 'standard', 3, now)
+                )
+            else:
+                cur.execute("UPDATE tenants SET public_order_token = ? WHERE tenant_slug = ?", (new_token, slug))
+            conn.commit()
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return jsonify({'error': 'no se pudo actualizar el token'}), 500
+        return jsonify({'ok': True, 'tenant_slug': slug, 'public_order_token': new_token})
+
+    if not row:
+        return jsonify({'error': 'comercio no encontrado', 'tenant_slug': slug}), 404
+    public_order_token = str(row[6] or '').strip()
+    return jsonify({'tenant_slug': slug, 'public_order_token': public_order_token, 'configured': bool(public_order_token)})
 
 @bp.route('/tenants/create_demo', methods=['POST'])
 def create_demo_tenant():
@@ -858,14 +961,19 @@ def create_demo_tenant():
         ensure_tenants_plan_columns(conn, cur)
     except Exception:
         pass
+    try:
+        ensure_tenants_public_order_token_column(conn, cur)
+    except Exception:
+        pass
     cur.execute("SELECT id FROM tenants WHERE tenant_slug = ?", (slug,))
     row = cur.fetchone()
     if row:
         return jsonify({'error': 'tenant ya existe', 'tenant_slug': slug}), 409
-    
+
+    public_order_token = secrets.token_urlsafe(32)
     cur.execute(
-        "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, plan, max_users, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (slug, name, contact_email, contact_phone, 'active', 'standard', 3, now)
+        "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, plan, max_users, created_at, public_order_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (slug, name, contact_email, contact_phone, 'active', 'standard', 3, now, public_order_token)
     )
     
     default_cfg = {

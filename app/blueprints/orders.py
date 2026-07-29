@@ -2,6 +2,7 @@ import json
 import re
 import math
 import logging
+import hmac
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
@@ -1429,6 +1430,37 @@ def create_order():
         except Exception:
             cfg = {}
 
+        is_admin_origin = False
+        try:
+            is_admin_origin = bool(is_authed() and check_csrf())
+        except Exception:
+            is_admin_origin = False
+
+        if not is_admin_origin:
+            public_token = (
+                request.headers.get('X-Public-Order-Token')
+                or payload.get('public_order_token')
+                or payload.get('public_token')
+                or payload.get('token')
+            )
+            public_token = str(public_token or '').strip()
+            try:
+                cur.execute("SELECT COALESCE(public_order_token, '') AS public_order_token, COALESCE(status, 'active') AS status FROM tenants WHERE tenant_slug = ?", (tenant_slug,))
+                tenant_row = cur.fetchone()
+            except Exception:
+                tenant_row = None
+            if tenant_row:
+                db_token = str(tenant_row[0] or '').strip()
+                tenant_status = str(tenant_row[1] or 'active').strip().lower()
+                if tenant_status == 'suspended':
+                    return jsonify({'error': 'comercio suspendido', 'tenant_slug': tenant_slug}), 403
+                # Modo de transición: solo exigimos token cuando el comercio ya tiene uno configurado.
+                if db_token:
+                    if not public_token:
+                        return jsonify({'error': 'token requerido'}), 403
+                    if not hmac.compare_digest(db_token, public_token):
+                        return jsonify({'error': 'token inválido'}), 403
+
         if order_type == 'mesa':
             resolved_table_number, table_error = _resolve_table_label(cfg, table_number)
             _dbg_log('orders.create.table_resolved', {
@@ -1448,12 +1480,6 @@ def create_order():
                     'conflict_order_id': conflict.get('id'),
                     'conflict_order_number': order_ref,
                 }), 409
-
-        is_admin_origin = False
-        try:
-            is_admin_origin = bool(is_authed() and check_csrf())
-        except Exception:
-            is_admin_origin = False
 
         if bool(cfg.get('require_order_approval')) and (not is_admin_origin):
             status = 'por_aprobar'
