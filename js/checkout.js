@@ -398,14 +398,12 @@ async function sendOrderToBackend(orderType, data, total) {
         slug = alias[slug] || slug || 'gastronomia-local1';
         return slug;
     };
-
-    const publicOrderTokens = {
-        miprueba: 'vZ-UzBm7UeI3pM2cjkikx1VwIKBbAIrKvPTH0hq-BbI',
-        lomomania: '4ilxax-Bg3pWrRClELW6IwUSS-Msq_n_GRfQvWsuC3Q',
-        'planeta-pancho': ''
-    };
     const tenantSlug = getTenantSlug();
-    const publicOrderToken = String(publicOrderTokens[tenantSlug] || '').trim();
+    const publicOrderToken = String(
+        (window.BusinessConfig && window.BusinessConfig.checkout && window.BusinessConfig.checkout.publicOrderToken)
+        || window.PUBLIC_ORDER_TOKEN
+        || ''
+    ).trim();
 
     const payload = {
         tenant_slug: tenantSlug,

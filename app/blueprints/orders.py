@@ -1218,6 +1218,18 @@ def get_tenant_config():
     checkout_cfg = cfg.get('checkout')
     if not isinstance(checkout_cfg, dict):
         checkout_cfg = {}
+    else:
+        checkout_cfg = checkout_cfg.copy()
+    public_order_token = ''
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT COALESCE(public_order_token, '') FROM tenants WHERE tenant_slug = ?", (slug,))
+        row = cur.fetchone()
+        public_order_token = str((row[0] if row else '') or '').strip()
+    except Exception:
+        public_order_token = ''
+    checkout_cfg['publicOrderToken'] = public_order_token
     raw_order_status_whatsapp = cfg.get('orderStatusWhatsapp')
     if not isinstance(raw_order_status_whatsapp, dict):
         raw_order_status_whatsapp = {}
@@ -1225,9 +1237,10 @@ def get_tenant_config():
         'enabled': bool(raw_order_status_whatsapp['enabled']) if 'enabled' in raw_order_status_whatsapp else True,
         'number': str(raw_order_status_whatsapp.get('number', '') or '') if 'number' in raw_order_status_whatsapp else str(checkout_cfg.get('whatsappNumber', '') or '')
     }
-    if cfg.get('orderStatusWhatsapp') != normalized_order_status_whatsapp:
+    if cfg.get('orderStatusWhatsapp') != normalized_order_status_whatsapp or cfg.get('checkout') != checkout_cfg:
         cfg = cfg.copy()
         cfg['orderStatusWhatsapp'] = normalized_order_status_whatsapp
+        cfg['checkout'] = checkout_cfg
     if 'require_order_approval' not in cfg:
         cfg = cfg.copy()
         cfg['require_order_approval'] = True
