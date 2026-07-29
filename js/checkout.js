@@ -399,8 +399,17 @@ async function sendOrderToBackend(orderType, data, total) {
         return slug;
     };
 
+    const publicOrderTokens = {
+        miprueba: 'vZ-UzBm7UeI3pM2cjkikx1VwIKBbAIrKvPTH0hq-BbI',
+        lomomania: '4ilxax-Bg3pWrRClELW6IwUSS-Msq_n_GRfQvWsuC3Q',
+        'planeta-pancho': ''
+    };
+    const tenantSlug = getTenantSlug();
+    const publicOrderToken = String(publicOrderTokens[tenantSlug] || '').trim();
+
     const payload = {
-        tenant_slug: getTenantSlug(),
+        tenant_slug: tenantSlug,
+        public_order_token: publicOrderToken,
         order_type: orderType,
         table_number: orderType === 'mesa' ? data.mesaNumber : '',
         address: orderType === 'direccion' ? { address: data.address, locality: data.locality, geo: data.geo || null } : {},
