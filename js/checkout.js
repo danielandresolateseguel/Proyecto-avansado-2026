@@ -4,6 +4,7 @@
 import { cart, clearCart, updateCartDisplay } from './cart.js?v=8';
 import { closeCartUI } from './ui.js?v=8';
 import { getWhatsappNumber, CATEGORY, getCheckoutMode, getWhatsappEnabled, getWhatsappTemplate, getBusinessSlug, formatMoneyWithCode, calculateShippingQuote } from './config.js?v=8';
+import { openOrderStatusModal } from './order-status.js?v=11';
 
 function getCheckoutMixSummary(item) {
     if (item && typeof item.mix_summary === 'string' && item.mix_summary.trim()) {
@@ -378,6 +379,7 @@ ${notas}`;
 
         clearCart();
         closeCartUI();
+        try { openOrderStatusModal(); } catch (_) {}
     } catch (error) {
         console.error('Error procesando checkout:', error);
         alert('No se pudo registrar el pedido en el sistema. Tu carrito se conservó para que puedas reintentar. Detalle: ' + error.message);

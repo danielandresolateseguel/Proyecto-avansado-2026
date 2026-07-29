@@ -53,6 +53,21 @@ export function initOrderStatus() {
     setTimeout(checkBackgroundStatus, 1000);
 }
 
+export function openOrderStatusModal() {
+    const statusModal = document.getElementById('order-status-modal');
+    if (!statusModal) return false;
+
+    statusModal.style.display = 'flex';
+    celebrationShown = false;
+    statusModal.offsetHeight;
+    statusModal.classList.add('active');
+    statusModal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    fetchOrderStatus();
+    startPolling();
+    return true;
+}
+
 function startPolling() {
     stopPolling();
     // Actualizar datos cada 5 segundos
