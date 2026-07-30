@@ -31,10 +31,10 @@ import {
     openDialog, 
     closeDialog,
     closeCartUI
-} from './ui.js?v=10';
+} from './ui.js?v=11';
 import { 
     initSearch
-} from './search.js?v=8';
+} from './search.js?v=11';
 import { handleCheckout } from './checkout.js?v=17';
 import { 
     initializeCarousel, 
@@ -53,7 +53,7 @@ import {
     initInterestFiltering,
     initDynamicProducts,
     openProductModalByProductId
-} from './ui.js?v=10';
+} from './ui.js?v=11';
  
  
 import { initOrderStatus } from './order-status.js?v=11';

@@ -3,7 +3,7 @@
  */
 import { addToCart, updateCartDisplay, updateCartCount } from './cart.js?v=8';
 import { getBusinessSlug, formatMoneyWithCode } from './config.js?v=8';
-import { refreshSearchableItems } from './search.js?v=8';
+import { refreshSearchableItems } from './search.js?v=11';
 
 function normalizePackList(raw) {
     let arr = raw;

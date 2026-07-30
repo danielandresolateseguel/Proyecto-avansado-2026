@@ -3,11 +3,12 @@
  */
 import { normalizeForSearch, extractSnippet, highlightTerm, highlightElement } from './utils.js';
 import { addToCart } from './cart.js?v=8';
-import { showAddToCartAnimation, showAddedToCartIndicator } from './ui.js?v=8';
+import { showAddToCartAnimation, showAddedToCartIndicator } from './ui.js?v=11';
 
 export let searchableItems = [];
 
 const SEARCH_HISTORY_KEY = 'search_history';
+const DEFAULT_RESULTS_MESSAGE = 'Explora nuestro menú o busca tu plato favorito';
 
 // Datos de sugerencias
 const searchSuggestions = [
@@ -105,6 +106,65 @@ function buildSearchText(item) {
     return normalizeForSearch(texts.filter(Boolean).join(' '));
 }
 
+function tokenizeSearchText(text) {
+    return normalizeForSearch(text)
+        .split(/[^a-z0-9]+/)
+        .map(token => token.trim())
+        .filter(token => token.length >= 2);
+}
+
+function getEditDistance(a, b) {
+    const source = String(a || '');
+    const target = String(b || '');
+    const rows = source.length + 1;
+    const cols = target.length + 1;
+    const matrix = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    for (let i = 0; i < rows; i += 1) matrix[i][0] = i;
+    for (let j = 0; j < cols; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i < rows; i += 1) {
+        for (let j = 1; j < cols; j += 1) {
+            const cost = source[i - 1] === target[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost
+            );
+        }
+    }
+
+    return matrix[source.length][target.length];
+}
+
+function isFuzzyTokenMatch(queryToken, candidateToken) {
+    const query = normalizeForSearch(queryToken);
+    const candidate = normalizeForSearch(candidateToken);
+    if (!query || !candidate) return false;
+    if (query === candidate) return true;
+    if (query.length >= 4 && candidate.includes(query)) return true;
+    if (candidate.length >= 4 && query.includes(candidate)) return true;
+
+    const maxDiff = Math.abs(query.length - candidate.length);
+    if (maxDiff > 2) return false;
+
+    const distance = getEditDistance(query, candidate);
+    if (Math.max(query.length, candidate.length) >= 8) return distance <= 2;
+    return distance <= 1;
+}
+
+function findFuzzyTokenMatch(term, item) {
+    const variants = expandSynonyms(term);
+    const queryTokens = Array.from(new Set(variants.flatMap(tokenizeSearchText)));
+    const itemTokens = Array.from(new Set(tokenizeSearchText(buildSearchText(item))));
+
+    for (const queryToken of queryTokens) {
+        const candidate = itemTokens.find(itemToken => isFuzzyTokenMatch(queryToken, itemToken));
+        if (candidate) return candidate;
+    }
+    return null;
+}
+
 export function performSearch(term, items) {
     const results = [];
     items.forEach(item => {
@@ -138,22 +198,31 @@ export function performSearch(term, items) {
 function matchesSearch(term, item) {
     const variants = expandSynonyms(term);
     const text = buildSearchText(item);
-    return variants.some(v => text.includes(v));
+    if (variants.some(v => text.includes(v))) return true;
+    return !!findFuzzyTokenMatch(term, item);
 }
 
 function findMatchedVariant(term, item) {
     const variants = expandSynonyms(term);
     const text = buildSearchText(item);
-    return variants.find(v => text.includes(v)) || null;
+    return variants.find(v => text.includes(v)) || findFuzzyTokenMatch(term, item);
 }
 
 export function displayResults(results, term, container) {
     container.innerHTML = '';
     
     if (results.length === 0) {
-        container.innerHTML = '<p class="no-results">No se encontraron resultados para "' + term + '".</p>';
+        const emptyState = document.createElement('p');
+        emptyState.className = 'no-results';
+        emptyState.textContent = `No se encontraron resultados para "${term}".`;
+        container.appendChild(emptyState);
         return;
     }
+
+    const resultsCount = document.createElement('p');
+    resultsCount.className = 'results-count';
+    resultsCount.textContent = `${results.length} resultado${results.length === 1 ? '' : 's'} para "${term}"`;
+    container.appendChild(resultsCount);
     
     results.forEach(result => {
         const resultItem = document.createElement('div');
@@ -221,8 +290,7 @@ export function displayResults(results, term, container) {
         resultLink.innerHTML = '<i class="fas fa-eye"></i> Ver más';
         resultLink.addEventListener('click', function(e) {
             e.preventDefault();
-            const searchResultsSection = document.querySelector('.search-results');
-            if (searchResultsSection) searchResultsSection.classList.remove('active');
+            closeSearchResults();
             
             const targetElement = document.getElementById(result.id);
             if (targetElement) {
@@ -426,6 +494,43 @@ function selectHighlightedSuggestion() {
     }
 }
 
+function setDefaultResultsState() {
+    const resultsContainer = document.getElementById('results-container');
+    if (!resultsContainer) return;
+    resultsContainer.innerHTML = `<p class="no-results">${DEFAULT_RESULTS_MESSAGE}</p>`;
+}
+
+function syncClearSearchButton(clearSearchBtn, searchInput) {
+    if (!clearSearchBtn || !searchInput) return;
+    const searchResultsSection = document.querySelector('.search-results');
+    const shouldShow = !!searchInput.value.trim() || !!(searchResultsSection && searchResultsSection.classList.contains('active'));
+    clearSearchBtn.style.display = shouldShow ? 'inline-flex' : 'none';
+}
+
+function closeSearchResults(options = {}) {
+    const keepInput = options.keepInput === true;
+    const keepFocus = options.keepFocus === true;
+    const searchInput = document.getElementById('search-input');
+    const clearSearchBtn = document.getElementById('clear-search-btn');
+    const searchResultsSection = document.querySelector('.search-results');
+
+    hideSuggestions();
+    if (searchResultsSection) {
+        searchResultsSection.classList.remove('active');
+    }
+    setDefaultResultsState();
+
+    if (searchInput && !keepInput) {
+        searchInput.value = '';
+    }
+
+    syncClearSearchButton(clearSearchBtn, searchInput);
+
+    if (keepFocus && searchInput) {
+        searchInput.focus();
+    }
+}
+
 // Inicialización
 export function initSearch() {
     const searchInput = document.getElementById('search-input');
@@ -435,14 +540,13 @@ export function initSearch() {
     const clearSearchBtn = document.getElementById('clear-search-btn');
     
     refreshSearchableItems();
+    setDefaultResultsState();
+    syncClearSearchButton(clearSearchBtn, searchInput);
 
     if (clearSearchBtn) {
+        clearSearchBtn.innerHTML = '<i class="fas fa-times" aria-hidden="true"></i><span>Limpiar</span>';
         clearSearchBtn.addEventListener('click', () => {
-            if (searchInput) {
-                searchInput.value = '';
-                searchInput.dispatchEvent(new Event('input'));
-                searchInput.focus();
-            }
+            closeSearchResults();
         });
     }
 
@@ -454,15 +558,28 @@ export function initSearch() {
         searchInput.addEventListener('input', (e) => {
             const query = e.target.value.trim();
             clearTimeout(searchTimeout);
+            syncClearSearchButton(clearSearchBtn, searchInput);
             searchTimeout = setTimeout(() => {
                 updateSuggestionsDisplay(query);
                 if (query.length > 0) {
                     showSuggestions();
+                } else {
+                    closeSearchResults({ keepInput: true });
                 }
             }, 150);
         });
 
         searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (suggestionsDropdown.classList.contains('active')) {
+                    hideSuggestions();
+                } else {
+                    closeSearchResults();
+                    searchInput.blur();
+                }
+                return;
+            }
+
             if (!suggestionsDropdown.classList.contains('active')) return;
             
             switch (e.key) {
@@ -479,10 +596,6 @@ export function initSearch() {
                         e.preventDefault();
                         selectHighlightedSuggestion();
                     }
-                    break;
-                case 'Escape':
-                    hideSuggestions();
-                    searchInput.blur();
                     break;
             }
         });
@@ -509,22 +622,29 @@ export function initSearch() {
             e.preventDefault();
             const searchTerm = searchInput.value.trim();
             const skipHistory = searchForm?.dataset?.skipHistory === 'true';
-            
-            if (searchTerm) {
-                if (!skipHistory) {
-                    addToHistory(searchTerm);
+
+            if (!searchTerm) {
+                closeSearchResults({ keepInput: true });
+                if (skipHistory) {
+                    delete searchForm.dataset.skipHistory;
                 }
-                hideSuggestions();
-                
-                const results = performSearch(searchTerm, searchableItems);
-                const resultsContainer = document.getElementById('results-container');
-                const searchResultsSection = document.querySelector('.search-results');
-                
-                if (resultsContainer && searchResultsSection) {
-                    displayResults(results, searchTerm, resultsContainer);
-                    searchResultsSection.classList.add('active');
-                }
+                return;
             }
+            
+            if (!skipHistory) {
+                addToHistory(searchTerm);
+            }
+            hideSuggestions();
+
+            const results = performSearch(searchTerm, searchableItems);
+            const resultsContainer = document.getElementById('results-container');
+            const searchResultsSection = document.querySelector('.search-results');
+
+            if (resultsContainer && searchResultsSection) {
+                displayResults(results, searchTerm, resultsContainer);
+                searchResultsSection.classList.add('active');
+            }
+            syncClearSearchButton(clearSearchBtn, searchInput);
             
             if (skipHistory) {
                 delete searchForm.dataset.skipHistory;
