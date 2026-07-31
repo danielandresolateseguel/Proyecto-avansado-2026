@@ -76,6 +76,122 @@ def _parse_perms_json(s):
         return {}
     return {}
 
+def _safe_json_loads(raw):
+    if not raw:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+def _first_non_empty(*values):
+    for value in values:
+        text = str(value or '').strip()
+        if text:
+            return text
+    return ''
+
+def _tenant_activity_health(tenant, config_data, user_stats, order_stats, recent_cutoff_iso, today_start_iso):
+    slug = str((tenant or {}).get('slug') or '').strip()
+    name = str((tenant or {}).get('name') or slug).strip() or slug
+    status = str((tenant or {}).get('status') or 'active').strip().lower() or 'active'
+    max_users = int((tenant or {}).get('max_users') or 3)
+    public_order_token = str((tenant or {}).get('public_order_token') or '').strip()
+    cfg = config_data if isinstance(config_data, dict) else {}
+    meta = cfg.get('meta') if isinstance(cfg.get('meta'), dict) else {}
+    branding = meta.get('branding') if isinstance(meta.get('branding'), dict) else {}
+    branding_contact = branding.get('contact') if isinstance(branding.get('contact'), dict) else {}
+    checkout = cfg.get('checkout') if isinstance(cfg.get('checkout'), dict) else {}
+    users = user_stats if isinstance(user_stats, dict) else {}
+    orders = order_stats if isinstance(order_stats, dict) else {}
+
+    category = _first_non_empty(meta.get('category'), 'general')
+    page = _first_non_empty(meta.get('page'), category)
+    checkout_mode = _first_non_empty(checkout.get('mode'), 'general')
+    whatsapp = _first_non_empty(
+        checkout.get('whatsappNumber'),
+        branding_contact.get('whatsapp'),
+        cfg.get('whatsapp'),
+        (tenant or {}).get('contact_phone'),
+    )
+    branding_name = _first_non_empty(branding.get('name'), cfg.get('name'), name)
+
+    user_count = int((users or {}).get('count') or 0)
+    users_limit_reached = bool(max_users > 0 and user_count >= max_users)
+    last_seen_at = _first_non_empty((users or {}).get('last_seen_at'))
+    total_orders = int((orders or {}).get('total_orders') or 0)
+    active_orders = int((orders or {}).get('active_orders') or 0)
+    orders_today = int((orders or {}).get('orders_today') or 0)
+    delivered_today = int((orders or {}).get('delivered_today') or 0)
+    canceled_today = int((orders or {}).get('canceled_today') or 0)
+    net_sales_today = int((orders or {}).get('net_sales_today') or 0)
+    avg_ticket_today = int((orders or {}).get('avg_ticket_today') or 0)
+    last_order_at = _first_non_empty((orders or {}).get('last_order_at'))
+
+    last_activity_at = max(last_seen_at, last_order_at) if (last_seen_at or last_order_at) else ''
+    has_recent_activity = bool(active_orders > 0 or orders_today > 0 or (last_activity_at and last_activity_at >= recent_cutoff_iso))
+    if active_orders > 0:
+        activity_level = 'live'
+    elif orders_today > 0 or (last_activity_at and last_activity_at >= today_start_iso):
+        activity_level = 'today'
+    elif last_activity_at and last_activity_at >= recent_cutoff_iso:
+        activity_level = 'recent'
+    else:
+        activity_level = 'inactive'
+    has_public_profile = bool(category and page and branding_name)
+    onboarding = {
+        'has_public_token': bool(public_order_token),
+        'has_profile': has_public_profile,
+        'has_whatsapp': bool(whatsapp),
+        'has_users': user_count > 0,
+        'has_test_order': total_orders > 0,
+    }
+
+    if status == 'suspended':
+        health = 'suspended'
+    elif not onboarding['has_public_token'] or not onboarding['has_profile'] or not onboarding['has_whatsapp']:
+        health = 'incomplete'
+    elif status == 'warning' or users_limit_reached:
+        health = 'attention'
+    elif not has_recent_activity:
+        health = 'inactive'
+    else:
+        health = 'ok'
+
+    return {
+        'slug': slug,
+        'name': name,
+        'status': status,
+        'status_message': str((tenant or {}).get('status_message') or '').strip(),
+        'plan': str((tenant or {}).get('plan') or 'standard').strip() or 'standard',
+        'max_users': max_users,
+        'public_order_token': public_order_token,
+        'category': category,
+        'page': page,
+        'checkout_mode': checkout_mode,
+        'branding_name': branding_name,
+        'whatsapp_number': whatsapp,
+        'user_count': user_count,
+        'users_limit_reached': users_limit_reached,
+        'last_seen_at': last_seen_at,
+        'total_orders': total_orders,
+        'active_orders': active_orders,
+        'orders_today': orders_today,
+        'delivered_today': delivered_today,
+        'canceled_today': canceled_today,
+        'net_sales_today': net_sales_today,
+        'avg_ticket_today': avg_ticket_today,
+        'last_order_at': last_order_at,
+        'last_activity_at': last_activity_at,
+        'has_recent_activity': has_recent_activity,
+        'activity_level': activity_level,
+        'onboarding': onboarding,
+        'health': health,
+    }
+
 def _can_manage_tenant_slug(slug, require_owner_or_admin=True):
     session_tenant = str(session.get('tenant_slug') or '').strip()
     role = str(session.get('admin_role') or '').strip().lower()
@@ -821,10 +937,10 @@ def master_get_tenants():
             ensure_tenants_public_order_token_column(conn, cur)
         except Exception:
             pass
-        cur.execute("SELECT tenant_slug, name, status, COALESCE(status_message, '') AS status_message, COALESCE(plan, 'standard') AS plan, COALESCE(max_users, 3) AS max_users, COALESCE(public_order_token, '') AS public_order_token FROM tenants ORDER BY created_at DESC")
+        cur.execute("SELECT tenant_slug, name, status, COALESCE(status_message, '') AS status_message, COALESCE(plan, 'standard') AS plan, COALESCE(max_users, 3) AS max_users, COALESCE(public_order_token, '') AS public_order_token, COALESCE(contact_phone, '') AS contact_phone FROM tenants ORDER BY created_at DESC")
         rows = cur.fetchall()
         for r in rows:
-            tenants_list.append({'slug': r[0], 'name': r[1] or r[0], 'status': r[2] or 'active', 'status_message': r[3] or '', 'plan': r[4] or 'standard', 'max_users': int(r[5] or 3), 'public_order_token': r[6] or ''})
+            tenants_list.append({'slug': r[0], 'name': r[1] or r[0], 'status': r[2] or 'active', 'status_message': r[3] or '', 'plan': r[4] or 'standard', 'max_users': int(r[5] or 3), 'public_order_token': r[6] or '', 'contact_phone': r[7] or ''})
     except Exception:
         tenants_list = []
 
@@ -838,12 +954,165 @@ def master_get_tenants():
             for r in rows:
                 slug = r[0]
                 if slug and slug not in seen:
-                    tenants_list.append({'slug': slug, 'name': slug.replace('-', ' ').title(), 'status': 'active', 'status_message': '', 'plan': 'standard', 'max_users': 3})
+                    tenants_list.append({'slug': slug, 'name': slug.replace('-', ' ').title(), 'status': 'active', 'status_message': '', 'plan': 'standard', 'max_users': 3, 'public_order_token': '', 'contact_phone': ''})
                     seen.add(slug)
         except Exception:
             pass
 
-    return jsonify({'tenants': tenants_list})
+    summary = {
+        'total': len(tenants_list),
+        'active_status': 0,
+        'recent_activity': 0,
+        'inactive': 0,
+        'attention': 0,
+        'without_token': 0,
+        'users_limit_reached': 0,
+        'incomplete_onboarding': 0,
+        'net_sales_today': 0,
+        'delivered_today': 0,
+        'avg_ticket_today': 0,
+    }
+    if not tenants_list:
+        return jsonify({'tenants': [], 'summary': summary})
+
+    now_dt = datetime.utcnow()
+    recent_cutoff_iso = (now_dt - timedelta(hours=24)).isoformat()
+    today_start_iso = now_dt.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    tenant_slugs = {str(item.get('slug') or '').strip() for item in tenants_list if str(item.get('slug') or '').strip()}
+    config_map = {}
+    user_stats = {}
+    order_stats = {}
+
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT tenant_slug, config_json FROM tenant_config")
+        for row in cur.fetchall() or []:
+            slug = str(row[0] or '').strip()
+            if slug and slug in tenant_slugs:
+                config_map[slug] = _safe_json_loads(row[1])
+    except Exception:
+        config_map = {}
+
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT tenant_slug, COUNT(*) AS user_count, MAX(COALESCE(last_seen_at, '')) AS last_seen_at
+            FROM admin_users
+            GROUP BY tenant_slug
+            """
+        )
+        for row in cur.fetchall() or []:
+            slug = str(row[0] or '').strip()
+            if slug and slug in tenant_slugs:
+                user_stats[slug] = {
+                    'count': int(row[1] or 0),
+                    'last_seen_at': row[2] or '',
+                }
+    except Exception:
+        user_stats = {}
+
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT o.tenant_slug,
+                   COUNT(*) AS total_orders,
+                   SUM(CASE WHEN lower(COALESCE(o.status,'')) NOT IN ('cancelado', 'entregado')
+                                AND o.id NOT IN (SELECT order_id FROM archived_orders)
+                            THEN 1 ELSE 0 END) AS active_orders,
+                   SUM(CASE WHEN COALESCE(o.created_at, '') >= ? THEN 1 ELSE 0 END) AS orders_today,
+                   SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'entregado' THEN 1 ELSE 0 END) AS delivered_today,
+                   SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'cancelado' THEN 1 ELSE 0 END) AS canceled_today,
+                   SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'entregado' THEN COALESCE(o.total, 0) ELSE 0 END) AS net_sales_today,
+                   MAX(COALESCE(o.created_at, '')) AS last_order_at
+            FROM orders o
+            GROUP BY o.tenant_slug
+            """,
+            (today_start_iso, today_start_iso, today_start_iso, today_start_iso)
+        )
+        for row in cur.fetchall() or []:
+            slug = str(row[0] or '').strip()
+            if slug and slug in tenant_slugs:
+                delivered_today = int(row[4] or 0)
+                net_sales_today = int(row[6] or 0)
+                order_stats[slug] = {
+                    'total_orders': int(row[1] or 0),
+                    'active_orders': int(row[2] or 0),
+                    'orders_today': int(row[3] or 0),
+                    'delivered_today': delivered_today,
+                    'canceled_today': int(row[5] or 0),
+                    'net_sales_today': net_sales_today,
+                    'avg_ticket_today': int(round(net_sales_today / delivered_today)) if delivered_today > 0 else 0,
+                    'last_order_at': row[7] or '',
+                }
+    except Exception:
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT o.tenant_slug,
+                       COUNT(*) AS total_orders,
+                       SUM(CASE WHEN lower(COALESCE(o.status,'')) NOT IN ('cancelado', 'entregado') THEN 1 ELSE 0 END) AS active_orders,
+                       SUM(CASE WHEN COALESCE(o.created_at, '') >= ? THEN 1 ELSE 0 END) AS orders_today,
+                       SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'entregado' THEN 1 ELSE 0 END) AS delivered_today,
+                       SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'cancelado' THEN 1 ELSE 0 END) AS canceled_today,
+                       SUM(CASE WHEN COALESCE(o.created_at, '') >= ? AND lower(COALESCE(o.status,'')) = 'entregado' THEN COALESCE(o.total, 0) ELSE 0 END) AS net_sales_today,
+                       MAX(COALESCE(o.created_at, '')) AS last_order_at
+                FROM orders o
+                GROUP BY o.tenant_slug
+                """,
+                (today_start_iso, today_start_iso, today_start_iso, today_start_iso)
+            )
+            for row in cur.fetchall() or []:
+                slug = str(row[0] or '').strip()
+                if slug and slug in tenant_slugs:
+                    delivered_today = int(row[4] or 0)
+                    net_sales_today = int(row[6] or 0)
+                    order_stats[slug] = {
+                        'total_orders': int(row[1] or 0),
+                        'active_orders': int(row[2] or 0),
+                        'orders_today': int(row[3] or 0),
+                        'delivered_today': delivered_today,
+                        'canceled_today': int(row[5] or 0),
+                        'net_sales_today': net_sales_today,
+                        'avg_ticket_today': int(round(net_sales_today / delivered_today)) if delivered_today > 0 else 0,
+                        'last_order_at': row[7] or '',
+                    }
+        except Exception:
+            order_stats = {}
+
+    enriched = []
+    for tenant in tenants_list:
+        record = _tenant_activity_health(
+            tenant,
+            config_map.get(str(tenant.get('slug') or '').strip(), {}),
+            user_stats.get(str(tenant.get('slug') or '').strip(), {}),
+            order_stats.get(str(tenant.get('slug') or '').strip(), {}),
+            recent_cutoff_iso,
+            today_start_iso,
+        )
+        if record['status'] == 'active':
+            summary['active_status'] += 1
+        if record['has_recent_activity']:
+            summary['recent_activity'] += 1
+        else:
+            summary['inactive'] += 1
+        if record['health'] in ('attention', 'suspended'):
+            summary['attention'] += 1
+        if not record['onboarding']['has_public_token']:
+            summary['without_token'] += 1
+        if record['users_limit_reached']:
+            summary['users_limit_reached'] += 1
+        if record['health'] == 'incomplete':
+            summary['incomplete_onboarding'] += 1
+        summary['net_sales_today'] += int(record.get('net_sales_today') or 0)
+        summary['delivered_today'] += int(record.get('delivered_today') or 0)
+        enriched.append(record)
+
+    summary['avg_ticket_today'] = int(round(summary['net_sales_today'] / summary['delivered_today'])) if summary['delivered_today'] > 0 else 0
+
+    return jsonify({'tenants': enriched, 'summary': summary})
 
 @bp.route('/master/tenants/public_token', methods=['GET', 'POST'])
 def master_tenant_public_token():
@@ -923,6 +1192,17 @@ def create_demo_tenant():
     contact_phone = str(payload.get('contact_phone') or '').strip() or None
     admin_username = str(payload.get('admin_username') or '').strip()
     admin_password = str(payload.get('admin_password') or '')
+    plan = str(payload.get('plan') or 'standard').strip().lower() or 'standard'
+    status = str(payload.get('status') or 'active').strip().lower() or 'active'
+    category = str(payload.get('category') or 'gastronomia').strip().lower() or 'gastronomia'
+    page = str(payload.get('page') or '').strip().lower()
+    checkout_mode = str(payload.get('checkout_mode') or '').strip().lower()
+    whatsapp_number = str(payload.get('whatsapp_number') or '').strip()
+    branding_name = str(payload.get('branding_name') or '').strip()
+    primary_color = str(payload.get('primary_color') or '').strip()
+    secondary_color = str(payload.get('secondary_color') or '').strip()
+    button_color = str(payload.get('button_color') or '').strip()
+    button_text_color = str(payload.get('button_text_color') or '').strip()
     
     if not slug:
         return jsonify({'error': 'tenant_slug requerido'}), 400
@@ -940,8 +1220,22 @@ def create_demo_tenant():
         return jsonify({'error': 'usuario demasiado largo'}), 400
     if len(admin_password) < 6 or len(admin_password) > 256:
         return jsonify({'error': 'clave inválida'}), 400
+    if plan not in ('standard', 'pro'):
+        return jsonify({'error': 'plan inválido'}), 400
+    if status not in ('active', 'warning', 'suspended'):
+        return jsonify({'error': 'estado inválido'}), 400
+    if category not in ('gastronomia', 'comercio', 'servicios', 'general'):
+        return jsonify({'error': 'categoría inválida'}), 400
     if not name:
         name = slug.replace('-', ' ').replace('_', ' ').title()
+    if not page:
+        page = 'gastronomia' if category == 'gastronomia' else category
+    if not checkout_mode:
+        checkout_mode = 'mesa' if category == 'gastronomia' else 'whatsapp'
+    if checkout_mode not in ('mesa', 'direccion', 'espera', 'whatsapp', 'general'):
+        return jsonify({'error': 'checkout inválido'}), 400
+    if not branding_name:
+        branding_name = name
     try:
         shipping_cost = _bounded_int(payload.get('shipping_cost', 0), 0, 0, 1000000)
         time_mesa = _bounded_int(payload.get('time_mesa', 0), 0, 0, 300)
@@ -949,6 +1243,7 @@ def create_demo_tenant():
         time_delivery = _bounded_int(payload.get('time_delivery', 0), 0, 0, 300)
         warning_minutes = _bounded_int(payload.get('warning_minutes', 15), 15, 1, 240)
         critical_minutes = _bounded_int(payload.get('critical_minutes', 30), 30, 2, 480)
+        max_users = _bounded_int(payload.get('max_users', 3), 3, 1, 50)
     except ValueError:
         return jsonify({'error': 'valores numéricos inválidos'}), 400
     if critical_minutes <= warning_minutes:
@@ -973,16 +1268,40 @@ def create_demo_tenant():
     public_order_token = secrets.token_urlsafe(32)
     cur.execute(
         "INSERT INTO tenants (tenant_slug, name, contact_email, contact_phone, status, plan, max_users, created_at, public_order_token) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (slug, name, contact_email, contact_phone, 'active', 'standard', 3, now, public_order_token)
+        (slug, name, contact_email, contact_phone, status, plan, max_users, now, public_order_token)
     )
     
     default_cfg = {
+        'name': name,
+        'whatsapp': whatsapp_number,
+        'theme_color': primary_color or '#ff6a00',
         'shipping_cost': shipping_cost,
         'require_order_approval': True,
         'time_mesa': time_mesa,
         'time_espera': time_espera,
         'time_delivery': time_delivery,
         'time_auto': bool(payload.get('time_auto') or False),
+        'meta': {
+            'slug': slug,
+            'category': category,
+            'page': page,
+            'branding': {
+                'name': branding_name,
+                'primaryColor': primary_color or '#ff6a00',
+                'secondaryColor': secondary_color or '#4a6fa5',
+                'buttonColor': button_color or primary_color or '#ff6a00',
+                'buttonTextColor': button_text_color or '#ffffff',
+                'contact': {
+                    'whatsapp': whatsapp_number
+                }
+            }
+        },
+        'checkout': {
+            'mode': checkout_mode,
+            'whatsappEnabled': True,
+            'whatsappNumber': whatsapp_number,
+            'messageTemplate': 'Hola! Quiero hacer un pedido desde la web. {{orderTypeLabel}} {{orderTypeValue}}. Productos: {{items}}. Total: {{total}} ARS.'
+        },
         'sla': {
             'warning_minutes': warning_minutes,
             'critical_minutes': critical_minutes
@@ -1032,7 +1351,21 @@ def create_demo_tenant():
     conn.commit()
     invalidate_tenant_config(slug)
     
-    return jsonify({'ok': True, 'tenant_slug': slug, 'name': name, 'admin_username': admin_username})
+    return jsonify({
+        'ok': True,
+        'tenant_slug': slug,
+        'name': name,
+        'admin_username': admin_username,
+        'plan': plan,
+        'max_users': max_users,
+        'status': status,
+        'public_order_token': public_order_token,
+        'category': category,
+        'page': page,
+        'checkout_mode': checkout_mode,
+        'whatsapp_number': whatsapp_number,
+        'branding_name': branding_name
+    })
 
 @bp.route('/tenant_tables', methods=['GET'])
 def get_tenant_tables():

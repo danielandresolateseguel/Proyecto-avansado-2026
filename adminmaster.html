@@ -15,7 +15,8 @@
     .row { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; }
     .field { display:flex; flex-direction:column; gap:6px; }
     .field label { font-size:13px; color:var(--muted); }
-    .field input { padding:10px 12px; border:1px solid var(--bd); border-radius:6px; min-width:240px; }
+    .field input, .field select { padding:10px 12px; border:1px solid var(--bd); border-radius:6px; min-width:240px; font:inherit; background:#fff; color:var(--fg); }
+    .field small { font-size:12px; color:var(--muted); line-height:1.45; }
     .btn { padding:10px 14px; border-radius:6px; border:1px solid transparent; cursor:pointer; font-weight:600; }
     .btn.primary { background:var(--primary); color:#fff; }
     .btn.ok { background:var(--ok); color:#fff; }
@@ -29,7 +30,33 @@
     .sep { height:1px; background:var(--bd); margin:8px 0; }
     .hint { color:var(--muted); font-size:12px; }
     .stack { display:flex; flex-direction:column; gap:8px; }
-    @media (max-width:640px){ .field input { min-width: 0; width: 100%; } }
+    .quick-create-shell{gap:14px}
+    .quick-create-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+    .quick-create-head-main{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex:1;flex-wrap:wrap}
+    .quick-create-meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;flex:1;min-width:280px}
+    .quick-kpi{border:1px solid var(--bd);border-radius:10px;padding:10px 12px;background:#f8fafc}
+    .quick-kpi span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .quick-kpi strong{display:block;font-size:14px;word-break:break-word}
+    .quick-section{border:1px solid var(--bd);border-radius:10px;padding:14px;background:#fbfdff}
+    .quick-section-title{font-size:14px;font-weight:700;margin:0 0 10px 0}
+    .field.field-tight input,.field.field-tight select{min-width:160px}
+    .field-check{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--bd);border-radius:8px;background:#fff;min-height:44px}
+    .field-check input{min-width:0;width:auto}
+    .inline-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .form-note{padding:12px 14px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;line-height:1.45}
+    .quick-password-wrap{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+    .quick-password-wrap .field{flex:1;min-width:240px}
+    .field input.invalid,.field select.invalid{border-color:#dc2626;background:#fef2f2}
+    .quick-create-toggle{display:inline-flex;align-items:center;gap:8px}
+    .quick-create-toggle::before{content:'+';font-size:16px;font-weight:700;line-height:1}
+    .quick-create-toggle[aria-expanded="true"]::before{content:'-'}
+    .quick-create-body{display:none}
+    .quick-create-body.open{display:flex}
+    @media (max-width:640px){
+      .field input, .field select { min-width: 0; width: 100%; }
+      .quick-create-meta{grid-template-columns:1fr}
+      .quick-password-wrap{display:block}
+    }
     .kds-toast-container{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:9999}
     .kds-toast{min-width:220px;max-width:380px;padding:10px 14px;border-radius:6px;color:#fff;background:#333;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:opacity .3s ease}
     .kds-toast.success{background:#2e7d32}
@@ -48,6 +75,36 @@
     .badge.susp{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
     .btn.icon{padding:8px 10px;display:inline-flex;align-items:center;gap:8px}
     .btn.icon svg{width:16px;height:16px}
+    .master-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+    .master-stat{border:1px solid var(--bd);border-radius:12px;padding:14px;background:linear-gradient(180deg,#fff 0%,#f8fafc 100%)}
+    .master-stat .label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    .master-stat strong{display:block;font-size:24px;line-height:1.05}
+    .master-stat small{display:block;font-size:12px;color:var(--muted);margin-top:6px}
+    .toolbar-wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between}
+    .filter-pills{display:flex;flex-wrap:wrap;gap:8px}
+    .filter-pill{padding:8px 12px;border:1px solid var(--bd);border-radius:999px;background:#fff;color:var(--fg);cursor:pointer;font-weight:600;font-size:13px}
+    .filter-pill.active{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
+    .tenant{gap:10px}
+    .tenant-health{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .badge.health-ok{background:#e8f5e9;color:#1b5e20;border:1px solid #c8e6c9}
+    .badge.health-attention{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa}
+    .badge.health-inactive{background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db}
+    .badge.health-incomplete{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+    .badge.health-suspended{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+    .tenant-meta{display:flex;flex-wrap:wrap;gap:8px}
+    .meta-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f8fafc;border:1px solid var(--bd);font-size:12px;color:#334155}
+    .tenant-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .tenant-metric{border:1px solid var(--bd);border-radius:10px;padding:10px;background:#fbfdff}
+    .tenant-metric span{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+    .tenant-metric strong{display:block;font-size:18px;line-height:1.1}
+    .tenant-onboarding{display:flex;flex-wrap:wrap;gap:8px}
+    .onboard-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:12px;border:1px solid var(--bd);background:#fff}
+    .onboard-chip.ok{background:#e8f5e9;color:#1b5e20;border-color:#c8e6c9}
+    .onboard-chip.miss{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+    .tenant-note{font-size:12px;color:var(--muted);line-height:1.45}
+    @media (max-width:860px){
+      .tenant-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
   </style>
 </head>
 <body>
@@ -60,74 +117,229 @@
     </div>
   </header>
   <main style="display:none;">
-    <section class="card stack">
-      <strong>Alta rápida de comercio</strong>
-      <div class="row">
-        <div class="field">
-          <label>Slug</label>
-          <input id="t-slug" placeholder="ej: gastronomia-local7" />
+    <section class="card stack quick-create-shell">
+      <div class="quick-create-head">
+        <div class="quick-create-head-main">
+          <div class="stack" style="gap:4px;">
+            <strong>Alta rápida de comercio</strong>
+            <span class="hint">Crea el tenant, el usuario principal, la config base y el token público inicial sin salir del panel master.</span>
+          </div>
+          <div class="quick-create-meta">
+            <div class="quick-kpi">
+              <span>Slug final</span>
+              <strong id="t-slug-preview">sin definir</strong>
+            </div>
+            <div class="quick-kpi">
+              <span>Usuario principal</span>
+              <strong id="t-admin-user-preview">sin definir</strong>
+            </div>
+            <div class="quick-kpi">
+              <span>Plan / estado</span>
+              <strong id="t-plan-status-preview">standard / active</strong>
+            </div>
+            <div class="quick-kpi">
+              <span>Perfil público</span>
+              <strong id="t-public-profile-preview">gastronomia / mesa</strong>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label>Nombre</label>
-          <input id="t-name" placeholder="Nombre del comercio" />
+        <button id="toggle-quick-create" class="btn muted quick-create-toggle" type="button" aria-expanded="false" aria-controls="quick-create-body">Mostrar alta</button>
+      </div>
+      <div id="quick-create-body" class="quick-create-body stack">
+      <div class="quick-section stack">
+        <div class="quick-section-title">Identidad y acceso</div>
+        <div class="row">
+          <div class="field">
+            <label>Slug</label>
+            <input id="t-slug" placeholder="ej: gastronomia-local7" />
+            <small>Usa letras, números, guion y guion bajo. Este valor conecta tenant, config y frontend.</small>
+          </div>
+          <div class="field">
+            <label>Nombre</label>
+            <input id="t-name" placeholder="Nombre del comercio" />
+            <small>Si lo dejas vacío, se genera desde el slug.</small>
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input id="t-email" placeholder="correo@dominio.com" />
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input id="t-phone" placeholder="+54 9 ..." />
+          </div>
         </div>
-        <div class="field">
-          <label>Email</label>
-          <input id="t-email" placeholder="correo@dominio.com" />
-        </div>
-        <div class="field">
-          <label>Teléfono</label>
-          <input id="t-phone" placeholder="+54 9 ..." />
-        </div>
-        <div class="field">
-          <label>Usuario principal</label>
-          <input id="t-admin-user" placeholder="usuario" autocomplete="username" />
-        </div>
-        <div class="field">
-          <label>Clave</label>
-          <input id="t-admin-pass" type="password" placeholder="clave" autocomplete="new-password" />
+        <div class="row">
+          <div class="field">
+            <label>Usuario principal</label>
+            <input id="t-admin-user" placeholder="usuario" autocomplete="username" />
+            <small>Se propone automáticamente a partir del slug, pero puedes ajustarlo.</small>
+          </div>
+          <div class="quick-password-wrap">
+            <div class="field">
+              <label>Clave</label>
+              <input id="t-admin-pass" type="password" placeholder="clave" autocomplete="new-password" />
+              <small>Mínimo 6 caracteres. Conviene dejar una clave inicial fuerte y luego cambiarla.</small>
+            </div>
+            <button id="btn-generate-tenant-pass" class="btn muted" type="button">Generar clave</button>
+          </div>
         </div>
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Costo envío</label>
-          <input id="t-ship" type="number" min="0" step="1" value="0" autocomplete="new-password" />
-        </div>
-        <div class="field">
-          <label>Tiempo Mesa</label>
-          <input id="t-time-mesa" type="number" min="0" step="1" value="0" autocomplete="new-password" />
-        </div>
-        <div class="field">
-          <label>Tiempo Espera</label>
-          <input id="t-time-espera" type="number" min="0" step="1" value="0" autocomplete="new-password" />
-        </div>
-        <div class="field">
-          <label>Tiempo Domicilio</label>
-          <input id="t-time-delivery" type="number" min="0" step="1" value="0" autocomplete="new-password" />
-        </div>
-        <div class="field">
-          <label>SLA Advertencia</label>
-          <input id="t-sla-w" type="number" min="1" step="1" value="15" autocomplete="new-password" />
-        </div>
-        <div class="field">
-          <label>SLA Crítico</label>
-          <input id="t-sla-c" type="number" min="2" step="1" value="30" autocomplete="new-password" />
+
+      <div class="quick-section stack">
+        <div class="quick-section-title">Servicio inicial</div>
+        <div class="row">
+          <div class="field field-tight">
+            <label>Plan</label>
+            <select id="t-plan">
+              <option value="standard" selected>Standard</option>
+              <option value="pro">Pro</option>
+            </select>
+          </div>
+          <div class="field field-tight">
+            <label>Máx. usuarios</label>
+            <input id="t-max-users" type="number" min="1" max="50" step="1" value="3" />
+          </div>
+          <div class="field field-tight">
+            <label>Estado inicial</label>
+            <select id="t-status">
+              <option value="active" selected>Activo</option>
+              <option value="warning">Aviso</option>
+              <option value="suspended">Suspendido</option>
+            </select>
+          </div>
+          <div class="field field-tight">
+            <label>Automatizar tiempos</label>
+            <label class="field-check">
+              <input id="t-time-auto" type="checkbox" checked />
+              <span>Aplicar SLA automático base</span>
+            </label>
+          </div>
         </div>
       </div>
-      <div class="row">
+
+      <div class="quick-section stack">
+        <div class="quick-section-title">Perfil público inicial</div>
+        <div class="row">
+          <div class="field field-tight">
+            <label>Rubro</label>
+            <select id="t-category">
+              <option value="gastronomia" selected>Gastronomía</option>
+              <option value="comercio">Comercio</option>
+              <option value="servicios">Servicios</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div class="field field-tight">
+            <label>Página base</label>
+            <select id="t-page">
+              <option value="gastronomia" selected>Gastronomía</option>
+              <option value="comercio">Comercio</option>
+              <option value="servicios">Servicios</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+          <div class="field field-tight">
+            <label>Checkout</label>
+            <select id="t-checkout-mode">
+              <option value="mesa" selected>Mesa</option>
+              <option value="direccion">Domicilio</option>
+              <option value="espera">Retiro / espera</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>WhatsApp pedidos</label>
+            <input id="t-whatsapp-number" placeholder="+549..." />
+            <small>Se guarda en la config base del checkout y en el branding de contacto.</small>
+          </div>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Nombre visible</label>
+            <input id="t-branding-name" placeholder="Nombre visible en la carta" />
+            <small>Si lo dejas vacío, toma el nombre del comercio.</small>
+          </div>
+          <div class="field field-tight">
+            <label>Color principal</label>
+            <input id="t-primary-color" type="color" value="#ff6a00" />
+          </div>
+          <div class="field field-tight">
+            <label>Color secundario</label>
+            <input id="t-secondary-color" type="color" value="#4a6fa5" />
+          </div>
+          <div class="field field-tight">
+            <label>Color botón</label>
+            <input id="t-button-color" type="color" value="#ff6a00" />
+          </div>
+          <div class="field field-tight">
+            <label>Texto botón</label>
+            <input id="t-button-text-color" type="color" value="#ffffff" />
+          </div>
+        </div>
+      </div>
+
+      <div class="quick-section stack">
+        <div class="quick-section-title">Operación base</div>
+        <div class="row">
+          <div class="field field-tight">
+            <label>Costo envío</label>
+            <input id="t-ship" type="number" min="0" step="1" value="0" autocomplete="new-password" />
+          </div>
+          <div class="field field-tight">
+            <label>Tiempo Mesa</label>
+            <input id="t-time-mesa" type="number" min="0" step="1" value="0" autocomplete="new-password" />
+          </div>
+          <div class="field field-tight">
+            <label>Tiempo Espera</label>
+            <input id="t-time-espera" type="number" min="0" step="1" value="0" autocomplete="new-password" />
+          </div>
+          <div class="field field-tight">
+            <label>Tiempo Domicilio</label>
+            <input id="t-time-delivery" type="number" min="0" step="1" value="0" autocomplete="new-password" />
+          </div>
+          <div class="field field-tight">
+            <label>SLA Advertencia</label>
+            <input id="t-sla-w" type="number" min="1" step="1" value="15" autocomplete="new-password" />
+          </div>
+          <div class="field field-tight">
+            <label>SLA Crítico</label>
+            <input id="t-sla-c" type="number" min="2" step="1" value="30" autocomplete="new-password" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-note">
+        Al crear el comercio se genera automáticamente un <code>public_order_token</code>, se crea el usuario principal como <code>admin</code> owner y se guarda una config base en el tenant. Luego puedes entrar a configuración para copiar el token y terminar el onboarding del frontend público.
+      </div>
+
+      <div class="inline-actions">
         <button id="btn-create-tenant" class="btn primary">Crear Comercio</button>
+        <button id="btn-reset-tenant-form" class="btn muted" type="button">Limpiar</button>
         <span id="csrf-indicator" class="hint"></span>
+      </div>
       </div>
     </section>
 
     <section class="card stack">
       <strong>Comercios</strong>
-      <div class="row">
-        <div class="field" style="flex:1; min-width:240px;">
-          <label>Buscar</label>
-          <input id="search" placeholder="Buscar por slug o nombre..." />
+      <div id="master-summary" class="master-summary"></div>
+      <div class="sep"></div>
+      <div class="toolbar-wrap">
+        <div class="filter-pills" id="tenant-filters">
+          <button class="filter-pill active" data-filter="all" type="button">Todos</button>
+          <button class="filter-pill" data-filter="recent" type="button">Con actividad</button>
+          <button class="filter-pill" data-filter="alerts" type="button">Con alertas</button>
+          <button class="filter-pill" data-filter="incomplete" type="button">Onboarding incompleto</button>
+          <button class="filter-pill" data-filter="without_token" type="button">Sin token</button>
+          <button class="filter-pill" data-filter="limit" type="button">Al límite</button>
         </div>
-        <button id="btn-reload-tenants" class="btn muted">Recargar</button>
+        <div class="row">
+          <div class="field" style="flex:1; min-width:240px;">
+            <label>Buscar</label>
+            <input id="search" placeholder="Buscar por slug o nombre..." />
+          </div>
+          <button id="btn-reload-tenants" class="btn muted">Recargar</button>
+        </div>
       </div>
       <div class="sep"></div>
       <div id="tenants-list" class="list"></div>
@@ -287,6 +499,8 @@
     let csrfToken = '';
     let MASTER_AUTHED = false;
     let TENANTS_CACHE = [];
+    let TENANTS_SUMMARY = {};
+    let TENANTS_FILTER = 'all';
 
     async function fetchCsrfToken(){
       try{
@@ -370,6 +584,98 @@
       const v = String(s||'').trim();
       if (!v) return '';
       return v.replace('T',' ').replace('Z','');
+    }
+    function asInt(v){
+      const n = parseInt(String(v ?? '0'), 10);
+      return Number.isFinite(n) ? n : 0;
+    }
+    function formatMoney(v){
+      const n = asInt(v);
+      try{
+        return new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(n);
+      }catch(_){
+        return `$${n}`;
+      }
+    }
+    function activityLabel(level){
+      const value = String(level || '').trim().toLowerCase();
+      if (value === 'live') return 'Operando ahora';
+      if (value === 'today') return 'Con movimiento hoy';
+      if (value === 'recent') return 'Activo en 24 h';
+      return 'Sin movimiento reciente';
+    }
+    function healthBadgeClass(health){
+      const value = String(health || '').trim().toLowerCase();
+      if (value === 'ok') return 'health-ok';
+      if (value === 'attention') return 'health-attention';
+      if (value === 'inactive') return 'health-inactive';
+      if (value === 'suspended') return 'health-suspended';
+      return 'health-incomplete';
+    }
+    function healthBadgeLabel(health){
+      const value = String(health || '').trim().toLowerCase();
+      if (value === 'ok') return 'OK';
+      if (value === 'attention') return 'Atención';
+      if (value === 'inactive') return 'Inactivo';
+      if (value === 'suspended') return 'Suspendido';
+      return 'Incompleto';
+    }
+    function renderMasterSummary(summary, list){
+      const container = document.getElementById('master-summary');
+      if (!container) return;
+      const items = Array.isArray(list) ? list : [];
+      const stats = summary && typeof summary === 'object' ? summary : {};
+      const total = asInt(stats.total || items.length);
+      const cards = [
+        { label:'Comercios', value: total, note:'Base total del panel maestro' },
+        { label:'Activos', value: asInt(stats.active_status), note:'Estado de servicio en activo' },
+        { label:'Con actividad', value: asInt(stats.recent_activity), note:'Actividad reciente en 24 h' },
+        { label:'Ventas hoy', value: formatMoney(stats.net_sales_today), note:'Entregado hoy entre todos los locales' },
+        { label:'Ticket hoy', value: formatMoney(stats.avg_ticket_today), note:'Promedio sobre entregados del día' },
+        { label:'Alertas', value: asInt(stats.attention), note:'Avisos o suspensión operativa' },
+        { label:'Onboarding incompleto', value: asInt(stats.incomplete_onboarding), note:'Faltan datos base para operar' },
+      ];
+      container.innerHTML = cards.map(card => `
+        <div class="master-stat">
+          <span class="label">${escapeMasterHtml(card.label)}</span>
+          <strong>${escapeMasterHtml(String(card.value))}</strong>
+          <small>${escapeMasterHtml(card.note)}</small>
+        </div>
+      `).join('');
+    }
+    function matchesTenantFilter(tenant){
+      const t = tenant || {};
+      const onboarding = t.onboarding || {};
+      switch (TENANTS_FILTER){
+        case 'recent':
+          return !!t.has_recent_activity;
+        case 'alerts':
+          return ['attention', 'suspended'].includes(String(t.health || '').toLowerCase()) || String(t.status || '').toLowerCase() === 'warning';
+        case 'incomplete':
+          return String(t.health || '').toLowerCase() === 'incomplete';
+        case 'without_token':
+          return !onboarding.has_public_token;
+        case 'limit':
+          return !!t.users_limit_reached;
+        default:
+          return true;
+      }
+    }
+    function setTenantFilter(value){
+      TENANTS_FILTER = String(value || 'all').trim().toLowerCase() || 'all';
+      document.querySelectorAll('#tenant-filters .filter-pill').forEach(btn=>{
+        btn.classList.toggle('active', String(btn.getAttribute('data-filter') || '') === TENANTS_FILTER);
+      });
+      renderTenants(TENANTS_CACHE);
+    }
+    function toggleQuickCreate(open){
+      const body = document.getElementById('quick-create-body');
+      const btn = document.getElementById('toggle-quick-create');
+      if (!body || !btn) return;
+      const nextOpen = (typeof open === 'boolean') ? open : !body.classList.contains('open');
+      body.classList.toggle('open', nextOpen);
+      btn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+      btn.textContent = nextOpen ? 'Ocultar alta' : 'Mostrar alta';
     }
     function escapeMasterHtml(v){
       return String(v ?? '')
@@ -669,6 +975,218 @@
       return re.test(s);
     }
 
+    function slugifyCandidate(v){
+      const text = String(v || '').trim().toLowerCase();
+      if (!text) return '';
+      return text
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .replace(/-{2,}/g, '-');
+    }
+
+    function suggestTenantNameFromSlug(slug){
+      const base = String(slug || '').trim().replace(/[-_]+/g, ' ');
+      return base.replace(/\b\w/g, m => m.toUpperCase());
+    }
+
+    function suggestAdminUsername(value){
+      return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .slice(0, 24);
+    }
+
+    function generateTenantPassword(){
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+      let out = '';
+      for (let i = 0; i < 14; i += 1){
+        out += alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+      return out;
+    }
+
+    function setFieldInvalid(el, invalid){
+      if (!el) return;
+      if (invalid) el.classList.add('invalid');
+      else el.classList.remove('invalid');
+    }
+
+    function syncCreateTenantSummary(){
+      const slugEl = document.getElementById('t-slug');
+      const adminUserEl = document.getElementById('t-admin-user');
+      const planEl = document.getElementById('t-plan');
+      const statusEl = document.getElementById('t-status');
+      const categoryEl = document.getElementById('t-category');
+      const checkoutEl = document.getElementById('t-checkout-mode');
+      const slugPreview = document.getElementById('t-slug-preview');
+      const userPreview = document.getElementById('t-admin-user-preview');
+      const planPreview = document.getElementById('t-plan-status-preview');
+      const publicPreview = document.getElementById('t-public-profile-preview');
+      const slug = String(slugEl && slugEl.value || '').trim().toLowerCase();
+      const user = String(adminUserEl && adminUserEl.value || '').trim();
+      const plan = String(planEl && planEl.value || 'standard').trim();
+      const status = String(statusEl && statusEl.value || 'active').trim();
+      const category = String(categoryEl && categoryEl.value || 'gastronomia').trim();
+      const checkout = String(checkoutEl && checkoutEl.value || 'mesa').trim();
+      if (slugPreview) slugPreview.textContent = slug || 'sin definir';
+      if (userPreview) userPreview.textContent = user || 'sin definir';
+      if (planPreview) planPreview.textContent = `${plan} / ${status}`;
+      if (publicPreview) publicPreview.textContent = `${category} / ${checkout}`;
+      setFieldInvalid(slugEl, !!slug && !validSlug(slug));
+    }
+
+    function resetCreateTenantForm(){
+      const defaults = {
+        't-slug': '',
+        't-name': '',
+        't-email': '',
+        't-phone': '',
+        't-admin-user': '',
+        't-admin-pass': '',
+        't-plan': 'standard',
+        't-max-users': '3',
+        't-status': 'active',
+        't-category': 'gastronomia',
+        't-page': 'gastronomia',
+        't-checkout-mode': 'mesa',
+        't-whatsapp-number': '',
+        't-branding-name': '',
+        't-primary-color': '#ff6a00',
+        't-secondary-color': '#4a6fa5',
+        't-button-color': '#ff6a00',
+        't-button-text-color': '#ffffff',
+        't-ship': '0',
+        't-time-mesa': '0',
+        't-time-espera': '0',
+        't-time-delivery': '0',
+        't-sla-w': '15',
+        't-sla-c': '30'
+      };
+      Object.keys(defaults).forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.value = defaults[id];
+        setFieldInvalid(el, false);
+      });
+      const timeAuto = document.getElementById('t-time-auto');
+      if (timeAuto) timeAuto.checked = true;
+      const slugEl = document.getElementById('t-slug');
+      const nameEl = document.getElementById('t-name');
+      const adminUserEl = document.getElementById('t-admin-user');
+      const buttonColorEl = document.getElementById('t-button-color');
+      if (slugEl) slugEl.dataset.manual = '0';
+      if (nameEl) nameEl.dataset.manual = '0';
+      if (adminUserEl) adminUserEl.dataset.manual = '0';
+      if (buttonColorEl) buttonColorEl.dataset.manual = '0';
+      syncCreateTenantSummary();
+    }
+
+    function initCreateTenantForm(){
+      const slugEl = document.getElementById('t-slug');
+      const nameEl = document.getElementById('t-name');
+      const adminUserEl = document.getElementById('t-admin-user');
+      const adminPassEl = document.getElementById('t-admin-pass');
+      const planEl = document.getElementById('t-plan');
+      const statusEl = document.getElementById('t-status');
+      const categoryEl = document.getElementById('t-category');
+      const pageEl = document.getElementById('t-page');
+      const checkoutEl = document.getElementById('t-checkout-mode');
+      const brandingNameEl = document.getElementById('t-branding-name');
+      const primaryColorEl = document.getElementById('t-primary-color');
+      const buttonColorEl = document.getElementById('t-button-color');
+      const generateBtn = document.getElementById('btn-generate-tenant-pass');
+      const resetBtn = document.getElementById('btn-reset-tenant-form');
+
+      if (slugEl) slugEl.dataset.manual = '0';
+      if (nameEl) nameEl.dataset.manual = '0';
+      if (adminUserEl) adminUserEl.dataset.manual = '0';
+      if (buttonColorEl) buttonColorEl.dataset.manual = '0';
+
+      if (nameEl){
+        nameEl.addEventListener('input', ()=>{
+          const name = String(nameEl.value || '').trim();
+          nameEl.dataset.manual = name ? '1' : '0';
+          if (slugEl && slugEl.dataset.manual !== '1'){
+            slugEl.value = slugifyCandidate(name);
+          }
+          if (adminUserEl && adminUserEl.dataset.manual !== '1'){
+            adminUserEl.value = suggestAdminUsername(slugEl ? slugEl.value : name);
+          }
+          if (brandingNameEl && !String(brandingNameEl.value || '').trim()){
+            brandingNameEl.value = name;
+          }
+          syncCreateTenantSummary();
+        });
+      }
+      if (slugEl){
+        slugEl.addEventListener('input', ()=>{
+          slugEl.dataset.manual = '1';
+          slugEl.value = String(slugEl.value || '').toLowerCase();
+          if (nameEl && !String(nameEl.value || '').trim() && nameEl.dataset.manual !== '1'){
+            nameEl.value = suggestTenantNameFromSlug(slugEl.value);
+          }
+          if (brandingNameEl && !String(brandingNameEl.value || '').trim()){
+            brandingNameEl.value = nameEl && String(nameEl.value || '').trim()
+              ? String(nameEl.value || '').trim()
+              : suggestTenantNameFromSlug(slugEl.value);
+          }
+          if (adminUserEl && adminUserEl.dataset.manual !== '1'){
+            adminUserEl.value = suggestAdminUsername(slugEl.value);
+          }
+          syncCreateTenantSummary();
+        });
+      }
+      if (adminUserEl){
+        adminUserEl.addEventListener('input', ()=>{
+          adminUserEl.dataset.manual = String(adminUserEl.value || '').trim() ? '1' : '0';
+          syncCreateTenantSummary();
+        });
+      }
+      if (planEl) planEl.addEventListener('change', syncCreateTenantSummary);
+      if (statusEl) statusEl.addEventListener('change', syncCreateTenantSummary);
+      if (categoryEl){
+        categoryEl.addEventListener('change', ()=>{
+          const category = String(categoryEl.value || 'gastronomia');
+          if (pageEl) pageEl.value = category === 'gastronomia' ? 'gastronomia' : category;
+          if (checkoutEl){
+            checkoutEl.value = category === 'gastronomia' ? 'mesa' : 'whatsapp';
+          }
+          syncCreateTenantSummary();
+        });
+      }
+      if (pageEl) pageEl.addEventListener('change', syncCreateTenantSummary);
+      if (checkoutEl) checkoutEl.addEventListener('change', syncCreateTenantSummary);
+      if (brandingNameEl){
+        brandingNameEl.addEventListener('input', syncCreateTenantSummary);
+      }
+      if (primaryColorEl){
+        primaryColorEl.addEventListener('input', ()=>{
+          if (buttonColorEl && (!buttonColorEl.dataset.manual || buttonColorEl.dataset.manual !== '1')){
+            buttonColorEl.value = primaryColorEl.value || '#ff6a00';
+          }
+        });
+      }
+      if (buttonColorEl){
+        buttonColorEl.addEventListener('input', ()=>{
+          buttonColorEl.dataset.manual = '1';
+        });
+      }
+      if (generateBtn){
+        generateBtn.addEventListener('click', ()=>{
+          if (adminPassEl) adminPassEl.value = generateTenantPassword();
+          showToast('Clave generada','info');
+        });
+      }
+      if (resetBtn){
+        resetBtn.addEventListener('click', ()=>{
+          resetCreateTenantForm();
+        });
+      }
+      syncCreateTenantSummary();
+    }
+
     async function createTenant(){
       const slug = document.getElementById('t-slug').value.trim().toLowerCase();
       const name = document.getElementById('t-name').value.trim();
@@ -676,6 +1194,19 @@
       const phone = document.getElementById('t-phone').value.trim();
       const adminUser = document.getElementById('t-admin-user').value.trim();
       const adminPass = document.getElementById('t-admin-pass').value;
+      const plan = String(document.getElementById('t-plan').value || 'standard').trim().toLowerCase();
+      const maxUsers = parseInt(document.getElementById('t-max-users').value||'3',10) || 3;
+      const status = String(document.getElementById('t-status').value || 'active').trim().toLowerCase();
+      const category = String(document.getElementById('t-category').value || 'gastronomia').trim().toLowerCase();
+      const page = String(document.getElementById('t-page').value || '').trim().toLowerCase();
+      const checkoutMode = String(document.getElementById('t-checkout-mode').value || '').trim().toLowerCase();
+      const whatsappNumber = document.getElementById('t-whatsapp-number').value.trim();
+      const brandingName = document.getElementById('t-branding-name').value.trim();
+      const primaryColor = document.getElementById('t-primary-color').value.trim();
+      const secondaryColor = document.getElementById('t-secondary-color').value.trim();
+      const buttonColor = document.getElementById('t-button-color').value.trim();
+      const buttonTextColor = document.getElementById('t-button-text-color').value.trim();
+      const timeAuto = !!(document.getElementById('t-time-auto') && document.getElementById('t-time-auto').checked);
       const ship = parseInt(document.getElementById('t-ship').value||'0',10) || 0;
       const tm = parseInt(document.getElementById('t-time-mesa').value||'0',10) || 0;
       const te = parseInt(document.getElementById('t-time-espera').value||'0',10) || 0;
@@ -683,8 +1214,12 @@
       const w = Math.max(1, parseInt(document.getElementById('t-sla-w').value||'15',10));
       const c = Math.max(w+1, parseInt(document.getElementById('t-sla-c').value||'30',10));
       if (!validSlug(slug)){ showToast('Slug inválido','error'); return; }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Email inválido','error'); return; }
       if (!adminUser){ showToast('Usuario principal requerido','error'); return; }
       if (!adminPass || String(adminPass).length < 6){ showToast('Clave requerida (mínimo 6 caracteres)','error'); return; }
+      if (maxUsers < 1 || maxUsers > 50){ showToast('Máx. usuarios inválido','error'); return; }
+      const btn = document.getElementById('btn-create-tenant');
+      if (btn) btn.disabled = true;
       try{
         await fetchCsrfToken();
         const url = new URL('/api/tenants/create_demo', API_BASE).toString() + `?tenant_slug=${encodeURIComponent(slug)}`;
@@ -698,11 +1233,23 @@
             contact_phone: phone || undefined,
             admin_username: adminUser,
             admin_password: adminPass,
+            plan: plan,
+            max_users: maxUsers,
+            status: status,
+            category: category,
+            page: page,
+            checkout_mode: checkoutMode,
+            whatsapp_number: whatsappNumber || undefined,
+            branding_name: brandingName || undefined,
+            primary_color: primaryColor || undefined,
+            secondary_color: secondaryColor || undefined,
+            button_color: buttonColor || undefined,
+            button_text_color: buttonTextColor || undefined,
             shipping_cost: ship,
             time_mesa: tm,
             time_espera: te,
             time_delivery: td,
-            time_auto: true,
+            time_auto: timeAuto,
             warning_minutes: w,
             critical_minutes: c
           })
@@ -711,15 +1258,22 @@
           let j = null;
           try { j = await r.json(); } catch(_) {}
           const createdSlug = (j && (j.tenant_slug || j.slug)) ? String(j.tenant_slug || j.slug) : slug;
-          const createdUser = (j && j.admin_username) ? String(j.admin_username) : adminUser;
-          showToast(`Comercio creado: ${createdSlug} (usuario: ${createdUser})`,'success');
-          loadTenants();
+          const createdToken = (j && j.public_order_token) ? String(j.public_order_token) : '';
+          SETTINGS_PUBLIC_TOKEN = createdToken;
+          showToast(`Comercio creado: ${createdSlug}. Revisa el token público y termina el onboarding.`,'success');
+          resetCreateTenantForm();
+          toggleQuickCreate(false);
+          await loadTenants();
+          openTenantSettings(createdSlug);
         } else {
           let msg = 'No se pudo crear';
           try { const j = await r.json(); if (j.error) msg = j.error; } catch(_) {}
           showToast(msg,'error');
         }
       }catch(e){ showToast('Error de red','error'); }
+      finally{
+        if (btn) btn.disabled = false;
+      }
     }
 
     function renderTenants(list){
@@ -727,13 +1281,17 @@
       const cont = document.getElementById('tenants-list');
       const empty = document.getElementById('empty');
       cont.innerHTML = '';
+      renderMasterSummary(TENANTS_SUMMARY, list);
       const filtered = list.filter(it=>{
         const a = (it.slug||'').toLowerCase();
         const b = (it.name||'').toLowerCase();
-        return !q || a.includes(q) || b.includes(q);
+        const c = String(it.branding_name||'').toLowerCase();
+        const d = String(it.whatsapp_number||'').toLowerCase();
+        return matchesTenantFilter(it) && (!q || a.includes(q) || b.includes(q) || c.includes(q) || d.includes(q));
       });
       if (!filtered.length){
         empty.style.display = 'block';
+        empty.textContent = 'Sin comercios para ese filtro.';
         return;
       }
       empty.style.display = 'none';
@@ -746,17 +1304,69 @@
         const badge = st === 'warning'
           ? `<span class="badge warn">Aviso</span>`
           : (st === 'suspended' ? `<span class="badge susp">Suspendido</span>` : ``);
+        const health = String(t.health || 'incomplete').toLowerCase();
+        const onboarding = (t && typeof t.onboarding === 'object') ? t.onboarding : {};
+        const userCount = asInt(t.user_count);
+        const maxUsers = Math.max(1, asInt(t.max_users || 0));
+        const plan = String(t.plan || 'standard');
+        const category = String(t.category || 'general');
+        const checkoutMode = String(t.checkout_mode || 'general');
+        const lastActivity = formatLastSeen(t.last_activity_at || t.last_order_at || t.last_seen_at || '');
+        const statusMessage = String(t.status_message || '').trim();
+        const usersText = `${userCount}/${maxUsers} usuarios`;
         const safeName = escapeMasterHtml(name);
         const safeSlug = escapeMasterHtml(slug);
         const safeSlugAttr = escapeMasterAttr(slug);
         const encodedSlug = encodeURIComponent(slug);
         el.innerHTML = `
           <div class="t-head">
-            <div style="display:flex; align-items:center; gap:8px;">
+            <div class="tenant-health">
               <strong>${safeName}</strong>
               ${badge}
+              <span class="badge ${healthBadgeClass(health)}">${healthBadgeLabel(health)}</span>
             </div>
             <span class="slug">${safeSlug}</span>
+          </div>
+          <div class="tenant-meta">
+            <span class="meta-pill">${escapeMasterHtml(plan)}</span>
+            <span class="meta-pill">${escapeMasterHtml(usersText)}</span>
+            <span class="meta-pill">${escapeMasterHtml(category)} / ${escapeMasterHtml(checkoutMode)}</span>
+            <span class="meta-pill">${escapeMasterHtml(activityLabel(t.activity_level))}</span>
+          </div>
+          <div class="tenant-metrics">
+            <div class="tenant-metric">
+              <span>Pedidos hoy</span>
+              <strong>${escapeMasterHtml(String(asInt(t.orders_today)))}</strong>
+            </div>
+            <div class="tenant-metric">
+              <span>Activos</span>
+              <strong>${escapeMasterHtml(String(asInt(t.active_orders)))}</strong>
+            </div>
+            <div class="tenant-metric">
+              <span>Entregados hoy</span>
+              <strong>${escapeMasterHtml(String(asInt(t.delivered_today)))}</strong>
+            </div>
+            <div class="tenant-metric">
+              <span>Venta hoy</span>
+              <strong style="font-size:15px;line-height:1.35;">${escapeMasterHtml(formatMoney(t.net_sales_today))}</strong>
+            </div>
+            <div class="tenant-metric">
+              <span>Ticket prom.</span>
+              <strong style="font-size:15px;line-height:1.35;">${escapeMasterHtml(formatMoney(t.avg_ticket_today))}</strong>
+            </div>
+            <div class="tenant-metric">
+              <span>Última actividad</span>
+              <strong style="font-size:13px;line-height:1.35;">${escapeMasterHtml(lastActivity || 'Sin registros')}</strong>
+            </div>
+          </div>
+          <div class="tenant-onboarding">
+            <span class="onboard-chip ${onboarding.has_public_token ? 'ok' : 'miss'}">${onboarding.has_public_token ? 'Token OK' : 'Sin token'}</span>
+            <span class="onboard-chip ${onboarding.has_profile ? 'ok' : 'miss'}">${onboarding.has_profile ? 'Perfil base OK' : 'Falta perfil base'}</span>
+            <span class="onboard-chip ${onboarding.has_whatsapp ? 'ok' : 'miss'}">${onboarding.has_whatsapp ? 'WhatsApp OK' : 'Falta WhatsApp'}</span>
+            <span class="onboard-chip ${onboarding.has_test_order ? 'ok' : 'miss'}">${onboarding.has_test_order ? 'Pedido de prueba OK' : 'Sin pedido de prueba'}</span>
+          </div>
+          <div class="tenant-note">
+            ${escapeMasterHtml(statusMessage || (t.whatsapp_number ? `WhatsApp: ${t.whatsapp_number}` : 'Sin mensaje de servicio ni WhatsApp configurado.'))}
           </div>
           <div class="actions">
             <a class="btn muted" href="/public-menu-base.html?slug=${encodedSlug}" target="_blank" rel="noopener">Abrir público</a>
@@ -802,6 +1412,7 @@
         if (!r.ok){ showToast('No se pudo cargar comercios','error'); return; }
         const j = await r.json();
         const list = (j && Array.isArray(j.tenants)) ? j.tenants : [];
+        TENANTS_SUMMARY = (j && j.summary && typeof j.summary === 'object') ? j.summary : {};
         TENANTS_CACHE = list;
         renderTenants(list);
       }catch(e){ showToast('Error de red','error'); }
@@ -862,7 +1473,15 @@
       });
       document.getElementById('btn-refresh').addEventListener('click', ()=>{ fetchCsrfToken(); loadTenants(); });
       document.getElementById('btn-create-tenant').addEventListener('click', createTenant);
+      document.getElementById('toggle-quick-create').addEventListener('click', ()=> toggleQuickCreate());
+      initCreateTenantForm();
+      toggleQuickCreate(false);
       document.getElementById('btn-reload-tenants').addEventListener('click', loadTenants);
+      document.querySelectorAll('#tenant-filters .filter-pill').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          setTenantFilter(btn.getAttribute('data-filter') || 'all');
+        });
+      });
       document.getElementById('tenant-settings-close').addEventListener('click', closeTenantSettings);
       document.getElementById('tenant-settings-modal').addEventListener('click', (e)=>{ if (e.target && e.target.id === 'tenant-settings-modal') closeTenantSettings(); });
       document.getElementById('tenant-public-token-copy').addEventListener('click', async ()=>{
@@ -954,15 +1573,9 @@
         rEl.addEventListener('change', sync);
         sync();
       })();
-      document.getElementById('search').addEventListener('input', async ()=>{
+      document.getElementById('search').addEventListener('input', ()=>{
         if (!MASTER_AUTHED) return;
-        try{
-          const r = await fetch(new URL('/api/master/tenants', API_BASE).toString(), { credentials:'include' });
-          const j = await r.json();
-          const list = (j && Array.isArray(j.tenants)) ? j.tenants : [];
-          TENANTS_CACHE = list;
-          renderTenants(list);
-        }catch(e){}
+        renderTenants(TENANTS_CACHE);
       });
     });
   </script>
