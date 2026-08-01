@@ -32,7 +32,72 @@
     header { display:flex; flex-direction: column; align-items: stretch; gap: 8px; margin-bottom: 16px; }
     .header-main { display:flex; align-items:center; gap: 8px; width: 100%; }
     .header-rest { display:flex; align-items:center; gap: 8px; flex: 1 1 auto; }
-    .header-end { display:flex; align-items:center; gap: 10px; margin-left: auto; }
+    .header-end { display:flex; align-items:center; gap:10px; margin-left: auto; }
+    .tv-kitchen-shell { display:none; margin: 0 0 16px 0; }
+    .tv-kitchen-toolbar {
+      display:grid;
+      gap:12px;
+      padding:16px 18px;
+      border-radius:18px;
+      background:linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #172554 100%);
+      color:#e2e8f0;
+      border:1px solid rgba(148, 163, 184, 0.25);
+      box-shadow:0 16px 36px rgba(15, 23, 42, 0.28);
+    }
+    .tv-kitchen-head { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .tv-kitchen-brand { display:grid; gap:4px; min-width:260px; }
+    .tv-kitchen-brand strong { font-size:24px; line-height:1.1; letter-spacing:0.02em; }
+    .tv-kitchen-brand span { font-size:13px; color:rgba(226, 232, 240, 0.82); }
+    .tv-kitchen-statuses { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .tv-kitchen-pill {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      min-height:38px;
+      padding:0 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      color:#e5eefc;
+      font-size:13px;
+      font-weight:700;
+      white-space:nowrap;
+    }
+    .tv-kitchen-pill.ok { background:rgba(34, 197, 94, 0.16); border-color:rgba(74, 222, 128, 0.35); color:#dcfce7; }
+    .tv-kitchen-pill.warn { background:rgba(251, 191, 36, 0.18); border-color:rgba(251, 191, 36, 0.35); color:#fef3c7; }
+    .tv-kitchen-pill.off { background:rgba(239, 68, 68, 0.18); border-color:rgba(248, 113, 113, 0.35); color:#fee2e2; }
+    .tv-kitchen-pill.manual { background:rgba(96, 165, 250, 0.16); border-color:rgba(96, 165, 250, 0.32); color:#dbeafe; }
+    .tv-kitchen-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .tv-kitchen-actions button {
+      min-height:46px;
+      padding:0 16px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.16);
+      background:rgba(255,255,255,0.08);
+      color:#fff;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow:none;
+    }
+    .tv-kitchen-actions button.active {
+      background:#2563eb;
+      border-color:#60a5fa;
+      color:#fff;
+    }
+    .tv-kitchen-actions button:hover { background:rgba(255,255,255,0.14); }
+    .tv-kitchen-actions button.active:hover { background:#1d4ed8; }
+    .tv-kitchen-note {
+      display:none;
+      gap:4px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.08);
+      border:1px solid rgba(255,255,255,0.12);
+      color:#dbeafe;
+      font-size:13px;
+    }
+    .tv-kitchen-shell .tv-kitchen-note { display:grid; }
+    .tv-kitchen-note strong { font-size:13px; letter-spacing:0.02em; }
     @media (min-width: 961px) {
       .header-main { flex-wrap: nowrap; }
       .header-rest { order: 2; flex: 1 1 auto; }
@@ -989,8 +1054,8 @@
     body.auth-pending .header-rest, body.auth-pending .header-end { display: none !important; }
     body.no-auth .header-main > :not(h1),
     body.auth-pending .header-main > :not(h1) { display: none !important; }
-    body.no-auth #top-controls, body.no-auth #metrics, body.no-auth #analytics, body.no-auth #cash-box, body.no-auth #cash-history, body.no-auth section.grid,
-    body.auth-pending #top-controls, body.auth-pending #metrics, body.auth-pending #analytics, body.auth-pending #cash-box, body.auth-pending #cash-history, body.auth-pending section.grid { display: none !important; }
+    body.no-auth #top-controls, body.no-auth #metrics, body.no-auth #analytics, body.no-auth #cash-panel, body.no-auth #cash-box, body.no-auth #cash-history, body.no-auth section.grid,
+    body.auth-pending #top-controls, body.auth-pending #metrics, body.auth-pending #analytics, body.auth-pending #cash-panel, body.auth-pending #cash-box, body.auth-pending #cash-history, body.auth-pending section.grid { display: none !important; }
     body.no-auth #login-box,
     body.show-login #login-box,
     body.auth-pending #login-box {
@@ -2155,24 +2220,264 @@
     .kitchen-quick-filters { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; }
     .kitchen-quick-filters button { border:none; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:800; font-size:12px; background:#607d8b; color:#fff; line-height:1; }
     .kitchen-quick-filters button.active { box-shadow: 0 0 0 2px rgba(0,0,0,0.25) inset, 0 2px 8px rgba(0,0,0,0.12); transform: translateY(-1px); }
-    #kitchen-cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-top: 10px; }
-    .kitchen-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); display: grid; gap: 10px; }
+    #kitchen-cards { display: grid; gap: 14px 12px; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); margin-top: 10px; }
+    .kitchen-card { background: var(--kds-card-bg); border: 1px solid var(--kds-border); border-radius: 12px; padding: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.08); display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
     .kitchen-card .k-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
     .kitchen-card .k-title { font-weight: 800; color: #1f2937; }
     .kitchen-card .k-new-badge { display:inline-flex; align-items:center; margin-left:8px; padding:2px 8px; border-radius:999px; background:#e8f5e9; color:#2e7d32; font-size:11px; font-weight:800; letter-spacing:0.02em; }
     .kitchen-card .k-meta { font-size: 12px; color: #6b7280; margin-top: 2px; }
     .kitchen-card .k-dest { font-size: 13px; color: #374151; }
-    .kitchen-items { display: grid; gap: 6px; }
+    .kitchen-card .k-order-note {
+      display:grid;
+      gap:4px;
+      padding:8px 10px;
+      border-radius:10px;
+      background:#fff7ed;
+      border-left:4px solid #f97316;
+      color:#9a3412;
+    }
+    .kitchen-card .k-order-note strong {
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+    }
+    .kitchen-items { display: grid; gap: 6px; align-content:start; flex: 1 1 auto; }
     .kitchen-items .k-item { display: grid; grid-template-columns: 56px 1fr; gap: 10px; align-items: baseline; }
     .kitchen-items .k-qty { font-weight: 800; color: #111827; }
     .kitchen-items .k-name { color: #111827; font-weight: 600; }
-    .kitchen-items .k-note { grid-column: 2 / -1; color: #e65100; font-size: 12px; font-style: italic; margin-top: 2px; }
+    .kitchen-items .k-note {
+      grid-column: 2 / -1;
+      display:grid;
+      gap:3px;
+      padding:6px 8px;
+      border-radius:10px;
+      background:#fff1f2;
+      border-left:4px solid #fb7185;
+      color:#9f1239;
+      margin-top: 2px;
+    }
+    .kitchen-items .k-note .k-note-label {
+      font-size:10px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:0.06em;
+      color:#be123c;
+    }
+    .kitchen-items .k-note .k-note-text {
+      font-size:12px;
+      font-style:italic;
+      font-weight:700;
+      line-height:1.25;
+    }
     .kitchen-items .k-mod { grid-column: 2 / -1; color: #6b7280; font-size: 12px; margin-top: 2px; }
-    .kitchen-card .k-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .kitchen-card .k-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 4px; padding-top:6px; }
     .kitchen-card .k-actions .status-action { width: 42px; height: 34px; border-radius: 8px; }
     .kitchen-card .k-actions .status-badge { margin-left: auto; }
     .kitchen-card.card-overdue { border-color: var(--st-overdue); box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.3), 0 6px 16px rgba(0,0,0,0.08); background: rgba(244, 67, 54, 0.06); }
     .kitchen-card.card-overdue .k-title { color: #b71c1c; }
+    body.tv-kitchen-mode {
+      padding:12px;
+      background:#020617;
+      color:#e2e8f0;
+    }
+    body.tv-kitchen-mode.no-auth,
+    body.tv-kitchen-mode.show-login,
+    body.tv-kitchen-mode.auth-pending {
+      overflow:hidden;
+    }
+    body.tv-kitchen-mode header,
+    body.tv-kitchen-mode #service-banner,
+    body.tv-kitchen-mode #top-controls,
+    body.tv-kitchen-mode #cash-panel,
+    body.tv-kitchen-mode #orders-header-row,
+    body.tv-kitchen-mode #orders-table,
+    body.tv-kitchen-mode #orders-mobile,
+    body.tv-kitchen-mode #orders-count,
+    body.tv-kitchen-mode .pager,
+    body.tv-kitchen-mode #table-management,
+    body.tv-kitchen-mode #delivery-box,
+    body.tv-kitchen-mode #inventory-box,
+    body.tv-kitchen-mode #carousel-box,
+    body.tv-kitchen-mode #archived-box,
+    body.tv-kitchen-mode #delivered-box,
+    body.tv-kitchen-mode #canceled-box,
+    body.tv-kitchen-mode #orders-history-group { display:none !important; }
+    body.tv-kitchen-mode .tv-kitchen-shell { display:block; }
+    body.tv-kitchen-mode.no-auth .tv-kitchen-shell,
+    body.tv-kitchen-mode.show-login .tv-kitchen-shell,
+    body.tv-kitchen-mode.auth-pending .tv-kitchen-shell { display:none !important; }
+    body.tv-kitchen-mode .grid { display:block; }
+    body.tv-kitchen-mode .sales-area {
+      background:transparent;
+      border:none;
+      box-shadow:none;
+      padding:0;
+    }
+    body.tv-kitchen-mode #kitchen-box {
+      display:block !important;
+      margin:0;
+      padding:0;
+      border:none;
+      background:transparent;
+    }
+    body.tv-kitchen-mode #kitchen-box > summary { display:none; }
+    body.tv-kitchen-mode #kitchen-quick-filters { display:none; }
+    body.tv-kitchen-mode #kitchen-count {
+      margin: 8px 0 10px 0;
+      color: rgba(226, 232, 240, 0.88) !important;
+      font-size:14px;
+    }
+    body.tv-kitchen-mode #kitchen-cards {
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap:14px 12px;
+      margin-top:0;
+      align-items:start;
+    }
+    body.tv-kitchen-mode .kitchen-card {
+      padding:14px;
+      border-radius:16px;
+      background:rgba(255,255,255,0.96);
+      border:1px solid rgba(148, 163, 184, 0.35);
+      box-shadow:0 12px 24px rgba(15, 23, 42, 0.22);
+      gap:10px;
+    }
+    body.tv-kitchen-mode .kitchen-card .k-head { gap:8px; }
+    body.tv-kitchen-mode .kitchen-card .k-title { font-size:23px; line-height:1.05; }
+    body.tv-kitchen-mode .kitchen-card .k-meta,
+    body.tv-kitchen-mode .kitchen-card .k-dest { font-size:14px; }
+    body.tv-kitchen-mode .kitchen-card .k-order-note {
+      padding:10px 12px;
+      border-radius:12px;
+      box-shadow: inset 0 0 0 1px rgba(249, 115, 22, 0.14);
+    }
+    body.tv-kitchen-mode .kitchen-card .k-order-note strong { font-size:10px; }
+    body.tv-kitchen-mode .kitchen-items { gap:8px; }
+    body.tv-kitchen-mode .kitchen-items .k-item { grid-template-columns: 48px 1fr; gap:10px; }
+    body.tv-kitchen-mode .kitchen-items .k-qty { font-size:18px; }
+    body.tv-kitchen-mode .kitchen-items .k-name { font-size:16px; line-height:1.15; }
+    body.tv-kitchen-mode .kitchen-items .k-note {
+      padding:8px 10px;
+      border-radius:12px;
+    }
+    body.tv-kitchen-mode .kitchen-items .k-note .k-note-label {
+      font-size:10px;
+    }
+    body.tv-kitchen-mode .kitchen-items .k-note .k-note-text {
+      font-size:13px;
+      line-height:1.25;
+    }
+    body.tv-kitchen-mode .kitchen-items .k-mod { font-size:13px; line-height:1.25; }
+    body.tv-kitchen-mode .kitchen-card .k-actions { gap:10px; }
+    body.tv-kitchen-mode .kitchen-card .k-actions .status-action {
+      width:58px;
+      height:46px;
+      border-radius:12px;
+      font-size:18px;
+      font-weight:900;
+    }
+    body.tv-kitchen-mode #login-box {
+      max-width:none;
+      margin:0;
+      padding:32px;
+      background:
+        radial-gradient(1100px circle at 18% 18%, rgba(59,130,246,0.22) 0%, rgba(59,130,246,0.00) 55%),
+        radial-gradient(900px circle at 82% 14%, rgba(37,99,235,0.18) 0%, rgba(37,99,235,0.00) 48%),
+        linear-gradient(180deg, rgba(2,6,23,0.96) 0%, rgba(15,23,42,0.98) 100%);
+    }
+    body.tv-kitchen-mode #login-box .login-card {
+      width:min(560px, 100%);
+      padding:28px 24px 22px;
+      background:linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(30, 41, 59, 0.96) 100%);
+      color:#e2e8f0;
+      border:1px solid rgba(148, 163, 184, 0.24);
+      border-radius:22px;
+      box-shadow:0 28px 50px rgba(0,0,0,0.34);
+      backdrop-filter: blur(6px);
+    }
+    body.tv-kitchen-mode #login-box h2 {
+      margin-bottom:18px;
+      font-size:34px;
+      color:#f8fafc;
+    }
+    body.tv-kitchen-mode #login-box label {
+      color:#e2e8f0;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:0.08em;
+    }
+    body.tv-kitchen-mode #login-box label[style*="display:flex"] {
+      color:#cbd5e1;
+      font-size:12px;
+      letter-spacing:0.02em;
+      text-transform:none;
+      font-weight:700;
+    }
+    body.tv-kitchen-mode #login-box input[type="checkbox"] {
+      accent-color:#3b82f6;
+      width:16px;
+      height:16px;
+    }
+    body.tv-kitchen-mode #login-box .login-card input,
+    body.tv-kitchen-mode #login-box .login-card button {
+      min-height:52px !important;
+      border-radius:14px;
+    }
+    body.tv-kitchen-mode #login-box input[type="text"],
+    body.tv-kitchen-mode #login-box input[type="password"] {
+      background:rgba(15, 23, 42, 0.72);
+      color:#f8fafc;
+      border-color:rgba(148, 163, 184, 0.32) !important;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    }
+    body.tv-kitchen-mode #login-box input[type="text"]::placeholder,
+    body.tv-kitchen-mode #login-box input[type="password"]::placeholder {
+      color:rgba(226, 232, 240, 0.48);
+    }
+    body.tv-kitchen-mode #login-box input[type="text"]:focus,
+    body.tv-kitchen-mode #login-box input[type="password"]:focus {
+      background:rgba(15, 23, 42, 0.92);
+    }
+    body.tv-kitchen-mode #login-box #login-btn {
+      margin-top:14px;
+      background:linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow:0 16px 30px rgba(37, 99, 235, 0.28);
+    }
+    body.tv-kitchen-mode #login-box #login-btn:hover {
+      background:linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    }
+    body.tv-kitchen-mode #login-box .login-card .tv-kitchen-note {
+      display:grid;
+      margin-top:14px;
+      background:rgba(37, 99, 235, 0.12);
+      border-color:rgba(96, 165, 250, 0.22);
+      color:#dbeafe;
+    }
+    body.tv-kitchen-mode #login-box .small { color:#cbd5e1; }
+    @media (max-height: 860px) {
+      body.tv-kitchen-mode { padding:10px; }
+      body.tv-kitchen-mode #kitchen-count { margin:6px 0 8px 0; font-size:13px; }
+      body.tv-kitchen-mode #kitchen-cards { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px 10px; }
+      body.tv-kitchen-mode .kitchen-card { padding:12px; gap:8px; }
+      body.tv-kitchen-mode .kitchen-card .k-title { font-size:20px; }
+      body.tv-kitchen-mode .kitchen-card .k-meta,
+      body.tv-kitchen-mode .kitchen-card .k-dest { font-size:13px; }
+      body.tv-kitchen-mode .kitchen-card .k-order-note { padding:8px 10px; }
+      body.tv-kitchen-mode .kitchen-items { gap:6px; }
+      body.tv-kitchen-mode .kitchen-items .k-item { grid-template-columns: 42px 1fr; gap:8px; }
+      body.tv-kitchen-mode .kitchen-items .k-qty { font-size:16px; }
+      body.tv-kitchen-mode .kitchen-items .k-name { font-size:15px; }
+      body.tv-kitchen-mode .kitchen-items .k-note { padding:6px 8px; }
+      body.tv-kitchen-mode .kitchen-items .k-note .k-note-text { font-size:12px; }
+      body.tv-kitchen-mode .kitchen-items .k-mod { font-size:12px; line-height:1.2; }
+      body.tv-kitchen-mode .kitchen-card .k-actions .status-action { width:52px; height:40px; font-size:16px; }
+      body.tv-kitchen-mode #login-box { padding:24px; }
+      body.tv-kitchen-mode #login-box .login-card { width:min(520px, 100%); padding:24px 20px 18px; }
+      body.tv-kitchen-mode #login-box h2 { font-size:30px; margin-bottom:14px; }
+    }
+    @media (max-width: 920px) {
+      body.tv-kitchen-mode #kitchen-cards { grid-template-columns: 1fr; }
+      .tv-kitchen-head { flex-direction:column; align-items:flex-start; }
+    }
     @media (min-width: 1600px) {
       #orders-table tbody { grid-template-columns: repeat(5, 280px); max-width: calc(5 * 280px + 4 * 12px); margin: 0; justify-content: start; }
     }
@@ -2492,6 +2797,31 @@
   </header>
 
   <div id="service-banner"></div>
+  <div id="tv-kitchen-shell" class="tv-kitchen-shell" aria-live="polite">
+    <div class="tv-kitchen-toolbar">
+      <div class="tv-kitchen-head">
+        <div class="tv-kitchen-brand">
+          <strong id="tv-kitchen-title">Modo TV Cocina</strong>
+          <span id="tv-kitchen-subtitle">Pantalla dedicada para Android TV.</span>
+        </div>
+        <div class="tv-kitchen-statuses">
+          <span id="tv-kitchen-connection" class="tv-kitchen-pill manual">Sin sesión</span>
+          <span id="tv-kitchen-wakelock" class="tv-kitchen-pill manual">Pantalla manual</span>
+          <span id="tv-kitchen-updated" class="tv-kitchen-pill manual">Sin sincronizar</span>
+        </div>
+      </div>
+      <div class="tv-kitchen-actions">
+        <button id="tv-kitchen-filter-ingresos" type="button" class="active">Ingresos</button>
+        <button id="tv-kitchen-filter-listos" type="button">Listos</button>
+        <button id="tv-kitchen-refresh" type="button">Recargar</button>
+        <button id="tv-kitchen-fullscreen" type="button">Pantalla completa</button>
+      </div>
+      <div class="tv-kitchen-note" id="tv-kitchen-note">
+        <strong>Android TV listo para operaci&oacute;n continua</strong>
+        <span>Recomendado: navegador en pantalla completa, ahorro de energ&iacute;a desactivado en la TV y sesi&oacute;n con usuario de cocina dedicado.</span>
+      </div>
+    </div>
+  </div>
  
   
 
@@ -2555,6 +2885,10 @@
       <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-show" type="checkbox" /> Ver clave</label>
       <label style="display:flex; align-items:center; gap:8px; margin-top:4px;"><input id="login-remember" type="checkbox" /> Recordar usuario</label>
       <button id="login-btn" style="height:32px;">Entrar</button>
+      <div class="tv-kitchen-note" id="tv-kitchen-login-note">
+        <strong>Modo TV Cocina</strong>
+        <span>Usa un usuario de cocina dedicado. Despu&eacute;s del ingreso, confirma una vez la pantalla completa si Android TV o el navegador lo solicitan.</span>
+      </div>
       <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
     </div>
   </div>
@@ -6752,6 +7086,25 @@
     const ORDER_DETAIL_CACHE = new Map();
     const LOGIN_KEY_USER = 'kds_login_user';
     const LOGIN_KEY_REM = 'kds_login_rem';
+    const TV_KITCHEN_MODE = (() => {
+      try {
+        const url = new URL(String(window.location && window.location.href || ''));
+        const raw = String(url.searchParams.get('tv') || url.searchParams.get('display') || url.searchParams.get('mode') || '').trim().toLowerCase();
+        return ['1', 'true', 'kitchen', 'cocina', 'kitchen-tv', 'tv-kitchen'].includes(raw);
+      } catch (_) {
+        return false;
+      }
+    })();
+    let tvKitchenWakeLock = null;
+    let tvKitchenLastSuccessAt = 0;
+    let tvKitchenLastError = '';
+    let tvKitchenWakeLockError = '';
+    let tvKitchenFailureCount = 0;
+    let tvKitchenReloadTimer = null;
+    let tvKitchenImmersiveArmed = false;
+    const TV_KITCHEN_FAILURE_THRESHOLD = 3;
+    const TV_KITCHEN_RELOAD_DELAY_MS = 12000;
+    let kitchenQuickFilter = 'ingresos';
     let currentSlaThresholds = { warning: 15, critical: 30 };
     let currentTipPercent = 10;
     let currentTipDefaultEnabled = true;
@@ -6782,6 +7135,240 @@
     let dailyResetFrom = '';
     let dailyResetOverride = false;
     let cashHistoryCollapsed = true;
+    let authBootstrapDone = false;
+    function formatTvKitchenClock(ts) {
+      if (!ts) return '';
+      try {
+        return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch (_) {
+        return '';
+      }
+    }
+    function isTvKitchenAllowed() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const perms = currentUserPerms || {};
+      return !!isAuthed && (role === 'cocina' || role === 'admin' || !!isOwnerUser) && (!!isOwnerUser || role === 'admin' || !perms || !!perms.orders_view);
+    }
+    function syncTvKitchenFilterButtons() {
+      const current = String(kitchenQuickFilter || 'ingresos');
+      const bIn = document.getElementById('tv-kitchen-filter-ingresos');
+      const bLi = document.getElementById('tv-kitchen-filter-listos');
+      if (bIn) bIn.classList.toggle('active', current === 'ingresos');
+      if (bLi) bLi.classList.toggle('active', current === 'listos');
+    }
+    function syncTvKitchenChrome() {
+      const shell = document.getElementById('tv-kitchen-shell');
+      if (!shell) return;
+      shell.style.display = TV_KITCHEN_MODE ? 'block' : 'none';
+      document.body.classList.toggle('tv-kitchen-mode', !!TV_KITCHEN_MODE);
+      if (!TV_KITCHEN_MODE) return;
+      const loginTenantEl = document.getElementById('login-tenant');
+      const titleEl = document.getElementById('tv-kitchen-title');
+      const subtitleEl = document.getElementById('tv-kitchen-subtitle');
+      const connEl = document.getElementById('tv-kitchen-connection');
+      const wakeEl = document.getElementById('tv-kitchen-wakelock');
+      const updEl = document.getElementById('tv-kitchen-updated');
+      const fullscreenBtn = document.getElementById('tv-kitchen-fullscreen');
+      const tenantLabel = String(currentTenantSlug || (loginTenantEl && loginTenantEl.value) || '').trim() || 'Sin comercio';
+      const roleLabel = String(currentUserRole || '').trim().toLowerCase() || 'sin rol';
+      if (titleEl) titleEl.textContent = `${tenantLabel} · Cocina TV`;
+      if (subtitleEl) {
+        subtitleEl.textContent = !isAuthed
+          ? 'Inicia sesión con un usuario de cocina para proyectar en Android TV.'
+          : (tvKitchenReloadTimer
+            ? `Sesión ${roleLabel}. Se detectó inestabilidad y la pantalla se recargará automáticamente.`
+            : (isTvKitchenAllowed()
+              ? `Sesión ${roleLabel}. Vista dedicada para cocina con actualización automática.`
+              : `Sesión ${roleLabel}. Esta vista está pensada para un usuario de cocina.`));
+      }
+      if (connEl) {
+        connEl.className = 'tv-kitchen-pill';
+        if (!isAuthed) {
+          connEl.classList.add('manual');
+          connEl.textContent = 'Sin sesión';
+        } else if (tvKitchenReloadTimer) {
+          connEl.classList.add('off');
+          connEl.textContent = 'Recarga programada';
+        } else if (!navigator.onLine || tvKitchenLastError) {
+          connEl.classList.add(navigator.onLine ? 'warn' : 'off');
+          connEl.textContent = navigator.onLine ? 'Revisar conexión' : 'Sin conexión';
+        } else {
+          connEl.classList.add('ok');
+          connEl.textContent = 'Conectado';
+        }
+      }
+      if (wakeEl) {
+        wakeEl.className = 'tv-kitchen-pill';
+        if (tvKitchenWakeLock) {
+          wakeEl.classList.add('ok');
+          wakeEl.textContent = 'Pantalla activa';
+        } else if ('wakeLock' in navigator && navigator.wakeLock) {
+          wakeEl.classList.add('warn');
+          wakeEl.textContent = tvKitchenWakeLockError ? 'Wake Lock manual' : 'Wake Lock pendiente';
+        } else {
+          wakeEl.classList.add('manual');
+          wakeEl.textContent = 'Configurar TV';
+        }
+      }
+      if (updEl) {
+        updEl.className = 'tv-kitchen-pill';
+        if (tvKitchenReloadTimer) {
+          updEl.classList.add('off');
+          updEl.textContent = 'Recarga de respaldo activa';
+        } else if (tvKitchenLastError) {
+          updEl.classList.add('warn');
+          updEl.textContent = `Reintento ${Math.max(tvKitchenFailureCount, 1)}/${TV_KITCHEN_FAILURE_THRESHOLD}`;
+        } else if (tvKitchenLastSuccessAt) {
+          updEl.classList.add('manual');
+          updEl.textContent = `Actualizado ${formatTvKitchenClock(tvKitchenLastSuccessAt)}`;
+        } else {
+          updEl.classList.add('manual');
+          updEl.textContent = 'Sin sincronizar';
+        }
+      }
+      if (fullscreenBtn) {
+        fullscreenBtn.textContent = document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa';
+      }
+      syncTvKitchenFilterButtons();
+    }
+    function clearTvKitchenReloadTimer() {
+      if (!tvKitchenReloadTimer) return;
+      try { clearTimeout(tvKitchenReloadTimer); } catch (_) {}
+      tvKitchenReloadTimer = null;
+    }
+    function resetTvKitchenRuntimeState() {
+      tvKitchenLastSuccessAt = 0;
+      tvKitchenLastError = '';
+      tvKitchenWakeLockError = '';
+      tvKitchenFailureCount = 0;
+      clearTvKitchenReloadTimer();
+    }
+    function scheduleTvKitchenReload() {
+      if (!TV_KITCHEN_MODE || tvKitchenReloadTimer || !isAuthed) return;
+      tvKitchenReloadTimer = window.setTimeout(() => {
+        tvKitchenReloadTimer = null;
+        try { window.location.reload(); } catch (_) {}
+      }, TV_KITCHEN_RELOAD_DELAY_MS);
+      syncTvKitchenChrome();
+    }
+    function markTvKitchenSync(ok, message) {
+      if (ok) {
+        tvKitchenLastSuccessAt = Date.now();
+        tvKitchenLastError = '';
+        tvKitchenFailureCount = 0;
+        clearTvKitchenReloadTimer();
+      } else if (message) {
+        tvKitchenLastError = String(message);
+        tvKitchenFailureCount += 1;
+        if (tvKitchenFailureCount >= TV_KITCHEN_FAILURE_THRESHOLD) {
+          scheduleTvKitchenReload();
+        }
+      }
+      syncTvKitchenChrome();
+    }
+    async function releaseTvKitchenWakeLock() {
+      if (!tvKitchenWakeLock) return;
+      try { await tvKitchenWakeLock.release(); } catch (_) {}
+      tvKitchenWakeLock = null;
+      syncTvKitchenChrome();
+    }
+    async function requestTvKitchenWakeLock(force) {
+      if (!TV_KITCHEN_MODE) return false;
+      if (!('wakeLock' in navigator) || !navigator.wakeLock || typeof navigator.wakeLock.request !== 'function') {
+        syncTvKitchenChrome();
+        return false;
+      }
+      if (document.visibilityState !== 'visible') return false;
+      if (tvKitchenWakeLock && !force) {
+        syncTvKitchenChrome();
+        return true;
+      }
+      try {
+        if (tvKitchenWakeLock) {
+          try { await tvKitchenWakeLock.release(); } catch (_) {}
+          tvKitchenWakeLock = null;
+        }
+        tvKitchenWakeLock = await navigator.wakeLock.request('screen');
+        tvKitchenWakeLockError = '';
+        try {
+          tvKitchenWakeLock.addEventListener('release', () => {
+            tvKitchenWakeLock = null;
+            syncTvKitchenChrome();
+          });
+        } catch (_) {}
+        syncTvKitchenChrome();
+        return true;
+      } catch (_) {
+        tvKitchenWakeLockError = 'Wake Lock no disponible en este navegador';
+        syncTvKitchenChrome();
+        return false;
+      }
+    }
+    async function enterTvKitchenFullscreen() {
+      if (!TV_KITCHEN_MODE) return;
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if (document.documentElement && document.documentElement.requestFullscreen) {
+          try {
+            await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+          } catch (_) {
+            await document.documentElement.requestFullscreen();
+          }
+        }
+      } catch (_) {}
+      syncTvKitchenChrome();
+    }
+    function armTvKitchenImmersiveActivation() {
+      if (!TV_KITCHEN_MODE || tvKitchenImmersiveArmed) return;
+      const tryImmersive = async () => {
+        if (!TV_KITCHEN_MODE || !isAuthed || !isTvKitchenAllowed()) return;
+        try { await enterTvKitchenFullscreen(); } catch (_) {}
+        try { await requestTvKitchenWakeLock(true); } catch (_) {}
+        cleanup();
+      };
+      const cleanup = () => {
+        if (!tvKitchenImmersiveArmed) return;
+        tvKitchenImmersiveArmed = false;
+        document.removeEventListener('pointerup', tryImmersive, true);
+        document.removeEventListener('keydown', tryImmersive, true);
+        document.removeEventListener('touchend', tryImmersive, true);
+      };
+      tvKitchenImmersiveArmed = true;
+      document.addEventListener('pointerup', tryImmersive, true);
+      document.addEventListener('keydown', tryImmersive, true);
+      document.addEventListener('touchend', tryImmersive, true);
+    }
+    function bindTvKitchenMode() {
+      if (!TV_KITCHEN_MODE) return;
+      const bIn = document.getElementById('tv-kitchen-filter-ingresos');
+      const bLi = document.getElementById('tv-kitchen-filter-listos');
+      const bRefresh = document.getElementById('tv-kitchen-refresh');
+      const bFullscreen = document.getElementById('tv-kitchen-fullscreen');
+      if (bIn) bIn.addEventListener('click', () => {
+        kitchenQuickFilter = 'ingresos';
+        updateKitchenQuickFilterUI();
+        try { renderKitchenOrders(window.__kitchenLastActiveAll || []); } catch (_) {}
+      });
+      if (bLi) bLi.addEventListener('click', () => {
+        kitchenQuickFilter = 'listos';
+        updateKitchenQuickFilterUI();
+        try { renderKitchenOrders(window.__kitchenLastActiveAll || []); } catch (_) {}
+      });
+      if (bRefresh) bRefresh.addEventListener('click', () => { loadOrdersSafe(); });
+      if (bFullscreen) bFullscreen.addEventListener('click', () => { enterTvKitchenFullscreen(); });
+      window.addEventListener('online', syncTvKitchenChrome);
+      window.addEventListener('offline', syncTvKitchenChrome);
+      document.addEventListener('fullscreenchange', syncTvKitchenChrome);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          requestTvKitchenWakeLock(true);
+          syncTvKitchenChrome();
+        }
+      });
+      armTvKitchenImmersiveActivation();
+      syncTvKitchenChrome();
+    }
     function shouldSyncOrdersForTables() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       const perms = currentUserPerms || {};
@@ -6795,6 +7382,7 @@
     const loginOpenBtn = document.getElementById('login-open-btn');
     const authBadge = document.getElementById('auth-status-badge');
     const loginBox = document.getElementById('login-box');
+    const loginTenantInput = document.getElementById('login-tenant');
     const loginUserEl = document.getElementById('login-user');
     const loginPassEl = document.getElementById('login-pass');
     const loginRemEl = document.getElementById('login-remember');
@@ -6813,8 +7401,14 @@
     if (loginUserEl) loginUserEl.value = _lu;
     if (loginPassEl) loginPassEl.value = '';
     if (loginShowEl && loginPassEl) loginShowEl.onchange = function(){ loginPassEl.type = loginShowEl.checked ? 'text' : 'password'; };
+    if (loginTenantInput) {
+      loginTenantInput.addEventListener('input', syncTvKitchenChrome);
+      loginTenantInput.addEventListener('change', syncTvKitchenChrome);
+    }
     function setAuthUI(){
-      document.body.classList.remove('auth-pending');
+      if (authBootstrapDone) {
+        document.body.classList.remove('auth-pending');
+      }
       if (authBadge) {
         authBadge.classList.remove('on','off');
         authBadge.classList.add(isAuthed ? 'on' : 'off');
@@ -6828,16 +7422,20 @@
         tenantInput.disabled = !!isAuthed;
       }
       try { updateTenantName(); } catch (_) {}
+      syncTvKitchenChrome();
     }
 
     function updateKitchenVisibility(){
       const el = document.getElementById('kitchen-box');
       if (!el) return;
-      const canSee = !!isAuthed && (String(currentUserRole || '').toLowerCase() === 'cocina') && (!currentUserPerms || !!currentUserPerms.orders_view);
+      const role = String(currentUserRole || '').toLowerCase();
+      const canSee = (!!isAuthed && role === 'cocina' && (!currentUserPerms || !!currentUserPerms.orders_view))
+        || (TV_KITCHEN_MODE && isTvKitchenAllowed());
       el.style.display = canSee ? '' : 'none';
       try {
         if (canSee) el.open = true;
       } catch(_) {}
+      syncTvKitchenChrome();
     }
 
     function setRoleVisibilityById(id, show) {
@@ -9214,6 +9812,7 @@
         await renderSalesAnalytics();
         if (!cashCollapsed && !isCashEditing) await renderCashBox();
         if (!cashHistoryCollapsed) await renderCashHistory();
+        markTvKitchenSync(true);
 
         // --- NEW: Auto-refresh open detail modal ---
         const detailModal = document.getElementById('order-detail-modal');
@@ -9237,6 +9836,7 @@
 
       } catch (e) {
         console.warn('Fallo al refrescar pedidos', e);
+        markTvKitchenSync(false, String(e && e.message ? e.message : 'Error al refrescar pedidos'));
       } finally {
         isLoading = false;
       }
@@ -11780,12 +12380,12 @@
       return buildModifierDisplayLines(modifiersJson).join(' · ');
     }
 
-    let kitchenQuickFilter = 'ingresos';
     function updateKitchenQuickFilterUI() {
       const bIn = document.getElementById('kitchen-qf-ingresos');
       const bLi = document.getElementById('kitchen-qf-listos');
       if (bIn) bIn.classList.toggle('active', kitchenQuickFilter === 'ingresos');
       if (bLi) bLi.classList.toggle('active', kitchenQuickFilter === 'listos');
+      syncTvKitchenFilterButtons();
     }
     function bindKitchenQuickFilters() {
       const bIn = document.getElementById('kitchen-qf-ingresos');
@@ -11843,11 +12443,13 @@
           const name = String(it.name || '').trim();
           const note = (it.notes && it.notes !== 'null' && it.notes !== 'undefined') ? String(it.notes) : '';
           const modLines = buildModifierDisplayLines(it.modifiers_json);
+          const safeItemName = escapeAdminHtml(name);
+          const safeItemNote = note ? escapeAdminHtml(note) : '';
           return `
             <div class="k-item">
               <div class="k-qty">${qty}×</div>
-              <div class="k-name">${name}</div>
-              ${note ? `<div class="k-note">Nota: ${note}</div>` : ''}
+              <div class="k-name">${safeItemName}</div>
+              ${note ? `<div class="k-note"><span class="k-note-label">Nota cocina</span><span class="k-note-text">${safeItemNote}</span></div>` : ''}
               ${modLines.length ? `<div class="k-mod">${modLines.map(line => `<div>${escapeAdminHtml(line)}</div>`).join('')}</div>` : ''}
             </div>
           `;
@@ -11870,7 +12472,7 @@
               ${renderSLA(o)}
             </div>
           </div>
-          ${orderNotes ? `<div class="small" style="color:#374151;"><span style="font-weight:700;">Detalle:</span> ${safeOrderNotes}</div>` : ''}
+          ${orderNotes ? `<div class="k-order-note"><strong>Detalle del pedido</strong><span>${safeOrderNotes}</span></div>` : ''}
           <div class="kitchen-items">${itemsHtml}</div>
           <div class="k-actions">
             ${prepBtn}
@@ -13969,8 +14571,10 @@
         await renderMetricsBox();
         await renderSalesAnalytics();
         if (!cashCollapsed && !isCashEditing) await renderCashBox();
+        markTvKitchenSync(true);
       } catch (e) {
         tbody.innerHTML = '<tr><td colspan="7">Error al cargar pedidos</td></tr>';
+        markTvKitchenSync(false, String(e && e.message ? e.message : 'Error al cargar pedidos'));
       } finally {
         isLoading = false;
       }
@@ -14099,6 +14703,12 @@
             isAuthed = false;
             currentUserName = '';
             currentTenantSlug = '';
+            currentUserRole = '';
+            currentUserPerms = {};
+            canManageUsers = false;
+            isOwnerUser = false;
+            resetTvKitchenRuntimeState();
+            await releaseTvKitchenWakeLock();
             document.getElementById('login-box').style.display = 'block';
             setAuthUI();
             try { updateDeliveryFilterControls(); } catch (_) {}
@@ -14143,6 +14753,8 @@
       currentUserPerms = {};
       canManageUsers = false;
       isOwnerUser = false;
+      resetTvKitchenRuntimeState();
+      await releaseTvKitchenWakeLock();
       try{
         const btnUsers = document.getElementById('users-admin-open');
         if (btnUsers) btnUsers.style.display = 'none';
@@ -14179,6 +14791,7 @@
     }
 
     async function init() {
+      bindTvKitchenMode();
       try {
         const href = String(window.location && window.location.href || '');
         const url = new URL(href);
@@ -14187,15 +14800,27 @@
           try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
           isAuthed = false;
           csrfToken = '';
+          currentUserName = '';
+          currentTenantSlug = '';
+          currentUserRole = '';
+          currentUserPerms = {};
+          canManageUsers = false;
+          isOwnerUser = false;
+          resetTvKitchenRuntimeState();
+          await releaseTvKitchenWakeLock();
           const box = document.getElementById('login-box');
           if (box) box.style.display = 'block';
         }
       } catch (_) {}
       await populateTenantsList();
       await ensureAuth();
+      authBootstrapDone = true;
       setAuthUI();
+      syncTvKitchenChrome();
       if (isAuthed) {
         applyDailyReset(computeDailyResetUTC());
+        requestTvKitchenWakeLock(true);
+        armTvKitchenImmersiveActivation();
       }
       if (!isAuthed) {
         return;
@@ -14212,6 +14837,8 @@
            loadOrdersSafe();
            if (refreshTimer) clearInterval(refreshTimer);
            refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+           requestTvKitchenWakeLock(true);
+           armTvKitchenImmersiveActivation();
         }
       });
     }
@@ -14276,8 +14903,11 @@
         document.body.classList.remove('show-login');
         try { await ensureAuth(); } catch (_) {}
         setAuthUI();
+        syncTvKitchenChrome();
         await loadSlaThresholds();
         await load();
+        requestTvKitchenWakeLock(true);
+        armTvKitchenImmersiveActivation();
         try { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } await audioCtx.resume(); } catch (_) {}
         if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
         refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
@@ -14296,8 +14926,16 @@
         csrfToken = '';
         updateServiceBanner('', '');
         if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
+        resetTvKitchenRuntimeState();
+        await releaseTvKitchenWakeLock();
         document.getElementById('login-box').style.display = 'block';
         document.body.classList.add('show-login');
+        currentUserName = '';
+        currentTenantSlug = '';
+        currentUserRole = '';
+        currentUserPerms = {};
+        canManageUsers = false;
+        isOwnerUser = false;
         setAuthUI();
         try { updateDeliveryFilterControls(); } catch (_) {}
       });
