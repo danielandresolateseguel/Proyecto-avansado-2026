@@ -91,6 +91,8 @@
     .badge.health-inactive{background:#f3f4f6;color:#4b5563;border:1px solid #d1d5db}
     .badge.health-incomplete{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
     .badge.health-suspended{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+    button.badge{cursor:pointer;font-family:inherit}
+    .health-badge-button{box-shadow:none}
     .tenant-meta{display:flex;flex-wrap:wrap;gap:8px}
     .meta-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#f8fafc;border:1px solid var(--bd);font-size:12px;color:#334155}
     .tenant-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -102,6 +104,12 @@
     .onboard-chip.ok{background:#e8f5e9;color:#1b5e20;border-color:#c8e6c9}
     .onboard-chip.miss{background:#fef2f2;color:#991b1b;border-color:#fecaca}
     .tenant-note{font-size:12px;color:var(--muted);line-height:1.45}
+    .issues-list{display:grid;gap:10px}
+    .issue-item{border:1px solid var(--bd);border-radius:10px;padding:12px;background:#fbfdff}
+    .issue-item strong{display:block;margin-bottom:4px}
+    .issue-item p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}
+    .issue-summary{display:flex;flex-wrap:wrap;gap:8px}
+    .issue-actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
     @media (max-width:860px){
       .tenant-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
@@ -471,6 +479,24 @@
       </div>
     </div>
   </div>
+  <div id="tenant-health-modal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="tenant-health-title">Pendientes del comercio</div>
+        <button id="tenant-health-close" class="btn muted">Cerrar</button>
+      </div>
+      <div class="sep"></div>
+      <div class="stack">
+        <div class="hint" id="tenant-health-subtitle"></div>
+        <div class="issue-summary" id="tenant-health-summary"></div>
+        <div class="sep"></div>
+        <div id="tenant-health-issues" class="issues-list"></div>
+        <div class="issue-actions">
+          <button id="tenant-health-open-settings" class="btn primary" type="button">Abrir configuración</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <script>
     var DEBUG_LOGS=false;
     (function(){
@@ -619,6 +645,118 @@
       if (value === 'inactive') return 'Inactivo';
       if (value === 'suspended') return 'Suspendido';
       return 'Incompleto';
+    }
+    function getTenantBySlug(slug){
+      const key = String(slug || '').trim();
+      return (TENANTS_CACHE || []).find(x => String((x && x.slug) || '').trim() === key) || null;
+    }
+    function computeTenantIssues(tenant){
+      const t = (tenant && typeof tenant === 'object') ? tenant : {};
+      const issues = [];
+      const onboarding = (t && typeof t.onboarding === 'object') ? t.onboarding : {};
+      const health = String(t.health || 'incomplete').toLowerCase();
+      const status = String(t.status || 'active').toLowerCase();
+      const statusMessage = String(t.status_message || '').trim();
+      const userCount = asInt(t.user_count);
+      const maxUsers = Math.max(1, asInt(t.max_users || 0));
+      if (status === 'warning'){
+        issues.push({
+          title: 'Servicio marcado con aviso',
+          detail: statusMessage || 'El comercio quedó en estado de atención. Conviene revisar el motivo y regularizarlo.'
+        });
+      }
+      if (status === 'suspended'){
+        issues.push({
+          title: 'Comercio suspendido',
+          detail: statusMessage || 'El acceso operativo está suspendido para este comercio.'
+        });
+      }
+      if (t.users_limit_reached){
+        issues.push({
+          title: 'Límite de usuarios alcanzado',
+          detail: `El comercio ya usa ${userCount}/${maxUsers} usuarios del plan actual.`
+        });
+      }
+      if (!onboarding.has_public_token){
+        issues.push({
+          title: 'Falta token público',
+          detail: 'Todavía no tiene token para autorizar pedidos desde la carta online.'
+        });
+      }
+      if (!onboarding.has_profile){
+        issues.push({
+          title: 'Perfil base incompleto',
+          detail: 'Faltan datos mínimos del perfil público, como categoría, página base o branding.'
+        });
+      }
+      if (!onboarding.has_whatsapp){
+        issues.push({
+          title: 'WhatsApp no configurado',
+          detail: 'Conviene cargar un número de contacto para completar el onboarding comercial.'
+        });
+      }
+      if (!onboarding.has_users){
+        issues.push({
+          title: 'Sin usuarios operativos',
+          detail: 'El comercio todavía no tiene usuarios creados para operar el panel.'
+        });
+      }
+      if (!onboarding.has_test_order){
+        issues.push({
+          title: 'Falta pedido de prueba',
+          detail: 'Aún no hay una orden registrada para validar el flujo punta a punta.'
+        });
+      }
+      if (health === 'inactive'){
+        issues.push({
+          title: 'Sin actividad reciente',
+          detail: 'No se detectó movimiento operativo en la ventana reciente del panel maestro.'
+        });
+      }
+      if (!issues.length){
+        issues.push({
+          title: 'Sin pendientes críticos',
+          detail: 'Este comercio no tiene alertas operativas abiertas en este momento.'
+        });
+      }
+      return issues;
+    }
+    function openTenantHealthModal(slug){
+      const tenant = getTenantBySlug(slug);
+      if (!tenant) return;
+      const modal = document.getElementById('tenant-health-modal');
+      const title = document.getElementById('tenant-health-title');
+      const subtitle = document.getElementById('tenant-health-subtitle');
+      const summary = document.getElementById('tenant-health-summary');
+      const body = document.getElementById('tenant-health-issues');
+      const openSettingsBtn = document.getElementById('tenant-health-open-settings');
+      const name = String(tenant.name || tenant.slug || 'Comercio');
+      const issues = computeTenantIssues(tenant);
+      if (title) title.textContent = `Pendientes de ${name}`;
+      if (subtitle) subtitle.textContent = `Slug: ${String(tenant.slug || '')} · Estado: ${healthBadgeLabel(tenant.health)} · Actividad: ${activityLabel(tenant.activity_level)}`;
+      if (summary){
+        summary.innerHTML = `
+          <span class="badge ${healthBadgeClass(tenant.health)}">${escapeMasterHtml(healthBadgeLabel(tenant.health))}</span>
+          <span class="meta-pill">${escapeMasterHtml(String(tenant.plan || 'standard'))}</span>
+          <span class="meta-pill">${escapeMasterHtml(String(tenant.user_count || 0))}/${escapeMasterHtml(String(tenant.max_users || 0))} usuarios</span>
+        `;
+      }
+      if (body){
+        body.innerHTML = issues.map(issue => `
+          <div class="issue-item">
+            <strong>${escapeMasterHtml(issue.title || 'Pendiente')}</strong>
+            <p>${escapeMasterHtml(issue.detail || '')}</p>
+          </div>
+        `).join('');
+      }
+      if (openSettingsBtn){
+        openSettingsBtn.setAttribute('data-tenant', String(tenant.slug || ''));
+      }
+      if (modal) modal.style.display = 'flex';
+    }
+    function closeTenantHealthModal(){
+      const modal = document.getElementById('tenant-health-modal');
+      if (modal) modal.style.display = 'none';
     }
     function renderMasterSummary(summary, list){
       const container = document.getElementById('master-summary');
@@ -1318,12 +1456,16 @@
         const safeSlug = escapeMasterHtml(slug);
         const safeSlugAttr = escapeMasterAttr(slug);
         const encodedSlug = encodeURIComponent(slug);
+        const healthLabel = healthBadgeLabel(health);
+        const healthBadge = ['attention', 'incomplete', 'inactive', 'suspended'].includes(health)
+          ? `<button class="badge ${healthBadgeClass(health)} health-badge-button" type="button" data-health-details="${safeSlugAttr}" title="Ver pendientes del comercio">${escapeMasterHtml(healthLabel)}</button>`
+          : `<span class="badge ${healthBadgeClass(health)}">${escapeMasterHtml(healthLabel)}</span>`;
         el.innerHTML = `
           <div class="t-head">
             <div class="tenant-health">
               <strong>${safeName}</strong>
               ${badge}
-              <span class="badge ${healthBadgeClass(health)}">${healthBadgeLabel(health)}</span>
+              ${healthBadge}
             </div>
             <span class="slug">${safeSlug}</span>
           </div>
@@ -1401,6 +1543,11 @@
       cont.querySelectorAll('button[data-settings]').forEach(b=>{
         b.addEventListener('click', ()=>{
           openTenantSettings(b.getAttribute('data-settings')||'');
+        });
+      });
+      cont.querySelectorAll('button[data-health-details]').forEach(b=>{
+        b.addEventListener('click', ()=>{
+          openTenantHealthModal(b.getAttribute('data-health-details')||'');
         });
       });
     }
@@ -1484,6 +1631,13 @@
       });
       document.getElementById('tenant-settings-close').addEventListener('click', closeTenantSettings);
       document.getElementById('tenant-settings-modal').addEventListener('click', (e)=>{ if (e.target && e.target.id === 'tenant-settings-modal') closeTenantSettings(); });
+      document.getElementById('tenant-health-close').addEventListener('click', closeTenantHealthModal);
+      document.getElementById('tenant-health-modal').addEventListener('click', (e)=>{ if (e.target && e.target.id === 'tenant-health-modal') closeTenantHealthModal(); });
+      document.getElementById('tenant-health-open-settings').addEventListener('click', ()=>{
+        const slug = document.getElementById('tenant-health-open-settings').getAttribute('data-tenant') || '';
+        closeTenantHealthModal();
+        if (slug) openTenantSettings(slug);
+      });
       document.getElementById('tenant-public-token-copy').addEventListener('click', async ()=>{
         const el = document.getElementById('tenant-public-token');
         let tk = String((el && el.value) || SETTINGS_PUBLIC_TOKEN || '').trim();
