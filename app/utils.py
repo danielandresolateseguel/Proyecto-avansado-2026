@@ -1,12 +1,14 @@
 import secrets
 import time
 import json
+import hashlib
 import io
 import zipfile
 import unicodedata
 import re
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape as _xml_escape
+from datetime import datetime, timezone
 from flask import session, request
 from app.database import get_db
 
@@ -57,6 +59,65 @@ def get_csrf_token():
 def check_csrf():
     token = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
     return token and token == session.get('csrf_token')
+
+def hash_tv_device_token(token):
+    raw = str(token or '').strip()
+    if not raw:
+        return ''
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+def get_tv_device_token_from_request():
+    token = str(request.headers.get('X-TV-Token') or '').strip()
+    if token:
+        return token
+    auth = str(request.headers.get('Authorization') or '').strip()
+    if auth.lower().startswith('bearer '):
+        return auth[7:].strip()
+    return ''
+
+def get_tv_device_auth(touch=False, kind='tv_kitchen'):
+    token = get_tv_device_token_from_request()
+    if not token:
+        return None
+    token_hash = hash_tv_device_token(token)
+    if not token_hash:
+        return None
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT id, tenant_slug, device_kind, device_name, device_label, pairing_status,
+                   pending_device_token, linked_by, linked_role, created_at, linked_at,
+                   last_seen_at, revoked_at, revoked_by, meta_json
+            FROM tv_devices
+            WHERE device_token_hash = ?
+              AND pairing_status = 'active'
+              AND COALESCE(revoked_at, '') = ''
+            LIMIT 1
+            """,
+            (token_hash,)
+        )
+        row = cur.fetchone()
+        if not row:
+            return None
+        device = dict(row)
+        if kind and str(device.get('device_kind') or '').strip().lower() != str(kind).strip().lower():
+            return None
+        if touch:
+            try:
+                now = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+                cur.execute("UPDATE tv_devices SET last_seen_at = ? WHERE id = ?", (now, device.get('id')))
+                conn.commit()
+                device['last_seen_at'] = now
+            except Exception:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+        return device
+    except Exception:
+        return None
 
 def slugify_simple(value):
     text = str(value or '').strip().lower()

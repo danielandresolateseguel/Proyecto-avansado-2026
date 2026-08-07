@@ -536,6 +536,104 @@ def init_db_postgres(cur):
     except Exception:
         pass
 
+    # Dispositivos TV Cocina vinculados por código temporal
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tv_devices (
+            id SERIAL PRIMARY KEY,
+            tenant_slug TEXT,
+            device_kind TEXT NOT NULL DEFAULT 'tv_kitchen',
+            device_name TEXT,
+            device_label TEXT,
+            pairing_key TEXT NOT NULL UNIQUE,
+            pairing_code TEXT,
+            pairing_status TEXT NOT NULL DEFAULT 'pending',
+            pair_expires_at TEXT,
+            device_token_hash TEXT UNIQUE,
+            pending_device_token TEXT,
+            linked_by TEXT,
+            linked_role TEXT,
+            created_at TEXT NOT NULL,
+            linked_at TEXT,
+            last_seen_at TEXT,
+            revoked_at TEXT,
+            revoked_by TEXT,
+            meta_json TEXT
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_tenant ON tv_devices(tenant_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_status ON tv_devices(pairing_status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_code ON tv_devices(pairing_code)")
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS device_kind TEXT NOT NULL DEFAULT 'tv_kitchen'")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS device_name TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS device_label TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS pairing_key TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS pairing_code TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS pairing_status TEXT NOT NULL DEFAULT 'pending'")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS pair_expires_at TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS device_token_hash TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS pending_device_token TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS linked_by TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS linked_role TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS created_at TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS linked_at TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS last_seen_at TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS revoked_at TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS revoked_by TEXT")
+    except Exception:
+        pass
+    try:
+        cur.execute("ALTER TABLE tv_devices ADD COLUMN IF NOT EXISTS meta_json TEXT")
+    except Exception:
+        pass
+
     # Auditoría de eventos
     cur.execute(
         """
@@ -874,6 +972,36 @@ def init_db_sqlite(cur):
         """
     )
     cur.execute("CREATE INDEX IF NOT EXISTS idx_admin_users_tenant ON admin_users(tenant_slug)")
+
+    # Dispositivos TV Cocina vinculados por código temporal
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tv_devices (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_slug TEXT,
+            device_kind TEXT NOT NULL DEFAULT 'tv_kitchen',
+            device_name TEXT,
+            device_label TEXT,
+            pairing_key TEXT NOT NULL UNIQUE,
+            pairing_code TEXT,
+            pairing_status TEXT NOT NULL DEFAULT 'pending',
+            pair_expires_at TEXT,
+            device_token_hash TEXT UNIQUE,
+            pending_device_token TEXT,
+            linked_by TEXT,
+            linked_role TEXT,
+            created_at TEXT NOT NULL,
+            linked_at TEXT,
+            last_seen_at TEXT,
+            revoked_at TEXT,
+            revoked_by TEXT,
+            meta_json TEXT
+        )
+        """
+    )
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_tenant ON tv_devices(tenant_slug)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_status ON tv_devices(pairing_status)")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_tv_devices_code ON tv_devices(pairing_code)")
 
     # Auditoría de eventos
     cur.execute(

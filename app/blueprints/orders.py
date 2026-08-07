@@ -6,7 +6,7 @@ import hmac
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
-from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config
+from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config, get_tv_device_auth
 import io
 import csv
 
@@ -1716,6 +1716,19 @@ def list_orders():
     if date_field not in ('created', 'closed'):
         date_field = 'created'
     use_closed_date = (date_field == 'closed' and str(status or '').strip().lower() in ('entregado', 'cancelado'))
+
+    tv_device = get_tv_device_auth(touch=True, kind='tv_kitchen')
+    if is_authed():
+        session_tenant, _, role, perms, owner = _ctx()
+        if session_tenant and tenant_slug and session_tenant != tenant_slug:
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        if not _has_perm(perms, owner, role, 'orders_view'):
+            return jsonify({'error': 'sin permisos para ver pedidos'}), 403
+    elif tv_device:
+        if tenant_slug and str(tv_device.get('tenant_slug') or '').strip() != str(tenant_slug).strip():
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+    else:
+        return jsonify({'error': 'unauthorized'}), 401
     
     conn = get_db()
     cur = conn.cursor()
@@ -1906,9 +1919,24 @@ def get_order_detail(order_id):
     except Exception:
         payment_ev = None
     order['paid_at'] = payment_ev.get('created_at') if payment_ev else ''
+
+    tv_device = get_tv_device_auth(touch=True, kind='tv_kitchen')
+    has_full_access = False
+    if is_authed():
+        session_tenant, _, role, perms, owner = _ctx()
+        order_tenant = str(order.get('tenant_slug') or '').strip()
+        if session_tenant and order_tenant and session_tenant != order_tenant:
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        if not _has_perm(perms, owner, role, 'orders_view'):
+            return jsonify({'error': 'sin permisos para ver el pedido'}), 403
+        has_full_access = True
+    elif tv_device:
+        if str(tv_device.get('tenant_slug') or '').strip() != str(order.get('tenant_slug') or '').strip():
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        has_full_access = True
     
-    # Si no es admin, retornar versión sanitizada (seguridad)
-    if not is_authed():
+    # Para clientes externos se mantiene una versión sanitizada del detalle.
+    if not has_full_access:
         sanitized_order = {
             'id': order['id'],
             'tenant_slug': order['tenant_slug'],

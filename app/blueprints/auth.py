@@ -1,9 +1,10 @@
 import secrets
 import os
+import json
 from flask import Blueprint, request, jsonify, session
 from werkzeug.security import check_password_hash, generate_password_hash
 from app.database import get_db, is_postgres
-from app.utils import is_authed, check_csrf, get_csrf_token
+from app.utils import is_authed, check_csrf, get_csrf_token, get_tv_device_auth, hash_tv_device_token
 from datetime import datetime, timezone, timedelta
 import time
 
@@ -234,7 +235,8 @@ def _role_defaults(role):
             'products_manage': True,
             'carousel_manage': True,
             'reports_view': True,
-            'users_manage': True
+            'users_manage': True,
+            'devices_manage': True
         }
     elif role == 'mozo':
         perms = {
@@ -257,7 +259,8 @@ def _role_defaults(role):
             'orders_create': True,
             'tables_manage': True,
             'cash_view': True,
-            'cash_manage': True
+            'cash_manage': True,
+            'devices_manage': True
         }
     elif role == 'repartidor':
         perms = {
@@ -287,6 +290,60 @@ def _parse_perms_json(s):
     except Exception:
         return {}
     return {}
+
+def _now_iso():
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+def _can_manage_tv_devices(role, owner, perms):
+    if owner or role == 'admin':
+        return True
+    return bool((perms or {}).get('devices_manage'))
+
+def _can_revoke_tv_devices(role, owner):
+    return bool(owner or role == 'admin')
+
+def _generate_tv_pair_code(cur):
+    now_iso = _now_iso()
+    for _ in range(20):
+        code = ''.join(secrets.choice('0123456789') for _ in range(6))
+        cur.execute(
+            """
+            SELECT id
+            FROM tv_devices
+            WHERE pairing_code = ?
+              AND pairing_status = 'pending'
+              AND COALESCE(revoked_at, '') = ''
+              AND COALESCE(pair_expires_at, '') > ?
+            LIMIT 1
+            """,
+            (code, now_iso)
+        )
+        if not cur.fetchone():
+            return code
+    raise RuntimeError('No se pudo generar un código de vinculación único')
+
+def _sanitize_device_label(value, fallback='Cocina TV'):
+    text = str(value or '').strip()
+    if not text:
+        return fallback
+    return text[:80]
+
+def _serialize_tv_device_row(row):
+    device = dict(row)
+    return {
+        'id': device.get('id'),
+        'tenant_slug': device.get('tenant_slug') or '',
+        'device_kind': device.get('device_kind') or 'tv_kitchen',
+        'device_name': device.get('device_name') or '',
+        'device_label': device.get('device_label') or '',
+        'status': device.get('pairing_status') or 'pending',
+        'linked_by': device.get('linked_by') or '',
+        'linked_role': device.get('linked_role') or '',
+        'created_at': device.get('created_at') or '',
+        'linked_at': device.get('linked_at') or '',
+        'last_seen_at': device.get('last_seen_at') or '',
+        'revoked_at': device.get('revoked_at') or ''
+    }
 
 def _tenant_plan_limit(db, cur, tenant_slug):
     plan = 'standard'
@@ -566,6 +623,250 @@ def auth_me():
         'tenant_message': tenant_message,
         'suspended': bool(suspended)
     })
+
+@bp.route('/auth/tv/start', methods=['POST'])
+def auth_tv_start():
+    payload = request.get_json(silent=True) or {}
+    device_name = _sanitize_device_label(payload.get('device_name') or '', 'Pantalla cocina')
+    meta = payload.get('meta')
+    if not isinstance(meta, dict):
+        meta = {}
+    db = get_db()
+    cur = db.cursor()
+    created_at = _now_iso()
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=5)).replace(microsecond=0).isoformat()
+    pair_key = secrets.token_urlsafe(24)
+    pair_code = _generate_tv_pair_code(cur)
+    cur.execute(
+        """
+        INSERT INTO tv_devices (
+            tenant_slug, device_kind, device_name, device_label, pairing_key, pairing_code,
+            pairing_status, pair_expires_at, created_at, meta_json
+        ) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?)
+        """,
+        ('', 'tv_kitchen', device_name, '', pair_key, pair_code, expires_at, created_at, json.dumps(meta, ensure_ascii=False))
+    )
+    db.commit()
+    return jsonify({
+        'ok': True,
+        'pairing_key': pair_key,
+        'pair_code': pair_code,
+        'expires_at': expires_at,
+        'poll_after_ms': 2500
+    })
+
+@bp.route('/auth/tv/status', methods=['GET'])
+def auth_tv_status():
+    pair_key = str(request.args.get('pairing_key') or '').strip()
+    if not pair_key:
+        return jsonify({'error': 'pairing_key requerido'}), 400
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """
+        SELECT id, tenant_slug, device_label, pairing_status, pair_expires_at, pending_device_token, revoked_at
+        FROM tv_devices
+        WHERE pairing_key = ?
+        LIMIT 1
+        """,
+        (pair_key,)
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'Solicitud de vinculación no encontrada'}), 404
+    data = dict(row)
+    now_iso = _now_iso()
+    if str(data.get('revoked_at') or '').strip():
+        return jsonify({'ok': True, 'status': 'revoked'})
+    if str(data.get('pairing_status') or '').strip() == 'pending':
+        expires_at = str(data.get('pair_expires_at') or '').strip()
+        if expires_at and expires_at <= now_iso:
+            return jsonify({'ok': True, 'status': 'expired'})
+        return jsonify({
+            'ok': True,
+            'status': 'pending',
+            'expires_at': expires_at
+        })
+    if str(data.get('pairing_status') or '').strip() == 'active':
+        return jsonify({
+            'ok': True,
+            'status': 'active',
+            'tenant_slug': data.get('tenant_slug') or '',
+            'device_label': data.get('device_label') or '',
+            'device_token': data.get('pending_device_token') or ''
+        })
+    return jsonify({'ok': True, 'status': str(data.get('pairing_status') or 'unknown')})
+
+@bp.route('/auth/tv/me', methods=['GET'])
+def auth_tv_me():
+    device = get_tv_device_auth(touch=True, kind='tv_kitchen')
+    if not device:
+        return jsonify({'authenticated': False}), 401
+    db = get_db()
+    cur = db.cursor()
+    try:
+        cur.execute("UPDATE tv_devices SET pending_device_token = NULL WHERE id = ?", (device.get('id'),))
+        db.commit()
+    except Exception:
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return jsonify({
+        'authenticated': True,
+        'tenant_slug': device.get('tenant_slug') or '',
+        'device_label': device.get('device_label') or '',
+        'device_name': device.get('device_name') or '',
+        'device_kind': device.get('device_kind') or 'tv_kitchen',
+        'role': 'tv_kitchen',
+        'permissions': {
+            'orders_view': True
+        }
+    })
+
+@bp.route('/auth/tv/confirm', methods=['POST'])
+def auth_tv_confirm():
+    if not is_authed():
+        return jsonify({'error': 'unauthorized'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    payload = request.get_json(silent=True) or {}
+    pair_code = ''.join(ch for ch in str(payload.get('code') or '') if ch.isdigit())[:6]
+    if len(pair_code) != 6:
+        return jsonify({'error': 'Código inválido'}), 400
+    tenant_slug = str(session.get('tenant_slug') or '').strip().lower()
+    actor = str(session.get('admin_user') or '').strip()
+    role_raw = str(session.get('admin_role') or '').strip().lower()
+    role, defaults = _role_defaults(role_raw)
+    perms_raw = _parse_perms_json(session.get('admin_perms') or '')
+    perms = dict(defaults or {})
+    perms.update(perms_raw or {})
+    owner = bool(session.get('admin_owner'))
+    if not tenant_slug:
+        return jsonify({'error': 'Tenant no disponible en la sesión'}), 400
+    if not _can_manage_tv_devices(role, owner, perms):
+        return jsonify({'error': 'Sin permisos para vincular TVs'}), 403
+
+    db = get_db()
+    cur = db.cursor()
+    now_iso = _now_iso()
+    cur.execute(
+        """
+        SELECT id, device_name
+        FROM tv_devices
+        WHERE pairing_code = ?
+          AND pairing_status = 'pending'
+          AND COALESCE(revoked_at, '') = ''
+          AND COALESCE(pair_expires_at, '') > ?
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (pair_code, now_iso)
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'Código no encontrado o expirado'}), 404
+    device = dict(row)
+    label_fallback = str(device.get('device_name') or '').strip() or f"Cocina TV {device.get('id')}"
+    label = _sanitize_device_label(payload.get('device_label') or '', label_fallback)
+    device_token = secrets.token_urlsafe(32)
+    token_hash = hash_tv_device_token(device_token)
+    cur.execute(
+        """
+        UPDATE tv_devices
+        SET tenant_slug = ?,
+            device_label = ?,
+            pairing_status = 'active',
+            pairing_code = NULL,
+            pair_expires_at = NULL,
+            device_token_hash = ?,
+            pending_device_token = ?,
+            linked_by = ?,
+            linked_role = ?,
+            linked_at = ?,
+            revoked_at = NULL,
+            revoked_by = NULL
+        WHERE id = ?
+        """,
+        (tenant_slug, label, token_hash, device_token, actor, role, now_iso, device.get('id'))
+    )
+    db.commit()
+    return jsonify({
+        'ok': True,
+        'device_id': device.get('id'),
+        'device_label': label,
+        'tenant_slug': tenant_slug
+    })
+
+@bp.route('/auth/tv/devices', methods=['GET'])
+def auth_tv_devices():
+    if not is_authed():
+        return jsonify({'error': 'unauthorized'}), 401
+    tenant_slug = str(session.get('tenant_slug') or '').strip().lower()
+    role_raw = str(session.get('admin_role') or '').strip().lower()
+    role, defaults = _role_defaults(role_raw)
+    perms_raw = _parse_perms_json(session.get('admin_perms') or '')
+    perms = dict(defaults or {})
+    perms.update(perms_raw or {})
+    owner = bool(session.get('admin_owner'))
+    if not tenant_slug:
+        return jsonify({'error': 'Tenant no disponible en la sesión'}), 400
+    if not _can_manage_tv_devices(role, owner, perms):
+        return jsonify({'error': 'Sin permisos para ver TVs'}), 403
+    db = get_db()
+    cur = db.cursor()
+    cur.execute(
+        """
+        SELECT id, tenant_slug, device_kind, device_name, device_label, pairing_status, linked_by,
+               linked_role, created_at, linked_at, last_seen_at, revoked_at
+        FROM tv_devices
+        WHERE tenant_slug = ?
+          AND device_kind = 'tv_kitchen'
+          AND COALESCE(revoked_at, '') = ''
+        ORDER BY COALESCE(linked_at, created_at) DESC, id DESC
+        """,
+        (tenant_slug,)
+    )
+    rows = cur.fetchall()
+    return jsonify({
+        'ok': True,
+        'devices': [_serialize_tv_device_row(row) for row in rows],
+        'can_revoke': _can_revoke_tv_devices(role, owner)
+    })
+
+@bp.route('/auth/tv/devices/<int:device_id>/revoke', methods=['POST'])
+def auth_tv_revoke(device_id):
+    if not is_authed():
+        return jsonify({'error': 'unauthorized'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    tenant_slug = str(session.get('tenant_slug') or '').strip().lower()
+    actor = str(session.get('admin_user') or '').strip()
+    role_raw = str(session.get('admin_role') or '').strip().lower()
+    role, _ = _role_defaults(role_raw)
+    owner = bool(session.get('admin_owner'))
+    if not _can_revoke_tv_devices(role, owner):
+        return jsonify({'error': 'Solo admin puede desvincular TVs'}), 403
+    db = get_db()
+    cur = db.cursor()
+    cur.execute("SELECT id FROM tv_devices WHERE id = ? AND tenant_slug = ? LIMIT 1", (device_id, tenant_slug))
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'Dispositivo no encontrado'}), 404
+    now_iso = _now_iso()
+    cur.execute(
+        """
+        UPDATE tv_devices
+        SET revoked_at = ?,
+            revoked_by = ?,
+            pairing_status = 'revoked',
+            pending_device_token = NULL
+        WHERE id = ?
+        """,
+        (now_iso, actor, device_id)
+    )
+    db.commit()
+    return jsonify({'ok': True, 'device_id': device_id, 'revoked_at': now_iso})
 
 @bp.route('/auth/csrf', methods=['GET'])
 def auth_csrf():

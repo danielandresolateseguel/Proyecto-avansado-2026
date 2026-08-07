@@ -1226,6 +1226,7 @@
     .kds-modal-content { position: relative; z-index: 1; background: #fff; border: 1px solid var(--kds-border); border-radius: 12px; width: min(92vw, 820px); max-height: 88vh; overflow: auto; box-shadow: 0 12px 24px rgba(0,0,0,0.18); padding: 12px; }
     .kds-modal-close { position: absolute; right: 10px; top: 10px; }
     .kds-confirm { width: min(92vw, 420px); padding: 16px; }
+    #confirm-modal { z-index: 20100; }
     .auth-bar { display:flex; gap:8px; align-items:center; }
     .auth-badge { display:inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 600; font-size: 12px; }
     .auth-badge.on { background:#2e7d32; color:#fff; }
@@ -2813,6 +2814,72 @@
       border-color:rgba(96, 165, 250, 0.22);
       color:#dbeafe;
     }
+    body.tv-kitchen-mode.tv-device-pairing #login-box .login-card > label,
+    body.tv-kitchen-mode.tv-device-pairing #login-box #login-btn,
+    body.tv-kitchen-mode.tv-device-pairing #login-box #login-error,
+    body.tv-kitchen-mode.tv-device-pairing #login-box #tv-kitchen-login-note {
+      display:none !important;
+    }
+    body.tv-kitchen-mode.tv-device-pairing #tv-device-pairing-box {
+      display:block !important;
+    }
+    .tv-device-pairing-panel {
+      display:none;
+      margin-top:14px;
+      padding:18px 16px;
+      border-radius:18px;
+      background:rgba(15, 23, 42, 0.72);
+      border:1px solid rgba(148, 163, 184, 0.34);
+      color:#f8fafc;
+      text-align:center;
+    }
+    .tv-device-pairing-title {
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:0.3px;
+      margin-bottom:8px;
+    }
+    .tv-device-pairing-text {
+      font-size:15px;
+      line-height:1.45;
+      color:#cbd5e1;
+      margin-bottom:14px;
+    }
+    .tv-device-pair-code {
+      font-size:54px;
+      line-height:1;
+      letter-spacing:10px;
+      font-weight:900;
+      font-variant-numeric: tabular-nums;
+      padding:14px 16px;
+      border-radius:16px;
+      background:rgba(30, 41, 59, 0.92);
+      border:1px solid rgba(96, 165, 250, 0.45);
+      color:#f8fafc;
+      box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.4);
+      margin-bottom:10px;
+    }
+    .tv-device-item {
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      padding:12px;
+      border:1px solid #dbe4f3;
+      border-radius:12px;
+      background:#f8fafc;
+    }
+    .tv-device-meta {
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      color:#475569;
+    }
+    .tv-device-name {
+      font-size:14px;
+      font-weight:800;
+      color:#0f172a;
+    }
     body.tv-kitchen-mode #login-box .small { color:#cbd5e1; }
     @media (max-height: 860px) {
       body.tv-kitchen-mode { padding:10px; }
@@ -3134,6 +3201,7 @@
               <label class="small"><input id="sound-toggle" type="checkbox" checked /> Sonido</label>
               <div class="settings-sep"></div>
               <button id="shortcuts-open" type="button" title="Atajos de teclado" aria-label="Atajos de teclado">Atajos</button>
+              <button id="tv-devices-open" type="button" title="TV Cocina" aria-label="TV Cocina" style="display:none;">TV Cocina</button>
               <button id="users-admin-open" type="button" title="Usuarios" aria-label="Usuarios" style="display:none;">Usuarios</button>
               <button id="logout-btn" type="button" disabled>Salir</button>
             </div>
@@ -3269,7 +3337,45 @@
         <strong>Modo TV Cocina</strong>
         <span>Usa un usuario de cocina dedicado. Despu&eacute;s del ingreso, confirma una vez la pantalla completa si Android TV o el navegador lo solicitan.</span>
       </div>
+      <div id="tv-device-pairing-box" class="tv-device-pairing-panel" style="display:none;">
+        <div class="tv-device-pairing-title">Vincular esta TV</div>
+        <div class="tv-device-pairing-text">Ingresa este c&oacute;digo desde el panel para activar la pantalla de cocina.</div>
+        <div id="tv-device-pair-code" class="tv-device-pair-code">------</div>
+        <div id="tv-device-pair-status" class="small" style="color:#dbeafe; min-height:18px;">Generando c&oacute;digo...</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+          <button id="tv-device-pair-refresh" type="button" style="height:40px; min-width:180px;">Generar nuevo c&oacute;digo</button>
+          <button id="tv-device-pair-reset" type="button" style="height:40px; min-width:180px; background:#0f172a; border:1px solid rgba(148,163,184,0.45); color:#e2e8f0;">Borrar vinculaci&oacute;n</button>
+        </div>
+      </div>
       <p class="small" id="login-error" style="color:#c62828; display:none; margin-top:8px;">Credenciales inválidas</p>
+    </div>
+  </div>
+
+  <div id="tv-devices-modal" class="kds-modal" aria-hidden="true" role="dialog" aria-modal="true" style="display:none; z-index:20070;">
+    <div class="kds-modal-overlay"></div>
+    <div class="kds-modal-content" style="max-width:760px; width:min(760px, 96vw);">
+      <button id="tv-devices-close" class="kds-modal-close" type="button">Cerrar</button>
+      <h2 style="margin:0 0 8px; font-size:22px;">Vincular TV Cocina</h2>
+      <p class="small" style="margin:0 0 16px; color:#475569;">Los roles <strong>admin</strong> y <strong>caja</strong> pueden aprobar un c&oacute;digo. Solo <strong>admin</strong> puede revocar una TV ya vinculada.</p>
+      <div class="module-panel" style="padding:14px; margin:0 0 14px;">
+        <div style="display:grid; grid-template-columns:minmax(180px, 220px) minmax(220px, 1fr) auto; gap:10px; align-items:end;">
+          <label style="display:flex; flex-direction:column; gap:6px; font-weight:700; color:#1f2937;">C&oacute;digo TV
+            <input id="tv-pair-code-input" type="text" inputmode="numeric" maxlength="6" placeholder="123456" style="height:38px;" />
+          </label>
+          <label style="display:flex; flex-direction:column; gap:6px; font-weight:700; color:#1f2937;">Nombre visible (opcional)
+            <input id="tv-pair-label-input" type="text" maxlength="80" placeholder="Cocina TV Principal" style="height:38px;" />
+          </label>
+          <button id="tv-pair-confirm-btn" type="button" style="height:38px;">Vincular TV</button>
+        </div>
+        <p id="tv-pair-feedback" class="small" style="margin:10px 0 0; min-height:18px; color:#475569;"></p>
+      </div>
+      <div class="module-panel" style="padding:14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <h3 style="margin:0; font-size:16px;">TVs vinculadas</h3>
+          <button id="tv-devices-refresh" type="button" style="height:34px; background:#fff; color:#1d4ed8; border:1px solid #bfdbfe;">Actualizar</button>
+        </div>
+        <div id="tv-devices-list" class="small" style="display:grid; gap:10px;"></div>
+      </div>
     </div>
   </div>
 
@@ -7471,13 +7577,29 @@
       const o = opts ? Object.assign({}, opts) : {};
       o.credentials = 'include';
       if (!Object.prototype.hasOwnProperty.call(o, 'cache')) o.cache = 'no-store';
+      const headers = Object.assign({}, o.headers || {});
+      if (isTvDeviceSession && tvDeviceToken) {
+        headers['X-TV-Token'] = tvDeviceToken;
+      }
+      o.headers = headers;
+      const requestUrl = String(url || '');
+      const shouldHandleTvUnauthorized = isTvDeviceSession && (
+        requestUrl.includes('/api/auth/tv/me') ||
+        requestUrl.includes('/api/orders')
+      );
+      const onResponse = (resp) => {
+        if (resp && resp.status === 401 && shouldHandleTvUnauthorized) {
+          try { handleTvDeviceUnauthorized(); } catch (_) {}
+        }
+        return resp;
+      };
       if (!o.signal && typeof AbortController !== 'undefined') {
         const controller = new AbortController();
         o.signal = controller.signal;
         const t = setTimeout(() => { try { controller.abort(); } catch(_) {} }, 15000);
-        return fetch(url, o).finally(() => clearTimeout(t));
+        return fetch(url, o).then(onResponse).finally(() => clearTimeout(t));
       }
-      return fetch(url, o);
+      return fetch(url, o).then(onResponse);
     }
     let csrfToken = '';
     let isAuthed = false;
@@ -7487,9 +7609,16 @@
     let currentUserPerms = {};
     let canManageUsers = false;
     let isOwnerUser = false;
+    let isTvDeviceSession = false;
+    let tvDeviceToken = '';
+    let tvDeviceLabel = '';
+    let tvDevicePairingKey = '';
+    let tvDevicePairingTimer = null;
     const ORDER_DETAIL_CACHE = new Map();
     const LOGIN_KEY_USER = 'kds_login_user';
     const LOGIN_KEY_REM = 'kds_login_rem';
+    const TV_DEVICE_TOKEN_KEY = 'kds_tv_device_token';
+    const TV_DEVICE_PAIR_KEY = 'kds_tv_pairing_key';
     (function normalizeAdminTvUrl() {
       try {
         const url = new URL(String(window.location && window.location.href || ''));
@@ -7568,7 +7697,198 @@
     function isTvKitchenAllowed() {
       const role = String(currentUserRole || '').trim().toLowerCase();
       const perms = currentUserPerms || {};
-      return !!isAuthed && (role === 'cocina' || role === 'admin' || !!isOwnerUser) && (!!isOwnerUser || role === 'admin' || !perms || !!perms.orders_view);
+      return !!isAuthed && (isTvDeviceSession || role === 'cocina' || role === 'admin' || !!isOwnerUser) && (!!isOwnerUser || role === 'admin' || !perms || !!perms.orders_view);
+    }
+    function getTvDeviceDisplayName() {
+      try {
+        const ua = String(navigator.userAgent || '').replace(/\s+/g, ' ').trim();
+        const screenBits = [];
+        if (window.screen && Number(window.screen.width) && Number(window.screen.height)) {
+          screenBits.push(`${window.screen.width}x${window.screen.height}`);
+        }
+        return [ua || 'Navegador', screenBits.join(' ')].filter(Boolean).join(' | ').slice(0, 120);
+      } catch (_) {
+        return 'Pantalla cocina';
+      }
+    }
+    function loadStoredTvDeviceAuth() {
+      try { tvDeviceToken = localStorage.getItem(TV_DEVICE_TOKEN_KEY) || ''; } catch (_) { tvDeviceToken = ''; }
+      try { tvDevicePairingKey = localStorage.getItem(TV_DEVICE_PAIR_KEY) || ''; } catch (_) { tvDevicePairingKey = ''; }
+    }
+    function persistTvDeviceToken(token) {
+      tvDeviceToken = String(token || '').trim();
+      try {
+        if (tvDeviceToken) localStorage.setItem(TV_DEVICE_TOKEN_KEY, tvDeviceToken);
+        else localStorage.removeItem(TV_DEVICE_TOKEN_KEY);
+      } catch (_) {}
+    }
+    function persistTvDevicePairingKey(key) {
+      tvDevicePairingKey = String(key || '').trim();
+      try {
+        if (tvDevicePairingKey) localStorage.setItem(TV_DEVICE_PAIR_KEY, tvDevicePairingKey);
+        else localStorage.removeItem(TV_DEVICE_PAIR_KEY);
+      } catch (_) {}
+    }
+    function stopTvDevicePairingPoll() {
+      if (tvDevicePairingTimer) {
+        try { clearInterval(tvDevicePairingTimer); } catch (_) {}
+        tvDevicePairingTimer = null;
+      }
+    }
+    function setTvDevicePairingMode(active) {
+      document.body.classList.toggle('tv-device-pairing', !!active);
+      const box = document.getElementById('tv-device-pairing-box');
+      if (box) box.style.display = active ? 'block' : 'none';
+    }
+    function setTvDevicePairingStatus(message, isError) {
+      const el = document.getElementById('tv-device-pair-status');
+      if (!el) return;
+      el.textContent = String(message || '');
+      el.style.color = isError ? '#fecaca' : '#dbeafe';
+    }
+    function setTvDevicePairCode(code) {
+      const el = document.getElementById('tv-device-pair-code');
+      if (!el) return;
+      const raw = String(code || '').replace(/\D/g, '').slice(0, 6);
+      el.textContent = raw || '------';
+    }
+    function clearTvDeviceSession(showPairing) {
+      isTvDeviceSession = false;
+      tvDeviceLabel = '';
+      persistTvDeviceToken('');
+      if (showPairing && TV_KITCHEN_MODE) {
+        isAuthed = false;
+        currentUserName = '';
+        currentTenantSlug = '';
+        currentUserRole = '';
+        currentUserPerms = {};
+        setAuthUI();
+        setTvDevicePairingMode(true);
+      }
+    }
+    async function completeTvDeviceBootstrap(data) {
+      isTvDeviceSession = true;
+      isAuthed = true;
+      currentUserRole = 'cocina';
+      currentUserPerms = { orders_view: true };
+      currentTenantSlug = String(data && data.tenant_slug || '').trim() || currentTenantSlug || defaultSlug();
+      currentUserName = String(data && data.device_label || '').trim() || 'TV Cocina';
+      tvDeviceLabel = currentUserName;
+      canManageUsers = false;
+      isOwnerUser = false;
+      if (tenantInput) tenantInput.value = currentTenantSlug;
+      try { sessionStorage.setItem('current_tenant_slug', currentTenantSlug); } catch (_) {}
+      persistTvDevicePairingKey('');
+      stopTvDevicePairingPoll();
+      setTvDevicePairingMode(false);
+      setAuthUI();
+      syncTvKitchenChrome();
+      resetOrderRealtimeState();
+      await load();
+      requestTvKitchenWakeLock(true);
+      armTvKitchenImmersiveActivation();
+      if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
+      refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+    }
+    async function tryEnsureTvDeviceAuth() {
+      if (!TV_KITCHEN_MODE) return false;
+      loadStoredTvDeviceAuth();
+      if (!tvDeviceToken) return false;
+      try {
+        const resp = await fetch(new URL('/api/auth/tv/me', API_BASE).toString(), {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'X-TV-Token': tvDeviceToken }
+        });
+        if (!resp.ok) {
+          clearTvDeviceSession(false);
+          return false;
+        }
+        const data = await resp.json();
+        if (!data || !data.authenticated) {
+          clearTvDeviceSession(false);
+          return false;
+        }
+        await completeTvDeviceBootstrap(data);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+    async function pollTvDevicePairingStatus() {
+      if (!TV_KITCHEN_MODE || !tvDevicePairingKey) return;
+      try {
+        const url = new URL('/api/auth/tv/status', API_BASE);
+        url.searchParams.set('pairing_key', tvDevicePairingKey);
+        const resp = await fetch(url.toString(), { credentials: 'include', cache: 'no-store' });
+        if (!resp.ok) throw new Error('No se pudo revisar el estado');
+        const data = await resp.json();
+        const status = String(data && data.status || '').trim().toLowerCase();
+        if (status === 'pending') {
+          setTvDevicePairingStatus('Esperando confirmación desde el panel...', false);
+          return;
+        }
+        if (status === 'expired') {
+          stopTvDevicePairingPoll();
+          persistTvDevicePairingKey('');
+          setTvDevicePairCode('');
+          setTvDevicePairingStatus('El código expiró. Genera uno nuevo.', true);
+          return;
+        }
+        if (status === 'active' && data && data.device_token) {
+          persistTvDeviceToken(data.device_token);
+          await tryEnsureTvDeviceAuth();
+          return;
+        }
+        if (status === 'revoked') {
+          stopTvDevicePairingPoll();
+          clearTvDeviceSession(true);
+          setTvDevicePairCode('');
+          setTvDevicePairingStatus('La TV fue desvinculada. Genera un nuevo código.', true);
+        }
+      } catch (_) {}
+    }
+    async function startTvDevicePairing(forceNew) {
+      if (!TV_KITCHEN_MODE) return false;
+      if (forceNew) {
+        persistTvDevicePairingKey('');
+        persistTvDeviceToken('');
+      }
+      setTvDevicePairingMode(true);
+      setTvDevicePairCode('');
+      setTvDevicePairingStatus('Generando código...', false);
+      try {
+        const resp = await fetch(new URL('/api/auth/tv/start', API_BASE).toString(), {
+          method: 'POST',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            device_name: getTvDeviceDisplayName(),
+            meta: { pathname: String(window.location && window.location.pathname || ''), mode: 'tv_kitchen' }
+          })
+        });
+        if (!resp.ok) throw new Error('No se pudo generar el código');
+        const data = await resp.json();
+        persistTvDevicePairingKey(data && data.pairing_key || '');
+        setTvDevicePairCode(data && data.pair_code || '');
+        setTvDevicePairingStatus('Ingresa este código desde el panel para vincular la TV.', false);
+        stopTvDevicePairingPoll();
+        tvDevicePairingTimer = setInterval(pollTvDevicePairingStatus, Number(data && data.poll_after_ms) || 2500);
+        try { await pollTvDevicePairingStatus(); } catch (_) {}
+        return true;
+      } catch (e) {
+        setTvDevicePairingStatus(String((e && e.message) || 'No se pudo generar el código'), true);
+        return false;
+      }
+    }
+    function handleTvDeviceUnauthorized() {
+      if (!TV_KITCHEN_MODE) return;
+      stopTvDevicePairingPoll();
+      if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
+      clearTvDeviceSession(true);
+      setTvDevicePairingStatus('La vinculación expiró o fue revocada. Genera un nuevo código.', true);
     }
     function syncTvKitchenFilterButtons() {
       const current = String(kitchenQuickFilter || 'ingresos');
@@ -8002,6 +8322,18 @@
     const loginPassEl = document.getElementById('login-pass');
     const loginRemEl = document.getElementById('login-remember');
     const loginShowEl = document.getElementById('login-show');
+    const tvDevicePairRefreshBtn = document.getElementById('tv-device-pair-refresh');
+    const tvDevicePairResetBtn = document.getElementById('tv-device-pair-reset');
+    const tvDevicesOpenBtn = document.getElementById('tv-devices-open');
+    const tvDevicesModal = document.getElementById('tv-devices-modal');
+    const tvDevicesCloseBtn = document.getElementById('tv-devices-close');
+    const tvDevicesRefreshBtn = document.getElementById('tv-devices-refresh');
+    const tvPairCodeInput = document.getElementById('tv-pair-code-input');
+    const tvPairLabelInput = document.getElementById('tv-pair-label-input');
+    const tvPairConfirmBtn = document.getElementById('tv-pair-confirm-btn');
+    const tvPairFeedback = document.getElementById('tv-pair-feedback');
+    const tvDevicesList = document.getElementById('tv-devices-list');
+    loadStoredTvDeviceAuth();
     try { localStorage.removeItem('kds_login_pass'); } catch (_) {}
     let _rem = false;
     let _lu = '';
@@ -8027,7 +8359,7 @@
       if (authBadge) {
         authBadge.classList.remove('on','off');
         authBadge.classList.add(isAuthed ? 'on' : 'off');
-        authBadge.textContent = isAuthed ? (`${currentUserName || 'Usuario'} activo`) : 'Sin sesión';
+        authBadge.textContent = isAuthed ? (isTvDeviceSession ? (tvDeviceLabel || 'TV Cocina vinculada') : `${currentUserName || 'Usuario'} activo`) : 'Sin sesión';
       }
       if (logoutBtn) logoutBtn.disabled = !isAuthed;
       if (loginOpenBtn) loginOpenBtn.style.display = isAuthed ? 'none' : '';
@@ -8037,7 +8369,83 @@
         tenantInput.disabled = !!isAuthed;
       }
       try { updateTenantName(); } catch (_) {}
+      setTvDevicePairingMode(TV_KITCHEN_MODE && !isAuthed && !tvDeviceToken);
       syncTvKitchenChrome();
+    }
+
+    function canManageTvDevices() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      const perms = currentUserPerms || {};
+      return !!isAuthed && !isTvDeviceSession && (!!isOwnerUser || role === 'admin' || !!perms.devices_manage);
+    }
+
+    function canRevokeTvDevices() {
+      const role = String(currentUserRole || '').trim().toLowerCase();
+      return !!isAuthed && !isTvDeviceSession && (!!isOwnerUser || role === 'admin');
+    }
+
+    function setTvPairFeedback(message, isError) {
+      if (!tvPairFeedback) return;
+      tvPairFeedback.textContent = String(message || '');
+      tvPairFeedback.style.color = isError ? '#b91c1c' : '#475569';
+    }
+
+    async function loadTvDevicesList() {
+      if (!tvDevicesList) return;
+      if (!canManageTvDevices()) {
+        tvDevicesList.innerHTML = '<div class="small" style="color:#64748b;">No tienes permisos para administrar TVs.</div>';
+        return;
+      }
+      tvDevicesList.innerHTML = '<div class="small" style="color:#64748b;">Cargando TVs...</div>';
+      try {
+        const resp = await wFetch(new URL('/api/auth/tv/devices', API_BASE).toString());
+        if (!resp.ok) throw new Error('No se pudo cargar la lista');
+        const data = await resp.json();
+        const devices = Array.isArray(data && data.devices) ? data.devices : [];
+        const canRevoke = !!(data && data.can_revoke);
+        if (!devices.length) {
+          tvDevicesList.innerHTML = '<div class="small" style="color:#64748b;">Aún no hay TVs vinculadas para este comercio.</div>';
+          return;
+        }
+        tvDevicesList.innerHTML = devices.map((device) => {
+          const id = Number(device && device.id || 0) || 0;
+          const label = escapeAdminHtml(String(device && device.device_label || 'TV Cocina'));
+          const name = escapeAdminHtml(String(device && device.device_name || 'Sin nombre'));
+          const linked = escapeAdminHtml(String(device && device.linked_by || ''));
+          const lastSeen = escapeAdminHtml(String(device && device.last_seen_at || ''));
+          return `
+            <div class="tv-device-item">
+              <div class="tv-device-meta">
+                <div class="tv-device-name">${label}</div>
+                <div>Equipo: ${name}</div>
+                <div>Vinculada por: ${linked || 'N/D'}</div>
+                <div>Última actividad: ${lastSeen || 'Sin datos'}</div>
+              </div>
+              ${canRevoke ? `<button type="button" class="tv-device-revoke-btn" data-device-id="${id}" style="height:34px; background:#fff; color:#b91c1c; border:1px solid #fecaca;">Desvincular</button>` : ''}
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        tvDevicesList.innerHTML = `<div class="small" style="color:#b91c1c;">${escapeAdminHtml(String((e && e.message) || 'No se pudo cargar la lista'))}</div>`;
+      }
+    }
+
+    function openTvDevicesModal() {
+      if (!tvDevicesModal || !canManageTvDevices()) return;
+      tvDevicesModal.style.display = 'flex';
+      tvDevicesModal.classList.add('active');
+      tvDevicesModal.setAttribute('aria-hidden', 'false');
+      setTvPairFeedback('', false);
+      if (tvPairCodeInput) tvPairCodeInput.value = '';
+      if (tvPairLabelInput) tvPairLabelInput.value = '';
+      loadTvDevicesList();
+    }
+
+    function closeTvDevicesModal() {
+      if (!tvDevicesModal) return;
+      tvDevicesModal.classList.remove('active');
+      tvDevicesModal.setAttribute('aria-hidden', 'true');
+      tvDevicesModal.style.display = 'none';
     }
 
     function updateKitchenVisibility(){
@@ -8098,6 +8506,7 @@
       setRoleVisibilityById('tables-open', !isKitchen && canTables);
       setRoleVisibilityById('btn-view-carta', !isKitchen && canOrdersCreate);
       setRoleVisibilityById('carousel-open', !isKitchen && canCarousel);
+      setRoleVisibilityById('tv-devices-open', !isKitchen && canManageTvDevices());
       setRoleVisibilityById('users-admin-open', !isKitchen && canUsers);
       setRoleVisibilityById('delivery-open', !isKitchen && canDelivery);
       const canModulesIcons = !isKitchen && (canDelivery || canOrdersView || canInventory || canReports || canCarousel);
@@ -10413,6 +10822,7 @@
           if (cashPanelVisible && !cashHistoryCollapsed) await renderCashHistory();
           return;
         }
+        const isTvReadOnlyView = !!(TV_KITCHEN_MODE && isTvDeviceSession);
         const data = await fetchOrders();
         await renderOrders(data);
         try {
@@ -10423,10 +10833,12 @@
           }
         } catch (_) {}
         try { window.dispatchEvent(new CustomEvent('kds-orders-updated')); } catch (_) {}
-        await renderMetricsBox();
-        await renderSalesAnalytics();
-        if (!cashCollapsed && !isCashEditing) await renderCashBox();
-        if (!cashHistoryCollapsed) await renderCashHistory();
+        if (!isTvReadOnlyView) {
+          await renderMetricsBox();
+          await renderSalesAnalytics();
+          if (!cashCollapsed && !isCashEditing) await renderCashBox();
+          if (!cashHistoryCollapsed) await renderCashHistory();
+        }
         markTvKitchenSync(true);
 
         // --- NEW: Auto-refresh open detail modal ---
@@ -13365,12 +13777,22 @@
       const showKitchenActions = !TV_KITCHEN_MODE;
       window.__kitchenLastActiveAll = Array.isArray(activeOrders) ? activeOrders : [];
       try { updateKitchenQuickFilterUI(); } catch(_) {}
-      let list = (Array.isArray(activeOrders) ? activeOrders : []).filter(o => ['pendiente','preparacion','listo'].includes(String(o.status || '').toLowerCase()));
-      const kf = String(kitchenQuickFilter || 'ingresos');
-      if (kf === 'listos') {
-        list = list.filter(o => String(o.status || '').toLowerCase() === 'listo');
-      } else {
-        list = list.filter(o => ['pendiente','preparacion'].includes(String(o.status || '').toLowerCase()));
+      const kitchenEligible = (Array.isArray(activeOrders) ? activeOrders : []).filter(o => ['pendiente','preparacion','listo'].includes(String(o.status || '').toLowerCase()));
+      let kf = String(kitchenQuickFilter || 'ingresos');
+      let list = kitchenEligible.filter(o => {
+        const st = String(o.status || '').toLowerCase();
+        return kf === 'listos'
+          ? st === 'listo'
+          : ['pendiente','preparacion'].includes(st);
+      });
+      if (TV_KITCHEN_MODE && !list.length && kf === 'listos') {
+        const ingresos = kitchenEligible.filter(o => ['pendiente','preparacion'].includes(String(o.status || '').toLowerCase()));
+        if (ingresos.length) {
+          kitchenQuickFilter = 'ingresos';
+          kf = 'ingresos';
+          list = ingresos;
+          try { updateKitchenQuickFilterUI(); } catch (_) {}
+        }
       }
       list.sort((a,b) => parseDateSafe(a.created_at) - parseDateSafe(b.created_at));
       countElK.textContent = `Mostrando ${list.length} comanda(s)`;
@@ -13393,6 +13815,19 @@
       let tvKitchenExtraSlots = 0;
       const tvKitchenDetailOrders = [];
       const allowTvKitchenTallCards = false;
+      if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'tv-kitchen-detail-empty';
+        empty.style.cssText = 'margin:24px auto 0; max-width:520px; text-align:center; padding:28px 24px; border-radius:18px; border:1px solid rgba(148,163,184,0.22); background:rgba(15,23,42,0.32); color:#dbeafe;';
+        empty.innerHTML = kitchenEligible.length
+          ? '<div style="font-size:22px; font-weight:900; margin-bottom:8px;">Sin pedidos en este filtro</div><div style="font-size:14px; color:#93c5fd;">La vista cambiara sola a ingresos cuando haya comandas pendientes o en preparación.</div>'
+          : '<div style="font-size:22px; font-weight:900; margin-bottom:8px;">Sin pedidos activos</div><div style="font-size:14px; color:#93c5fd;">La pantalla mostrara las comandas nuevas apenas ingresen.</div>';
+        cardsEl.replaceChildren(empty);
+        tvKitchenLayoutCount = 0;
+        setTvKitchenDetailCandidates([]);
+        syncTvKitchenGridLayout(0);
+        return;
+      }
       for (const o of list) {
         let detail = null;
         try { detail = await fetchOrderDetailCached(o.id, 2500); } catch(_) { detail = null; }
@@ -15574,6 +16009,7 @@
           const newBound = computeDailyResetUTC();
           if (newBound !== dailyResetFrom) applyDailyReset(newBound);
         }
+        const isTvReadOnlyView = !!(TV_KITCHEN_MODE && isTvDeviceSession);
         const data = await fetchOrders();
         await renderOrders(data);
         try {
@@ -15584,9 +16020,11 @@
           }
         } catch (_) {}
         try { window.dispatchEvent(new CustomEvent('kds-orders-updated')); } catch (_) {}
-        await renderMetricsBox();
-        await renderSalesAnalytics();
-        if (!cashCollapsed && !isCashEditing) await renderCashBox();
+        if (!isTvReadOnlyView) {
+          await renderMetricsBox();
+          await renderSalesAnalytics();
+          if (!cashCollapsed && !isCashEditing) await renderCashBox();
+        }
         markTvKitchenSync(true);
       } catch (e) {
         tbody.innerHTML = '<tr><td colspan="7">Error al cargar pedidos</td></tr>';
@@ -15712,6 +16150,8 @@
         const resp = await wFetch(new URL('/api/auth/me', API_BASE).toString());
         const data = await resp.json();
         if (data && data.authenticated) {
+          isTvDeviceSession = false;
+          tvDeviceLabel = '';
           window.__deliveryDriverDefaultResolved = false;
           updateServiceBanner(String(data.tenant_status || ''), String(data.tenant_message || ''));
           if (data.suspended) {
@@ -15761,6 +16201,14 @@
           return true;
         }
       } catch (_) {}
+      if (TV_KITCHEN_MODE) {
+        const okTv = await tryEnsureTvDeviceAuth();
+        if (okTv) {
+          updateKitchenVisibility();
+          applyRoleUI();
+          return true;
+        }
+      }
       window.__deliveryDriverDefaultResolved = false;
       isAuthed = false;
       currentUserName = '';
@@ -15777,6 +16225,18 @@
       }catch(_){}
       updateServiceBanner('', '');
       document.getElementById('login-box').style.display = 'block';
+      if (TV_KITCHEN_MODE) {
+        loadStoredTvDeviceAuth();
+        if (tvDevicePairingKey) {
+          setTvDevicePairingMode(true);
+          setTvDevicePairingStatus('Esperando confirmación desde el panel...', false);
+          stopTvDevicePairingPoll();
+          tvDevicePairingTimer = setInterval(pollTvDevicePairingStatus, 2500);
+          try { await pollTvDevicePairingStatus(); } catch (_) {}
+        } else {
+          await startTvDevicePairing(false);
+        }
+      }
       setAuthUI();
       updateKitchenVisibility();
       applyRoleUI();
@@ -15814,6 +16274,8 @@
         const forceLogout = url.searchParams.get('logout') || url.searchParams.get('forceLogin');
         if (forceLogout) {
           try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
+          clearTvDeviceSession(false);
+          persistTvDevicePairingKey('');
           isAuthed = false;
           csrfToken = '';
           currentUserName = '';
@@ -15842,10 +16304,13 @@
         return;
       }
       await populateTenantsList();
-      await loadSlaThresholds();
-      await loadTenantPrefs();
-      await loadAdminMainMenuCategories(true);
+      if (!isTvDeviceSession) {
+        await loadSlaThresholds();
+        await loadTenantPrefs();
+        await loadAdminMainMenuCategories(true);
+      }
       await load();
+      if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
       refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
       
       document.addEventListener('visibilitychange', () => {
@@ -15894,6 +16359,10 @@
         if (errEl) { errEl.style.display = 'none'; errEl.textContent = 'Credenciales inválidas'; }
         await fetchCsrfToken();
         if (typeof csrfToken !== 'undefined') csrfToken = CSRF_TOKEN;
+        isTvDeviceSession = false;
+        tvDeviceLabel = '';
+        persistTvDeviceToken('');
+        persistTvDevicePairingKey('');
         currentUserName = u;
         const remEl = document.getElementById('login-remember');
         if (remEl && remEl.checked) {
@@ -15937,6 +16406,18 @@
 
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async () => {
+        if (isTvDeviceSession) {
+          if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
+          stopTvDevicePairingPoll();
+          clearTvDeviceSession(true);
+          csrfToken = '';
+          updateServiceBanner('', '');
+          resetTvKitchenRuntimeState();
+          await releaseTvKitchenWakeLock();
+          document.body.classList.add('show-login');
+          await startTvDevicePairing(true);
+          return;
+        }
         try { await wFetch(new URL('/api/auth/logout', API_BASE).toString(), { method: 'POST', headers: { 'X-CSRF-Token': csrfToken || '' } }); } catch (_) {}
         window.__deliveryDriverDefaultResolved = false;
         isAuthed = false;
@@ -15967,6 +16448,112 @@
           try { box.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
           const u = document.getElementById('login-user');
           try { u && u.focus(); } catch (_) {}
+        }
+      });
+    }
+
+    if (tvDevicePairRefreshBtn) {
+      tvDevicePairRefreshBtn.addEventListener('click', async (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        await startTvDevicePairing(true);
+      });
+    }
+
+    if (tvDevicePairResetBtn) {
+      tvDevicePairResetBtn.addEventListener('click', async (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        stopTvDevicePairingPoll();
+        clearTvDeviceSession(true);
+        persistTvDevicePairingKey('');
+        setTvDevicePairCode('');
+        await startTvDevicePairing(true);
+      });
+    }
+
+    if (tvDevicesOpenBtn) {
+      tvDevicesOpenBtn.addEventListener('click', (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        openTvDevicesModal();
+      });
+    }
+    if (tvDevicesCloseBtn) {
+      tvDevicesCloseBtn.addEventListener('click', (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        closeTvDevicesModal();
+      });
+    }
+    if (tvDevicesRefreshBtn) {
+      tvDevicesRefreshBtn.addEventListener('click', async (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        await loadTvDevicesList();
+      });
+    }
+    if (tvDevicesModal) {
+      const overlay = tvDevicesModal.querySelector('.kds-modal-overlay');
+      if (overlay) overlay.addEventListener('click', (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        closeTvDevicesModal();
+      });
+    }
+    if (tvPairCodeInput) {
+      tvPairCodeInput.addEventListener('input', () => {
+        tvPairCodeInput.value = String(tvPairCodeInput.value || '').replace(/\D/g, '').slice(0, 6);
+      });
+    }
+    if (tvPairConfirmBtn) {
+      tvPairConfirmBtn.addEventListener('click', async (e) => {
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        const code = String(tvPairCodeInput && tvPairCodeInput.value || '').replace(/\D/g, '').slice(0, 6);
+        const deviceLabel = String(tvPairLabelInput && tvPairLabelInput.value || '').trim();
+        if (code.length !== 6) {
+          setTvPairFeedback('Ingresa un código de 6 dígitos.', true);
+          return;
+        }
+        try {
+          if (tvPairConfirmBtn) tvPairConfirmBtn.disabled = true;
+          if (!csrfToken) await fetchCsrfToken();
+          const resp = await wFetch(new URL('/api/auth/tv/confirm', API_BASE).toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken || '' },
+            body: JSON.stringify({ code, device_label: deviceLabel })
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(String((data && data.error) || 'No se pudo vincular la TV'));
+          setTvPairFeedback(`TV vinculada correctamente${data && data.device_label ? `: ${data.device_label}` : ''}.`, false);
+          if (tvPairCodeInput) tvPairCodeInput.value = '';
+          if (tvPairLabelInput) tvPairLabelInput.value = '';
+          await loadTvDevicesList();
+        } catch (e) {
+          setTvPairFeedback(String((e && e.message) || 'No se pudo vincular la TV'), true);
+        } finally {
+          if (tvPairConfirmBtn) tvPairConfirmBtn.disabled = false;
+        }
+      });
+    }
+    if (tvDevicesList) {
+      tvDevicesList.addEventListener('click', async (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest('.tv-device-revoke-btn') : null;
+        if (!btn) return;
+        try { e.preventDefault(); e.stopPropagation(); } catch (_) {}
+        const deviceId = Number(btn.getAttribute('data-device-id') || 0);
+        if (!deviceId) return;
+        const ok = await askConfirm('¿Desvincular esta TV de cocina?');
+        if (!ok) return;
+        try {
+          btn.disabled = true;
+          if (!csrfToken) await fetchCsrfToken();
+          const resp = await wFetch(new URL(`/api/auth/tv/devices/${deviceId}/revoke`, API_BASE).toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken || '' }
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok) throw new Error(String((data && data.error) || 'No se pudo desvincular la TV'));
+          setTvPairFeedback('TV desvinculada correctamente.', false);
+          await loadTvDevicesList();
+        } catch (err) {
+          setTvPairFeedback(String((err && err.message) || 'No se pudo desvincular la TV'), true);
+        } finally {
+          btn.disabled = false;
         }
       });
     }
@@ -19829,7 +20416,7 @@
         return {
           orders_view:true, orders_update_status:true, orders_cancel:true, orders_create:true,
           tables_manage:true, cash_view:true, cash_manage:true, products_manage:true,
-          carousel_manage:true, reports_view:true, users_manage:true
+          carousel_manage:true, reports_view:true, users_manage:true, devices_manage:true
         };
       }
       if (r === 'mozo'){
@@ -19839,7 +20426,7 @@
         return { orders_view:true, orders_update_status:true };
       }
       if (r === 'caja'){
-        return { orders_view:true, orders_update_status:true, orders_create:true, tables_manage:true, cash_view:true, cash_manage:true };
+        return { orders_view:true, orders_update_status:true, orders_create:true, tables_manage:true, cash_view:true, cash_manage:true, devices_manage:true };
       }
       if (r === 'repartidor'){
         return { orders_view:true, orders_update_status:true };
