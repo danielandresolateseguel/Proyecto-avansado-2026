@@ -19274,11 +19274,13 @@
       };
 
       let html = '<div class="history-card"><div class="history-actions"><div class="cash-title" style="display:flex; align-items:center; justify-content:space-between;"><span>Historial de cierres</span></div><div style="display:flex; gap:8px; align-items:center;"><button id="cash-history-export">Exportar CSV</button>' + (prevRows.length ? `<button id="cash-history-toggle-prev">Mostrar anteriores (${prevRows.length})</button>` : '') + '</div></div>';
-      html += '<div id="cash-history-body"><table class="history-table"><thead><tr><th>Apertura</th><th>Cierre</th><th>Inicial</th><th>Contado</th><th>Ventas</th><th>Entradas</th><th>Salidas</th><th>Teórica</th><th>Diferencia</th><th>Cerró</th><th>Acciones</th></tr></thead><tbody id="history-latest-body">';
+      html += '<div id="cash-history-body"><table class="history-table"><thead><tr><th>N°</th><th>Apertura</th><th>Cierre</th><th>Inicial</th><th>Contado</th><th>Ventas</th><th>Entradas</th><th>Salidas</th><th>Teórica</th><th>Diferencia</th><th>Cerró</th><th>Acciones</th></tr></thead><tbody id="history-latest-body">';
       for (const s of latestRows) {
         const sum = s.summary || {};
         const safeClosedBy = escapeAdminHtml(s.closed_by || '');
+        const displayNumber = Number(s.display_number || 0);
         html += `<tr>
+          <td>${displayNumber || '-'}</td>
           <td>${formatARDate(s.opened_at||'')}</td>
           <td>${formatARDate(s.closed_at||'')}</td>
           <td>$${s.opening_amount||0}</td>
@@ -19290,10 +19292,10 @@
           <td>$${sum.closing_diff||0}</td>
           <td>${safeClosedBy}</td>
           <td>
-            <button class="hist-view" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">
+            <button class="hist-view" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">
               Ver
             </button>
-            <button class="hist-pdf" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">
+            <button class="hist-pdf" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">
               PDF
             </button>
           </td>
@@ -19304,7 +19306,9 @@
         html += '<tbody id="history-prev-body" style="display:none;">';
         for (const s of prevRows) {
           const sum = s.summary || {};
+          const displayNumber = Number(s.display_number || 0);
           html += `<tr>
+            <td>${displayNumber || '-'}</td>
             <td>${formatARDate(s.opened_at||'')}</td>
             <td>${formatARDate(s.closed_at||'')}</td>
             <td>$${s.opening_amount||0}</td>
@@ -19316,8 +19320,8 @@
             <td>$${sum.closing_diff||0}</td>
             <td>${s.closed_by||''}</td>
             <td>
-              <button class="hist-view" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
-              <button class="hist-pdf" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
+              <button class="hist-view" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
+              <button class="hist-pdf" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
             </td>
           </tr>`;
         }
@@ -19326,9 +19330,10 @@
       html += '</table><div class="history-mobile">';
       for (const s of latestRows) {
         const sum = s.summary || {};
+        const displayNumber = Number(s.display_number || 0);
         html += `
           <div class="hm-row">
-            <div class="hm-header">${formatARDate(s.opened_at||'')} → ${formatARDate(s.closed_at||'')}</div>
+            <div class="hm-header">Cierre #${displayNumber || '-'} · ${formatARDate(s.opened_at||'')} → ${formatARDate(s.closed_at||'')}</div>
             <div class="hm-meta">Cerró: ${s.closed_by||''}</div>
             <div class="hm-metrics">
               <div class="item">Inicial: $${s.opening_amount||0}</div>
@@ -19340,8 +19345,8 @@
               <div class="item">Dif.: $${sum.closing_diff||0}</div>
             </div>
             <div class="hm-actions">
-              <button class="hist-view" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
-              <button class="hist-pdf" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
+              <button class="hist-view" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
+              <button class="hist-pdf" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
             </div>
           </div>
         `;
@@ -19350,9 +19355,10 @@
         html += `<div id="history-mobile-prev" style="display:none;">`;
         for (const s of prevRows) {
           const sum = s.summary || {};
+          const displayNumber = Number(s.display_number || 0);
           html += `
             <div class="hm-row">
-              <div class="hm-header">${formatARDate(s.opened_at||'')} → ${formatARDate(s.closed_at||'')}</div>
+              <div class="hm-header">Cierre #${displayNumber || '-'} · ${formatARDate(s.opened_at||'')} → ${formatARDate(s.closed_at||'')}</div>
               <div class="hm-meta">Cerró: ${s.closed_by||''}</div>
               <div class="hm-metrics">
                 <div class="item">Inicial: $${s.opening_amount||0}</div>
@@ -19364,8 +19370,8 @@
                 <div class="item">Dif.: $${sum.closing_diff||0}</div>
               </div>
               <div class="hm-actions">
-                <button class="hist-view" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
-                <button class="hist-pdf" data-sid="${s.id}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
+                <button class="hist-view" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-sales="${sum.delivered_total||0}" data-in="${sum.entradas||0}" data-out="${sum.salidas||0}" data-theo="${sum.theoretical_cash||0}" data-diff="${sum.closing_diff||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">Ver</button>
+                <button class="hist-pdf" data-sid="${s.id}" data-display-number="${displayNumber || ''}" data-opened="${s.opened_at||''}" data-closed="${s.closed_at||''}" data-note-open="${(s.notes_open||'').replace(/"/g,'&quot;')}" data-note-close="${(s.notes_close||'').replace(/"/g,'&quot;')}" data-open-amt="${s.opening_amount||0}" data-close-amt="${s.closing_amount||0}" data-tip="${sum.tip_total||0}" data-base="${sum.base_delivered_total||0}" data-ship="${sum.shipping_total||0}" data-metadata="${getMeta(s)}">PDF</button>
               </div>
             </div>
           `;
@@ -19393,9 +19399,10 @@
           togglePrev.textContent = isHidden ? 'Ocultar anteriores' : `Mostrar anteriores (${prevRows.length})`;
         };
       }
-      const attach = async (sid, opened, closed, mode, noteOpen, noteClose, openAmtStr, closeAmtStr, tipTotalStr, baseSalesStr, shippingTotalStr, metadataStr) => {
+      const attach = async (sid, displayNumber, opened, closed, mode, noteOpen, noteClose, openAmtStr, closeAmtStr, tipTotalStr, baseSalesStr, shippingTotalStr, metadataStr) => {
         try {
           const slug = tenantInput.value.trim() || defaultSlug();
+          const displayRef = Number(displayNumber || 0) || Number(sid || 0) || 0;
           const metadata = (() => { try { return JSON.parse(metadataStr||'{}'); } catch(e){ return {}; } })();
           const declared = metadata.declared_breakdown || {};
 
@@ -19598,6 +19605,7 @@
 
             dialog.innerHTML = `
               <div class="cash-title">Detalle de cierre</div>
+              <div class="small">Cierre #${displayRef}</div>
               <div class="small">Apertura: ${formatARDate(opened||'')} · Cierre: ${formatARDate(closed||'')}</div>
               <div class="small">Notas (apertura): ${noteOpen||''}</div>
               <div class="small">Notas (cierre): ${noteClose||''}</div>
@@ -19771,8 +19779,8 @@
               const label = getPaymentMethodLabel(row.methodId);
               return `<tr><td>${escapeAdminHtml(label)}</td><td style="text-align:right;">${row.count}</td><td style="text-align:right;">${fmt(row.total)}</td></tr>`;
             }).join('');
-            const doc = `<!doctype html><html><head><meta charset="utf-8"><title>Cierre #${sid}</title><style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:16px} h1{font-size:18px;margin:0 0 8px} table{width:100%;border-collapse:collapse} th,td{padding:6px;border-bottom:1px solid #ddd} th{background:#f5f5f5;text-align:left} .section{margin-top:12px}</style></head><body>
-              <h1>Detalle de cierre #${sid}</h1>
+            const doc = `<!doctype html><html><head><meta charset="utf-8"><title>Cierre #${displayRef}</title><style>body{font-family:system-ui,Segoe UI,Arial,sans-serif;padding:16px} h1{font-size:18px;margin:0 0 8px} table{width:100%;border-collapse:collapse} th,td{padding:6px;border-bottom:1px solid #ddd} th{background:#f5f5f5;text-align:left} .section{margin-top:12px}</style></head><body>
+              <h1>Detalle de cierre #${displayRef}</h1>
               <div>Tenant: ${slug}</div>
               <div>Rango: ${formatARDate(opened||'')} → ${formatARDate(closed||'')}</div>
               <div>Notas (apertura): ${noteOpen||''}</div>
@@ -19826,6 +19834,7 @@
       viewBtns.forEach(b => {
         b.addEventListener('click', () => attach(
           b.getAttribute('data-sid'),
+          b.getAttribute('data-display-number'),
           b.getAttribute('data-opened'),
           b.getAttribute('data-closed'),
           'view',
@@ -19843,6 +19852,7 @@
       pdfBtns.forEach(b => {
         b.addEventListener('click', () => attach(
           b.getAttribute('data-sid'),
+          b.getAttribute('data-display-number'),
           b.getAttribute('data-opened'),
           b.getAttribute('data-closed'),
           'pdf',

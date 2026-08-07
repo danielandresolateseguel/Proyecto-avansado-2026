@@ -59,6 +59,14 @@ def _session_where(tenant_slug, scope, actor=None):
         params.append(actor or '')
     return q, params
 
+def _build_closed_session_display_map(cur, tenant_slug):
+    cur.execute(
+        "SELECT id FROM cash_sessions WHERE tenant_slug = ? AND closed_at IS NOT NULL ORDER BY id ASC",
+        (tenant_slug,),
+    )
+    rows = cur.fetchall() or []
+    return {int(row[0]): idx for idx, row in enumerate(rows, start=1)}
+
 _BREAKDOWN_KEYS = ('efectivo', 'pos', 'qr', 'transferencia', 'otros')
 
 def _safe_int(value, default=0):
@@ -380,9 +388,11 @@ def cash_close():
     
     cur.execute("UPDATE cash_sessions SET closed_at = ?, closed_by = ?, closing_amount = ?, notes_close = ?, closing_diff = ?, closing_metadata = ? WHERE id = ?", (now, actor, closing_amount, notes_close, closing_diff, closing_metadata, sid))
     conn.commit()
+    display_map = _build_closed_session_display_map(cur, tenant_slug)
     
     return jsonify({
         'session_id': sid, 
+        'display_number': int(display_map.get(sid) or 0),
         'tenant_slug': tenant_slug, 
         'opened_at': opened_at, 
         'closed_at': now, 
@@ -697,10 +707,12 @@ def cash_sessions_list():
     cur.execute(base, params)
     rows = cur.fetchall()
     sessions = []
+    display_map = _build_closed_session_display_map(cur, tenant_slug)
     
     for r in rows:
         s = dict(r)
         sid = int(s['id'])
+        s['display_number'] = int(display_map.get(sid) or 0)
         opened_at = s.get('opened_at')
         closed_at = s.get('closed_at')
         sess_scope = str(s.get('scope') or scope)
@@ -869,7 +881,8 @@ def cash_sessions_export_csv():
     
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['tenant_slug', 'opened_at', 'opened_by', 'opening_amount', 'notes_open', 'closed_at', 'closed_by', 'closing_amount', 'notes_close', 'base_delivered_total', 'tip_total', 'shipping_total', 'delivered_total', 'entradas', 'salidas', 'theoretical_cash', 'closing_diff'])
+    writer.writerow(['tenant_slug', 'display_number', 'opened_at', 'opened_by', 'opening_amount', 'notes_open', 'closed_at', 'closed_by', 'closing_amount', 'notes_close', 'base_delivered_total', 'tip_total', 'shipping_total', 'delivered_total', 'entradas', 'salidas', 'theoretical_cash', 'closing_diff'])
+    display_map = _build_closed_session_display_map(cur, tenant_slug)
     
     for r in rows:
         s = dict(r)
@@ -904,7 +917,7 @@ def cash_sessions_export_csv():
         theoretical_cash = int(s.get('opening_amount') or 0) + entradas - salidas
         
         writer.writerow([
-            s.get('tenant_slug'), s.get('opened_at'), s.get('opened_by'), int(s.get('opening_amount') or 0), s.get('notes_open'), s.get('closed_at'), s.get('closed_by'), int(s.get('closing_amount') or 0), s.get('notes_close'), base_delivered_total, tip_total, shipping_total, delivered_total, entradas, salidas, theoretical_cash, int(s.get('closing_diff') or 0)
+            s.get('tenant_slug'), int(display_map.get(sid) or 0), s.get('opened_at'), s.get('opened_by'), int(s.get('opening_amount') or 0), s.get('notes_open'), s.get('closed_at'), s.get('closed_by'), int(s.get('closing_amount') or 0), s.get('notes_close'), base_delivered_total, tip_total, shipping_total, delivered_total, entradas, salidas, theoretical_cash, int(s.get('closing_diff') or 0)
         ])
         
     resp = make_response(output.getvalue())
