@@ -6686,6 +6686,34 @@
     let soundEnabled = true;
     try { const sraw = localStorage.getItem(SOUND_PREF_KEY); if (sraw === '0') soundEnabled = false; } catch (_) {}
     
+    function hasUserGestureForAudio() {
+      try {
+        return !!(window.__kdsUserGestureSeen || (audioCtx && audioCtx.state === 'running'));
+      } catch (_) { return false; }
+    }
+    (function markUserGestureOnce() {
+      const mark = () => { window.__kdsUserGestureSeen = true; };
+      try {
+        document.addEventListener('pointerdown', mark, { passive: true, once: true });
+        document.addEventListener('keydown', mark, { passive: true, once: true });
+        document.addEventListener('touchend', mark, { passive: true, once: true });
+      } catch (_) {}
+    })();
+    
+    async function ensureAudioContextReady() {
+      try {
+        if (!audioCtx) {
+          if (!hasUserGestureForAudio()) return false;
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+          if (!hasUserGestureForAudio()) return false;
+          await audioCtx.resume();
+        }
+        return audioCtx.state === 'running';
+      } catch (_) { return false; }
+    }
+    
     // Unlock AudioContext on first interaction
     document.addEventListener('click', async () => {
         try {
@@ -6705,8 +6733,9 @@
     }
     async function playNewOrderSound() {
       try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        await audioCtx.resume();
+        if (!soundEnabled) return;
+        const ready = await ensureAudioContextReady();
+        if (!ready || !audioCtx) return;
         const g = audioCtx.createGain();
         const t0 = audioCtx.currentTime;
         const o1 = audioCtx.createOscillator();
@@ -6731,8 +6760,9 @@
     }
     async function playSlaWarningSound() {
       try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        await audioCtx.resume();
+        if (!soundEnabled) return;
+        const ready = await ensureAudioContextReady();
+        if (!ready || !audioCtx) return;
         const g = audioCtx.createGain();
         const t0 = audioCtx.currentTime;
         const o = audioCtx.createOscillator();
@@ -6749,8 +6779,9 @@
     }
     async function playSlaCriticalSound() {
       try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        await audioCtx.resume();
+        if (!soundEnabled) return;
+        const ready = await ensureAudioContextReady();
+        if (!ready || !audioCtx) return;
         const g = audioCtx.createGain();
         const t0 = audioCtx.currentTime;
         const o = audioCtx.createOscillator();
@@ -7583,10 +7614,8 @@
       }
       o.headers = headers;
       const requestUrl = String(url || '');
-      const shouldHandleTvUnauthorized = isTvDeviceSession && (
-        requestUrl.includes('/api/auth/tv/me') ||
-        requestUrl.includes('/api/orders')
-      );
+      const shouldHandleTvUnauthorized = isTvDeviceSession &&
+        requestUrl.includes('/api/auth/tv/me');
       const onResponse = (resp) => {
         if (resp && resp.status === 401 && shouldHandleTvUnauthorized) {
           try { handleTvDeviceUnauthorized(); } catch (_) {}
@@ -7784,11 +7813,12 @@
       setAuthUI();
       syncTvKitchenChrome();
       resetOrderRealtimeState();
-      await load();
-      requestTvKitchenWakeLock(true);
-      armTvKitchenImmersiveActivation();
       if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
       refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+      await load();
+      try { ensureAudioContextReady(); } catch (_) {}
+      try { requestTvKitchenWakeLock(true); } catch (_) {}
+      armTvKitchenImmersiveActivation();
     }
     async function tryEnsureTvDeviceAuth() {
       if (!TV_KITCHEN_MODE) return false;
@@ -10864,12 +10894,30 @@
       } catch (e) {
         console.warn('Fallo al refrescar pedidos', e);
         markTvKitchenSync(false, String(e && e.message ? e.message : 'Error al refrescar pedidos'));
+        if (TV_KITCHEN_MODE && isTvDeviceSession && tvDeviceToken) {
+          try {
+            Promise.resolve().then(() => tryEnsureTvDeviceAuth());
+          } catch (_) {}
+        }
       } finally {
         isLoading = false;
       }
     }
     let refreshTimer = null;
     const POLL_MS = 5000;
+
+    (function startTvKitchenPollingWatchdog() {
+      const WATCHDOG_MS = 30000;
+      setInterval(() => {
+        if (!TV_KITCHEN_MODE || !isAuthed) return;
+        if (!refreshTimer) {
+          try {
+            if (!isLoading) loadOrdersSafe();
+          } catch (_) {}
+          refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+        }
+      }, WATCHDOG_MS);
+    })();
 
     // filterSelect.addEventListener('change', () => { if (refreshTimer) loadOrdersSafe(); });
     tenantInput.addEventListener('change', async () => { 
@@ -10932,6 +10980,10 @@
       const s = localStorage.getItem('ordersConfig');
       if (s) ordersConfig = { ...ordersConfig, ...JSON.parse(s) };
     } catch(_) {}
+    if (TV_KITCHEN_MODE) {
+      ordersConfig.filters = { mesa: true, espera: true, direccion: true };
+      try { localStorage.setItem('ordersConfig', JSON.stringify(ordersConfig)); } catch(_) {}
+    }
     let ordersQuickStatusFilter = '';
     let ordersQuickDotsInitialized = false;
     const ordersQuickSeen = {
@@ -16029,6 +16081,11 @@
       } catch (e) {
         tbody.innerHTML = '<tr><td colspan="7">Error al cargar pedidos</td></tr>';
         markTvKitchenSync(false, String(e && e.message ? e.message : 'Error al cargar pedidos'));
+        if (TV_KITCHEN_MODE && isTvDeviceSession && tvDeviceToken) {
+          try {
+            Promise.resolve().then(() => tryEnsureTvDeviceAuth());
+          } catch (_) {}
+        }
       } finally {
         isLoading = false;
       }
@@ -16300,6 +16357,19 @@
         requestTvKitchenWakeLock(true);
         armTvKitchenImmersiveActivation();
       }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (isAuthed) {
+          try { loadOrdersSafe(); } catch (_) {}
+          if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} }
+          refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+          try { requestTvKitchenWakeLock(true); } catch (_) {}
+          armTvKitchenImmersiveActivation();
+        }
+        syncTvKitchenChrome();
+      });
+
       if (!isAuthed) {
         return;
       }
@@ -16309,19 +16379,10 @@
         await loadTenantPrefs();
         await loadAdminMainMenuCategories(true);
       }
-      await load();
       if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
       refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
-      
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-           loadOrdersSafe();
-           if (refreshTimer) clearInterval(refreshTimer);
-           refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
-           requestTvKitchenWakeLock(true);
-           armTvKitchenImmersiveActivation();
-        }
-      });
+      await load();
+      try { ensureAudioContextReady(); } catch (_) {}
     }
 
     document.getElementById('login-btn').addEventListener('click', async () => {
@@ -16391,12 +16452,12 @@
         setAuthUI();
         syncTvKitchenChrome();
         await loadSlaThresholds();
-        await load();
-        requestTvKitchenWakeLock(true);
-        armTvKitchenImmersiveActivation();
-        try { if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } await audioCtx.resume(); } catch (_) {}
         if (refreshTimer) { try { clearInterval(refreshTimer); } catch (_) {} refreshTimer = null; }
         refreshTimer = setInterval(loadOrdersSafe, POLL_MS);
+        await load();
+        try { ensureAudioContextReady(); } catch (_) {}
+        try { requestTvKitchenWakeLock(true); } catch (_) {}
+        armTvKitchenImmersiveActivation();
       } catch (_) {
         if (errEl) errEl.style.display = 'block';
       } finally {
