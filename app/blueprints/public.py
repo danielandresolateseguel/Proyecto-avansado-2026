@@ -97,10 +97,66 @@ def _absolutize_public_asset(url):
         return re.sub(r'^http://', 'https://', raw, count=1, flags=re.IGNORECASE)
     if raw.startswith('//'):
         return 'https:' + raw
-    base = re.sub(r'^http://', 'https://', str(request.url_root or '').rstrip('/'), count=1, flags=re.IGNORECASE)
-    if raw.startswith('/'):
-        return base + raw
-    return base + '/' + raw.lstrip('./')
+    try:
+        base = re.sub(r'^http://', 'https://', str(request.url_root or '').rstrip('/'), count=1, flags=re.IGNORECASE)
+    except Exception:
+        base = ''
+    normalized_path = re.sub(r'^\.?/{1,}', '', raw)
+    if not normalized_path:
+        return ''
+    path_lower = normalized_path.lower()
+    known_folders = (
+        'imagenes/',
+        'css/',
+        'js/',
+        'config/',
+        'theme-loader.js',
+        'media-loader.js',
+        'image-loader.js',
+        'lazy-phase1.js',
+        'carousel.js',
+        'admin.html',
+        'adminmaster.html',
+        'index.html',
+        'public-menu-base.html',
+        'gastronomia-local',
+        'gastronomia-independiente',
+        'gastronomia.html',
+        'gastronomia-local1.html',
+        'gastronomia-local2.html',
+        'gastronomia-local3.html',
+        'gastronomia-local4.html',
+        'gastronomia-local5.html',
+        'gastronomia-independiente.html',
+        'comercio',
+    )
+    absolute_path = normalized_path
+    if not normalized_path.startswith('api/'):
+        if any(path_lower.startswith(prefix) for prefix in known_folders):
+            absolute_path = '/' + normalized_path
+        else:
+            # Si no es conocido pero termina en .html, asumir root; si es asset img con nombre conocido, también root.
+            if normalized_path.endswith('.html'):
+                absolute_path = '/' + normalized_path
+            elif any(path_lower.endswith(ext) for ext in ('.png', '.jpg', '.jpeg', '.webp', '.svg', '.avif', '.gif', '.jfif')):
+                absolute_path = '/' + normalized_path
+    if base and absolute_path.startswith('/'):
+        out = base + absolute_path
+    elif base:
+        out = base + '/' + absolute_path
+    else:
+        out = absolute_path if absolute_path.startswith('/') else '/' + absolute_path
+    # Remover slashes duplicados después del esquema para no romper routes
+    try:
+        if '://' in out:
+            head, tail = out.split('://', 1)
+            tail = re.sub(r'/{2,}', '/', tail)
+            out = f'{head}://{tail}'
+        else:
+            out = re.sub(r'/{2,}', '/', out)
+    except Exception:
+        pass
+    return out
 
 def _resolve_tenant_display_name(slug):
     cfg = get_cached_tenant_config(slug) or {}
@@ -220,6 +276,112 @@ def ping():
 @bp.route('/api/routes')
 def routes_list():
     return jsonify({'routes': [{'rule': r.rule, 'methods': list(r.methods)} for r in current_app.url_map.iter_rules()]})
+
+def _is_valid_logo(value):
+    raw = str(value or '').strip()
+    if not raw:
+        return False
+    if raw.startswith('data:image/gif;base64'):
+        return False
+    lowered = raw.lower()
+    if lowered.endswith('.png') or lowered.endswith('.jpg') or lowered.endswith('.jpeg') or lowered.endswith('.webp') or lowered.endswith('.svg') or lowered.endswith('.avif'):
+        return True
+    if raw.startswith('http://') or raw.startswith('https://') or raw.startswith('/'):
+        return True
+    if raw.startswith('data:image/'):
+        return True
+    return False
+
+def _collect_showcase_slugs():
+    slugs = []
+    seen = set()
+
+    def add(slug):
+        key = str(slug or '').strip()
+        if not key or key in seen:
+            return
+        seen.add(key)
+        slugs.append(key)
+
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                "SELECT tenant_slug, COALESCE(status, 'active') AS status FROM tenants ORDER BY created_at DESC"
+            )
+            rows = cur.fetchall()
+            for r in rows:
+                status = str(r[1] if len(r) > 1 else 'active').strip().lower() or 'active'
+                if status != 'suspended':
+                    add(r[0])
+        except Exception:
+            try:
+                cur.execute("SELECT DISTINCT tenant_slug FROM tenants")
+                for r in cur.fetchall():
+                    add(r[0])
+            except Exception:
+                pass
+
+        try:
+            cur.execute("SELECT DISTINCT tenant_slug FROM tenant_config")
+            for r in cur.fetchall():
+                add(r[0])
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    try:
+        project_root = os.path.dirname(current_app.root_path)
+        config_dir = os.path.join(project_root, 'config')
+        if os.path.isdir(config_dir):
+            for fname in sorted(os.listdir(config_dir)):
+                if not fname.endswith('.json'):
+                    continue
+                slug_candidate = fname[:-5].strip()
+                if slug_candidate:
+                    add(slug_candidate)
+    except Exception:
+        pass
+
+    return slugs
+
+@bp.route('/api/public/showcase/logos')
+def public_showcase_logos():
+    resp = jsonify({'items': []})
+    resp.headers['Cache-Control'] = 'public, max-age=60, s-maxage=300'
+    try:
+        slugs = _collect_showcase_slugs()
+        items = []
+        for slug in slugs:
+            try:
+                cfg = get_cached_tenant_config(slug) or {}
+                meta = cfg.get('meta') if isinstance(cfg.get('meta'), dict) else {}
+                branding = meta.get('branding') if isinstance(meta.get('branding'), dict) else {}
+                logo_raw = (
+                    cfg.get('logo_url')
+                    or branding.get('logo_url')
+                    or ''
+                )
+                if not _is_valid_logo(logo_raw):
+                    continue
+                display_name = _resolve_tenant_display_name(slug)
+                logo_url = _absolutize_public_asset(logo_raw)
+                menu_url = _absolutize_public_asset(f'{slug}.html')
+                items.append({
+                    'slug': slug,
+                    'name': display_name,
+                    'logo': logo_url,
+                    'menu_url': menu_url,
+                })
+            except Exception:
+                continue
+        resp = jsonify({'items': items})
+        resp.headers['Cache-Control'] = 'public, max-age=60, s-maxage=300'
+        return resp
+    except Exception:
+        return resp
 
 @bp.route('/<path:path>')
 def static_proxy(path):
