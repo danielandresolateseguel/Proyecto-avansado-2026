@@ -36,6 +36,16 @@
         </div>
     </section>
 
+    <section id="showcase" class="showcase-logos" aria-label="Locales que operan con QPlato" data-empty="true">
+        <div class="container">
+            <div class="section-head">
+                <h2>Locales que ya digitalizaron sus cartas con QPlato</h2>
+                <p>Mirá algunos de los negocios que usan nuestra plataforma para atender a sus clientes.</p>
+            </div>
+            <div class="logos-grid" id="showcase-grid" aria-live="polite"></div>
+        </div>
+    </section>
+
     <section id="soluciones" class="segments">
         <div class="container">
             <h2>Soluciones a tu medida</h2>
@@ -100,8 +110,7 @@
             </div>
             <div class="footer-col">
                 <h4>Contacto</h4>
-                <p><i class="fas fa-envelope"></i> ventas@epa.com</p>
-                <p><i class="fab fa-whatsapp"></i> WhatsApp a configurar</p>
+                <p><i class="fab fa-whatsapp"></i> <a href="https://wa.me/5492615893590" target="_blank" rel="noopener noreferrer">+54 9 261 589-3590</a></p>
                 <p><i class="fas fa-map-marker-alt"></i> Mendoza, Argentina</p>
             </div>
              <div class="footer-col">
@@ -116,5 +125,102 @@
             &copy; 2026 QPlato. Todos los derechos reservados.
         </div>
     </footer>
+    <script>
+    (function () {
+        var section = document.getElementById('showcase');
+        var grid = document.getElementById('showcase-grid');
+        if (!section || !grid) return;
+
+        function setEmpty(hide) {
+            try {
+                if (hide) section.setAttribute('data-empty', 'true');
+                else section.removeAttribute('data-empty');
+            } catch (_) {}
+        }
+
+        function appendItem(entry) {
+            try {
+                if (!entry) return;
+                var name = String(entry.name || '').trim();
+                var logo = String(entry.logo || '').trim();
+                var menu = String(entry.menu_url || '').trim();
+                if (!logo && !name) return;
+
+                var tag = menu ? 'a' : 'div';
+                var card = document.createElement(tag);
+                card.className = 'logo-card';
+                if (menu) {
+                    card.setAttribute('href', menu);
+                    card.setAttribute('target', '_blank');
+                    card.setAttribute('rel', 'noopener noreferrer');
+                }
+                if (name) card.setAttribute('title', name);
+                card.setAttribute('aria-label', name || 'Logo de comercio');
+
+                var inner = document.createElement('div');
+                inner.className = 'logo-card-inner';
+
+                var didCreateImg = false;
+                if (logo) {
+                    var img = document.createElement('img');
+                    img.setAttribute('src', logo);
+                    img.setAttribute('alt', name || 'Logo');
+                    img.setAttribute('loading', 'lazy');
+                    img.setAttribute('decoding', 'async');
+                    img.onerror = function () {
+                        try {
+                            img.style.display = 'none';
+                            var placeholder = card.querySelector('.logo-fallback');
+                            if (placeholder) placeholder.style.display = 'inline-flex';
+                        } catch (_) {}
+                    };
+                    inner.appendChild(img);
+                    didCreateImg = true;
+                }
+
+                var fallback = document.createElement('span');
+                fallback.className = 'logo-fallback';
+                fallback.textContent = name || '—';
+                fallback.style.display = didCreateImg ? 'none' : 'inline-flex';
+                inner.appendChild(fallback);
+
+                card.appendChild(inner);
+
+                if (name) {
+                    var caption = document.createElement('span');
+                    caption.className = 'logo-caption';
+                    caption.textContent = name;
+                    card.appendChild(caption);
+                }
+
+                grid.appendChild(card);
+            } catch (_) {}
+        }
+
+        try {
+            var base = (window.location && window.location.pathname ? window.location.pathname.replace(/\/[^/]*$/, '') : '') + '/';
+            var url = base + 'api/public/showcase/logos';
+            fetch(url, { cache: 'no-store' })
+                .then(function (res) {
+                    if (!res || !res.ok) throw new Error('no-ok');
+                    return res.json();
+                })
+                .then(function (data) {
+                    var items = (data && Array.isArray(data.items)) ? data.items : [];
+                    if (!items.length) {
+                        setEmpty(true);
+                        return;
+                    }
+                    items.forEach(appendItem);
+                    setEmpty(grid.children.length === 0);
+                })
+                .catch(function () {
+                    setEmpty(true);
+                });
+        } catch (_) {
+            setEmpty(true);
+        }
+    })();
+    </script>
 </body>
 </html>
