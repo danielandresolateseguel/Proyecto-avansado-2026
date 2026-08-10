@@ -4027,8 +4027,11 @@
             <label>Período
               <select id="analytics-range">
                 <option value="today" selected>Hoy</option>
-                <option value="week">Semana</option>
-                <option value="month">Mes</option>
+                <option value="yesterday">Ayer</option>
+                <option value="week">Semana actual</option>
+                <option value="lastweek">Semana pasada</option>
+                <option value="last7">Últimos 7 días</option>
+                <option value="month">Mes actual</option>
                 <option value="custom">Personalizado</option>
               </select>
             </label>
@@ -18030,17 +18033,32 @@
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       let from = new Date(today);
-      if (preset === 'week') {
+      let to = new Date(today);
+      if (preset === 'yesterday') {
+        from.setDate(today.getDate() - 1);
+        to = new Date(from);
+      } else if (preset === 'week') {
         const day = today.getDay();
         const diff = day === 0 ? 6 : day - 1;
         from.setDate(today.getDate() - diff);
+      } else if (preset === 'lastweek') {
+        const day = today.getDay();
+        const diff = day === 0 ? 6 : day - 1;
+        const lastMonday = new Date(today);
+        lastMonday.setDate(today.getDate() - diff - 7);
+        const lastSunday = new Date(lastMonday);
+        lastSunday.setDate(lastMonday.getDate() + 6);
+        from = lastMonday;
+        to = lastSunday;
+      } else if (preset === 'last7') {
+        from.setDate(today.getDate() - 6);
       } else if (preset === 'month') {
         from = new Date(today.getFullYear(), today.getMonth(), 1);
       } else if (preset === 'custom') {
         return;
       }
       analyticsFromInput.value = toInputDateValue(from);
-      analyticsToInput.value = toInputDateValue(today);
+      analyticsToInput.value = toInputDateValue(to);
     }
     function renderAnalyticsTable(rows, columns, emptyMessage) {
       if (!Array.isArray(rows) || !rows.length) {
@@ -18091,18 +18109,25 @@
         </div>
       `).join('')}</div>`;
     }
-    function renderAnalyticsTrend(rows, emptyMessage) {
+    function renderAnalyticsTrend(rows, emptyMessage, highlightLabel) {
       if (!Array.isArray(rows) || !rows.length) {
         return `<div class="analytics-empty">${analyticsEscapeHtml(emptyMessage || 'Sin datos')}</div>`;
       }
       const maxTotal = Math.max(...rows.map(row => Number(row.total || 0)), 0);
+      const hl = String(highlightLabel || '').trim();
       return `<div class="analytics-trend-grid">${rows.map(row => {
         const total = Number(row.total || 0);
         const width = maxTotal > 0 ? Math.max(6, Math.round((total / maxTotal) * 100)) : 0;
+        const label = String(row.label || '');
+        const isHighlight = hl && hl === label.trim();
+        const fillClass = isHighlight ? 'analytics-bar-fill' : 'analytics-bar-fill secondary';
+        const fillStyle = isHighlight ? 'background: linear-gradient(90deg, #d97706, #fbbf24); box-shadow: 0 0 0 1px rgba(217,119,6,0.3) inset;' : '';
+        const labelPrefix = isHighlight ? '<span title="Día pico" style="display:inline-flex; align-items:center; justify-content:center; min-width:18px; height:18px; padding:0 5px; border-radius:999px; background:#fef3c7; color:#92400e; font-size:10px; font-weight:800; margin-right:4px;">🏆</span>' : '';
+        const rowStyle = isHighlight ? 'background: linear-gradient(90deg, #fff7ed 0%, transparent 60%); border-radius: 8px; padding: 4px 6px 4px 2px;' : '';
         return `
-          <div class="analytics-trend-row">
-            <div class="analytics-trend-label">${analyticsEscapeHtml(row.label || '')}</div>
-            <div class="analytics-bar-track"><div class="analytics-bar-fill secondary" style="width:${width}%;"></div></div>
+          <div class="analytics-trend-row" style="${rowStyle}">
+            <div class="analytics-trend-label">${labelPrefix}${analyticsEscapeHtml(label)}</div>
+            <div class="analytics-bar-track"><div class="${fillClass}" style="width:${width}%; ${fillStyle}"></div></div>
             <div class="analytics-trend-value">${formatMoney(total)}</div>
           </div>
         `;
@@ -18154,32 +18179,98 @@
           const extrasSharePercent = summary.extras_share_percent == null
             ? (Number(summary.net_sales || 0) > 0 ? (extrasTotal / Number(summary.net_sales || 0)) * 100 : 0)
             : Number(summary.extras_share_percent || 0);
+
+          const sDeltaColorFor = (val) => val > 0 ? '#2e7d32' : (val < 0 ? '#c62828' : '#64748b');
+          const sPrev = (key, alt = 0) => comparison != null && comparison[key] != null ? Number(comparison[key] || 0) : Number(alt || 0);
+          const sDeltaVal = (key, alt = 0) => comparison != null && comparison[key] != null ? Number(comparison[key] || 0) : Number(alt || 0);
+          const sHasBase = (key) => !!((comparison || {})[key]);
+          const sPrefix = (v) => v > 0 ? '+' : '';
+          const sDeltaMoney = (kVal, kPct, prevKey, hasBaseKey, fallback) => {
+            const v = sDeltaVal(kVal);
+            const pct = comparison ? (comparison[kPct] != null ? comparison[kPct] : 0) : 0;
+            const col = sDeltaColorFor(v);
+            const prev = sPrev(prevKey);
+            const hasBase = sHasBase(hasBaseKey) || prev > 0;
+            return ` <span style="color:${col};font-weight:700;">(${sPrefix(v)}${formatMoney(v)} · ${formatAnalyticsComparisonDelta(hasBase ? prev : 0, 0, pct, fallback || 'Sin base')})</span>`;
+          };
+          const sDeltaQty = (kVal, kPct, prevKey, hasBaseKey, fallback) => {
+            const v = sDeltaVal(kVal);
+            const pct = comparison ? (comparison[kPct] != null ? comparison[kPct] : 0) : 0;
+            const col = sDeltaColorFor(v);
+            const prev = sPrev(prevKey);
+            const hasBase = sHasBase(hasBaseKey) || prev > 0;
+            return ` <span style="color:${col};font-weight:700;">(${sPrefix(v)}${v} · ${formatAnalyticsComparisonDelta(hasBase ? prev : 0, 0, pct, fallback || 'Sin base')})</span>`;
+          };
+          const sDeltaPP = (diffRaw, pct, prevVal, hasBase, fallback) => {
+            const diff = Number(diffRaw || 0);
+            const col = sDeltaColorFor(diff);
+            const prev = Number(prevVal || 0);
+            const has = !!hasBase || prev > 0;
+            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatAnalyticsNumber(diff)} pp · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')})</span>`;
+          };
+          const sDeltaPct = (diffRaw, pct, prevVal, hasBase, fallback) => {
+            const diff = Number(diffRaw || 0);
+            const col = sDeltaColorFor(diff);
+            const prev = Number(prevVal || 0);
+            const has = !!hasBase || prev > 0;
+            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatPercent(diff)} · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')})</span>`;
+          };
+
+          const truncNow = !!(range && range.truncated_to_now);
+          const fromISO = (range && (range.from_local || range.from)) ? (range.from_local || range.from) : (analyticsFromInput && analyticsFromInput.value);
+          const toISO = (range && (range.to_local || range.to)) ? (range.to_local || range.to) : (analyticsToInput && analyticsToInput.value);
+          const daySec = 24 * 60 * 60 * 1000;
+          let projectionLine = '';
+          try {
+            if (fromISO && toISO) {
+              const pFrom = new Date(String(fromISO).replace(' ', 'T'));
+              const pTo = new Date(String(toISO).replace(' ', 'T'));
+              if (!isNaN(pFrom.getTime()) && !isNaN(pTo.getTime())) {
+                const totalDurMs = pTo.getTime() - pFrom.getTime();
+                if (totalDurMs > 0 && totalDurMs <= 2 * daySec) {
+                  const now = new Date();
+                  const capTo = truncNow ? new Date(now.getTime()) : new Date(pTo.getTime());
+                  const actualDurMs = Math.max(1, Math.min(totalDurMs, capTo.getTime() - pFrom.getTime()));
+                  if (actualDurMs > 0 && actualDurMs < totalDurMs && Number(summary.net_sales || 0) > 0) {
+                    const currentSales = Number(summary.net_sales || 0);
+                    const projected = Math.round(currentSales * (totalDurMs / actualDurMs));
+                    const currentTickets = Number(summary.delivered_orders || 0);
+                    const projectedTickets = Math.round(currentTickets * (totalDurMs / actualDurMs));
+                    const paceLine = `📈 Proyección a cierre: ${formatMoney(projected)} (~${projectedTickets} pedidos · basado en ritmo actual)`;
+                    projectionLine = `<div class="small" style="margin: 10px 0 0; grid-column: 1 / -1; padding: 8px 12px; border-radius: 10px; background: #fef3c7; color: #92400e; font-weight: 700;">${paceLine}</div>`;
+                  }
+                }
+              }
+            }
+          } catch (_) { projectionLine = ''; }
+
           analyticsSummaryEl.innerHTML = `
             <div class="analytics-card accent-sales">
               <div class="label">Ventas Netas</div>
               <div class="value">${formatMoney(summary.net_sales)}</div>
-              <div class="sub">Canal líder: ${analyticsEscapeHtml(leaders.channel || 'Sin datos')} · Pago líder: ${analyticsEscapeHtml(leaders.payment_method || 'Sin datos')}</div>
+              <div class="sub">Canal líder: ${analyticsEscapeHtml(leaders.channel || 'Sin datos')} · Pago líder: ${analyticsEscapeHtml(leaders.payment_method || 'Sin datos')}${sDeltaMoney('delta_amount', 'delta_percent', 'previous_net_sales', 'has_previous_sales_base', 'Sin base')}</div>
             </div>
             <div class="analytics-card accent-orders">
               <div class="label">Pedidos Entregados</div>
               <div class="value">${Number(summary.delivered_orders || 0)}</div>
-              <div class="sub">Ticket promedio: ${formatMoney(summary.average_ticket)} · Hora pico: ${analyticsEscapeHtml(leaders.top_hour || 'Sin datos')}</div>
+              <div class="sub">Ticket promedio: ${formatMoney(summary.average_ticket)} · Hora pico: ${analyticsEscapeHtml(leaders.top_hour || 'Sin datos')}${sDeltaQty('delta_orders', 'delta_orders_percent', 'previous_delivered_orders', 'has_previous_orders_base', 'Nuevo período')}<br/>Ticket ${sDeltaMoney('delta_avg_ticket', 'delta_avg_ticket_percent', 'previous_avg_ticket', 'has_previous_ticket_base', 'Sin base')}</div>
             </div>
             <div class="analytics-card accent-cancel">
               <div class="label">Cancelados</div>
               <div class="value">${Number(summary.canceled_orders || 0)}</div>
-              <div class="sub">Tasa: ${formatPercent(summary.cancellation_rate)}</div>
+              <div class="sub">Tasa: ${formatPercent(summary.cancellation_rate)}${sDeltaQty('delta_canceled_orders', 'delta_canceled_percent', 'previous_canceled_orders', 'has_previous_canceled_base', 'Nuevo período')}<br/>Tasa ${sDeltaPct((comparison || {}).delta_cancellation_rate, null, (comparison || {}).previous_cancellation_rate, (comparison || {}).has_previous_canceled_base, 'Sin base')}</div>
             </div>
             <div class="analytics-card accent-volume">
               <div class="label">Volumen</div>
               <div class="value">${Number(summary.items_sold_total || 0)}</div>
-              <div class="sub">Promedio por pedido: ${formatAnalyticsNumber(summary.avg_items_per_order || 0)} ítems · Día pico: ${analyticsEscapeHtml(leaders.top_day || 'Sin datos')}</div>
+              <div class="sub">Promedio por pedido: ${formatAnalyticsNumber(summary.avg_items_per_order || 0)} ítems · Día pico: ${analyticsEscapeHtml(leaders.top_day || 'Sin datos')}${sDeltaQty('delta_items_sold', 'delta_items_sold_percent', 'previous_items_sold_total', 'has_previous_items_base', 'Nuevo período')}<br/>Ítems/pedido ${sDeltaPP((comparison || {}).delta_avg_items_per_order, null, (comparison || {}).previous_avg_items_per_order, (comparison || {}).has_previous_items_base, 'Sin base')}</div>
             </div>
             <div class="analytics-card accent-extra">
               <div class="label">Propinas y Envíos</div>
               <div class="value">${formatMoney(extrasTotal)}</div>
-              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Peso: ${formatPercent(extrasSharePercent)}</div>
+              <div class="sub">Propinas: ${formatMoney(summary.tips_total)} · Envíos: ${formatMoney(summary.shipping_total)} · Peso: ${formatPercent(extrasSharePercent)}${sDeltaMoney('delta_extras_total', 'delta_extras_percent', 'previous_extras_total', 'has_previous_extras_base', 'Nuevo período')}<br/>Peso ${sDeltaPct((comparison || {}).delta_extras_share_percent, null, (comparison || {}).previous_extras_share_percent, (comparison || {}).has_previous_extras_base, 'Sin base')}</div>
             </div>
+            ${projectionLine}
           `;
         }
         if (analyticsComparisonEl) {
@@ -18192,22 +18283,91 @@
           const currentNetSales = Number(summary.net_sales || 0);
           const currentDeliveredOrders = Number(summary.delivered_orders || 0);
           const currentAvgTicket = Number(summary.average_ticket || 0);
-          const deltaColor = deltaAmount >= 0 ? '#2e7d32' : '#c62828';
-          const deltaOrdersColor = deltaOrders >= 0 ? '#2e7d32' : '#c62828';
-          const deltaTicketColor = deltaTicket >= 0 ? '#2e7d32' : '#c62828';
-          const hasAmountBaseline = previousNetSales > 0;
-          const comparisonInsight = !hasAmountBaseline && currentNetSales > 0
-            ? 'Lectura rápida: hay ventas en el rango actual, pero todavia no existe una base anterior para comparar la evolucion.'
-            : (deltaAmount >= 0
-              ? 'Lectura rápida: crece la facturación, con mejor volumen de pedidos y un ticket más alto.'
-              : 'Lectura rápida: cae la facturación, con menor volumen de pedidos y un ticket más bajo.');
-          analyticsComparisonEl.innerHTML = `
+
+          const deltaColorFor = (val) => val > 0 ? '#2e7d32' : (val < 0 ? '#c62828' : '#64748b');
+          const deltaColor = deltaColorFor(deltaAmount);
+          const deltaOrdersColor = deltaColorFor(deltaOrders);
+          const deltaTicketColor = deltaColorFor(deltaTicket);
+
+          const signOf = (v) => v > 0 ? 1 : (v < 0 ? -1 : 0);
+          const sAmt = signOf(deltaAmount);
+          const sOrd = signOf(deltaOrders);
+          const sTic = signOf(deltaTicket);
+          const pctAmt = Number(comparison.delta_percent || 0);
+          const pctOrd = Number(comparison.delta_orders_percent || 0);
+          const pctTic = Number(comparison.delta_avg_ticket_percent || 0);
+
+          const hasSalesBase = !!comparison.has_previous_sales_base || previousNetSales > 0;
+          const hasOrdersBase = !!comparison.has_previous_orders_base || previousDeliveredOrders > 0;
+          const hasTicketBase = !!comparison.has_previous_ticket_base || previousAvgTicket > 0;
+          const hasAnyBase = hasSalesBase || hasOrdersBase || hasTicketBase;
+
+          let comparisonInsight;
+          if (!hasAnyBase) {
+            if (currentNetSales > 0 || currentDeliveredOrders > 0) {
+              comparisonInsight = 'Lectura rápida: hay ventas en el rango actual, pero todavía no existe una base anterior para comparar la evolución.';
+            } else {
+              comparisonInsight = 'Lectura rápida: sin actividad registrada en ninguno de los dos períodos.';
+            }
+          } else if (!hasSalesBase && currentNetSales > 0) {
+            comparisonInsight = 'Lectura rápida: hay ventas en el rango actual, pero todavía no existe una base de facturación anterior para comparar.';
+          } else if (sAmt === 0 && sOrd === 0 && sTic === 0) {
+            comparisonInsight = 'Lectura rápida: sin movimiento — facturación, volumen de pedidos y ticket promedio sin cambios.';
+          } else if (sAmt > 0) {
+            if (sOrd === 0 && sTic > 0) {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)} exclusivamente por un ticket promedio más alto (+${formatPercent(pctTic)}). El volumen de pedidos se mantuvo estable.`;
+            } else if (sOrd > 0 && sTic === 0) {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)} por mayor volumen de pedidos (+${formatPercent(pctOrd)}). El ticket promedio sin cambio.`;
+            } else if (sOrd > 0 && sTic > 0) {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)}, combinando mayor volumen de pedidos (+${formatPercent(pctOrd)}) y un ticket promedio más alto (+${formatPercent(pctTic)}).`;
+            } else if (sOrd < 0 && sTic > 0) {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)} a pesar de menos pedidos (${formatPercent(pctOrd)}), compensado por un ticket promedio muy superior (+${formatPercent(pctTic)}).`;
+            } else if (sOrd > 0 && sTic < 0) {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)} por mayor volumen de pedidos (+${formatPercent(pctOrd)}), aunque el ticket promedio bajó (${formatPercent(pctTic)}).`;
+            } else {
+              comparisonInsight = `Lectura rápida: crece la facturación ${pctAmt >= 0 ? '+' : ''}${formatPercent(pctAmt)} (pedidos ${pctOrd >= 0 ? '+' : ''}${formatPercent(pctOrd)} · ticket ${pctTic >= 0 ? '+' : ''}${formatPercent(pctTic)}).`;
+            }
+          } else if (sAmt < 0) {
+            if (sOrd === 0 && sTic < 0) {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)} exclusivamente por un ticket promedio más bajo (${formatPercent(pctTic)}). El volumen de pedidos se mantuvo estable.`;
+            } else if (sOrd < 0 && sTic === 0) {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)} por menor volumen de pedidos (${formatPercent(pctOrd)}). El ticket promedio sin cambio.`;
+            } else if (sOrd < 0 && sTic < 0) {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)}, combinando menor volumen de pedidos (${formatPercent(pctOrd)}) y un ticket promedio más bajo (${formatPercent(pctTic)}).`;
+            } else if (sOrd > 0 && sTic < 0) {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)} a pesar de más pedidos (+${formatPercent(pctOrd)}), por un ticket promedio muy inferior (${formatPercent(pctTic)}).`;
+            } else if (sOrd < 0 && sTic > 0) {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)} por menor volumen (${formatPercent(pctOrd)}), aunque el ticket promedio subió (+${formatPercent(pctTic)}).`;
+            } else {
+              comparisonInsight = `Lectura rápida: cae la facturación ${formatPercent(pctAmt)} (pedidos ${pctOrd >= 0 ? '+' : ''}${formatPercent(pctOrd)} · ticket ${pctTic >= 0 ? '+' : ''}${formatPercent(pctTic)}).`;
+            }
+          } else {
+            if (sOrd > 0 && sTic < 0) {
+              comparisonInsight = 'Lectura rápida: facturación sin cambio — más pedidos pero cada uno de menor valor (ticket promedio más bajo).';
+            } else if (sOrd < 0 && sTic > 0) {
+              comparisonInsight = 'Lectura rápida: facturación sin cambio — menos pedidos pero cada uno de mayor valor (ticket promedio más alto).';
+            } else {
+              comparisonInsight = 'Lectura rápida: facturación sin cambio; revisá los deltas de pedidos y ticket para ver los detalles.';
+            }
+          }
+
+          const deltaAmountPrefix = deltaAmount > 0 ? '+' : '';
+          const truncatedToNow = !!(range && range.truncated_to_now);
+          const truncatedBadge = truncatedToNow
+            ? `<div style="margin-bottom:8px;"><span class="analytics-badge" style="background:#fff7ed;color:#9a3412;">⏱ Período actual truncado a la hora actual · comparado contra mismo horario del período anterior</span></div>`
+            : '';
+          const currentPeriodLine = `
+            <div class="small" style="margin-bottom:4px; color:#425b76; font-weight:700;">Período actual: ${analyticsEscapeHtml(formatARDateShort(range && (range.from_local || range.from) || analyticsFromInput.value || ''))} al ${analyticsEscapeHtml(formatARDateShort(range && (range.to_local || range.to) || analyticsToInput.value || ''))}</div>
             <div class="small" style="margin-bottom:8px; color:#5b7083;">Período anterior: ${analyticsEscapeHtml(formatARDateShort(comparison.previous_from_local || comparison.previous_from || ''))} al ${analyticsEscapeHtml(formatARDateShort(comparison.previous_to_local || comparison.previous_to || ''))}</div>
+          `;
+          analyticsComparisonEl.innerHTML = `
+            ${truncatedBadge}
+            ${currentPeriodLine}
             ${renderAnalyticsMiniCards([
-              { label: 'Ventas período ant.', value: formatMoney(previousNetSales), sub: `Pedidos: ${previousDeliveredOrders}` },
-              { label: 'Variación neta', value: `<span style="color:${deltaColor};">${formatMoney(deltaAmount)}</span>`, sub: formatAnalyticsComparisonDelta(previousNetSales, currentNetSales, comparison.delta_percent, 'Sin base comparativa') },
-              { label: 'Delta pedidos', value: `<span style="color:${deltaOrdersColor};">${deltaOrders >= 0 ? '+' : ''}${deltaOrders}</span>`, sub: `Actual: ${currentDeliveredOrders} · ${formatAnalyticsComparisonDelta(previousDeliveredOrders, currentDeliveredOrders, comparison.delta_orders_percent, 'Nuevo período')}` },
-              { label: 'Delta ticket', value: `<span style="color:${deltaTicketColor};">${formatMoney(deltaTicket)}</span>`, sub: `Actual: ${formatMoney(currentAvgTicket)} · ${formatAnalyticsComparisonDelta(previousAvgTicket, currentAvgTicket, comparison.delta_avg_ticket_percent, 'Sin base anterior')}` },
+              { label: 'Ventas período ant.', value: formatMoney(previousNetSales), sub: `Pedidos: ${previousDeliveredOrders} · Actual: ${formatMoney(currentNetSales)}` },
+              { label: 'Variación neta', value: `<span style="color:${deltaColor};">${deltaAmountPrefix}${formatMoney(deltaAmount)}</span>`, sub: formatAnalyticsComparisonDelta(hasSalesBase ? previousNetSales : 0, currentNetSales, comparison.delta_percent, 'Sin base comparativa') },
+              { label: 'Delta pedidos', value: `<span style="color:${deltaOrdersColor};">${deltaOrders >= 0 ? '+' : ''}${deltaOrders}</span>`, sub: `Actual: ${currentDeliveredOrders} · ${formatAnalyticsComparisonDelta(hasOrdersBase ? previousDeliveredOrders : 0, currentDeliveredOrders, comparison.delta_orders_percent, 'Nuevo período')}` },
+              { label: 'Delta ticket', value: `<span style="color:${deltaTicketColor};">${deltaTicket > 0 ? '+' : ''}${formatMoney(deltaTicket)}</span>`, sub: `Actual: ${formatMoney(currentAvgTicket)} · ${formatAnalyticsComparisonDelta(hasTicketBase ? previousAvgTicket : 0, currentAvgTicket, comparison.delta_avg_ticket_percent, 'Sin base anterior')}` },
             ])}
             <div class="analytics-insight">${comparisonInsight}</div>
           `;
@@ -18218,7 +18378,7 @@
             colorClass: 'success',
             showRank: true,
             getLabel: row => row.label || '',
-            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)}`,
+            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)} · Ticket: ${formatMoney(row.avg_ticket || 0)}`,
             getPercent: row => row.share_percent || 0,
           });
         }
@@ -18228,7 +18388,7 @@
             colorClass: 'warning',
             showRank: true,
             getLabel: row => row.label || '',
-            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)}`,
+            getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos · ${formatPercent(row.share_percent || 0)} · Ticket: ${formatMoney(row.avg_ticket || 0)}`,
             getPercent: row => row.share_percent || 0,
           });
         }
@@ -18238,7 +18398,12 @@
             colorClass: '',
             showRank: true,
             getLabel: row => row.name || '',
-            getMeta: row => `${formatMoney(row.revenue || 0)} · ${Number(row.qty || 0)} uds · ${formatPercent(row.share_percent || 0)}`,
+            getMeta: row => {
+              const qty = Number(row.qty || 0);
+              const revenue = Number(row.revenue || 0);
+              const unit = qty > 0 ? revenue / qty : 0;
+              return `${formatMoney(revenue)} · ${qty} uds · ${formatPercent(row.share_percent || 0)} · P.Unit: ${formatMoney(unit)}`;
+            },
             getPercent: row => row.share_percent || 0,
           });
         }
@@ -18248,7 +18413,12 @@
             colorClass: 'secondary',
             showRank: true,
             getLabel: row => row.name || '',
-            getMeta: row => `${Number(row.qty || 0)} uds · ${formatMoney(row.revenue || 0)} · ${formatPercent(row.share_percent || 0)}`,
+            getMeta: row => {
+              const qty = Number(row.qty || 0);
+              const revenue = Number(row.revenue || 0);
+              const unit = qty > 0 ? revenue / qty : 0;
+              return `${qty} uds · ${formatMoney(revenue)} · ${formatPercent(row.share_percent || 0)} · P.Unit: ${formatMoney(unit)}`;
+            },
             getPercent: row => row.share_percent || 0,
           });
         }
@@ -18256,7 +18426,7 @@
           analyticsByHourEl.innerHTML = renderAnalyticsBarList(data.by_hour || [], {
             emptyMessage: 'Sin ventas por hora en este rango',
             colorClass: 'secondary',
-            showRank: true,
+            showRank: false,
             getLabel: row => row.label || '',
             getMeta: row => `${formatMoney(row.total || 0)} · ${Number(row.count || 0)} pedidos`,
             getPercent: row => {
@@ -18267,7 +18437,7 @@
           });
         }
         if (analyticsByDayEl) {
-          analyticsByDayEl.innerHTML = renderAnalyticsTrend(data.by_day || [], 'Sin tendencia diaria en este rango');
+          analyticsByDayEl.innerHTML = renderAnalyticsTrend(data.by_day || [], 'Sin tendencia diaria en este rango', (leaders || {}).top_day || '');
         }
       } catch (err) {
         const msg = analyticsEscapeHtml(err && err.message ? err.message : 'No se pudo cargar el análisis');

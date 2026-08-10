@@ -182,7 +182,11 @@ def _resolve_sales_range(from_raw, to_raw):
         to_dt = now_dt
     if to_dt < from_dt:
         to_dt = from_dt
-    return from_dt, to_dt, from_dt.isoformat(), to_dt.isoformat()
+    truncated_to_now = False
+    if to_dt > now_dt:
+        to_dt = now_dt
+        truncated_to_now = True
+    return from_dt, to_dt, from_dt.isoformat(), to_dt.isoformat(), truncated_to_now
 
 def _has_reports_access():
     role = str(session.get('admin_role') or '').strip().lower()
@@ -948,7 +952,7 @@ def sales_analytics():
         if not _has_reports_access():
             return jsonify({'error': 'sin permisos'}), 403
 
-        from_dt, to_dt, from_iso, to_iso = _resolve_sales_range(
+        from_dt, to_dt, from_iso, to_iso, truncated_to_now = _resolve_sales_range(
             request.args.get('from'),
             request.args.get('to'),
         )
@@ -996,7 +1000,8 @@ def sales_analytics():
         def _summary_for_range(range_from_iso, range_to_iso):
             cur.execute(
                 """
-                SELECT COALESCE(COUNT(*), 0) AS delivered_count, COALESCE(SUM(o.total), 0) AS delivered_total
+                SELECT COALESCE(COUNT(*), 0) AS delivered_count, COALESCE(SUM(o.total), 0) AS delivered_total,
+                       COALESCE(SUM(o.tip_amount), 0) AS tip_total, COALESCE(SUM(o.shipping_cost), 0) AS shipping_total
                 FROM orders o
                 JOIN (
                     SELECT order_id, MAX(changed_at) AS last_change
@@ -1011,13 +1016,46 @@ def sales_analytics():
             delivered_row = cur.fetchone()
             cur.execute(canceled_sql, (tenant_slug, range_from_iso, range_to_iso))
             canceled_range_row = cur.fetchone()
-            delivered_count = _money(delivered_row[0] if delivered_row else 0)
-            delivered_total = _money(delivered_row[1] if delivered_row else 0)
+            delivered_count_range = _money(delivered_row[0] if delivered_row else 0)
+            delivered_total_range = _money(delivered_row[1] if delivered_row else 0)
+            tip_total_range = _money(delivered_row[2] if delivered_row else 0)
+            shipping_total_range = _money(delivered_row[3] if delivered_row else 0)
             canceled_count_range = _money(canceled_range_row[0] if canceled_range_row else 0)
+            canceled_total_range = _money(canceled_range_row[1] if canceled_range_row else 0)
+            cur.execute(
+                """
+                SELECT COALESCE(SUM(oi.qty), 0) AS items_total
+                FROM order_items oi
+                JOIN orders o ON o.id = oi.order_id
+                JOIN (
+                    SELECT order_id, MAX(changed_at) AS last_change
+                    FROM order_status_history
+                    WHERE status = 'entregado'
+                    GROUP BY order_id
+                ) h ON h.order_id = o.id
+                WHERE o.tenant_slug = ? AND o.status = 'entregado' AND h.last_change >= ? AND h.last_change <= ?
+                """,
+                (tenant_slug, range_from_iso, range_to_iso),
+            )
+            items_row = cur.fetchone()
+            items_total_range = _money(items_row[0] if items_row else 0)
+            avg_items_range = _round_metric(items_total_range / delivered_count_range, 1) if delivered_count_range else 0.0
+            extras_total_range = tip_total_range + shipping_total_range
+            extras_share_range = _percent(extras_total_range, delivered_total_range)
+            canceled_denominator = delivered_count_range + canceled_count_range
+            cancellation_rate_range = _percent(canceled_count_range, canceled_denominator) if canceled_denominator > 0 else 0.0
             return {
-                'delivered_count': delivered_count,
-                'delivered_total': delivered_total,
+                'delivered_count': delivered_count_range,
+                'delivered_total': delivered_total_range,
                 'canceled_count': canceled_count_range,
+                'canceled_amount': canceled_total_range,
+                'cancellation_rate': cancellation_rate_range,
+                'tips_total': tip_total_range,
+                'shipping_total': shipping_total_range,
+                'extras_total': extras_total_range,
+                'extras_share_percent': extras_share_range,
+                'items_sold_total': items_total_range,
+                'avg_items_per_order': avg_items_range,
             }
 
         current_delivered_count = len(delivered_rows)
@@ -1153,12 +1191,23 @@ def sales_analytics():
         extras_total = current_tip_total + current_shipping_total
         extras_share_percent = _percent(extras_total, current_net_sales)
 
+        prev_canceled = prev_summary.get('canceled_count', 0) or 0
+        prev_canceled_amount = prev_summary.get('canceled_amount', 0) or 0
+        prev_items = prev_summary.get('items_sold_total', 0) or 0
+        prev_avg_items = prev_summary.get('avg_items_per_order', 0.0) or 0.0
+        prev_tips = prev_summary.get('tips_total', 0) or 0
+        prev_shipping = prev_summary.get('shipping_total', 0) or 0
+        prev_extras = prev_summary.get('extras_total', 0) or 0
+        prev_extras_share = prev_summary.get('extras_share_percent', 0.0) or 0.0
+        prev_cancel_rate = prev_summary.get('cancellation_rate', 0.0) or 0.0
+
         response = jsonify({
             'range': {
                 'from': from_iso,
                 'to': to_iso,
                 'from_local': _format_dt_for_client(current_from_local),
                 'to_local': _format_dt_for_client(current_to_local),
+                'truncated_to_now': truncated_to_now,
             },
             'summary': {
                 'net_sales': current_net_sales,
@@ -1181,18 +1230,42 @@ def sales_analytics():
                 'previous_to_local': _format_dt_for_client(prev_to_local),
                 'previous_net_sales': prev_summary['delivered_total'],
                 'previous_delivered_orders': prev_summary['delivered_count'],
-                'previous_canceled_orders': prev_summary['canceled_count'],
+                'previous_canceled_orders': prev_canceled,
+                'previous_canceled_amount': prev_canceled_amount,
+                'previous_cancellation_rate': prev_cancel_rate,
                 'previous_average_ticket': previous_avg_ticket,
                 'previous_avg_ticket': previous_avg_ticket,
+                'previous_items_sold_total': prev_items,
+                'previous_avg_items_per_order': prev_avg_items,
+                'previous_tips_total': prev_tips,
+                'previous_shipping_total': prev_shipping,
+                'previous_extras_total': prev_extras,
+                'previous_extras_share_percent': prev_extras_share,
                 'has_previous_sales_base': prev_summary['delivered_total'] > 0,
                 'has_previous_orders_base': prev_summary['delivered_count'] > 0,
                 'has_previous_ticket_base': previous_avg_ticket > 0,
+                'has_previous_canceled_base': prev_canceled > 0,
+                'has_previous_items_base': prev_items > 0,
+                'has_previous_extras_base': prev_extras > 0,
                 'delta_amount': current_net_sales - prev_summary['delivered_total'],
                 'delta_percent': _delta_percent(current_net_sales, prev_summary['delivered_total']),
                 'delta_orders': current_delivered_count - prev_summary['delivered_count'],
                 'delta_orders_percent': _delta_percent(current_delivered_count, prev_summary['delivered_count']),
                 'delta_avg_ticket': avg_ticket - previous_avg_ticket,
                 'delta_avg_ticket_percent': _delta_percent(avg_ticket, previous_avg_ticket),
+                'delta_canceled_orders': canceled_count - prev_canceled,
+                'delta_canceled_percent': _delta_percent(canceled_count, prev_canceled),
+                'delta_cancellation_rate': round(float(cancellation_rate or 0) - float(prev_cancel_rate or 0), 2),
+                'delta_items_sold': total_items_sold - prev_items,
+                'delta_items_sold_percent': _delta_percent(total_items_sold, prev_items),
+                'delta_avg_items_per_order': round(float(avg_items_per_order or 0.0) - float(prev_avg_items or 0.0), 1),
+                'delta_tips_total': current_tip_total - prev_tips,
+                'delta_tips_percent': _delta_percent(current_tip_total, prev_tips),
+                'delta_shipping_total': current_shipping_total - prev_shipping,
+                'delta_shipping_percent': _delta_percent(current_shipping_total, prev_shipping),
+                'delta_extras_total': extras_total - prev_extras,
+                'delta_extras_percent': _delta_percent(extras_total, prev_extras),
+                'delta_extras_share_percent': round(float(extras_share_percent or 0.0) - float(prev_extras_share or 0.0), 2),
             },
             'leaders': {
                 'channel': by_channel_list[0]['label'] if by_channel_list else '',
