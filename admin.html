@@ -18185,9 +18185,12 @@
           const sDeltaVal = (key, alt = 0) => comparison != null && comparison[key] != null ? Number(comparison[key] || 0) : Number(alt || 0);
           const sHasBase = (key) => !!((comparison || {})[key]);
           const sPrefix = (v) => v > 0 ? '+' : '';
+          const flatZero = (a, b) => Math.abs(Number(a || 0)) < 0.05 && Math.abs(Number(b || 0)) < 0.05;
+          const noChangeSpan = ' <span style="color:#64748b;font-weight:600;">· sin cambio</span>';
           const sDeltaMoney = (kVal, kPct, prevKey, hasBaseKey, fallback) => {
             const v = sDeltaVal(kVal);
             const pct = comparison ? (comparison[kPct] != null ? comparison[kPct] : 0) : 0;
+            if (flatZero(v, pct)) return noChangeSpan;
             const col = sDeltaColorFor(v);
             const prev = sPrev(prevKey);
             const hasBase = sHasBase(hasBaseKey) || prev > 0;
@@ -18196,6 +18199,7 @@
           const sDeltaQty = (kVal, kPct, prevKey, hasBaseKey, fallback) => {
             const v = sDeltaVal(kVal);
             const pct = comparison ? (comparison[kPct] != null ? comparison[kPct] : 0) : 0;
+            if (flatZero(v, pct)) return noChangeSpan;
             const col = sDeltaColorFor(v);
             const prev = sPrev(prevKey);
             const hasBase = sHasBase(hasBaseKey) || prev > 0;
@@ -18206,14 +18210,22 @@
             const col = sDeltaColorFor(diff);
             const prev = Number(prevVal || 0);
             const has = !!hasBase || prev > 0;
-            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatAnalyticsNumber(diff)} pp · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')})</span>`;
+            const noPct = Number(pct == null ? 0 : pct) === 0;
+            if (Math.abs(diff) < 0.05) {
+              return ` <span style="color:#64748b;font-weight:600;">(${diff >= 0 ? '+' : ''}${formatAnalyticsNumber(diff)} pp)</span>`;
+            }
+            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatAnalyticsNumber(diff)} pp${noPct ? '' : ` · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')}`})</span>`;
           };
           const sDeltaPct = (diffRaw, pct, prevVal, hasBase, fallback) => {
             const diff = Number(diffRaw || 0);
             const col = sDeltaColorFor(diff);
             const prev = Number(prevVal || 0);
             const has = !!hasBase || prev > 0;
-            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatPercent(diff)} · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')})</span>`;
+            const noPct = Number(pct == null ? 0 : pct) === 0;
+            if (Math.abs(diff) < 0.05) {
+              return ` <span style="color:#64748b;font-weight:600;">(${diff >= 0 ? '+' : ''}${formatPercent(diff)})</span>`;
+            }
+            return ` <span style="color:${col};font-weight:700;">(${diff > 0 ? '+' : ''}${formatPercent(diff)}${noPct ? '' : ` · ${formatAnalyticsComparisonDelta(has ? prev : 0, 0, pct || 0, fallback || 'Sin base')}`})</span>`;
           };
 
           const truncNow = !!(range && range.truncated_to_now);
@@ -18258,7 +18270,7 @@
             <div class="analytics-card accent-cancel">
               <div class="label">Cancelados</div>
               <div class="value">${Number(summary.canceled_orders || 0)}</div>
-              <div class="sub">Tasa: ${formatPercent(summary.cancellation_rate)}${sDeltaQty('delta_canceled_orders', 'delta_canceled_percent', 'previous_canceled_orders', 'has_previous_canceled_base', 'Nuevo período')}<br/>Tasa ${sDeltaPct((comparison || {}).delta_cancellation_rate, null, (comparison || {}).previous_cancellation_rate, (comparison || {}).has_previous_canceled_base, 'Sin base')}</div>
+              <div class="sub">Cantidad: ${Number(summary.canceled_orders || 0)} · Ant: ${Number((comparison || {}).previous_canceled_orders || 0)}${sDeltaQty('delta_canceled_orders', 'delta_canceled_percent', 'previous_canceled_orders', 'has_previous_canceled_base', 'Nuevo período')}<br/>Tasa: ${formatPercent(summary.cancellation_rate)} · Ant: ${formatPercent((comparison || {}).previous_cancellation_rate || 0)}${sDeltaPP((comparison || {}).delta_cancellation_rate, null, (comparison || {}).previous_cancellation_rate, (comparison || {}).has_previous_canceled_base, 'Sin base')}</div>
             </div>
             <div class="analytics-card accent-volume">
               <div class="label">Volumen</div>
@@ -18353,9 +18365,24 @@
 
           const deltaAmountPrefix = deltaAmount > 0 ? '+' : '';
           const truncatedToNow = !!(range && range.truncated_to_now);
-          const truncatedBadge = truncatedToNow
+          const truncFromISO = (range && (range.from_local || range.from)) ? (range.from_local || range.from) : (analyticsFromInput && analyticsFromInput.value);
+          const truncToISO = (range && (range.to_local || range.to)) ? (range.to_local || range.to) : (analyticsToInput && analyticsToInput.value);
+          const compDayMs = 24 * 60 * 60 * 1000;
+          let showTruncBadge = false;
+          try {
+            if (truncFromISO && truncToISO) {
+              const tF = new Date(String(truncFromISO).replace(' ', 'T'));
+              const tT = new Date(String(truncToISO).replace(' ', 'T'));
+              if (!isNaN(tF.getTime()) && !isNaN(tT.getTime())) {
+                const durMs = tT.getTime() - tF.getTime();
+                showTruncBadge = truncatedToNow && durMs > 0 && durMs <= 2 * compDayMs;
+              }
+            }
+          } catch (_) { showTruncBadge = truncatedToNow; }
+          const truncatedBadge = showTruncBadge
             ? `<div style="margin-bottom:8px;"><span class="analytics-badge" style="background:#fff7ed;color:#9a3412;">⏱ Período actual truncado a la hora actual · comparado contra mismo horario del período anterior</span></div>`
             : '';
+          const deltaAvgPct = Number(comparison.delta_avg_ticket_percent || 0);
           const currentPeriodLine = `
             <div class="small" style="margin-bottom:4px; color:#425b76; font-weight:700;">Período actual: ${analyticsEscapeHtml(formatARDateShort(range && (range.from_local || range.from) || analyticsFromInput.value || ''))} al ${analyticsEscapeHtml(formatARDateShort(range && (range.to_local || range.to) || analyticsToInput.value || ''))}</div>
             <div class="small" style="margin-bottom:8px; color:#5b7083;">Período anterior: ${analyticsEscapeHtml(formatARDateShort(comparison.previous_from_local || comparison.previous_from || ''))} al ${analyticsEscapeHtml(formatARDateShort(comparison.previous_to_local || comparison.previous_to || ''))}</div>
@@ -18365,9 +18392,9 @@
             ${currentPeriodLine}
             ${renderAnalyticsMiniCards([
               { label: 'Ventas período ant.', value: formatMoney(previousNetSales), sub: `Pedidos: ${previousDeliveredOrders} · Actual: ${formatMoney(currentNetSales)}` },
-              { label: 'Variación neta', value: `<span style="color:${deltaColor};">${deltaAmountPrefix}${formatMoney(deltaAmount)}</span>`, sub: formatAnalyticsComparisonDelta(hasSalesBase ? previousNetSales : 0, currentNetSales, comparison.delta_percent, 'Sin base comparativa') },
-              { label: 'Delta pedidos', value: `<span style="color:${deltaOrdersColor};">${deltaOrders >= 0 ? '+' : ''}${deltaOrders}</span>`, sub: `Actual: ${currentDeliveredOrders} · ${formatAnalyticsComparisonDelta(hasOrdersBase ? previousDeliveredOrders : 0, currentDeliveredOrders, comparison.delta_orders_percent, 'Nuevo período')}` },
-              { label: 'Delta ticket', value: `<span style="color:${deltaTicketColor};">${deltaTicket > 0 ? '+' : ''}${formatMoney(deltaTicket)}</span>`, sub: `Actual: ${formatMoney(currentAvgTicket)} · ${formatAnalyticsComparisonDelta(hasTicketBase ? previousAvgTicket : 0, currentAvgTicket, comparison.delta_avg_ticket_percent, 'Sin base anterior')}` },
+              { label: 'Variación neta', value: `<span style="color:${deltaColor};">${deltaAmountPrefix}${formatMoney(deltaAmount)}</span>`, sub: `Ant: ${formatMoney(previousNetSales)} · ${formatAnalyticsComparisonDelta(hasSalesBase ? previousNetSales : 0, currentNetSales, comparison.delta_percent, 'Sin base comparativa')}` },
+              { label: 'Delta pedidos', value: `<span style="color:${deltaOrdersColor};">${deltaOrders >= 0 ? '+' : ''}${deltaOrders}</span>`, sub: `Ant: ${previousDeliveredOrders} · Actual: ${currentDeliveredOrders} · ${formatAnalyticsComparisonDelta(hasOrdersBase ? previousDeliveredOrders : 0, currentDeliveredOrders, comparison.delta_orders_percent, 'Nuevo período')}` },
+              { label: 'Delta ticket', value: `<span style="color:${deltaTicketColor};">${deltaTicket > 0 ? '+' : ''}${formatMoney(deltaTicket)}</span>`, sub: `Ant: ${formatMoney(previousAvgTicket)} · Actual: ${formatMoney(currentAvgTicket)} · ${formatAnalyticsComparisonDelta(hasTicketBase ? previousAvgTicket : 0, currentAvgTicket, deltaAvgPct, 'Sin base anterior')}` },
             ])}
             <div class="analytics-insight">${comparisonInsight}</div>
           `;
