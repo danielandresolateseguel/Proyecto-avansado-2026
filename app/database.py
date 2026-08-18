@@ -416,12 +416,20 @@ def init_db_postgres(cur):
             name TEXT NOT NULL,
             qty INTEGER NOT NULL,
             unit_price INTEGER NOT NULL,
+            unit_cost INTEGER NOT NULL DEFAULT 0,
             modifiers_json TEXT,
             notes TEXT,
             FOREIGN KEY(order_id) REFERENCES orders(id)
         )
         """
     )
+    try:
+        cur.execute("ALTER TABLE order_items ADD COLUMN IF NOT EXISTS unit_cost INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
 
     # Índices básicos
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_tenant_status ON orders(tenant_slug, status)")
@@ -482,6 +490,9 @@ def init_db_postgres(cur):
             product_id TEXT NOT NULL,
             name TEXT NOT NULL,
             price INTEGER NOT NULL,
+            cost_price INTEGER NOT NULL DEFAULT 0,
+            cost_type TEXT NOT NULL DEFAULT 'fixed',
+            margin_percent INTEGER NOT NULL DEFAULT 0,
             stock INTEGER NOT NULL DEFAULT 0,
             position INTEGER NOT NULL DEFAULT 0,
             active INTEGER NOT NULL DEFAULT 1,
@@ -496,6 +507,27 @@ def init_db_postgres(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_slug)")
     try:
         cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
+    try:
+        cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_price INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
+    try:
+        cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS cost_type TEXT NOT NULL DEFAULT 'fixed'")
+    except Exception:
+        try:
+            cur.connection.rollback()
+        except Exception:
+            pass
+    try:
+        cur.execute("ALTER TABLE products ADD COLUMN IF NOT EXISTS margin_percent INTEGER NOT NULL DEFAULT 0")
     except Exception:
         try:
             cur.connection.rollback()
@@ -858,12 +890,20 @@ def init_db_sqlite(cur):
             name TEXT NOT NULL,
             qty INTEGER NOT NULL,
             unit_price INTEGER NOT NULL,
+            unit_cost INTEGER NOT NULL DEFAULT 0,
             modifiers_json TEXT,
             notes TEXT,
             FOREIGN KEY(order_id) REFERENCES orders(id)
         )
         """
     )
+    try:
+        cur.execute("PRAGMA table_info(order_items)")
+        cols_oi = [r[1] for r in cur.fetchall()]
+        if 'unit_cost' not in cols_oi:
+            cur.execute("ALTER TABLE order_items ADD COLUMN unit_cost INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
 
     # Índices básicos
     cur.execute("CREATE INDEX IF NOT EXISTS idx_orders_tenant_status ON orders(tenant_slug, status)")
@@ -938,6 +978,9 @@ def init_db_sqlite(cur):
             product_id TEXT NOT NULL,
             name TEXT NOT NULL,
             price INTEGER NOT NULL,
+            cost_price INTEGER NOT NULL DEFAULT 0,
+            cost_type TEXT NOT NULL DEFAULT 'fixed',
+            margin_percent INTEGER NOT NULL DEFAULT 0,
             stock INTEGER NOT NULL DEFAULT 0,
             position INTEGER NOT NULL DEFAULT 0,
             active INTEGER NOT NULL DEFAULT 1,
@@ -952,6 +995,27 @@ def init_db_sqlite(cur):
     cur.execute("CREATE INDEX IF NOT EXISTS idx_products_tenant ON products(tenant_slug)")
     try:
         cur.execute("ALTER TABLE products ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        cur.execute("PRAGMA table_info(products)")
+        cols_p = [r[1] for r in cur.fetchall()]
+        if 'cost_price' not in cols_p:
+            cur.execute("ALTER TABLE products ADD COLUMN cost_price INTEGER NOT NULL DEFAULT 0")
+    except Exception:
+        pass
+    try:
+        cur.execute("PRAGMA table_info(products)")
+        cols_p2 = [r[1] for r in cur.fetchall()]
+        if 'cost_type' not in cols_p2:
+            cur.execute("ALTER TABLE products ADD COLUMN cost_type TEXT NOT NULL DEFAULT 'fixed'")
+    except Exception:
+        pass
+    try:
+        cur.execute("PRAGMA table_info(products)")
+        cols_p3 = [r[1] for r in cur.fetchall()]
+        if 'margin_percent' not in cols_p3:
+            cur.execute("ALTER TABLE products ADD COLUMN margin_percent INTEGER NOT NULL DEFAULT 0")
     except Exception:
         pass
     

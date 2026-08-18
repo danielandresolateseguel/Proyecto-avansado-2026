@@ -1589,7 +1589,7 @@ def create_order():
             
             # Check/Create Product
             cur.execute(
-                "SELECT stock, price, COALESCE(variants_json, ''), active FROM products WHERE tenant_slug = ? AND product_id = ?",
+                "SELECT stock, price, COALESCE(variants_json, ''), active, COALESCE(cost_price, 0) FROM products WHERE tenant_slug = ? AND product_id = ?",
                 (tenant_slug, pid)
             )
             row = cur.fetchone()
@@ -1600,6 +1600,7 @@ def create_order():
             stock = int((row[0] if row else 0) or 0)
             base_product_price = _safe_int(row[1] if row and len(row) > 1 else 0, 0)
             variants_raw = row[2] if row and len(row) > 2 else ''
+            base_product_cost = _safe_int(row[4] if row and len(row) > 4 else 0, 0)
             is_active_product = bool(row[3]) if row and len(row) > 3 else False
             if not is_active_product:
                 conn.rollback()
@@ -1665,10 +1666,11 @@ def create_order():
             # Insert Order Item
             if pack_id:
                 modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
+            snapshot_unit_cost = int(base_product_cost) * int(pack_size or 1)
             cur.execute(
                 """
-                INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, modifiers_json, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, unit_cost, modifiers_json, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     order_id,
@@ -1677,6 +1679,7 @@ def create_order():
                     it.get('name'),
                     qty,
                     unit_price,
+                    snapshot_unit_cost,
                     json.dumps(modifiers, ensure_ascii=False),
                     it.get('notes') or ''
                 )
@@ -3123,7 +3126,7 @@ def update_order_content(order_id):
                     pack_size = max(1, pack_size)
 
             cur.execute(
-                "SELECT stock, price, COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+                "SELECT stock, price, COALESCE(variants_json, ''), COALESCE(cost_price, 0) FROM products WHERE tenant_slug = ? AND product_id = ?",
                 (tenant_slug, pid),
             )
             prow = cur.fetchone()
@@ -3132,6 +3135,7 @@ def update_order_content(order_id):
                 return jsonify({'error': 'producto no encontrado', 'product_id': pid}), 400
 
             base_product_price = _safe_int(prow[1] if len(prow) > 1 else 0, 0)
+            base_product_cost = _safe_int(prow[3] if len(prow) > 3 else 0, 0)
             variants = _parse_variants_json(prow[2] if len(prow) > 2 else '')
             # En edición también recalculamos desde el precio real del catálogo para
             # que la promo afecte solo al producto base y no vuelva a tomar un valor ya descontado.
@@ -3186,12 +3190,14 @@ def update_order_content(order_id):
                 modifiers['pack'] = {'id': pack_id, 'label': pack_label, 'size': pack_size}
 
             items_total += unit_price * qty
+            snapshot_unit_cost = int(base_product_cost) * int(pack_size or 1)
             new_units_by_product[pid] = new_units_by_product.get(pid, 0) + (qty * pack_size)
             valid_items.append({
                 'product_id': pid, # Product ID
                 'item_id': it.get('item_id'), # DB ID (si existe)
                 'name': it.get('name', pid) or pid,
                 'price': unit_price,
+                'unit_cost': snapshot_unit_cost,
                 'qty': qty,
                 'notes': it.get('notes', ''),
                 'modifiers_json': json.dumps(modifiers, ensure_ascii=False)
@@ -3284,16 +3290,16 @@ def update_order_content(order_id):
         for item in valid_items:
             if item.get('item_id'):
                 cur.execute(
-                    "UPDATE order_items SET product_id = ?, name = ?, qty = ?, unit_price = ?, modifiers_json = ?, notes = ? WHERE id = ? AND order_id = ?",
-                    (item['product_id'], item['name'], item['qty'], item['price'], item['modifiers_json'], item['notes'], item['item_id'], order_id),
+                    "UPDATE order_items SET product_id = ?, name = ?, qty = ?, unit_price = ?, unit_cost = ?, modifiers_json = ?, notes = ? WHERE id = ? AND order_id = ?",
+                    (item['product_id'], item['name'], item['qty'], item['price'], int(item.get('unit_cost') or 0), item['modifiers_json'], item['notes'], item['item_id'], order_id),
                 )
             else:
                 cur.execute(
                     """
-                    INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, modifiers_json, notes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO order_items (order_id, tenant_slug, product_id, name, qty, unit_price, unit_cost, modifiers_json, notes)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], item['modifiers_json'], item['notes'])
+                    (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], int(item.get('unit_cost') or 0), item['modifiers_json'], item['notes'])
                 )
             
         order_sets = ["total = ?", "shipping_cost = ?", "customer_phone = ?", "customer_name = ?", "table_number = ?"]

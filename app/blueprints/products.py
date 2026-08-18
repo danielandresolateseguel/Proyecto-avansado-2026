@@ -530,7 +530,7 @@ def list_products():
     conn = get_db()
     cur = conn.cursor()
     
-    query = "SELECT product_id, name, price, stock, COALESCE(position, 0) as position, active, COALESCE(details,'') as details, COALESCE(variants_json,'') as variants_json, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url FROM products WHERE tenant_slug = ?"
+    query = "SELECT product_id, name, price, COALESCE(cost_price, 0), COALESCE(cost_type, 'fixed'), COALESCE(margin_percent, 0), stock, COALESCE(position, 0) as position, active, COALESCE(details,'') as details, COALESCE(variants_json,'') as variants_json, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url FROM products WHERE tenant_slug = ?"
     params = [tenant_slug]
     
     if not include_inactive:
@@ -551,14 +551,17 @@ def list_products():
             items.append({
                 'id': pid, 
                 'name': r[1], 
-                'price': int(r[2] or 0), 
-                'stock': int(r[3] or 0), 
-                'position': int(r[4] or 0),
-                'active': bool(r[5]), 
-                'details': r[6] or '', 
-                'variants': r[7] or '', 
-                'last_modified': r[8] or '', 
-                'image_url': r[9] or ''
+                'price': int(r[2] or 0),
+                'cost_price': int(r[3] or 0),
+                'cost_type': r[4] or 'fixed',
+                'margin_percent': int(r[5] or 0),
+                'stock': int(r[6] or 0), 
+                'position': int(r[7] or 0),
+                'active': bool(r[8]), 
+                'details': r[9] or '', 
+                'variants': r[10] or '', 
+                'last_modified': r[11] or '', 
+                'image_url': r[12] or ''
             })
             
     return jsonify({'products': items, 'tenant_slug': tenant_slug})
@@ -582,6 +585,15 @@ def create_product():
         return jsonify({'error': 'Precio inválido'}), 400
         
     stock = int(data.get('stock', 0))
+    try:
+        cost_price = int(data.get('cost_price') or 0)
+    except:
+        cost_price = 0
+    cost_type = str(data.get('cost_type') or 'fixed').strip() or 'fixed'
+    try:
+        margin_percent = int(data.get('margin_percent') or 0)
+    except:
+        margin_percent = 0
     position = data.get('position')
     details = data.get('details', '')
     image_url = data.get('image_url', '')
@@ -667,9 +679,9 @@ def create_product():
         if row:
             cur.execute("""
                 UPDATE products 
-                SET name=?, price=?, stock=?, active=1, details=?, variants_json=?, image_url=?, last_modified=?
+                SET name=?, price=?, cost_price=?, cost_type=?, margin_percent=?, stock=?, active=1, details=?, variants_json=?, image_url=?, last_modified=?
                 WHERE tenant_slug=? AND product_id=?
-            """, (name, price, stock, details, variants_json, image_url, datetime.utcnow().isoformat(), tenant_slug, product_id))
+            """, (name, price, cost_price, cost_type, margin_percent, stock, details, variants_json, image_url, datetime.utcnow().isoformat(), tenant_slug, product_id))
             if desired_position is not None:
                 _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
             conn.commit()
@@ -677,9 +689,9 @@ def create_product():
         
         initial_position = _next_product_position(cur, tenant_slug)
         cur.execute("""
-            INSERT INTO products (tenant_slug, product_id, name, price, stock, position, active, details, variants_json, image_url, last_modified)
-            VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
-        """, (tenant_slug, product_id, name, price, stock, initial_position, details, variants_json, image_url, datetime.utcnow().isoformat()))
+            INSERT INTO products (tenant_slug, product_id, name, price, cost_price, cost_type, margin_percent, stock, position, active, details, variants_json, image_url, last_modified)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)
+        """, (tenant_slug, product_id, name, price, cost_price, cost_type, margin_percent, stock, initial_position, details, variants_json, image_url, datetime.utcnow().isoformat()))
         _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
         conn.commit()
         return jsonify({'ok': True, 'id': product_id, 'created': True})
@@ -708,6 +720,26 @@ def update_product(product_id):
             fields.append('price = ?')
             params.append(max(0, pr))
         except: return jsonify({'error': 'price inválido'}), 400
+    if 'cost_price' in payload:
+        try:
+            cp = int(payload.get('cost_price'))
+            fields.append('cost_price = ?')
+            params.append(max(0, cp))
+        except: return jsonify({'error': 'cost_price inválido'}), 400
+    if 'cost_type' in payload:
+        ct = str(payload.get('cost_type') or 'fixed').strip() or 'fixed'
+        if ct not in ('fixed', 'percentage', 'recipe'):
+            ct = 'fixed'
+        fields.append('cost_type = ?')
+        params.append(ct)
+    if 'margin_percent' in payload:
+        try:
+            mp = int(payload.get('margin_percent'))
+            if mp < 0: mp = 0
+            if mp > 1000: mp = 1000
+            fields.append('margin_percent = ?')
+            params.append(mp)
+        except: return jsonify({'error': 'margin_percent inválido'}), 400
     if 'active' in payload:
         try:
             ac = 1 if bool(payload.get('active')) else 0

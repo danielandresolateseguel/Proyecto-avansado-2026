@@ -79,12 +79,13 @@ def create_app(test_config=None):
     start_background_tasks(app)
 
     # Register Blueprints
-    from .blueprints import auth, orders, cash, products, carousel, public, archive, tenants, system
+    from .blueprints import auth, orders, cash, products, carousel, public, archive, tenants, system, costs
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(orders.bp)
     app.register_blueprint(cash.bp)
     app.register_blueprint(products.bp)
+    app.register_blueprint(costs.bp)
     app.register_blueprint(carousel.bp)
     app.register_blueprint(archive.bp)
     app.register_blueprint(tenants.bp)
