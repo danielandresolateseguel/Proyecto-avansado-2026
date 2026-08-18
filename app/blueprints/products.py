@@ -6,7 +6,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import Blueprint, request, jsonify, session, current_app, send_file
 from app.database import get_db
-from app.utils import is_authed, check_csrf, read_xlsx_sheets, slugify_simple, get_cached_tenant_config, invalidate_tenant_config, create_xlsx_bytes
+from app.utils import is_authed, check_csrf, read_xlsx_sheets, slugify_simple, get_cached_tenant_config, invalidate_tenant_config, create_xlsx_bytes, normalize_recipe_breakdown, apply_recipe_to_product_fields
 import cloudinary
 import cloudinary.uploader
 
@@ -630,7 +630,25 @@ def create_product():
     if isinstance(extra_variants, dict):
         for k, v in extra_variants.items():
             variants[k] = v
-    variants_json = json.dumps(variants)
+    recipe_final = None
+    if 'recipe_cost_breakdown' in data:
+        try:
+            recipe_final = normalize_recipe_breakdown(data.get('recipe_cost_breakdown'))
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        variants['recipe_cost_breakdown'] = recipe_final
+        recipe_field_updates = apply_recipe_to_product_fields(recipe_final, {'price': price})
+        if recipe_field_updates:
+            user_set_cost_price = bool('cost_price' in data and data.get('cost_price') is not None)
+            user_set_cost_type = bool('cost_type' in data and data.get('cost_type'))
+            user_set_margin = bool('margin_percent' in data and data.get('margin_percent') is not None)
+            if 'cost_price' in recipe_field_updates and not user_set_cost_price:
+                cost_price = int(recipe_field_updates['cost_price'])
+            if 'cost_type' in recipe_field_updates and not user_set_cost_type:
+                cost_type = str(recipe_field_updates['cost_type'])
+            if 'margin_percent' in recipe_field_updates and not user_set_margin:
+                margin_percent = int(recipe_field_updates['margin_percent'])
+    variants_json = json.dumps(variants, ensure_ascii=False)
     scope_key = _product_scope_from_parts(section, interest_tag, food_categories)
     desired_position = None
     if position not in (None, ''):
@@ -770,6 +788,55 @@ def update_product(product_id):
                 fields.append('variants_json = ?')
                 params.append(json.dumps(v or {}))
         except: return jsonify({'error': 'variants inválido'}), 400
+    recipe_updates = {}
+    final_recipe = None
+    current_variants = {}
+    conn = get_db()
+    cur = conn.cursor()
+    if 'recipe_cost_breakdown' in payload:
+        try:
+            final_recipe = normalize_recipe_breakdown(payload.get('recipe_cost_breakdown'))
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+        cur.execute(
+            "SELECT COALESCE(price, 0), COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?",
+            (tenant_slug, product_id)
+        )
+        row = cur.fetchone()
+        current_price = int(row[0] or 0) if row else 0
+        try:
+            current_variants = json.loads(row[1] or '{}') or {} if row and row[1] else {}
+        except Exception:
+            current_variants = {}
+        if not isinstance(current_variants, dict):
+            current_variants = {}
+        current_variants['recipe_cost_breakdown'] = final_recipe
+        recipe_updates = apply_recipe_to_product_fields(final_recipe, {'price': current_price})
+        if 'variants_json' not in [f.split('=')[0].strip().lower() for f in fields]:
+            fields.append('variants_json = ?')
+            params.append(json.dumps(current_variants, ensure_ascii=False))
+        else:
+            params[-1] = json.dumps(current_variants, ensure_ascii=False)
+    if recipe_updates:
+        current_field_keys = [f.split('=')[0].strip().lower() for f in fields]
+        if 'cost_price' in recipe_updates and 'cost_price' not in current_field_keys:
+            fields.append('cost_price = ?')
+            params.append(int(recipe_updates['cost_price']))
+        elif 'cost_price' in recipe_updates:
+            idx = current_field_keys.index('cost_price')
+            params[idx] = int(recipe_updates['cost_price'])
+        if 'cost_type' in recipe_updates and 'cost_type' not in current_field_keys:
+            fields.append('cost_type = ?')
+            params.append(str(recipe_updates['cost_type']))
+        elif 'cost_type' in recipe_updates:
+            idx = current_field_keys.index('cost_type')
+            params[idx] = str(recipe_updates['cost_type'])
+        if 'margin_percent' in recipe_updates and 'margin_percent' not in current_field_keys:
+            fields.append('margin_percent = ?')
+            params.append(int(recipe_updates['margin_percent']))
+        elif 'margin_percent' in recipe_updates:
+            idx = current_field_keys.index('margin_percent')
+            params[idx] = int(recipe_updates['margin_percent'])
     desired_position = None
     if 'position' in payload:
         try:
@@ -782,16 +849,22 @@ def update_product(product_id):
     params.append(datetime.utcnow().isoformat())
     params.extend([tenant_slug, product_id])
     
-    conn = get_db()
-    cur = conn.cursor()
     cur.execute(f"UPDATE products SET {', '.join(fields)} WHERE tenant_slug = ? AND product_id = ?", params)
+    if cur.rowcount <= 0:
+        conn.rollback()
+        return jsonify({'error': 'producto no encontrado'}), 404
     if desired_position is not None:
         cur.execute("SELECT COALESCE(variants_json, '') FROM products WHERE tenant_slug = ? AND product_id = ?", (tenant_slug, product_id))
         row = cur.fetchone()
         scope_key = _product_scope_from_variants(row[0] if row else '')
         _resequence_scope(cur, tenant_slug, product_id, scope_key, desired_position)
     conn.commit()
-    return jsonify({'ok': True, 'product_id': product_id, 'last_modified': params[len(fields)-1]})
+    out = {'ok': True, 'product_id': product_id, 'last_modified': params[len(fields)-1]}
+    if final_recipe:
+        out['recipe'] = final_recipe
+        if recipe_updates:
+            out['cost_fields'] = recipe_updates
+    return jsonify(out)
 
 @bp.route('/products/<product_id>', methods=['DELETE'])
 def delete_product(product_id):

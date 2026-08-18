@@ -384,3 +384,161 @@ def create_xlsx_bytes(sheets):
         for i, sh in enumerate(safe_sheets, start=1):
             zf.writestr(f'xl/worksheets/sheet{i}.xml', _xlsx_sheet_xml(sh.get('rows') or []))
     return bio.getvalue()
+
+
+def _safe_cost_int(v, default=0):
+    if v is None:
+        return default
+    if isinstance(v, bool):
+        return int(v)
+    if isinstance(v, int):
+        return max(0, v)
+    if isinstance(v, float):
+        try:
+            if v == v:
+                return max(0, int(round(v)))
+        except Exception:
+            pass
+        return default
+    s = str(v).strip().replace(',', '').replace('.', '')
+    if not s:
+        return default
+    try:
+        return max(0, int(s))
+    except Exception:
+        return default
+
+
+def normalize_recipe_breakdown(raw):
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return None
+        try:
+            raw = json.loads(s)
+        except Exception as e:
+            raise ValueError(f'escandallo JSON inválido: {e}')
+    if not isinstance(raw, dict):
+        raise ValueError('escandallo debe ser un objeto (dict)')
+    version = int(raw.get('version') or 1)
+    if version < 1:
+        version = 1
+    yield_servings = int(raw.get('yield_servings') or 1)
+    if yield_servings < 1:
+        yield_servings = 1
+    currency = str(raw.get('currency') or 'ARS').strip().upper() or 'ARS'
+    prep_minutes_raw = raw.get('prep_minutes')
+    try:
+        prep_minutes = max(0, int(prep_minutes_raw or 0))
+    except Exception:
+        prep_minutes = 0
+    labor_cost_per_minute = _safe_cost_int(raw.get('labor_cost_per_minute'), 0)
+    auto_sync = True
+    if 'auto_sync_to_product_cost' in raw:
+        auto_sync = bool(raw['auto_sync_to_product_cost'])
+    ings_raw = raw.get('ingredients') or []
+    ingredients = []
+    ingredients_subtotal = 0
+    if not isinstance(ings_raw, list):
+        raise ValueError('ingredients debe ser una lista')
+    for idx, ing in enumerate(ings_raw):
+        if not isinstance(ing, dict):
+            raise ValueError(f'el ingrediente fila {idx+1} no es un objeto')
+        name = str(ing.get('name') or '').strip()
+        if not name:
+            raise ValueError(f'el ingrediente fila {idx+1} no tiene nombre')
+        try:
+            qty = float(ing.get('qty') or 0)
+        except Exception:
+            raise ValueError(f'cantidad inválida en ingrediente: {name}')
+        if qty < 0:
+            qty = 0.0
+        unit = str(ing.get('unit') or 'un').strip() or 'un'
+        unit_cost = _safe_cost_int(ing.get('unit_cost'), 0)
+        if isinstance(ing.get('total_line'), (int, float)) and ing.get('total_line') is not None:
+            try:
+                user_total = int(round(float(ing.get('total_line'))))
+                if user_total >= 0:
+                    line_total = user_total
+                else:
+                    line_total = int(round(qty * unit_cost))
+            except Exception:
+                line_total = int(round(qty * unit_cost))
+        else:
+            line_total = int(round(qty * unit_cost))
+        ingredients_subtotal += int(line_total)
+        entry = {
+            'ingredient_id': str(ing.get('ingredient_id') or '').strip(),
+            'name': name,
+            'qty': qty,
+            'unit': unit,
+            'unit_cost': unit_cost,
+            'total_line': int(line_total),
+            'notes': str(ing.get('notes') or '').strip()
+        }
+        for extra_key in ('supplier', 'brand', 'waste_percent'):
+            if extra_key in ing and ing[extra_key] is not None:
+                entry[extra_key] = ing[extra_key]
+        ingredients.append(entry)
+    other_vars_raw = raw.get('other_variables') or []
+    other_variables = []
+    other_vars_subtotal = 0
+    if isinstance(other_vars_raw, list):
+        for idx, ov in enumerate(other_vars_raw):
+            if not isinstance(ov, dict):
+                continue
+            name_ov = str(ov.get('name') or '').strip()
+            if not name_ov:
+                continue
+            total_ov = _safe_cost_int(ov.get('total'), 0)
+            other_vars_subtotal += total_ov
+            other_variables.append({'name': name_ov, 'total': total_ov})
+    labor_subtotal = prep_minutes * labor_cost_per_minute
+    calculated_total_cost = int(ingredients_subtotal) + int(other_vars_subtotal) + int(labor_subtotal)
+    unit_serving_cost = 0
+    if yield_servings > 0 and calculated_total_cost > 0:
+        try:
+            unit_serving_cost = int(round(calculated_total_cost / float(yield_servings)))
+        except Exception:
+            unit_serving_cost = int(calculated_total_cost)
+    else:
+        unit_serving_cost = int(calculated_total_cost)
+    recipe = {
+        'version': version,
+        'currency': currency,
+        'yield_servings': yield_servings,
+        'ingredients': ingredients,
+        'other_variables': other_variables,
+        'ingredients_subtotal': int(ingredients_subtotal),
+        'other_vars_subtotal': int(other_vars_subtotal),
+        'prep_minutes': int(prep_minutes),
+        'labor_cost_per_minute': int(labor_cost_per_minute),
+        'labor_subtotal': int(labor_subtotal),
+        'calculated_total_cost': int(calculated_total_cost),
+        'unit_serving_cost': int(unit_serving_cost),
+        'auto_sync_to_product_cost': bool(auto_sync)
+    }
+    return recipe
+
+
+def apply_recipe_to_product_fields(recipe, current_fields=None):
+    current_fields = current_fields or {}
+    updates = {}
+    if not recipe:
+        return updates
+    auto_sync = bool(recipe.get('auto_sync_to_product_cost'))
+    unit_cost = _safe_cost_int(recipe.get('unit_serving_cost'), 0)
+    if auto_sync and unit_cost >= 0:
+        updates['cost_price'] = int(unit_cost)
+        updates['cost_type'] = 'recipe'
+    price = current_fields.get('price')
+    if price and int(price) > 0 and updates.get('cost_price'):
+        cp = int(updates['cost_price'])
+        pr = int(price)
+        if pr > 0 and cp <= pr:
+            margin = int(round(((pr - cp) / float(pr)) * 100)) if pr else 0
+            updates['margin_percent'] = max(0, min(1000, margin))
+    return updates
+

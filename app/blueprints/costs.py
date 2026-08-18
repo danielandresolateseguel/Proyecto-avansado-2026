@@ -3,7 +3,7 @@ import json
 from datetime import datetime
 from flask import Blueprint, request, jsonify, session, current_app, send_file
 from app.database import get_db
-from app.utils import is_authed, check_csrf, read_xlsx_sheets, create_xlsx_bytes
+from app.utils import is_authed, check_csrf, read_xlsx_sheets, create_xlsx_bytes, normalize_recipe_breakdown, apply_recipe_to_product_fields
 
 bp = Blueprint('costs', __name__, url_prefix='/api')
 
@@ -334,6 +334,208 @@ def update_product_cost_only(product_id):
             'last_modified': r[6] or ''
         }
     return jsonify(out)
+
+
+@bp.route('/products/<product_id>/recipe', methods=['PATCH'])
+def update_product_recipe_only(product_id):
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    if not _session_tenant_matches(tenant_slug):
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    payload = request.get_json(silent=True) or {}
+    mode = str(payload.get('mode') or 'replace').strip().lower()
+    if mode not in ('replace', 'merge', 'clear'):
+        mode = 'replace'
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT product_id, name, COALESCE(price, 0), COALESCE(variants_json, ''), "
+        "COALESCE(cost_price, 0), COALESCE(cost_type, 'fixed'), COALESCE(margin_percent, 0) "
+        "FROM products WHERE tenant_slug = ? AND product_id = ?",
+        (tenant_slug, _safe_str(product_id))
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'producto no encontrado'}), 404
+    current_price = int(row[2] or 0)
+    variants_raw = row[3] or ''
+    current_cost_price = int(row[4] or 0)
+    current_cost_type = _safe_str(row[5]) or 'fixed'
+    current_margin = int(row[6] or 0)
+    variants = {}
+    try:
+        variants = json.loads(variants_raw or '{}') or {} if variants_raw else {}
+    except Exception:
+        variants = {}
+    if not isinstance(variants, dict):
+        variants = {}
+    if mode == 'clear':
+        variants.pop('recipe_cost_breakdown', None)
+        final_recipe = None
+        cost_fields = {}
+        if current_cost_type == 'recipe':
+            new_type = 'fixed'
+            new_fields = ['cost_type = ?', 'variants_json = ?', 'last_modified = ?']
+            new_params = [new_type, json.dumps(variants, ensure_ascii=False), datetime.utcnow().isoformat(), tenant_slug, _safe_str(product_id)]
+            cur.execute(f"UPDATE products SET {', '.join(new_fields)} WHERE tenant_slug = ? AND product_id = ?", new_params)
+            conn.commit()
+            return jsonify({'ok': True, 'recipe': None, 'cost_fields': {'cost_type': new_type, 'cost_price': current_cost_price}})
+        cur.execute("UPDATE products SET variants_json = ?, last_modified = ? WHERE tenant_slug = ? AND product_id = ?",
+                    (json.dumps(variants, ensure_ascii=False), datetime.utcnow().isoformat(), tenant_slug, _safe_str(product_id)))
+        conn.commit()
+        return jsonify({'ok': True, 'recipe': None, 'cost_fields': {'cost_price': current_cost_price, 'cost_type': current_cost_type}})
+    raw_recipe = payload.get('recipe_cost_breakdown') or payload.get('recipe') or payload.get('escandallo')
+    if raw_recipe is None and 'ingredients' not in payload:
+        return jsonify({'error': 'falta recipe_cost_breakdown, ingredients o mode=clear'}), 400
+    existing = variants.get('recipe_cost_breakdown') if isinstance(variants, dict) else None
+    if mode == 'merge' and isinstance(existing, dict):
+        if isinstance(raw_recipe, dict):
+            merged = dict(existing)
+            for k, v in raw_recipe.items():
+                merged[k] = v
+            if 'ingredients' in payload and isinstance(payload.get('ingredients'), list):
+                merged['ingredients'] = list(payload.get('ingredients') or [])
+            if 'other_variables' in payload and isinstance(payload.get('other_variables'), list):
+                merged['other_variables'] = list(payload.get('other_variables') or [])
+            final_recipe = normalize_recipe_breakdown(merged)
+        else:
+            if isinstance(existing.get('ingredients'), list):
+                existing['ingredients'].extend(payload.get('ingredients') or [])
+            final_recipe = normalize_recipe_breakdown(existing)
+    else:
+        if raw_recipe is None and isinstance(payload.get('ingredients'), list):
+            obj = {}
+            for k in ('yield_servings', 'currency', 'prep_minutes', 'labor_cost_per_minute',
+                      'auto_sync_to_product_cost', 'other_variables'):
+                if k in payload:
+                    obj[k] = payload.get(k)
+            obj['ingredients'] = payload.get('ingredients') or []
+            final_recipe = normalize_recipe_breakdown(obj)
+        else:
+            final_recipe = normalize_recipe_breakdown(raw_recipe)
+    variants['recipe_cost_breakdown'] = final_recipe
+    cost_fields = apply_recipe_to_product_fields(final_recipe, {'price': current_price})
+    fields_to_set = ['variants_json = ?']
+    params_list = [json.dumps(variants, ensure_ascii=False)]
+    if cost_fields:
+        if 'cost_price' in cost_fields:
+            fields_to_set.append('cost_price = ?')
+            params_list.append(int(cost_fields['cost_price']))
+        if 'cost_type' in cost_fields:
+            fields_to_set.append('cost_type = ?')
+            params_list.append(str(cost_fields['cost_type']))
+        if 'margin_percent' in cost_fields:
+            fields_to_set.append('margin_percent = ?')
+            params_list.append(int(cost_fields['margin_percent']))
+    else:
+        if 'cost_price' in payload or 'unit_cost' in payload:
+            cp = payload.get('cost_price') if 'cost_price' in payload else payload.get('unit_cost')
+            try:
+                cp_int = max(0, int(cp))
+                fields_to_set.append('cost_price = ?')
+                params_list.append(cp_int)
+            except Exception:
+                pass
+    fields_to_set.append('last_modified = ?')
+    params_list.append(datetime.utcnow().isoformat())
+    params_list.extend([tenant_slug, _safe_str(product_id)])
+    cur.execute(f"UPDATE products SET {', '.join(fields_to_set)} WHERE tenant_slug = ? AND product_id = ?", params_list)
+    conn.commit()
+    resp = {'ok': True, 'recipe': final_recipe}
+    if cost_fields:
+        resp['cost_fields'] = cost_fields
+    else:
+        resp['cost_fields'] = {'cost_price': current_cost_price, 'cost_type': current_cost_type, 'margin_percent': current_margin}
+    return jsonify(resp)
+
+
+@bp.route('/products/<product_id>/recipe', methods=['GET'])
+def get_product_recipe(product_id):
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    if not _session_tenant_matches(tenant_slug):
+        return jsonify({'error': 'acceso denegado al tenant'}), 403
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT product_id, name, COALESCE(price, 0), COALESCE(variants_json, ''), "
+        "COALESCE(cost_price, 0), COALESCE(cost_type, 'fixed'), COALESCE(margin_percent, 0) "
+        "FROM products WHERE tenant_slug = ? AND product_id = ?",
+        (tenant_slug, _safe_str(product_id))
+    )
+    row = cur.fetchone()
+    if not row:
+        return jsonify({'error': 'producto no encontrado'}), 404
+    variants_raw = row[3] or ''
+    variants = {}
+    try:
+        variants = json.loads(variants_raw or '{}') or {} if variants_raw else {}
+    except Exception:
+        variants = {}
+    recipe = variants.get('recipe_cost_breakdown') if isinstance(variants, dict) else None
+    return jsonify({
+        'ok': True,
+        'product': {
+            'id': row[0],
+            'name': row[1],
+            'price': int(row[2] or 0),
+            'cost_price': int(row[4] or 0),
+            'cost_type': row[5] or 'fixed',
+            'margin_percent': int(row[6] or 0)
+        },
+        'recipe': recipe
+    })
+
+
+@bp.route('/costs/recipe_preview', methods=['POST'])
+def costs_recipe_preview():
+    if not is_authed():
+        return jsonify({'error': 'no autorizado'}), 401
+    if not check_csrf():
+        return jsonify({'error': 'csrf inválido'}), 403
+    payload = request.get_json(silent=True) or {}
+    price = 0
+    if 'price' in payload:
+        try:
+            price = max(0, int(payload.get('price') or 0))
+        except Exception:
+            price = 0
+    raw_recipe = payload.get('recipe_cost_breakdown') or payload.get('recipe') or payload.get('escandallo')
+    if raw_recipe is None and isinstance(payload.get('ingredients'), list):
+        obj = {}
+        for k in ('yield_servings', 'currency', 'prep_minutes', 'labor_cost_per_minute',
+                  'auto_sync_to_product_cost', 'other_variables'):
+            if k in payload:
+                obj[k] = payload.get(k)
+        obj['ingredients'] = payload.get('ingredients') or []
+        raw_recipe = obj
+    try:
+        final_recipe = normalize_recipe_breakdown(raw_recipe)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    cost_fields = apply_recipe_to_product_fields(final_recipe, {'price': price})
+    return jsonify({
+        'ok': True,
+        'price': int(price),
+        'recipe': final_recipe,
+        'cost_fields': cost_fields,
+        'summary': {
+            'ingredient_lines': len(final_recipe.get('ingredients') or []),
+            'ingredients_subtotal': int(final_recipe.get('ingredients_subtotal') or 0),
+            'other_variables_subtotal': int(final_recipe.get('other_vars_subtotal') or 0),
+            'labor_subtotal': int(final_recipe.get('labor_subtotal') or 0),
+            'calculated_total_cost': int(final_recipe.get('calculated_total_cost') or 0),
+            'yield_servings': int(final_recipe.get('yield_servings') or 1),
+            'unit_serving_cost': int(final_recipe.get('unit_serving_cost') or 0),
+            'suggested_cost_price': int(cost_fields.get('cost_price', final_recipe.get('unit_serving_cost') or 0)),
+            'suggested_margin_percent': int(cost_fields.get('margin_percent', 0)),
+            'gross_profit_per_unit': (int(price) - int(cost_fields.get('cost_price', final_recipe.get('unit_serving_cost') or 0))) if price > 0 else None
+        }
+    })
 
 
 @bp.route('/costs/products_template', methods=['GET'])
