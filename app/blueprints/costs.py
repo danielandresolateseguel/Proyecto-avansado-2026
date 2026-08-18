@@ -1,6 +1,8 @@
 import os
 import json
-from datetime import datetime
+import re
+import unicodedata
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify, session, current_app, send_file
 from app.database import get_db
 from app.utils import is_authed, check_csrf, read_xlsx_sheets, create_xlsx_bytes, normalize_recipe_breakdown, apply_recipe_to_product_fields
@@ -15,6 +17,185 @@ def _session_tenant_matches(tenant_slug):
     if not tenant_slug:
         return False
     return session_tenant == str(tenant_slug).strip()
+
+
+def _norm_date(s, end=False):
+    try:
+        if s and len(str(s).strip()) == 10:
+            return str(s).strip() + ('T23:59:59' if end else 'T00:00:00')
+    except Exception:
+        pass
+    return s
+
+
+def _parse_iso_dt(value):
+    try:
+        if not value:
+            return None
+        if isinstance(value, datetime):
+            dt = value
+            if dt.tzinfo is not None:
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt
+        raw = str(value).strip()
+        if not raw:
+            return None
+        for fmt in ('%Y-%m-%dT%H:%M:%S', '%Y-%m-%d %H:%M:%S', '%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%d %H:%M:%S.%f', '%Y-%m-%d'):
+            try:
+                return datetime.strptime(raw, fmt)
+            except Exception:
+                continue
+        return None
+    except Exception:
+        return None
+
+
+def _local_tz_offset_minutes():
+    try:
+        cfg = None
+        try:
+            from app.utils import get_cached_tenant_config
+            ts = session.get('tenant_slug') or request.args.get('tenant_slug') or request.args.get('slug') or ''
+            cfg = get_cached_tenant_config(ts) if ts else {}
+        except Exception:
+            cfg = {}
+        tz_raw = None
+        if isinstance(cfg, dict):
+            tz_raw = cfg.get('timezone_offset_min') or cfg.get('tz_minutes') or cfg.get('tz_offset_min')
+        if isinstance(tz_raw, int):
+            return tz_raw
+        raw_env = os.getenv('TZ_OFFSET_MINUTES') or ''
+        if raw_env:
+            try:
+                return int(raw_env)
+            except Exception:
+                pass
+        return -180
+    except Exception:
+        return -180
+
+
+def _utc_naive_to_local(dt):
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    from datetime import timedelta
+    offset = _local_tz_offset_minutes()
+    return (dt.astimezone(timezone.utc) + timedelta(minutes=offset)).replace(tzinfo=None)
+
+
+def _local_date_boundary_to_utc_naive(value, end=False):
+    try:
+        dt_local = datetime.strptime(str(value or '').strip(), '%Y-%m-%d')
+        dt_local = dt_local.replace(
+            hour=23 if end else 0,
+            minute=59 if end else 0,
+            second=59 if end else 0,
+            microsecond=0
+        )
+        from datetime import timedelta
+        offset = _local_tz_offset_minutes()
+        dt_utc_naive = (dt_local - timedelta(minutes=offset))
+        return dt_utc_naive
+    except Exception:
+        return None
+
+
+def _resolve_sales_range(from_raw, to_raw):
+    now_dt = datetime.utcnow().replace(microsecond=0)
+    now_local = _utc_naive_to_local(now_dt)
+    from datetime import timedelta
+    default_from = now_local.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(minutes=-_local_tz_offset_minutes())
+    from_raw_str = str(from_raw or '').strip()
+    to_raw_str = str(to_raw or '').strip()
+    from_dt = _local_date_boundary_to_utc_naive(from_raw_str, end=False) if len(from_raw_str) == 10 else _parse_iso_dt(_norm_date(from_raw, end=False))
+    to_dt = _local_date_boundary_to_utc_naive(to_raw_str, end=True) if len(to_raw_str) == 10 else _parse_iso_dt(_norm_date(to_raw, end=True))
+    if from_dt is None and to_dt is None:
+        from_dt = default_from
+        to_dt = now_dt
+    elif from_dt is None:
+        if to_dt:
+            local_to = _utc_naive_to_local(to_dt)
+            from_dt = local_to.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(minutes=-_local_tz_offset_minutes())
+        else:
+            from_dt = default_from
+    elif to_dt is None:
+        to_dt = now_dt
+    if to_dt < from_dt:
+        to_dt = from_dt
+    truncated_to_now = False
+    if to_dt > now_dt:
+        to_dt = now_dt
+        truncated_to_now = True
+    return from_dt, to_dt, from_dt.isoformat(), to_dt.isoformat(), truncated_to_now
+
+
+def _previous_period(from_dt, to_dt, truncated_to_now):
+    duration_s = max(1, int((to_dt - from_dt).total_seconds()))
+    from datetime import timedelta
+    prev_to = from_dt - timedelta(seconds=1)
+    prev_from = prev_to - timedelta(seconds=duration_s - 1)
+    if truncated_to_now:
+        now_local = _utc_naive_to_local(datetime.utcnow().replace(microsecond=0))
+        prev_to_local = _utc_naive_to_local(prev_to)
+        if prev_to_local is not None and now_local is not None:
+            from datetime import time as _dtime
+            target_time = now_local.time()
+            prev_to_local = datetime.combine(prev_to_local.date(), target_time)
+            prev_to = prev_to_local + timedelta(minutes=-_local_tz_offset_minutes())
+    return prev_from, prev_to, prev_from.isoformat(), prev_to.isoformat()
+
+
+def _norm_channel(order_type):
+    value = str(order_type or '').strip().lower()
+    if value == 'mesa':
+        return 'Mesa'
+    if value in ('direccion', 'delivery'):
+        return 'Delivery'
+    if value == 'retiro':
+        return 'Retiro'
+    if value == 'espera':
+        return 'Espera'
+    return 'Otros'
+
+
+def _percent(part, total):
+    try:
+        part_val = float(part or 0)
+        total_val = float(total or 0)
+        if total_val == 0:
+            return 0
+        return round((part_val / total_val) * 100, 2)
+    except Exception:
+        return 0
+
+
+def _pp_diff(current_pct, previous_pct):
+    try:
+        c = float(current_pct or 0)
+        p = float(previous_pct or 0)
+        return round(c - p, 2)
+    except Exception:
+        return 0.0
+
+
+def _delta_val(current, previous):
+    try:
+        return int(round(float(current or 0) - float(previous or 0)))
+    except Exception:
+        return 0
+
+
+def _delta_percent(current, previous):
+    try:
+        c = float(current or 0)
+        p = float(previous or 0)
+        if p == 0:
+            return None
+        return round(((c - p) / abs(p)) * 100, 2)
+    except Exception:
+        return None
 
 
 def _safe_str(v):
@@ -536,6 +717,292 @@ def costs_recipe_preview():
             'gross_profit_per_unit': (int(price) - int(cost_fields.get('cost_price', final_recipe.get('unit_serving_cost') or 0))) if price > 0 else None
         }
     })
+
+
+def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=None, channel_filter=None):
+    conn = get_db()
+    cur = conn.cursor()
+    status_filter_orders = ""
+    params = [tenant_slug]
+    if channel_filter:
+        cf = _safe_str(channel_filter).lower()
+        if cf in ('mesa', 'delivery', 'retiro', 'espera'):
+            status_filter_orders += " AND LOWER(COALESCE(o.order_type,'')) = ? "
+            params.append(cf)
+    params.extend([from_dt.isoformat(), to_dt.isoformat()])
+    order_ids_sql = (
+        "SELECT DISTINCT o.id FROM orders o "
+        "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
+        "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
+        "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
+        + status_filter_orders +
+        "  AND h.last_change BETWEEN ? AND ?"
+    )
+    base_sql = (
+        "SELECT "
+        "  COALESCE(oi.product_id,'') AS pid, "
+        "  COALESCE(NULLIF(TRIM(COALESCE(oi.name,'')),''), p.name) AS pname, "
+        "  COALESCE(p.variants_json,'') AS variants, "
+        "  COALESCE(o.order_type,'') AS order_type, "
+        "  SUM(COALESCE(oi.qty,0)) AS qty, "
+        "  SUM(COALESCE(oi.qty,0) * COALESCE(oi.unit_price,0)) AS revenue, "
+        "  SUM(COALESCE(oi.qty,0) * COALESCE(oi.unit_cost,0)) AS cogs, "
+        "  SUM(CASE WHEN COALESCE(oi.unit_cost,0)=0 THEN COALESCE(oi.qty,0) * COALESCE(oi.unit_price,0) ELSE 0 END) AS blind_revenue, "
+        "  SUM(CASE WHEN COALESCE(oi.unit_cost,0)=0 THEN 1 ELSE 0 END) AS blind_lines "
+        "FROM order_items oi "
+        "JOIN orders o ON o.id = oi.order_id "
+        "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
+        "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
+        "LEFT JOIN products p ON p.tenant_slug = o.tenant_slug AND p.product_id = oi.product_id "
+        "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
+        + status_filter_orders +
+        "  AND h.last_change BETWEEN ? AND ? "
+        "GROUP BY pid, pname, variants, order_type "
+        "ORDER BY revenue DESC"
+    )
+    cur.execute(base_sql, params)
+    rows = cur.fetchall() or []
+    product_map = {}
+    channel_map = {}
+    category_map = {}
+    net_sales = 0
+    total_cogs = 0
+    blind_revenue = 0
+    blind_lines = 0
+    distinct_products_without_cost = set()
+    product_counts = {}
+    for r in rows:
+        pid = _safe_str(r[0])
+        name = _safe_str(r[1]) or '(Sin nombre)'
+        variants_raw = r[2] or ''
+        channel_key = _norm_channel(r[3])
+        qty = int(r[4] or 0)
+        revenue = int(r[5] or 0)
+        cogs = int(r[6] or 0)
+        line_blind_rev = int(r[7] or 0)
+        line_blind_lines = int(r[8] or 0)
+        net_sales += revenue
+        total_cogs += cogs
+        blind_revenue += line_blind_rev
+        if line_blind_lines > 0:
+            blind_lines += line_blind_lines
+            if pid:
+                distinct_products_without_cost.add(pid)
+        gross = revenue - cogs
+        product_counts[pid] = product_counts.get(pid, 0) + 1
+        if pid not in product_map:
+            product_map[pid] = {
+                'id': pid,
+                'name': name,
+                'qty': 0,
+                'revenue': 0,
+                'total_cost': 0,
+                'gross_profit': 0,
+                'category': '',
+                'section': ''
+            }
+        e = product_map[pid]
+        e['qty'] += qty
+        e['revenue'] += revenue
+        e['total_cost'] += cogs
+        e['gross_profit'] += gross
+        if variants_raw:
+            try:
+                vj = json.loads(variants_raw) or {}
+                if isinstance(vj, dict):
+                    cats = vj.get('food_categories')
+                    if isinstance(cats, list) and cats:
+                        e['category'] = _safe_str(cats[0]) or e['category']
+                    elif isinstance(cats, str) and _safe_str(cats):
+                        e['category'] = _safe_str(cats)
+                    sec = _safe_str(vj.get('section'))
+                    if sec:
+                        e['section'] = sec
+            except Exception:
+                pass
+        if channel_key not in channel_map:
+            channel_map[channel_key] = {'channel': channel_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0}
+        ce = channel_map[channel_key]
+        ce['qty'] += qty
+        ce['revenue'] += revenue
+        ce['total_cost'] += cogs
+        ce['gross_profit'] += gross
+        cat_key = (product_map[pid].get('category') or 'Sin categoría').strip() or 'Sin categoría'
+        if category_filter and _safe_str(category_filter).lower() != cat_key.lower():
+            pass
+        if cat_key not in category_map:
+            category_map[cat_key] = {'category': cat_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0}
+        ca = category_map[cat_key]
+        ca['qty'] += qty
+        ca['revenue'] += revenue
+        ca['total_cost'] += cogs
+        ca['gross_profit'] += gross
+    gross_profit = net_sales - total_cogs
+    gross_margin_pct = _percent(gross_profit, net_sales)
+    by_product_list = []
+    for pid, p in product_map.items():
+        if p['revenue'] <= 0 and p['qty'] <= 0:
+            continue
+        margin = _percent(p['gross_profit'], p['revenue'])
+        unit_margin = int(round(p['gross_profit'] / p['qty'])) if p['qty'] > 0 else 0
+        by_product_list.append({
+            'id': p['id'],
+            'name': p['name'],
+            'category': p['category'],
+            'qty': p['qty'],
+            'revenue': p['revenue'],
+            'total_cost': p['total_cost'],
+            'gross_profit': p['gross_profit'],
+            'margin_percent': margin,
+            'unit_margin': unit_margin,
+            'share_profit_percent': _percent(p['gross_profit'], gross_profit)
+        })
+    by_product_list.sort(key=lambda x: x['gross_profit'], reverse=True)
+    by_category_list = sorted(list(category_map.values()), key=lambda x: x['gross_profit'], reverse=True)
+    for c in by_category_list:
+        c['margin_percent'] = _percent(c['gross_profit'], c['revenue'])
+        c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
+    by_channel_list = sorted(list(channel_map.values()), key=lambda x: x['gross_profit'], reverse=True)
+    for c in by_channel_list:
+        c['margin_percent'] = _percent(c['gross_profit'], c['revenue'])
+        c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
+    by_product = [x for x in by_product_list if not category_filter or (_safe_str(x.get('category')).lower() == _safe_str(category_filter).lower())]
+    most_profitable = by_product[0] if by_product else None
+    worst_margin = None
+    candidates_worst = [x for x in by_product if x['revenue'] > 0 and x['qty'] >= 1]
+    if candidates_worst:
+        worst_margin = sorted(candidates_worst, key=lambda x: x['margin_percent'])[0]
+    best_category = by_category_list[0] if by_category_list else None
+    leaders = {
+        'most_profitable_product': (most_profitable.get('name') if most_profitable else '') or '',
+        'most_profitable_product_id': (most_profitable.get('id') if most_profitable else '') or '',
+        'most_profitable_product_profit': int(most_profitable.get('gross_profit') or 0) if most_profitable else 0,
+        'worst_margin_product': (worst_margin.get('name') if worst_margin else '') or '',
+        'worst_margin_product_id': (worst_margin.get('id') if worst_margin else '') or '',
+        'worst_margin_percent': float(worst_margin.get('margin_percent') or 0) if worst_margin else 0.0,
+        'best_category_margin_name': (best_category.get('category') if best_category else '') or '',
+        'best_category_margin_percent': float(_percent(best_category.get('gross_profit'), best_category.get('revenue')) if best_category else 0.0)
+    }
+    summary = {
+        'net_sales': int(net_sales),
+        'total_cost_of_goods': int(total_cogs),
+        'gross_profit': int(gross_profit),
+        'gross_margin_percent': float(gross_margin_pct),
+        'products_without_cost': len(distinct_products_without_cost),
+        'exposed_revenue_without_cost': int(blind_revenue),
+        'blind_order_lines': int(blind_lines),
+        'distinct_products_sold': len([x for x in by_product_list if x['qty'] > 0])
+    }
+    payload = {
+        'truncated_to_now': bool(truncated_to_now),
+        'summary': summary,
+        'by_product': by_product,
+        'by_category': by_category_list,
+        'by_channel': by_channel_list,
+        'leaders': leaders,
+        '_raw_order_count_sql_id': None
+    }
+    cur.execute("SELECT COUNT(DISTINCT o.id) FROM orders o "
+                "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
+                "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
+                "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
+                + status_filter_orders + " AND h.last_change BETWEEN ? AND ?",
+                params)
+    cr = cur.fetchone()
+    payload['order_count'] = int(cr[0] or 0) if cr else 0
+    return payload
+
+
+@bp.route('/costs/analytics', methods=['GET'])
+def costs_analytics():
+    try:
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+        if not _session_tenant_matches(tenant_slug):
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        from_raw = request.args.get('from') or request.args.get('dateFrom') or request.args.get('desde')
+        to_raw = request.args.get('to') or request.args.get('dateTo') or request.args.get('hasta')
+        category_filter = request.args.get('category') or request.args.get('categoria')
+        channel_filter = request.args.get('channel') or request.args.get('order_type') or request.args.get('canal')
+        from_dt, to_dt, from_iso, to_iso, truncated_to_now = _resolve_sales_range(from_raw, to_raw)
+        prev_from_dt, prev_to_dt, prev_from_iso, prev_to_iso = _previous_period(from_dt, to_dt, truncated_to_now)
+        current = _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=category_filter, channel_filter=channel_filter)
+        previous = _compute_costs_payload(tenant_slug, prev_from_dt, prev_to_dt, truncated_to_now=False, category_filter=category_filter, channel_filter=channel_filter)
+        curr_sum = current['summary']
+        prev_sum = previous['summary']
+        current_gm = float(curr_sum.get('gross_margin_percent') or 0)
+        prev_gm = float(prev_sum.get('gross_margin_percent') or 0)
+        comparison = {
+            'previous_range': {'from': prev_from_iso, 'to': prev_to_iso},
+            'previous_net_sales': int(prev_sum.get('net_sales') or 0),
+            'delta_net_sales': _delta_val(curr_sum.get('net_sales'), prev_sum.get('net_sales')),
+            'delta_net_sales_percent': _delta_percent(curr_sum.get('net_sales'), prev_sum.get('net_sales')),
+            'previous_total_cost': int(prev_sum.get('total_cost_of_goods') or 0),
+            'delta_cost': _delta_val(curr_sum.get('total_cost_of_goods'), prev_sum.get('total_cost_of_goods')),
+            'delta_cost_percent': _delta_percent(curr_sum.get('total_cost_of_goods'), prev_sum.get('total_cost_of_goods')),
+            'previous_gross_profit': int(prev_sum.get('gross_profit') or 0),
+            'delta_gross_profit': _delta_val(curr_sum.get('gross_profit'), prev_sum.get('gross_profit')),
+            'delta_gross_profit_percent': _delta_percent(curr_sum.get('gross_profit'), prev_sum.get('gross_profit')),
+            'previous_gross_margin': float(prev_gm),
+            'delta_gross_margin_pp': float(_pp_diff(current_gm, prev_gm)),
+            'previous_products_without_cost': int(prev_sum.get('products_without_cost') or 0)
+        }
+        out = {
+            'ok': True,
+            'range': {
+                'from': from_iso,
+                'to': to_iso,
+                'truncated_to_now': bool(truncated_to_now)
+            },
+            'summary': curr_sum,
+            'comparison': comparison,
+            'by_product': current.get('by_product') or [],
+            'by_category': current.get('by_category') or [],
+            'by_channel': current.get('by_channel') or [],
+            'order_count': int(current.get('order_count') or 0),
+            'previous_order_count': int(previous.get('order_count') or 0),
+            'leaders': current.get('leaders') or {}
+        }
+        top_profit = out['by_product'][:15] if out['by_product'] else []
+        bottom_margin = sorted(
+            [x for x in (out['by_product'] or []) if x.get('revenue', 0) > 0 and x.get('qty', 0) >= 1],
+            key=lambda x: x.get('margin_percent', 0)
+        )[:10]
+        out['top_by_profit'] = top_profit
+        out['bottom_by_margin'] = bottom_margin
+        return jsonify(out)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/costs/kpis_small', methods=['GET'])
+def costs_kpis_small():
+    try:
+        if not is_authed():
+            return jsonify({'error': 'no autorizado'}), 401
+        tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+        if not _session_tenant_matches(tenant_slug):
+            return jsonify({'error': 'acceso denegado al tenant'}), 403
+        from_raw = request.args.get('from')
+        to_raw = request.args.get('to')
+        from_dt, to_dt, from_iso, to_iso, truncated_to_now = _resolve_sales_range(from_raw, to_raw)
+        payload = _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now)
+        s = payload['summary']
+        return jsonify({
+            'ok': True,
+            'range': {'from': from_iso, 'to': to_iso, 'truncated_to_now': bool(truncated_to_now)},
+            'kpis': {
+                'net_sales': int(s.get('net_sales') or 0),
+                'total_cost_of_goods': int(s.get('total_cost_of_goods') or 0),
+                'gross_profit': int(s.get('gross_profit') or 0),
+                'gross_margin_percent': float(s.get('gross_margin_percent') or 0.0),
+                'products_without_cost': int(s.get('products_without_cost') or 0),
+                'order_count': int(payload.get('order_count') or 0)
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @bp.route('/costs/products_template', methods=['GET'])
