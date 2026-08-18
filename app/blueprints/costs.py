@@ -1264,6 +1264,16 @@ def costs_import_apply():
                 )
                 updated += 1
         conn.commit()
+        remaining_without_cost = 0
+        try:
+            cur.execute(
+                "SELECT COUNT(*) FROM products WHERE tenant_slug = ? AND active = 1 AND (COALESCE(cost_price, 0) = 0)",
+                (tenant_slug,)
+            )
+            rw = cur.fetchone()
+            remaining_without_cost = int(rw[0] if rw else 0)
+        except Exception:
+            remaining_without_cost = 0
     except Exception as e:
         try:
             conn.rollback()
@@ -1278,6 +1288,8 @@ def costs_import_apply():
             'created': created,
             'updated': updated,
             'skipped': skipped,
+            'unchanged': skipped,
+            'remaining_without_cost': remaining_without_cost,
             'errors': plan.get('errors_count') or 0
         }
     })

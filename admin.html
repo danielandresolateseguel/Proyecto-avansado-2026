@@ -3964,6 +3964,12 @@
           <button id="inv-import-xlsx-btn" style="background-color:#2196F3; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Importar Excel</button>
           <button id="inv-download-xlsx-template" style="background-color:#607d8b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Descargar plantilla</button>
           <button id="inv-export-inventory-xlsx" style="background-color:#455a64; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Exportar inventario</button>
+          <div style="display:flex; align-items:center; gap:6px; padding-left:6px; border-left:1px solid #e2e8f0; margin-left:4px;">
+            <span class="small" style="color:#334155; font-weight:700;">Costos:</span>
+            <button id="costs-download-template" style="background-color:#16a34a; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">⬇ Plantilla de Costos</button>
+            <button id="costs-import-open" style="background-color:#ca8a04; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">⬆ Importar Costos</button>
+            <input type="file" id="costs-import-file" accept=".xlsx" style="display:none;">
+          </div>
           <input type="file" id="inv-import-xlsx-file" accept=".xlsx" style="display:none;">
           <span id="inv-hint" class="small">Editar stock requiere login</span>
         </div>
@@ -4478,6 +4484,42 @@
                 <input type="checkbox" id="edit-prod-active" style="width:auto;"> Activo (visible en menú)
               </label>
             </div>
+
+            <div style="margin-top:18px; padding-top:16px; border-top:2px dashed #e2e8f0;">
+              <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                <h4 style="margin:0; font-size:15px; color:#0f172a;">💰 Costos y Margen</h4>
+                <span class="small" id="edit-prod-cost-mode-badge" style="background:#eef2ff; color:#3730a3; padding:3px 8px; border-radius:999px; font-weight:700;">Costo Fijo</span>
+              </div>
+              <div class="edit-form-group">
+                <label>Costo Unitario ($)
+                  <span class="small" style="color:#64748b; font-weight:400;">· lo que realmente te cuesta producir o comprar</span>
+                </label>
+                <div style="display:flex; gap:6px;">
+                  <input type="number" id="edit-prod-cost-price" min="0" placeholder="Ej: 2400" style="flex:1;">
+                  <button type="button" id="edit-prod-calcmargin-btn" style="background:#0ea5e9; color:#fff; border:none; padding:0 12px; border-radius:4px; cursor:pointer; white-space:nowrap;">Calc. Margen</button>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                <div class="edit-form-group">
+                  <label>Tipo de Costo</label>
+                  <select id="edit-prod-cost-type" style="width:100%; padding:8px;">
+                    <option value="fixed">Fijo (manual)</option>
+                    <option value="recipe">Receta (Escandallo)</option>
+                    <option value="percentage">% sobre precio</option>
+                  </select>
+                </div>
+                <div class="edit-form-group">
+                  <label>Margen Sugerido (%)</label>
+                  <input type="number" id="edit-prod-margin-percent" min="0" max="100" placeholder="Ej: 60">
+                </div>
+              </div>
+              <div id="edit-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
+                <div><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="edit-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
+                <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="edit-prod-margin-real">0%</b></div>
+                <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="edit-prod-price-suggested">—</b></div>
+              </div>
+            </div>
+
             <div class="small" style="color:#666; margin-top:8px;" id="edit-prod-last-mod"></div>
           </div>
           <div class="preview-section" style="background:#f9f9f9; padding:20px; border-radius:8px; display:flex; justify-content:center; align-items:flex-start;">
@@ -5281,6 +5323,116 @@
     const prodEditAddonsMax = document.getElementById('edit-prod-addons-max');
     const prodEditAddonsOptions = document.getElementById('edit-prod-addons-options');
     const prodEditAddonsAddOption = document.getElementById('edit-prod-addons-add-option');
+
+    const prodEditCostPrice = document.getElementById('edit-prod-cost-price');
+    const prodEditCostType = document.getElementById('edit-prod-cost-type');
+    const prodEditMarginPct = document.getElementById('edit-prod-margin-percent');
+    const prodEditCostBadge = document.getElementById('edit-prod-cost-mode-badge');
+    const prodEditCostSummary = document.getElementById('edit-prod-cost-summary');
+    const prodEditProfitUnit = document.getElementById('edit-prod-profit-unit');
+    const prodEditMarginReal = document.getElementById('edit-prod-margin-real');
+    const prodEditPriceSuggested = document.getElementById('edit-prod-price-suggested');
+    const prodEditCalcMarginBtn = document.getElementById('edit-prod-calcmargin-btn');
+
+    function refreshCostSummaryUI(scope) {
+      const isEdit = scope === 'edit';
+      const priceEl = isEdit ? prodEditPrice : document.getElementById('create-prod-price');
+      const costEl = isEdit ? prodEditCostPrice : document.getElementById('create-prod-cost-price');
+      const marginEl = isEdit ? prodEditMarginPct : document.getElementById('create-prod-margin-percent');
+      const sumEl = isEdit ? prodEditCostSummary : document.getElementById('create-prod-cost-summary');
+      const profitEl = isEdit ? prodEditProfitUnit : document.getElementById('create-prod-profit-unit');
+      const realEl = isEdit ? prodEditMarginReal : document.getElementById('create-prod-margin-real');
+      const suggestedEl = isEdit ? prodEditPriceSuggested : document.getElementById('create-prod-price-suggested');
+      const badgeEl = isEdit ? prodEditCostBadge : document.getElementById('create-prod-cost-mode-badge');
+      const typeEl = isEdit ? prodEditCostType : document.getElementById('create-prod-cost-type');
+      if (!priceEl || !costEl || !marginEl || !sumEl) return;
+      const price = parseInt(String(priceEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const cost = parseInt(String(costEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const marginUser = parseInt(String(marginEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const typeVal = String((typeEl && typeEl.value) || 'fixed').toLowerCase();
+      if (badgeEl) {
+        if (typeVal === 'recipe') badgeEl.textContent = 'Receta / Escandallo';
+        else if (typeVal === 'percentage') badgeEl.textContent = '% sobre Precio';
+        else badgeEl.textContent = 'Costo Fijo';
+        badgeEl.style.background = typeVal === 'recipe' ? '#dcfce7' : (typeVal === 'percentage' ? '#fef3c7' : '#eef2ff');
+        badgeEl.style.color = typeVal === 'recipe' ? '#166534' : (typeVal === 'percentage' ? '#92400e' : '#3730a3');
+      }
+      const hasAny = price > 0 || cost > 0 || marginUser > 0;
+      if (!hasAny) {
+        sumEl.style.display = 'none';
+        return;
+      }
+      sumEl.style.display = 'flex';
+      if (priceEl && cost > 0) {
+        const profit = Math.max(0, price - cost);
+        if (profitEl) profitEl.textContent = '$' + new Intl.NumberFormat('es-AR').format(profit);
+      } else if (profitEl) {
+        profitEl.textContent = '$0';
+      }
+      if (realEl) {
+        const pct = price > 0 ? Math.round(((price - cost) / price) * 100) : 0;
+        realEl.textContent = pct + '%';
+        realEl.style.color = pct >= 50 ? '#2e7d32' : (pct >= 35 ? '#ca8a04' : '#c62828');
+      }
+      if (suggestedEl) {
+        if (marginUser > 0 && marginUser < 100 && cost > 0) {
+          const priceSuggested = Math.ceil(cost / (1 - (marginUser / 100)));
+          suggestedEl.textContent = '$' + new Intl.NumberFormat('es-AR').format(priceSuggested);
+        } else {
+          suggestedEl.textContent = '—';
+        }
+      }
+    }
+    function bindCostPanelListeners() {
+      if (!window.__costUI_bound) {
+        if (prodEditPrice) prodEditPrice.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (prodEditCostPrice) prodEditCostPrice.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (prodEditMarginPct) prodEditMarginPct.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (prodEditCostType) prodEditCostType.addEventListener('change', () => refreshCostSummaryUI('edit'));
+        if (prodEditCalcMarginBtn) {
+          prodEditCalcMarginBtn.addEventListener('click', () => {
+            const price = parseInt(String(prodEditPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            const cost = parseInt(String(prodEditCostPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            if (cost > 0 && price > cost) {
+              const margin = Math.round(((price - cost) / price) * 100);
+              prodEditMarginPct.value = String(margin);
+              refreshCostSummaryUI('edit');
+            } else if (prodEditMarginPct.value && prodEditCostPrice.value) {
+              const margin = parseFloat(prodEditMarginPct.value || '0');
+              if (margin > 0 && margin < 100) {
+                const suggested = Math.ceil(cost / (1 - (margin / 100)));
+                if (suggested > 0 && !prodEditPrice.value) {
+                  prodEditPrice.value = String(suggested);
+                }
+              }
+              refreshCostSummaryUI('edit');
+            }
+          });
+        }
+        const cp = document.getElementById('create-prod-price');
+        const cc = document.getElementById('create-prod-cost-price');
+        const cm = document.getElementById('create-prod-margin-percent');
+        const ct = document.getElementById('create-prod-cost-type');
+        const cb = document.getElementById('create-prod-calcmargin-btn');
+        if (cp) cp.addEventListener('input', () => refreshCostSummaryUI('create'));
+        if (cc) cc.addEventListener('input', () => refreshCostSummaryUI('create'));
+        if (cm) cm.addEventListener('input', () => refreshCostSummaryUI('create'));
+        if (ct) ct.addEventListener('change', () => refreshCostSummaryUI('create'));
+        if (cb) {
+          cb.addEventListener('click', () => {
+            const price = parseInt(String((cp && cp.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            const cost = parseInt(String((cc && cc.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            if (cost > 0 && price > cost && cm) {
+              cm.value = String(Math.round(((price - cost) / price) * 100));
+              refreshCostSummaryUI('create');
+            }
+          });
+        }
+        window.__costUI_bound = true;
+      }
+    }
+    bindCostPanelListeners();
+
     
     // Preview Elements
     const prevTitle = document.getElementById('preview-title');
@@ -6260,6 +6412,13 @@
       if (prodEditPosition) prodEditPosition.value = product.position || '';
       prodEditActive.checked = !!product.active;
       prodEditLastMod.textContent = product.last_modified ? 'Última modificación: ' + formatARDate(product.last_modified) : 'Sin modificaciones recientes';
+      if (prodEditCostPrice)  prodEditCostPrice.value = String(Math.max(0, parseInt(product.cost_price || 0, 10) || 0));
+      if (prodEditMarginPct)  prodEditMarginPct.value = String(Math.max(0, Math.min(100, parseInt(product.margin_percent || 0, 10) || 0)));
+      if (prodEditCostType) {
+        const ct = String(product.cost_type || 'fixed').trim().toLowerCase();
+        prodEditCostType.value = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
+      }
+      refreshCostSummaryUI('edit');
 
       // Preseleccionar categorías de filtro desde variants_json
       let existingSection = '';
@@ -6544,6 +6703,18 @@
                 stock: parseInt(prodEditStock.value || '0', 10),
                 active: prodEditActive.checked
             };
+            if (prodEditCostPrice) {
+              const cp = parseInt(String(prodEditCostPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+              payload.cost_price = Math.max(0, cp);
+            }
+            if (prodEditCostType) {
+              const ct = String(prodEditCostType.value || 'fixed').trim().toLowerCase();
+              payload.cost_type = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
+            }
+            if (prodEditMarginPct) {
+              const mv = parseInt(String(prodEditMarginPct.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+              payload.margin_percent = Math.max(0, Math.min(100, mv));
+            }
             const positionRaw = String(prodEditPosition && prodEditPosition.value || '').trim();
             if (positionRaw) {
                 payload.position = Math.max(1, parseInt(positionRaw, 10) || 1);
@@ -17909,6 +18080,115 @@
         }
       });
     }
+
+    const costsDownloadBtn = document.getElementById('costs-download-template');
+    const costsImportOpenBtn = document.getElementById('costs-import-open');
+    const costsImportFile = document.getElementById('costs-import-file');
+    if (costsDownloadBtn) {
+      costsDownloadBtn.addEventListener('click', () => {
+        if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
+        const slug = (tenantInput && tenantInput.value.trim()) || defaultSlug();
+        const url = new URL('/api/costs/products_template', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        window.open(url.toString(), '_blank');
+      });
+    }
+    if (costsImportOpenBtn && costsImportFile) {
+      costsImportOpenBtn.addEventListener('click', () => {
+        if (!isAuthed) { alert('Requiere sesión de administrador'); return; }
+        try { costsImportFile.click(); } catch (_) {}
+      });
+      costsImportFile.addEventListener('change', async () => {
+        const file = costsImportFile.files && costsImportFile.files[0];
+        if (!file) return;
+        if (!/\.xlsx$/i.test(file.name || '')) {
+          alert('Solo se permite .xlsx para importar costos');
+          costsImportFile.value = '';
+          return;
+        }
+        try {
+          if (!csrfToken) await fetchCSRF();
+          const slug = (tenantInput && tenantInput.value.trim()) || defaultSlug();
+          const urlPrew = new URL('/api/costs/import_preview', API_BASE);
+          urlPrew.searchParams.set('tenant_slug', slug);
+          const formData = new FormData();
+          formData.append('file', file);
+          const resp = await fetch(urlPrew.toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken || '' },
+            body: formData,
+            credentials: 'include'
+          });
+          const data = await resp.json().catch(() => ({}));
+          if (!resp.ok || !data || !data.ok) {
+            alert('Error al previsualizar: ' + String((data && data.error) || 'desconocido'));
+            costsImportFile.value = '';
+            return;
+          }
+          const summary = data.summary || {};
+          const toUpd = Number(summary.to_update || 0);
+          const toCreate = Number(summary.to_create || 0);
+          const noMatch = Number(summary.without_match || 0);
+          const unchangedNoCost = Number(summary.products_without_cost_in_db || 0);
+          const firstChanges = (Array.isArray(data.actions) ? data.actions.slice(0, 6) : []).map(a => {
+            if (!a) return '';
+            if (a.action === 'update') {
+              return `Fila ${a.row}: Actualizar → Costo $${a.from && a.from.cost_price} → $${a.to && a.to.cost_price}`;
+            }
+            if (a.action === 'create') {
+              return `Fila ${a.row}: Crear producto nuevo “${String(a.name || '').slice(0, 28)}”`;
+            }
+            if (a.action === 'skip') {
+              const reason = a.reason || 'sin cambios';
+              return `Fila ${a.row}: Salteado (${reason})`;
+            }
+            return '';
+          }).filter(Boolean).join('\n');
+          const resumen = `Resumen importación de costos:\n` +
+            `· Productos a ACTUALIZAR: ${toUpd}\n` +
+            `· Productos NUEVOS: ${toCreate}\n` +
+            `· Sin coincidencia (id/nombre no encontrado): ${noMatch}\n` +
+            `· Productos que seguirán SIN COSTO: ${unchangedNoCost}\n` +
+            (firstChanges ? `\nPrimeros cambios:\n${firstChanges}\n` : '') +
+            `\n¿Aplicar importación?`;
+          if (!confirm(resumen)) {
+            costsImportFile.value = '';
+            return;
+          }
+          const urlApply = new URL('/api/costs/import_apply', API_BASE);
+          urlApply.searchParams.set('tenant_slug', slug);
+          const fd2 = new FormData();
+          fd2.append('file', file);
+          if (data.assigned_ids) fd2.append('assigned_ids_json', JSON.stringify(data.assigned_ids || {}));
+          const resp2 = await fetch(urlApply.toString(), {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrfToken || '' },
+            body: fd2,
+            credentials: 'include'
+          });
+          const data2 = await resp2.json().catch(() => ({}));
+          if (!resp2.ok || !data2 || !data2.ok) {
+            alert('Error al aplicar importación: ' + String((data2 && data2.error) || 'desconocido'));
+            return;
+          }
+          try { await loadAdminMainMenuCategories(true); } catch (_) {}
+          try { await renderInventory(); } catch (_) {}
+          const sum = data2.summary || {};
+          alert(
+            `Importación de costos aplicada.\n` +
+            `- Creados: ${Number(sum.created || 0)}\n` +
+            `- Actualizados: ${Number(sum.updated || 0)}\n` +
+            `- Sin cambios: ${Number(sum.unchanged || 0)}\n` +
+            `- Productos aún sin costo: ${Number(sum.remaining_without_cost || 0)}`
+          );
+        } catch (e) {
+          console.error(e);
+          alert('Error al importar Excel de costos');
+        } finally {
+          costsImportFile.value = '';
+        }
+      });
+    }
     if (delPageSizeSelect) {
       delPageSizeSelect.addEventListener('change', async () => {
         deliveredLimit = parseInt(delPageSizeSelect.value, 10) || 50;
@@ -25565,6 +25845,42 @@
             <option value="combos">Combos</option>
           </select>
         </div>
+
+        <div style="margin-top:18px; padding-top:16px; border-top:2px dashed #e2e8f0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <h4 style="margin:0; font-size:15px; color:#0f172a;">💰 Costos y Margen</h4>
+            <span class="small" id="create-prod-cost-mode-badge" style="background:#eef2ff; color:#3730a3; padding:3px 8px; border-radius:999px; font-weight:700;">Costo Fijo</span>
+          </div>
+          <div class="edit-form-group">
+            <label>Costo Unitario ($)
+              <span class="small" style="color:#64748b; font-weight:400;">· lo que realmente te cuesta producir o comprar</span>
+            </label>
+            <div style="display:flex; gap:6px;">
+              <input type="number" id="create-prod-cost-price" min="0" placeholder="Ej: 2400" style="flex:1;">
+              <button type="button" id="create-prod-calcmargin-btn" style="background:#0ea5e9; color:#fff; border:none; padding:0 12px; border-radius:4px; cursor:pointer; white-space:nowrap;">Calc. Margen</button>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="edit-form-group">
+              <label>Tipo de Costo</label>
+              <select id="create-prod-cost-type" style="width:100%; padding:8px;">
+                <option value="fixed">Fijo (manual)</option>
+                <option value="recipe">Receta (Escandallo)</option>
+                <option value="percentage">% sobre precio</option>
+              </select>
+            </div>
+            <div class="edit-form-group">
+              <label>Margen Sugerido (%)</label>
+              <input type="number" id="create-prod-margin-percent" min="0" max="100" placeholder="Ej: 60">
+            </div>
+          </div>
+          <div id="create-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
+            <div><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="create-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
+            <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="create-prod-margin-real">0%</b></div>
+            <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="create-prod-price-suggested">—</b></div>
+          </div>
+        </div>
+
         <div class="edit-form-group">
           <label for="create-prod-file">Imagen del Producto</label>
           <input type="file" id="create-prod-file" accept="image/*">
@@ -26586,6 +26902,13 @@ document.addEventListener('DOMContentLoaded', () => {
       syncAddonsConfig(pAddonsEnabled, pAddonsConfig, pAddonsTitle, pAddonsMode, pAddonsMin, pAddonsMax);
       pFile.value = '';
       pImgUrl.value = '';
+      const pCost = document.getElementById('create-prod-cost-price');
+      const pCostType = document.getElementById('create-prod-cost-type');
+      const pMargin = document.getElementById('create-prod-margin-percent');
+      if (pCost) pCost.value = '';
+      if (pCostType) pCostType.value = 'fixed';
+      if (pMargin) pMargin.value = '';
+      refreshCostSummaryUI('create');
       if (pPacksEnabled) pPacksEnabled.checked = false;
       if (pPacksPanel) pPacksPanel.dataset.expanded = '0';
       bindAdminPacksConfigUI({ enabled: pPacksEnabled, panel: pPacksPanel, toggle: pPacksToggle, summary: pPacksSummary, container: pPacks });
@@ -26771,6 +27094,21 @@ document.addEventListener('DOMContentLoaded', () => {
         food_categories: selectedCats,
         image_url: pImgUrl.value
       };
+      const cCreateCost = document.getElementById('create-prod-cost-price');
+      const cCreateCostType = document.getElementById('create-prod-cost-type');
+      const cCreateMargin = document.getElementById('create-prod-margin-percent');
+      if (cCreateCost) {
+        const cc = parseInt(String(cCreateCost.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+        payload.cost_price = Math.max(0, cc);
+      }
+      if (cCreateCostType) {
+        const cv = String(cCreateCostType.value || 'fixed').trim().toLowerCase();
+        payload.cost_type = ['fixed', 'recipe', 'percentage'].includes(cv) ? cv : 'fixed';
+      }
+      if (cCreateMargin) {
+        const mm = parseInt(String(cCreateMargin.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+        payload.margin_percent = Math.max(0, Math.min(100, mm));
+      }
       if (packs.length) {
         payload.variants = { packs: packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier })) };
       }
