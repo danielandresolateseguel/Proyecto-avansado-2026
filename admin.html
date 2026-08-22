@@ -1006,6 +1006,23 @@
     .analytics-card.accent-cancel { background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%); border-color:#fed7aa; }
     .analytics-card.accent-volume { background: linear-gradient(135deg, #f5f3ff 0%, #ffffff 100%); border-color:#ddd6fe; }
     .analytics-card.accent-extra { background: linear-gradient(135deg, #effdf7 0%, #ffffff 100%); border-color:#a7f3d0; }
+    .analytics-card.accent-costs { background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%); border-color:#fecaca; }
+    .analytics-card.accent-profit { background: linear-gradient(135deg, #ecfdf5 0%, #ffffff 100%); border-color:#a7f3d0; }
+    .analytics-card.accent-margin { background: linear-gradient(135deg, #fefce8 0%, #ffffff 100%); border-color:#fde68a; }
+    .costs-delta { font-weight:800; font-size:12px; padding:2px 8px; border-radius:999px; display:inline-flex; align-items:center; gap:4px; }
+    .costs-delta.up { background:#dcfce7; color:#166534; }
+    .costs-delta.down { background:#fee2e2; color:#991b1b; }
+    .costs-delta.flat { background:#e2e8f0; color:#475569; }
+    .costs-margin-pill { padding:2px 8px; border-radius:999px; font-weight:800; font-size:12px; color:#fff; }
+    .costs-margin-good { background:#15803d; }
+    .costs-margin-mid { background:#ca8a04; }
+    .costs-margin-bad { background:#b91c1c; }
+    .costs-margin-none { background:#64748b; }
+    .costs-tr-row-missing { background:#fff7ed; }
+    .costs-tr-row-good td { background:#f0fdf4; }
+    .costs-tr-row-mid td { background:#fffbeb; }
+    .costs-tr-row-bad td { background:#fef2f2; }
+    .costs-meta-empty { color:#64748b; font-size:12px; text-align:center; padding:16px; }
     .analytics-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:12px; align-items:start; }
     .analytics-block { background:#fff; border:1px solid var(--kds-border); border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:8px; height:320px; }
     .analytics-block h3 { margin:0; color:#425b76; font-size:15px; }
@@ -4079,6 +4096,95 @@
             <div class="analytics-block">
               <h3>Tendencia Diaria</h3>
               <div id="analytics-by-day" class="analytics-scroll-body"></div>
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <div id="costs-analytics-wrap">
+      <details id="costs-analytics-panel" class="module-panel">
+        <summary>Análisis de Costos y Rentabilidad</summary>
+        <div class="analytics-shell">
+          <div class="analytics-toolbar">
+            <label>Período
+              <select id="costs-analytics-range">
+                <option value="today" selected>Hoy</option>
+                <option value="yesterday">Ayer</option>
+                <option value="week">Semana actual</option>
+                <option value="lastweek">Semana pasada</option>
+                <option value="last7">Últimos 7 días</option>
+                <option value="month">Mes actual</option>
+                <option value="custom">Personalizado</option>
+              </select>
+            </label>
+            <label>Desde
+              <input id="costs-analytics-from" type="date" />
+            </label>
+            <label>Hasta
+              <input id="costs-analytics-to" type="date" />
+            </label>
+            <button id="costs-analytics-apply" style="background:#1565c0; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;">Actualizar</button>
+            <button id="costs-analytics-reload" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:8px 14px; border-radius:8px; cursor:pointer;">Recargar</button>
+            <div id="costs-analytics-range-label" class="small" style="color:#5b7083;"></div>
+          </div>
+          <div id="costs-analytics-summary" class="analytics-summary"></div>
+          <div id="costs-analytics-leaders" class="analytics-grid" style="display:none;"></div>
+          <div class="analytics-grid">
+            <div class="analytics-block">
+              <h3>Top 15 — Más Rentables</h3>
+              <div id="costs-analytics-top-profit" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Bottom 10 — Peor Margen</h3>
+              <div id="costs-analytics-bottom-margin" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Por Categoría</h3>
+              <div id="costs-analytics-by-category" class="analytics-scroll-body"></div>
+            </div>
+            <div class="analytics-block">
+              <h3>Por Canal (Salón/Delivery/Rapi)</h3>
+              <div id="costs-analytics-by-channel" class="analytics-scroll-body"></div>
+            </div>
+          </div>
+          <div style="margin-top:16px; background:#fff; border:1px solid var(--kds-border); border-radius:12px; padding:12px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+              <h3 style="margin:0;">Rentabilidad por Producto</h3>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <input id="costs-analytics-product-search" placeholder="Buscar producto..." style="padding:7px 10px; border-radius:8px; border:1px solid #d1d5db; min-width:220px;" />
+                <select id="costs-analytics-product-sort" style="padding:7px 10px; border-radius:8px; border:1px solid #d1d5db;">
+                  <option value="profit_desc">Ganancia ↓</option>
+                  <option value="profit_asc">Ganancia ↑</option>
+                  <option value="margin_desc">Margen % ↓</option>
+                  <option value="margin_asc">Margen % ↑</option>
+                  <option value="qty_desc">Unidades ↓</option>
+                  <option value="revenue_desc">Ventas ↓</option>
+                  <option value="name_asc">Nombre A→Z</option>
+                </select>
+              </div>
+            </div>
+            <div style="overflow:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                  <tr style="background:#f8fafc; color:#475569;">
+                    <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Producto</th>
+                    <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Unid.</th>
+                    <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Ventas $</th>
+                    <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e2e8f0;">CMV $</th>
+                    <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Ganancia $</th>
+                    <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Margen %</th>
+                    <th style="text-align:center; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Costo</th>
+                  </tr>
+                </thead>
+                <tbody id="costs-analytics-product-tbody">
+                  <tr><td colspan="7" class="small" style="text-align:center; padding:18px; color:#64748b;">Cargando...</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="costs-analytics-product-pagination" style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+              <div id="costs-analytics-product-meta" class="small" style="color:#64748b;"></div>
+              <div id="costs-analytics-product-nav" style="display:flex; gap:6px;"></div>
             </div>
           </div>
         </div>
@@ -18189,6 +18295,538 @@
         }
       });
     }
+
+    // --------- Módulo: Análisis de Costos y Rentabilidad (Fase 5-B) ---------
+    const costsPanel = document.getElementById('costs-analytics-panel');
+    const costsSummaryEl = document.getElementById('costs-analytics-summary');
+    const costsRangeSel = document.getElementById('costs-analytics-range');
+    const costsFromInp = document.getElementById('costs-analytics-from');
+    const costsToInp = document.getElementById('costs-analytics-to');
+    const costsApplyBtn = document.getElementById('costs-analytics-apply');
+    const costsReloadBtn = document.getElementById('costs-analytics-reload');
+    const costsRangeLabel = document.getElementById('costs-analytics-range-label');
+    const costsLeadersEl = document.getElementById('costs-analytics-leaders');
+    const costsTopProfitEl = document.getElementById('costs-analytics-top-profit');
+    const costsBottomMarginEl = document.getElementById('costs-analytics-bottom-margin');
+    const costsByCatEl = document.getElementById('costs-analytics-by-category');
+    const costsByChanEl = document.getElementById('costs-analytics-by-channel');
+    const costsProdTbody = document.getElementById('costs-analytics-product-tbody');
+    const costsProdSearch = document.getElementById('costs-analytics-product-search');
+    const costsProdSort = document.getElementById('costs-analytics-product-sort');
+    const costsProdMeta = document.getElementById('costs-analytics-product-meta');
+    const costsProdNav = document.getElementById('costs-analytics-product-nav');
+    window.__costsAnalyticsLastData = null;
+    window.__costsAnalyticsPageIdx = 0;
+    window.__costsAnalyticsPageSize = 50;
+
+    function costsIntl$(n) {
+      const v = Number(n || 0);
+      try { return new Intl.NumberFormat('es-AR').format(Math.round(v)); }
+      catch (_) { return String(Math.round(v)); }
+    }
+    function costsEscapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+        c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : c === '"' ? '&quot;' : '&#39;'
+      ));
+    }
+    function costsMarginClass(m) {
+      if (m == null || isNaN(m)) return 'none';
+      const n = Number(m);
+      if (n >= 50) return 'good';
+      if (n >= 35) return 'mid';
+      if (n > 0) return 'bad';
+      return 'bad';
+    }
+    function costsRowBgClass(m) {
+      if (m == null || isNaN(m)) return '';
+      const n = Number(m);
+      if (n >= 50) return 'costs-tr-row-good';
+      if (n >= 35) return 'costs-tr-row-mid';
+      if (n > 0) return 'costs-tr-row-bad';
+      return 'costs-tr-row-bad';
+    }
+    function costsDeltaClassFromVals(cur, prev, lowerIsBetter) {
+      if (cur == null || prev == null || prev === 0 || isNaN(Number(cur)) || isNaN(Number(prev))) return { cls: 'flat', arrow: '–', sign: '' };
+      const c = Number(cur), p = Number(prev);
+      if (c === p) return { cls: 'flat', arrow: '▬', sign: '' };
+      const better = lowerIsBetter ? (c < p) : (c > p);
+      return {
+        cls: better ? 'up' : 'down',
+        arrow: better ? '▲' : '▼',
+        sign: c >= p ? '+' : '−'
+      };
+    }
+    function costsDeltaPct(cur, prev) {
+      if (prev == null || Number(prev) === 0 || isNaN(Number(cur)) || isNaN(Number(prev))) return null;
+      const c = Number(cur), p = Number(prev);
+      return ((c - p) / Math.abs(p)) * 100;
+    }
+    function costsBuildDelta(cur, prev, lowerIsBetter, isMarginPp) {
+      if (prev == null || (isNaN(Number(prev)) && !isMarginPp)) {
+        return `<span class="costs-delta flat">▬ Sin comparar</span>`;
+      }
+      if (isMarginPp) {
+        // Diferencia en puntos porcentuales
+        const d = (Number(cur || 0)) - Number(prev || 0);
+        const dRounded = Math.round(d * 10) / 10;
+        const info = (d > 0) ? { cls: 'up', arrow: '▲', sign: '+' } : (d < 0 ? { cls: 'down', arrow: '▼', sign: '−' } : { cls: 'flat', arrow: '▬', sign: '' });
+        return `<span class="costs-delta ${info.cls}" title="Margen período anterior: ${Number(prev || 0).toFixed(1)} pp">${info.arrow} ${info.sign}${Math.abs(dRounded)} pp</span>`;
+      }
+      const pct = costsDeltaPct(cur, prev);
+      if (pct == null) return `<span class="costs-delta flat">▬ Sin comparar</span>`;
+      const info = costsDeltaClassFromVals(cur, prev, !!lowerIsBetter);
+      const diff = Number(cur || 0) - Number(prev || 0);
+      const prefix = lowerIsBetter
+        ? (info.cls === 'up' ? 'Ahorro' : 'Gasto extra')
+        : (info.cls === 'up' ? 'Ganancia adicional' : 'Pérdida vs período');
+      return `<span class="costs-delta ${info.cls}" title="${prefix}: $${costsIntl$(Math.abs(diff))}">${info.arrow} ${info.sign}${Math.abs(Math.round(pct))}%</span>`;
+    }
+    function costsRenderEmptyKpi(label, accent, extraSub) {
+      return `<div class="analytics-card ${accent || ''}"><div class="label">${costsEscapeHtml(label)}</div><div class="value">$0</div><div class="sub">${costsEscapeHtml(extraSub || 'Sin datos en el período')}</div></div>`;
+    }
+
+    function costsRenderKpiCards(data) {
+      const sum = (data && data.summary) ? data.summary : {};
+      const comp = (data && data.comparison && data.comparison.current && data.comparison.previous) ? data.comparison : null;
+      const cur = comp ? comp.current : {};
+      const prv = comp ? comp.previous : {};
+
+      const netSales = Number(sum.net_sales || 0);
+      const cogs = Number(sum.total_cost_of_goods || 0);
+      const gp = Number(sum.gross_profit || 0);
+      const gmPct = sum.gross_margin_percent != null ? Number(sum.gross_margin_percent) : null;
+      const orderCount = Number(sum.order_count || 0);
+      const withoutCost = Number(sum.products_without_cost || 0);
+      const blindRev = Number(sum.blind_revenue || 0);
+
+      const kpis = [
+        {
+          label: 'Ventas Netas',
+          value: `$${costsIntl$(netSales)}`,
+          sub: (netSales > 0 && blindRev > 0) ? `⚠ $${costsIntl$(blindRev)} vendidos sin costo cargado` : `${orderCount} pedidos entregados`,
+          accent: 'accent-sales',
+          deltaHtml: costsBuildDelta(cur.net_sales, prv.net_sales, false)
+        },
+        {
+          label: 'CMV (Costo Vendido)',
+          value: `$${costsIntl$(cogs)}`,
+          sub: (cogs > 0 && netSales > 0) ? `= ${Math.round((cogs / netSales) * 100)}% de ventas` : (withoutCost > 0 ? `${withoutCost} productos sin costo` : ''),
+          accent: 'accent-costs',
+          deltaHtml: costsBuildDelta(cur.total_cost_of_goods, prv.total_cost_of_goods, true)
+        },
+        {
+          label: 'Ganancia Bruta',
+          value: `$${costsIntl$(gp)}`,
+          sub: (netSales > 0 && blindRev > 0) ? `No incluye $${costsIntl$(blindRev)} vendidos con costo 0` : (orderCount > 0 ? `≈ $${costsIntl$(orderCount ? gp / orderCount : 0)}/pedido` : ''),
+          accent: 'accent-profit',
+          deltaHtml: costsBuildDelta(cur.gross_profit, prv.gross_profit, false)
+        },
+        {
+          label: 'Margen Bruto %',
+          value: (gmPct != null ? `${gmPct.toFixed(1)}%` : '—'),
+          sub: 'Ganancia bruta ÷ Ventas netas · pp vs período ant.',
+          accent: 'accent-margin',
+          deltaHtml: costsBuildDelta(
+            (cur.gross_margin_percent != null ? Number(cur.gross_margin_percent) : null),
+            (prv.gross_margin_percent != null ? Number(prv.gross_margin_percent) : null),
+            false,
+            true
+          )
+        },
+        {
+          label: 'Pedidos Entregados',
+          value: `${costsIntl$(orderCount)}`,
+          sub: (orderCount > 0 ? `Ticket promedio $${costsIntl$(orderCount ? netSales / orderCount : 0)}` : 'Sin pedidos'),
+          accent: 'accent-orders',
+          deltaHtml: costsBuildDelta(cur.order_count, prv.order_count, false)
+        },
+        {
+          label: (withoutCost > 0 ? `⚠ Productos sin costo` : 'Productos sin costo'),
+          value: `${costsIntl$(withoutCost)}`,
+          sub: (withoutCost > 0
+            ? `$${costsIntl$(blindRev)} ciegos — Cargalos en Inventario`
+            : 'Todos los productos tienen costo cargado ✅'),
+          accent: (withoutCost > 0 ? 'accent-cancel' : 'accent-extra'),
+          deltaHtml: ''
+        }
+      ];
+
+      costsSummaryEl.innerHTML = kpis.map(k => {
+        const parts = [
+          `<div class="analytics-card ${k.accent}">`,
+          `<div class="label">${costsEscapeHtml(k.label)}</div>`,
+          `<div class="value">${k.value}</div>`,
+          (k.sub ? `<div class="sub">${costsEscapeHtml(k.sub)}</div>` : ''),
+          (k.deltaHtml ? `<div style="margin-top:6px;">${k.deltaHtml}</div>` : ''),
+          `</div>`
+        ];
+        return parts.join('');
+      }).join('');
+    }
+
+    function costsRenderTopList(containerEl, items, type) {
+      if (!containerEl) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        containerEl.innerHTML = `<div class="costs-meta-empty">Sin datos en el período. <br><br>💡 Recordá: cargar costos en Inventario y correr backfill para que los pedidos históricos aparezcan aquí.</div>`;
+        return;
+      }
+      const maxVal = Math.max(1, ...items.map(it => Number(it.gross_profit || it.revenue || it.qty || 1)));
+      const rows = items.map(it => {
+        const name = String(it.name || it.product_name || '(sin nombre)').slice(0, 42);
+        const qty = Number(it.qty || 0);
+        const rev = Number(it.revenue || 0);
+        const gp = Number(it.gross_profit || 0);
+        const m = (it.gross_margin_percent != null) ? Number(it.gross_margin_percent) : null;
+        const hasCost = !!(it.missing_cost_count == null ? true : (Number(it.missing_cost_count || 0) < qty));
+        const mcCls = costsMarginClass(m);
+        const mTxt = (m == null || isNaN(m)) ? '—' : `${m.toFixed(1)}%`;
+        const barValue = (type === 'bottom')
+          ? (rev > 0 ? Math.min(100, Math.abs(Number(gp)) / Math.max(1, rev) * 220) : 0)
+          : Math.min(100, (Math.abs(Number(gp)) / maxVal) * 100);
+        const barColor = (type === 'bottom') ? '#f87171' : '#10b981';
+        return `
+          <div style="display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:start; padding:7px 0; border-bottom:1px dashed #e5e7eb;">
+            <div style="min-width:0;">
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                <div style="font-weight:700; color:#0f172a; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;" title="${costsEscapeHtml(String(it.name || it.product_name || ''))}">${costsEscapeHtml(name)}</div>
+                ${!hasCost ? '<span title="Al menos una venta se realizó con costo 0" style="padding:1px 6px; background:#fff7ed; color:#9a3412; border-radius:999px; font-size:10px; font-weight:800;">⚠ COSTO PARCIAL</span>' : ''}
+                <span class="costs-margin-pill costs-margin-${mcCls}">${mTxt}</span>
+              </div>
+              <div class="small" style="color:#64748b; margin-top:3px;">${qty} unid. · Vta $${costsIntl$(rev)} · CMV $${costsIntl$(Math.max(0, rev - gp))}</div>
+              <div style="height:6px; background:#f1f5f9; border-radius:999px; margin-top:6px; overflow:hidden;">
+                <div style="width:${barValue}%; height:100%; background:${barColor};"></div>
+              </div>
+            </div>
+            <div style="text-align:right; white-space:nowrap;">
+              <div style="font-weight:900; color:${gp >= 0 ? '#15803d' : '#b91c1c'}; font-size:15px;">${gp >= 0 ? '+' : '−'}$${costsIntl$(Math.abs(gp))}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      containerEl.innerHTML = rows;
+    }
+
+    function costsRenderAggList(containerEl, items, titleType) {
+      if (!containerEl) return;
+      if (!Array.isArray(items) || items.length === 0) {
+        containerEl.innerHTML = `<div class="costs-meta-empty">Sin datos en el período.</div>`;
+        return;
+      }
+      const maxRev = Math.max(1, ...items.map(it => Number(it.revenue || 1)));
+      let totalRev = 0, totalGP = 0;
+      items.forEach(it => { totalRev += Number(it.revenue || 0); totalGP += Number(it.gross_profit || 0); });
+      const rows = items.map(it => {
+        const k = titleType === 'category' ? 'category' : 'channel';
+        const nameRaw = it[k] || it.group_name || '(sin clasificar)';
+        const name = (nameRaw === '' || nameRaw == null) ? '(sin clasificar)' : String(nameRaw);
+        const rev = Number(it.revenue || 0);
+        const gp = Number(it.gross_profit || 0);
+        const cmv = Math.max(0, rev - gp);
+        const gm = (rev > 0) ? (gp / rev) * 100 : null;
+        const pctRev = (totalRev > 0) ? (rev / totalRev) * 100 : 0;
+        const barW = Math.max(1, (rev / maxRev) * 100);
+        const mcCls = costsMarginClass(gm);
+        const mTxt = (gm == null || isNaN(gm)) ? '—' : `${gm.toFixed(1)}%`;
+        return `
+          <div style="padding:7px 0; border-bottom:1px dashed #e5e7eb;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+              <div style="min-width:0; display:flex; align-items:center; gap:6px;">
+                <span style="font-weight:700; color:#0f172a; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${costsEscapeHtml(name)}">${costsEscapeHtml(name.slice(0, 30))}</span>
+                <span class="costs-margin-pill costs-margin-${mcCls}">${mTxt}</span>
+              </div>
+              <div style="text-align:right; white-space:nowrap; font-weight:800; color:${gp >= 0 ? '#15803d' : '#b91c1c'};">${gp >= 0 ? '+' : '−'}$${costsIntl$(Math.abs(gp))}</div>
+            </div>
+            <div class="small" style="color:#64748b; margin-top:2px;">$${costsIntl$(rev)} · CMV $${costsIntl$(cmv)} · ${pctRev.toFixed(0)}% total</div>
+            <div style="height:5px; background:#f1f5f9; border-radius:999px; margin-top:5px; overflow:hidden;">
+              <div style="width:${barW}%; height:100%; background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%);"></div>
+            </div>
+          </div>`;
+      }).join('');
+      containerEl.innerHTML = rows;
+    }
+
+    function costsRenderLeaders(data) {
+      if (!costsLeadersEl) return;
+      const L = (data && data.leaders) ? data.leaders : null;
+      if (!L || (L.best_profit == null && L.worst_margin == null && L.best_category == null)) {
+        costsLeadersEl.style.display = 'none';
+        return;
+      }
+      costsLeadersEl.style.display = 'grid';
+      const cards = [];
+      if (L.best_profit) {
+        cards.push(`<div class="analytics-block" style="height:auto;">
+          <h3>🏆 Producto más rentable</h3>
+          <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.best_profit.name || L.best_profit.product_name || '').slice(0, 40) || '—')}</div>
+          <div style="margin-top:6px; font-size:14px; font-weight:800; color:#15803d;">+$${costsIntl$(Number(L.best_profit.gross_profit || 0))}</div>
+          <div class="small" style="color:#64748b; margin-top:2px;">${Number(L.best_profit.qty || 0)} unid. · Margen ${L.best_profit.gross_margin_percent != null ? Number(L.best_profit.gross_margin_percent).toFixed(1) + '%' : '—'}</div>
+        </div>`);
+      }
+      if (L.worst_margin) {
+        cards.push(`<div class="analytics-block" style="height:auto;">
+          <h3>⚠️ Peor margen (≥1 venta)</h3>
+          <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.worst_margin.name || L.worst_margin.product_name || '').slice(0, 40) || '—')}</div>
+          <div style="margin-top:6px;"><span class="costs-margin-pill costs-margin-${costsMarginClass(L.worst_margin.gross_margin_percent)}">${L.worst_margin.gross_margin_percent != null ? Number(L.worst_margin.gross_margin_percent).toFixed(1) + '%' : '—'}</span></div>
+          <div class="small" style="color:#64748b; margin-top:4px;">$${costsIntl$(Number(L.worst_margin.revenue || 0))} vendidos · Ganancia $${costsIntl$(Number(L.worst_margin.gross_profit || 0))}</div>
+        </div>`);
+      }
+      if (L.best_category) {
+        cards.push(`<div class="analytics-block" style="height:auto;">
+          <h3>📊 Mejor categoría</h3>
+          <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.best_category.category || L.best_category.group_name || '').slice(0, 40) || '—')}</div>
+          <div style="margin-top:6px; font-size:14px; font-weight:800; color:#15803d;">+$${costsIntl$(Number(L.best_category.gross_profit || 0))}</div>
+          <div class="small" style="color:#64748b; margin-top:2px;">Margen ${L.best_category.gross_margin_percent != null ? Number(L.best_category.gross_margin_percent).toFixed(1) + '%' : '—'} · $${costsIntl$(Number(L.best_category.revenue || 0))} vendidos</div>
+        </div>`);
+      }
+      costsLeadersEl.innerHTML = cards.join('');
+    }
+
+    function costsRenderProductsTable(fullList) {
+      if (!costsProdTbody) return;
+      const searchTxt = String((costsProdSearch && costsProdSearch.value) || '').trim().toLowerCase();
+      const sortMode = (costsProdSort && costsProdSort.value) || 'profit_desc';
+      let arr = Array.isArray(fullList) ? fullList.slice() : [];
+      if (searchTxt) {
+        arr = arr.filter(p => {
+          const n = String(p.name || p.product_name || '').toLowerCase();
+          const id = String(p.product_id || p.id || '').toLowerCase();
+          return n.includes(searchTxt) || id.includes(searchTxt);
+        });
+      }
+      const compareNum = (keyAsc, keyDesc, modeArr) => {
+        const asc = modeArr[1] === 'asc';
+        const key = modeArr[0];
+        return (a, b) => {
+          const av = Number(a[key] || 0), bv = Number(b[key] || 0);
+          return asc ? av - bv : bv - av;
+        };
+      };
+      switch (sortMode) {
+        case 'profit_asc': arr.sort((a, b) => Number(a.gross_profit || 0) - Number(b.gross_profit || 0)); break;
+        case 'profit_desc': arr.sort((a, b) => Number(b.gross_profit || 0) - Number(a.gross_profit || 0)); break;
+        case 'margin_asc': arr.sort((a, b) => Number(a.gross_margin_percent || -Infinity) - Number(b.gross_margin_percent || -Infinity)); break;
+        case 'margin_desc': arr.sort((a, b) => Number(b.gross_margin_percent || -Infinity) - Number(a.gross_margin_percent || -Infinity)); break;
+        case 'qty_desc': arr.sort((a, b) => Number(b.qty || 0) - Number(a.qty || 0)); break;
+        case 'revenue_desc': arr.sort((a, b) => Number(b.revenue || 0) - Number(a.revenue || 0)); break;
+        case 'name_asc': arr.sort((a, b) => String(a.name || a.product_name || '').localeCompare(String(b.name || b.product_name || ''), 'es')); break;
+      }
+      const total = arr.length;
+      const sz = window.__costsAnalyticsPageSize;
+      const pages = Math.max(1, Math.ceil(total / sz));
+      let idx = Math.max(0, Math.min(pages - 1, Number(window.__costsAnalyticsPageIdx || 0)));
+      const start = idx * sz;
+      const page = arr.slice(start, start + sz);
+
+      if (page.length === 0) {
+        costsProdTbody.innerHTML = `<tr><td colspan="7" class="costs-meta-empty">${searchTxt ? 'Sin productos que coincidan con la búsqueda.' : 'Sin datos en el período.'}</td></tr>`;
+      } else {
+        costsProdTbody.innerHTML = page.map(it => {
+          const nameRaw = String(it.name || it.product_name || '(sin nombre)');
+          const pid = String(it.product_id || it.id || '');
+          const qty = Number(it.qty || 0);
+          const rev = Number(it.revenue || 0);
+          const cmv = Number(it.total_cost || 0);
+          const gp = Number(it.gross_profit || 0);
+          const m = (it.gross_margin_percent != null) ? Number(it.gross_margin_percent) : null;
+          const missing = qty > 0 ? Number(it.missing_cost_count || 0) : 0;
+          const hasMissing = missing > 0;
+          const missingCostTxt = hasMissing ? `<span title="${missing} de ${qty} ventas con costo 0 (snapshot). Cargar costo y correr backfill." style="padding:1px 6px; background:#fff7ed; color:#9a3412; border-radius:999px; font-size:10px; font-weight:800;">⚠ ${missing}/${qty}</span>` : (cmv === 0 && qty > 0 ? '<span title="Todas las ventas con costo 0. Cargar costo y correr backfill." style="padding:1px 6px; background:#fee2e2; color:#991b1b; border-radius:999px; font-size:10px; font-weight:800;">SIN COSTO</span>' : `<span title="Todas las unidades vendidas en este período tienen snapshot de costo." style="padding:1px 6px; background:#dcfce7; color:#166534; border-radius:999px; font-size:10px; font-weight:800;">OK</span>`);
+          const mTxt = (m == null || isNaN(m)) ? '—' : `${m.toFixed(1)}%`;
+          const mcCls = costsMarginClass(m);
+          const rowCls = costsRowBgClass(m);
+          return `<tr class="${rowCls}">
+            <td style="text-align:left; padding:8px 10px; border-bottom:1px solid #f1f5f9;">
+              <div style="font-weight:700; color:#0f172a;" title="${costsEscapeHtml(pid ? pid + ' · ' + nameRaw : nameRaw)}">${costsEscapeHtml(nameRaw.slice(0, 46))}</div>
+              ${pid ? `<div class="small" style="color:#64748b;">ID: ${costsEscapeHtml(pid)}</div>` : ''}
+            </td>
+            <td style="text-align:right; padding:8px 10px; border-bottom:1px solid #f1f5f9; font-variant-numeric:tabular-nums; color:#334155;">${costsIntl$(qty)}</td>
+            <td style="text-align:right; padding:8px 10px; border-bottom:1px solid #f1f5f9; font-variant-numeric:tabular-nums; color:#1d4ed8; font-weight:700;">$${costsIntl$(rev)}</td>
+            <td style="text-align:right; padding:8px 10px; border-bottom:1px solid #f1f5f9; font-variant-numeric:tabular-nums; color:#9a3412;">$${costsIntl$(cmv)}</td>
+            <td style="text-align:right; padding:8px 10px; border-bottom:1px solid #f1f5f9; font-variant-numeric:tabular-nums; font-weight:800; color:${gp >= 0 ? '#15803d' : '#b91c1c'};">${gp >= 0 ? '+' : '−'}$${costsIntl$(Math.abs(gp))}</td>
+            <td style="text-align:right; padding:8px 10px; border-bottom:1px solid #f1f5f9;"><span class="costs-margin-pill costs-margin-${mcCls}">${mTxt}</span></td>
+            <td style="text-align:center; padding:8px 10px; border-bottom:1px solid #f1f5f9;">${missingCostTxt}</td>
+          </tr>`;
+        }).join('');
+      }
+      if (costsProdMeta) {
+        costsProdMeta.textContent = `Mostrando ${total === 0 ? 0 : (start + 1)}-${Math.min(start + sz, total)} de ${total} productos${searchTxt ? ` (buscando: "${searchTxt}")` : ''}`;
+      }
+      if (costsProdNav) {
+        const btns = [];
+        btns.push(`<button ${idx <= 0 ? 'disabled' : ''} data-costs-nav="prev" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx <= 0 ? 'not-allowed' : 'pointer'}; color:#334155;">← Anterior</button>`);
+        btns.push(`<span class="small" style="align-self:center; color:#475569; padding:0 4px;">Pág. ${idx + 1} / ${pages}</span>`);
+        btns.push(`<button ${idx >= pages - 1 ? 'disabled' : ''} data-costs-nav="next" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx >= pages - 1 ? 'not-allowed' : 'pointer'}; color:#334155;">Siguiente →</button>`);
+        costsProdNav.innerHTML = btns.join('');
+        costsProdNav.querySelectorAll('button[data-costs-nav]').forEach(b => {
+          b.addEventListener('click', () => {
+            const dir = b.getAttribute('data-costs-nav');
+            if (dir === 'prev') window.__costsAnalyticsPageIdx = Math.max(0, idx - 1);
+            else window.__costsAnalyticsPageIdx = Math.min(pages - 1, idx + 1);
+            costsRenderProductsTable(fullList);
+          });
+        });
+      }
+    }
+
+    function costsGuessLocalDateYYYYMMDD(utcIsoLikeStr) {
+      // Convierte "2026-08-21T14:05:00" (o ISO con Z) a YYYY-MM-DD local.
+      if (!utcIsoLikeStr) return '';
+      let d;
+      try {
+        if (typeof utcIsoLikeStr === 'string' && !/Z$/.test(utcIsoLikeStr)) {
+          d = new Date(utcIsoLikeStr.replace(' ', 'T'));
+        } else {
+          d = new Date(utcIsoLikeStr);
+        }
+      } catch (_) { return ''; }
+      if (isNaN(d.getTime())) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+    function costsLocalToday() {
+      const d = new Date();
+      return costsGuessLocalDateYYYYMMDD(d);
+    }
+    function costsAddDaysLocal(ymd, days) {
+      const parts = String(ymd || '').split('-').map(x => parseInt(x, 10));
+      if (parts.length !== 3 || parts.some(isNaN)) return ymd;
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      d.setDate(d.getDate() + Number(days || 0));
+      return costsGuessLocalDateYYYYMMDD(d);
+    }
+
+    function costsUpdateRangeLabelAndDefaults() {
+      if (!costsRangeSel) return;
+      const v = costsRangeSel.value;
+      const today = costsLocalToday();
+      let from = today, to = today, label = '';
+      const dFrom = new Date(String(today).replace(/-/g, '/'));
+      const toDtYmd = (dt) => costsGuessLocalDateYYYYMMDD(dt.toISOString().replace('Z', '').slice(0, 10) + 'T00:00:00') ? costsAddDaysLocal(today, 0) : today;
+      switch (v) {
+        case 'today':
+          from = today; to = today;
+          label = `Hoy ${today}`;
+          break;
+        case 'yesterday':
+          from = costsAddDaysLocal(today, -1);
+          to = costsAddDaysLocal(today, -1);
+          label = `Ayer ${from}`;
+          break;
+        case 'last7':
+          from = costsAddDaysLocal(today, -6);
+          to = today;
+          label = `Últimos 7 días · ${from} → ${to}`;
+          break;
+        case 'week': {
+          const dow = (dFrom.getDay() + 6) % 7; // lunes=0
+          from = costsAddDaysLocal(today, -dow);
+          to = today;
+          label = `Semana actual · ${from} → ${to}`;
+          break;
+        }
+        case 'lastweek': {
+          const dow = (dFrom.getDay() + 6) % 7;
+          const monThis = costsAddDaysLocal(today, -dow);
+          from = costsAddDaysLocal(monThis, -7);
+          to = costsAddDaysLocal(monThis, -1);
+          label = `Semana pasada · ${from} → ${to}`;
+          break;
+        }
+        case 'month': {
+          const first = costsGuessLocalDateYYYYMMDD(new Date(dFrom.getFullYear(), dFrom.getMonth(), 1).toISOString().slice(0, 10));
+          // En local: reconstruir
+          const y = dFrom.getFullYear(), m = dFrom.getMonth();
+          from = costsGuessLocalDateYYYYMMDD(`${y}-${String(m + 1).padStart(2, '0')}-01`);
+          to = today;
+          label = `Mes actual · ${from} → ${to}`;
+          break;
+        }
+        case 'custom': {
+          from = (costsFromInp && costsFromInp.value) || costsAddDaysLocal(today, -6);
+          to = (costsToInp && costsToInp.value) || today;
+          label = `Personalizado · ${from} → ${to}`;
+          break;
+        }
+      }
+      if (costsFromInp && v !== 'custom') costsFromInp.value = from;
+      if (costsToInp && v !== 'custom') costsToInp.value = to;
+      if (costsRangeLabel) costsRangeLabel.textContent = label;
+      return { from, to, range: v };
+    }
+
+    async function costsLoadAnalytics() {
+      const r = costsUpdateRangeLabelAndDefaults();
+      if (!r) return;
+      if (costsSummaryEl) costsSummaryEl.innerHTML = Array(6).fill(0).map(() =>
+        `<div class="analytics-card"><div class="label">…</div><div class="value" style="color:#cbd5e1;">Cargando</div><div class="sub" style="color:#cbd5e1;">…</div></div>`
+      ).join('');
+      if (costsProdTbody) costsProdTbody.innerHTML = `<tr><td colspan="7" class="small" style="text-align:center; padding:18px; color:#64748b;">Actualizando datos…</td></tr>`;
+      try {
+        const slug = (tenantInput && tenantInput.value.trim()) || defaultSlug();
+        const url = new URL('/api/costs/analytics', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('range', r.range);
+        if (r.from) url.searchParams.set('from_date', r.from);
+        if (r.to) url.searchParams.set('to_date', r.to);
+        const resp = await fetch(url.toString(), { credentials: 'include' });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok || !data || !data.ok) {
+          const err = String((data && data.error) || 'Error desconocido');
+          if (costsSummaryEl) costsSummaryEl.innerHTML = `<div class="analytics-card accent-cancel"><div class="label">Error al cargar análisis</div><div class="value">Sin datos</div><div class="sub">${costsEscapeHtml(err)}</div></div>`;
+          throw new Error(err);
+        }
+        window.__costsAnalyticsLastData = data;
+        window.__costsAnalyticsPageIdx = 0;
+        costsRenderKpiCards(data);
+        costsRenderLeaders(data);
+        costsRenderTopList(costsTopProfitEl, Array.isArray(data.top15_by_profit) ? data.top15_by_profit : [], 'top');
+        costsRenderTopList(costsBottomMarginEl, Array.isArray(data.bottom10_by_margin) ? data.bottom10_by_margin : [], 'bottom');
+        costsRenderAggList(costsByCatEl, Array.isArray(data.by_category) ? data.by_category : [], 'category');
+        costsRenderAggList(costsByChanEl, Array.isArray(data.by_channel) ? data.by_channel : [], 'channel');
+        costsRenderProductsTable(Array.isArray(data.by_product) ? data.by_product : []);
+      } catch (e) {
+        console.error(e);
+        if (costsProdTbody) costsProdTbody.innerHTML = `<tr><td colspan="7" class="costs-meta-empty">⚠ No se pudo conectar con el servidor de costos: ${costsEscapeHtml(e.message || 'error de red')}.</td></tr>`;
+      }
+    }
+
+    if (costsPanel) {
+      costsPanel.addEventListener('toggle', async () => {
+        if (costsPanel.open && !window.__costsAnalyticsLastData) {
+          await costsLoadAnalytics();
+        }
+      });
+    }
+    if (costsApplyBtn) costsApplyBtn.addEventListener('click', costsLoadAnalytics);
+    if (costsReloadBtn) costsReloadBtn.addEventListener('click', costsLoadAnalytics);
+    if (costsRangeSel) costsRangeSel.addEventListener('change', () => {
+      costsUpdateRangeLabelAndDefaults();
+      if (costsRangeSel.value !== 'custom') costsLoadAnalytics();
+    });
+    if (costsFromInp) costsFromInp.addEventListener('change', () => {
+      if (costsRangeSel) costsRangeSel.value = 'custom';
+      costsUpdateRangeLabelAndDefaults();
+    });
+    if (costsToInp) costsToInp.addEventListener('change', () => {
+      if (costsRangeSel) costsRangeSel.value = 'custom';
+      costsUpdateRangeLabelAndDefaults();
+    });
+    if (costsProdSearch) costsProdSearch.addEventListener('input', () => {
+      window.__costsAnalyticsPageIdx = 0;
+      costsRenderProductsTable((window.__costsAnalyticsLastData && Array.isArray(window.__costsAnalyticsLastData.by_product)) ? window.__costsAnalyticsLastData.by_product : []);
+    });
+    if (costsProdSort) costsProdSort.addEventListener('change', () => {
+      window.__costsAnalyticsPageIdx = 0;
+      costsRenderProductsTable((window.__costsAnalyticsLastData && Array.isArray(window.__costsAnalyticsLastData.by_product)) ? window.__costsAnalyticsLastData.by_product : []);
+    });
+    // Exponer para debug / botones fuera del panel
+    try { window.loadCostsAnalytics = costsLoadAnalytics; } catch (_) {}
+    costsUpdateRangeLabelAndDefaults();
+
+    // --------- Fin Módulo Costos Analytics ---------
+
     if (delPageSizeSelect) {
       delPageSizeSelect.addEventListener('change', async () => {
         deliveredLimit = parseInt(delPageSizeSelect.value, 10) || 50;

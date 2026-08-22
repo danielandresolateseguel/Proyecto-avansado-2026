@@ -771,6 +771,7 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
     blind_lines = 0
     distinct_products_without_cost = set()
     product_counts = {}
+    product_missing_lines = {}
     for r in rows:
         pid = _safe_str(r[0])
         name = _safe_str(r[1]) or '(Sin nombre)'
@@ -788,6 +789,7 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
             blind_lines += line_blind_lines
             if pid:
                 distinct_products_without_cost.add(pid)
+            product_missing_lines[pid] = int(product_missing_lines.get(pid, 0) or 0) + int(line_blind_lines or 0)
         gross = revenue - cogs
         product_counts[pid] = product_counts.get(pid, 0) + 1
         if pid not in product_map:
@@ -845,26 +847,35 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
             continue
         margin = _percent(p['gross_profit'], p['revenue'])
         unit_margin = int(round(p['gross_profit'] / p['qty'])) if p['qty'] > 0 else 0
+        missing_count = int(product_missing_lines.get(pid, 0) or 0)
         by_product_list.append({
             'id': p['id'],
+            'product_id': p['id'],
             'name': p['name'],
+            'product_name': p['name'],
             'category': p['category'],
             'qty': p['qty'],
             'revenue': p['revenue'],
             'total_cost': p['total_cost'],
             'gross_profit': p['gross_profit'],
             'margin_percent': margin,
+            'gross_margin_percent': margin,
             'unit_margin': unit_margin,
+            'missing_cost_count': missing_count,
             'share_profit_percent': _percent(p['gross_profit'], gross_profit)
         })
     by_product_list.sort(key=lambda x: x['gross_profit'], reverse=True)
     by_category_list = sorted(list(category_map.values()), key=lambda x: x['gross_profit'], reverse=True)
     for c in by_category_list:
-        c['margin_percent'] = _percent(c['gross_profit'], c['revenue'])
+        m = _percent(c['gross_profit'], c['revenue'])
+        c['margin_percent'] = m
+        c['gross_margin_percent'] = m
         c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
     by_channel_list = sorted(list(channel_map.values()), key=lambda x: x['gross_profit'], reverse=True)
     for c in by_channel_list:
-        c['margin_percent'] = _percent(c['gross_profit'], c['revenue'])
+        m = _percent(c['gross_profit'], c['revenue'])
+        c['margin_percent'] = m
+        c['gross_margin_percent'] = m
         c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
     by_product = [x for x in by_product_list if not category_filter or (_safe_str(x.get('category')).lower() == _safe_str(category_filter).lower())]
     most_profitable = by_product[0] if by_product else None
@@ -874,12 +885,15 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         worst_margin = sorted(candidates_worst, key=lambda x: x['margin_percent'])[0]
     best_category = by_category_list[0] if by_category_list else None
     leaders = {
+        'best_profit': most_profitable,
+        'worst_margin': worst_margin,
+        'best_category': best_category,
         'most_profitable_product': (most_profitable.get('name') if most_profitable else '') or '',
         'most_profitable_product_id': (most_profitable.get('id') if most_profitable else '') or '',
         'most_profitable_product_profit': int(most_profitable.get('gross_profit') or 0) if most_profitable else 0,
         'worst_margin_product': (worst_margin.get('name') if worst_margin else '') or '',
         'worst_margin_product_id': (worst_margin.get('id') if worst_margin else '') or '',
-        'worst_margin_percent': float(worst_margin.get('margin_percent') or 0) if worst_margin else 0.0,
+        'worst_margin_percent': float(worst_margin.get('gross_margin_percent') or 0) if worst_margin else 0.0,
         'best_category_margin_name': (best_category.get('category') if best_category else '') or '',
         'best_category_margin_percent': float(_percent(best_category.get('gross_profit'), best_category.get('revenue')) if best_category else 0.0)
     }
@@ -890,8 +904,10 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         'gross_margin_percent': float(gross_margin_pct),
         'products_without_cost': len(distinct_products_without_cost),
         'exposed_revenue_without_cost': int(blind_revenue),
+        'blind_revenue': int(blind_revenue),
         'blind_order_lines': int(blind_lines),
-        'distinct_products_sold': len([x for x in by_product_list if x['qty'] > 0])
+        'distinct_products_sold': len([x for x in by_product_list if x['qty'] > 0]),
+        'order_count': 0
     }
     payload = {
         'truncated_to_now': bool(truncated_to_now),
@@ -909,7 +925,9 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
                 + status_filter_orders + " AND h.last_change BETWEEN ? AND ?",
                 params)
     cr = cur.fetchone()
-    payload['order_count'] = int(cr[0] or 0) if cr else 0
+    order_count_val = int(cr[0] or 0) if cr else 0
+    payload['order_count'] = order_count_val
+    payload['summary']['order_count'] = order_count_val
     return payload
 
 
@@ -921,8 +939,8 @@ def costs_analytics():
         tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
         if not _session_tenant_matches(tenant_slug):
             return jsonify({'error': 'acceso denegado al tenant'}), 403
-        from_raw = request.args.get('from') or request.args.get('dateFrom') or request.args.get('desde')
-        to_raw = request.args.get('to') or request.args.get('dateTo') or request.args.get('hasta')
+        from_raw = request.args.get('from') or request.args.get('from_date') or request.args.get('dateFrom') or request.args.get('desde')
+        to_raw = request.args.get('to') or request.args.get('to_date') or request.args.get('dateTo') or request.args.get('hasta')
         category_filter = request.args.get('category') or request.args.get('categoria')
         channel_filter = request.args.get('channel') or request.args.get('order_type') or request.args.get('canal')
         from_dt, to_dt, from_iso, to_iso, truncated_to_now = _resolve_sales_range(from_raw, to_raw)
@@ -933,8 +951,30 @@ def costs_analytics():
         prev_sum = previous['summary']
         current_gm = float(curr_sum.get('gross_margin_percent') or 0)
         prev_gm = float(prev_sum.get('gross_margin_percent') or 0)
+        cur_order_count = int(current.get('order_count') or 0)
+        prev_order_count = int(previous.get('order_count') or 0)
+        current_block = {
+            'net_sales': int(curr_sum.get('net_sales') or 0),
+            'total_cost_of_goods': int(curr_sum.get('total_cost_of_goods') or 0),
+            'gross_profit': int(curr_sum.get('gross_profit') or 0),
+            'gross_margin_percent': float(curr_sum.get('gross_margin_percent') or 0),
+            'products_without_cost': int(curr_sum.get('products_without_cost') or 0),
+            'blind_revenue': int(curr_sum.get('blind_revenue') or curr_sum.get('exposed_revenue_without_cost') or 0),
+            'order_count': cur_order_count
+        }
+        previous_block = {
+            'net_sales': int(prev_sum.get('net_sales') or 0),
+            'total_cost_of_goods': int(prev_sum.get('total_cost_of_goods') or 0),
+            'gross_profit': int(prev_sum.get('gross_profit') or 0),
+            'gross_margin_percent': float(prev_sum.get('gross_margin_percent') or 0),
+            'products_without_cost': int(prev_sum.get('products_without_cost') or 0),
+            'blind_revenue': int(prev_sum.get('blind_revenue') or prev_sum.get('exposed_revenue_without_cost') or 0),
+            'order_count': prev_order_count
+        }
         comparison = {
             'previous_range': {'from': prev_from_iso, 'to': prev_to_iso},
+            'current': current_block,
+            'previous': previous_block,
             'previous_net_sales': int(prev_sum.get('net_sales') or 0),
             'delta_net_sales': _delta_val(curr_sum.get('net_sales'), prev_sum.get('net_sales')),
             'delta_net_sales_percent': _delta_percent(curr_sum.get('net_sales'), prev_sum.get('net_sales')),
@@ -967,10 +1007,12 @@ def costs_analytics():
         top_profit = out['by_product'][:15] if out['by_product'] else []
         bottom_margin = sorted(
             [x for x in (out['by_product'] or []) if x.get('revenue', 0) > 0 and x.get('qty', 0) >= 1],
-            key=lambda x: x.get('margin_percent', 0)
+            key=lambda x: x.get('gross_margin_percent', x.get('margin_percent', 0))
         )[:10]
         out['top_by_profit'] = top_profit
+        out['top15_by_profit'] = top_profit
         out['bottom_by_margin'] = bottom_margin
+        out['bottom10_by_margin'] = bottom_margin
         return jsonify(out)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
