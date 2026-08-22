@@ -362,7 +362,8 @@
     #orders-history-group > summary,
     #inventory-box > summary,
     #carousel-box > summary,
-    #analytics-panel > summary { display: none; }
+    #analytics-panel > summary,
+    #costs-analytics-panel > summary { display: none; }
     #delivery-box {
       overflow: visible;
     }
@@ -370,7 +371,8 @@
     #orders-history-group:not([open]),
     #inventory-box:not([open]),
     #carousel-box:not([open]),
-    #analytics-panel:not([open]) { display: none; }
+    #analytics-panel:not([open]),
+    #costs-analytics-panel:not([open]) { display: none; }
     header { border: 1px solid var(--kds-border); border-radius: 16px; padding: 12px; background: rgba(255,255,255,0.72); backdrop-filter: blur(10px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
     button { min-height: 32px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.20); border-radius: 10px; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); color: #fff; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14); }
     button:hover { background: linear-gradient(135deg, #0b1220 0%, #2b3646 100%); }
@@ -3245,6 +3247,9 @@
           </button>
           <button id="module-icon-analisis" class="module-icon-btn" type="button" data-mod="analisis" title="Análisis de ventas" aria-label="Análisis de ventas">
             <svg viewBox="0 0 24 24"><path d="M5 9h3v10H5V9Zm5-4h3v14h-3V5Zm5 7h3v7h-3v-7Z"/></svg>
+          </button>
+          <button id="module-icon-costos" class="module-icon-btn" type="button" data-mod="costos" title="Análisis de costos y rentabilidad" aria-label="Análisis de costos y rentabilidad">
+            <svg viewBox="0 0 24 24"><path d="M3 13h4v6H3v-6Zm6-6h4v12H9V7Zm6 4h4v8h-4v-8Zm9 10H2v-2h22v2Z"/></svg>
           </button>
           <button id="module-icon-export" class="module-icon-btn" type="button" data-mod="export" title="Filtros de exportación" aria-label="Filtros de exportación">
             <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2Zm-7-14v2h18V4H3Zm3 8h12v-2H6v2Z"/></svg>
@@ -7220,6 +7225,7 @@
       inventario: { detailsId: 'inventory-box', iconId: 'module-icon-inventario' },
       carta: { detailsId: 'carousel-box', iconId: 'module-icon-carta' },
       analisis: { detailsId: 'analytics-panel', iconId: 'module-icon-analisis' },
+      costos: { detailsId: 'costs-analytics-panel', iconId: 'module-icon-costos' },
       export: { divId: 'orders-filters-export', iconId: 'module-icon-export' },
     };
     let activeModule = '';
@@ -8826,6 +8832,7 @@
       setRoleVisibilityById('module-icon-inventario', !isKitchen && canInventory);
       setRoleVisibilityById('module-icon-carta', !isKitchen && canCarousel);
       setRoleVisibilityById('module-icon-analisis', !isKitchen && canReports);
+      setRoleVisibilityById('module-icon-costos', !isKitchen && canReports);
       setRoleVisibilityById('module-icon-export', !isKitchen && !mozoTablesOnly && canOrdersView && !isRepartidor);
 
       setRoleVisibilityById('orders-header-row', !isKitchen && !isRepartidor && ((!mozoTablesOnly && canOrdersView) || (mozoTablesOnly && canTables)));
