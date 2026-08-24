@@ -4629,6 +4629,38 @@
                 <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="edit-prod-margin-real">0%</b></div>
                 <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="edit-prod-price-suggested">—</b></div>
               </div>
+              <div id="edit-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <h5 style="margin:0; font-size:14px; color:#0f172a;">🧾 Ingredientes / Escandallo</h5>
+                    <span class="small" style="background:#ecfeff; color:#0c4a6e; padding:2px 8px; border-radius:999px; font-weight:700;" id="edit-prod-recipe-total-badge">$0</span>
+                    <label class="small" style="display:inline-flex; align-items:center; gap:4px; color:#334155; cursor:pointer;">
+                      <input type="checkbox" id="edit-prod-recipe-auto-sync" checked> Sincronizar a Costo/Margen
+                    </label>
+                  </div>
+                  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Rendimiento (porciones)</span><input type="number" min="1" id="edit-prod-recipe-yield" value="1" style="width:96px; padding:6px 8px;"></label>
+                    <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Prep (min)</span><input type="number" min="0" id="edit-prod-recipe-prep" value="0" style="width:80px; padding:6px 8px;"></label>
+                    <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Mano obra $/min</span><input type="number" min="0" id="edit-prod-recipe-labor" value="0" style="width:100px; padding:6px 8px;"></label>
+                    <button type="button" id="edit-prod-recipe-add" style="background:#2e7d32; color:#fff; border:none; padding:0 12px; border-radius:8px; height:32px; align-self:end; cursor:pointer; white-space:nowrap;">+ Ingrediente</button>
+                  </div>
+                </div>
+                <div class="recipe-grid-head" style="display:grid; grid-template-columns: minmax(140px,1.4fr) 84px 76px 110px 96px 40px; gap:8px; padding:6px 8px; font-weight:700; font-size:12px; color:#475569; border-bottom:1px solid #e5e7eb;">
+                  <span>Nombre</span><span>Cantidad</span><span>Unidad</span><span>Costo/Unidad</span><span>Subtotal</span><span></span>
+                </div>
+                <div id="edit-prod-recipe-list" style="max-height:240px; overflow:auto;"></div>
+                <div style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                  <button type="button" id="edit-prod-recipe-add-other" style="background:#0ea5e9; color:#fff; border:none; padding:0 12px; border-radius:8px; height:30px; cursor:pointer; font-weight:700; font-size:12px;">+ Otro costo fijo (envase, etc.)</button>
+                  <div id="edit-prod-recipe-other-list" style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:240px;"></div>
+                </div>
+                <div id="edit-prod-recipe-summary" style="margin-top:10px; padding:8px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; font-size:12px; color:#334155; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px 16px;">
+                  <div>Subtotal ingredientes: <b id="edit-prod-recipe-ing-sub">$0</b></div>
+                  <div>Otros costos: <b id="edit-prod-recipe-oth-sub">$0</b></div>
+                  <div>Mano de obra: <b id="edit-prod-recipe-lab-sub">$0</b></div>
+                  <div>Costo total receta: <b id="edit-prod-recipe-total">$0</b></div>
+                  <div>Costo / porción: <b id="edit-prod-recipe-unit" style="color:#1d4ed8;">$0</b></div>
+                </div>
+              </div>
             </div>
 
             <div class="small" style="color:#666; margin-top:8px;" id="edit-prod-last-mod"></div>
@@ -5444,6 +5476,255 @@
     const prodEditMarginReal = document.getElementById('edit-prod-margin-real');
     const prodEditPriceSuggested = document.getElementById('edit-prod-price-suggested');
     const prodEditCalcMarginBtn = document.getElementById('edit-prod-calcmargin-btn');
+
+    function __recipeByIds(scope){
+      const s = String(scope || 'create') === 'edit' ? 'edit' : 'create';
+      return {
+        block: s + '-prod-recipe-block',
+        list: s + '-prod-recipe-list',
+        otherList: s + '-prod-recipe-other-list',
+        addBtn: s + '-prod-recipe-add',
+        addOtherBtn: s + '-prod-recipe-add-other',
+        yieldInp: s + '-prod-recipe-yield',
+        prepInp: s + '-prod-recipe-prep',
+        laborInp: s + '-prod-recipe-labor',
+        autoSync: s + '-prod-recipe-auto-sync',
+        badge: s + '-prod-recipe-total-badge',
+        ingSub: s + '-prod-recipe-ing-sub',
+        othSub: s + '-prod-recipe-oth-sub',
+        labSub: s + '-prod-recipe-lab-sub',
+        total: s + '-prod-recipe-total',
+        unit: s + '-prod-recipe-unit',
+        costInp: s + '-prod-cost-price',
+        marginInp: s + '-prod-margin-percent',
+        priceInp: s + '-prod-price'
+      };
+    }
+    function __getRecipeRowEls(rowEl){
+      return {
+        name: rowEl.querySelector('.r-name'),
+        qty: rowEl.querySelector('.r-qty'),
+        unit: rowEl.querySelector('.r-unit'),
+        unitCost: rowEl.querySelector('.r-unit-cost'),
+        subtotal: rowEl.querySelector('.r-subtotal'),
+        del: rowEl.querySelector('.r-del')
+      };
+    }
+    function buildRecipeRow(scope, initial){
+      const row = document.createElement('div');
+      row.className = 'recipe-row';
+      row.style.display = 'grid';
+      row.style.gridTemplateColumns = 'minmax(140px,1.4fr) 84px 76px 110px 96px 40px';
+      row.style.gap = '8px';
+      row.style.padding = '4px 8px';
+      row.style.alignItems = 'center';
+      row.style.borderBottom = '1px dashed #f1f5f9';
+      const init = initial && typeof initial === 'object' ? initial : {};
+      row.innerHTML = `
+        <input type="text" class="r-name" placeholder="Ej: Lomo" style="width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;" value="${(init.name||'').toString().replace(/"/g,'&quot;')}">
+        <input type="number" class="r-qty" min="0" step="any" placeholder="0.250" style="width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;" value="${typeof init.qty==='number'?init.qty:(init.qty||'')}">
+        <select class="r-unit" style="width:100%; padding:6px 4px; border:1px solid #e5e7eb; border-radius:6px;">
+          ${['kg','g','l','ml','un','docena','paquete'].map(u=>`<option value="${u}" ${String(init.unit||'un')===u?'selected':''}>${u}</option>`).join('')}
+        </select>
+        <input type="number" class="r-unit-cost" min="0" placeholder="$/unidad" style="width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;" value="${typeof init.unit_cost==='number'?init.unit_cost:(init.unit_cost||'')}">
+        <input type="number" class="r-subtotal" min="0" placeholder="Auto" readonly style="width:100%; padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px; background:#f8fafc;">
+        <button type="button" class="r-del" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; border-radius:6px; height:32px; cursor:pointer; font-weight:800;" title="Quitar">×</button>
+      `;
+      const els = __getRecipeRowEls(row);
+      const recompute = () => {
+        const q = parseFloat(els.qty.value || '0') || 0;
+        const c = parseInt(String(els.unitCost.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+        const t = Math.round(q * c);
+        els.subtotal.value = String(t);
+        recomputeRecipeTotals(scope);
+      };
+      if (els.name) els.name.addEventListener('input', recompute);
+      if (els.qty) els.qty.addEventListener('input', recompute);
+      if (els.unit) els.unit.addEventListener('change', recompute);
+      if (els.unitCost) els.unitCost.addEventListener('input', recompute);
+      if (els.del) els.del.addEventListener('click', () => { row.remove(); recomputeRecipeTotals(scope); });
+      recompute();
+      return row;
+    }
+    function buildRecipeOtherRow(scope, initial){
+      const wrap = document.createElement('div');
+      wrap.style.display = 'grid';
+      wrap.style.gridTemplateColumns = '1fr 140px 32px';
+      wrap.style.gap = '6px';
+      wrap.style.alignItems = 'center';
+      const init = initial && typeof initial === 'object' ? initial : {};
+      wrap.innerHTML = `
+        <input type="text" class="r-other-name" placeholder="Ej: Envase papel 1 unidad" style="padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;" value="${(init.name||'').toString().replace(/"/g,'&quot;')}">
+        <input type="number" class="r-other-total" min="0" placeholder="$ total" style="padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;" value="${typeof init.total==='number'?init.total:(init.total||'')}">
+        <button type="button" class="r-other-del" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; border-radius:6px; height:32px; cursor:pointer; font-weight:800;" title="Quitar">×</button>
+      `;
+      const nEl = wrap.querySelector('.r-other-name');
+      const tEl = wrap.querySelector('.r-other-total');
+      const dEl = wrap.querySelector('.r-other-del');
+      const fn = () => recomputeRecipeTotals(scope);
+      if (nEl) nEl.addEventListener('input', fn);
+      if (tEl) tEl.addEventListener('input', fn);
+      if (dEl) dEl.addEventListener('click', () => { wrap.remove(); fn(); });
+      return wrap;
+    }
+    function recipeReadState(scope){
+      const ids = __recipeByIds(scope);
+      const listEl = document.getElementById(ids.list);
+      const otherEl = document.getElementById(ids.otherList);
+      const ingredients = [];
+      let ingredients_subtotal = 0;
+      if (listEl) {
+        listEl.querySelectorAll('.recipe-row').forEach((rowEl) => {
+          const els = __getRecipeRowEls(rowEl);
+          const name = String((els.name && els.name.value) || '').trim();
+          if (!name) return;
+          const qty = parseFloat(els.qty && els.qty.value || '0') || 0;
+          const unit = String((els.unit && els.unit.value) || 'un').trim() || 'un';
+          const unit_cost = parseInt(String((els.unitCost && els.unitCost.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
+          const total_line = Math.round(qty * unit_cost);
+          ingredients_subtotal += total_line;
+          ingredients.push({ name, qty, unit, unit_cost, total_line });
+        });
+      }
+      const other_variables = [];
+      let other_vars_subtotal = 0;
+      if (otherEl) {
+        otherEl.querySelectorAll('div').forEach(w => {
+          const nEl = w.querySelector && w.querySelector('.r-other-name');
+          const tEl = w.querySelector && w.querySelector('.r-other-total');
+          if (!nEl || !tEl) return;
+          const name = String(nEl.value || '').trim();
+          const total = parseInt(String(tEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+          if (!name && total <= 0) return;
+          if (!name) return;
+          other_variables.push({ name, total });
+          other_vars_subtotal += total;
+        });
+      }
+      const yEl = document.getElementById(ids.yieldInp);
+      const pEl = document.getElementById(ids.prepInp);
+      const lEl = document.getElementById(ids.laborInp);
+      const aEl = document.getElementById(ids.autoSync);
+      const yield_servings = Math.max(1, parseInt(String((yEl && yEl.value) || '1').replace(/[^0-9]/g, ''), 10) || 1);
+      const prep_minutes = Math.max(0, parseInt(String((pEl && pEl.value) || '0').replace(/[^0-9]/g, ''), 10) || 0);
+      const labor_cost_per_minute = Math.max(0, parseInt(String((lEl && lEl.value) || '0').replace(/[^0-9]/g, ''), 10) || 0);
+      const labor_subtotal = prep_minutes * labor_cost_per_minute;
+      const calculated_total_cost = ingredients_subtotal + other_vars_subtotal + labor_subtotal;
+      const unit_serving_cost = yield_servings > 0 ? Math.round(calculated_total_cost / yield_servings) : calculated_total_cost;
+      const auto_sync = !(aEl && aEl.checked === false);
+      return {
+        version: 1, currency: 'ARS', yield_servings, prep_minutes, labor_cost_per_minute,
+        auto_sync_to_product_cost: auto_sync,
+        ingredients, other_variables,
+        ingredients_subtotal, other_vars_subtotal, labor_subtotal,
+        calculated_total_cost, unit_serving_cost
+      };
+    }
+    function recipeApplyState(scope, rawRecipe){
+      const ids = __recipeByIds(scope);
+      const listEl = document.getElementById(ids.list);
+      const otherEl = document.getElementById(ids.otherList);
+      const yEl = document.getElementById(ids.yieldInp);
+      const pEl = document.getElementById(ids.prepInp);
+      const lEl = document.getElementById(ids.laborInp);
+      const aEl = document.getElementById(ids.autoSync);
+      const rec = rawRecipe && typeof rawRecipe === 'object' ? rawRecipe : {};
+      if (yEl) yEl.value = Math.max(1, parseInt(rec.yield_servings || 1, 10) || 1);
+      if (pEl) pEl.value = Math.max(0, parseInt(rec.prep_minutes || 0, 10) || 0);
+      if (lEl) lEl.value = Math.max(0, parseInt(rec.labor_cost_per_minute || 0, 10) || 0);
+      if (aEl) aEl.checked = rec.auto_sync_to_product_cost !== false;
+      if (listEl) {
+        listEl.innerHTML = '';
+        const ings = Array.isArray(rec.ingredients) ? rec.ingredients : [];
+        ings.forEach(ing => listEl.appendChild(buildRecipeRow(scope, ing)));
+      }
+      if (otherEl) {
+        otherEl.innerHTML = '';
+        const ovs = Array.isArray(rec.other_variables) ? rec.other_variables : [];
+        ovs.forEach(ov => otherEl.appendChild(buildRecipeOtherRow(scope, ov)));
+      }
+      recomputeRecipeTotals(scope);
+    }
+    function recomputeRecipeTotals(scope){
+      const state = recipeReadState(scope);
+      const ids = __recipeByIds(scope);
+      const badge = document.getElementById(ids.badge);
+      const ingSub = document.getElementById(ids.ingSub);
+      const othSub = document.getElementById(ids.othSub);
+      const labSub = document.getElementById(ids.labSub);
+      const tot = document.getElementById(ids.total);
+      const unit = document.getElementById(ids.unit);
+      const fmt = n => '$' + new Intl.NumberFormat('es-AR').format(parseInt(n||0,10));
+      if (badge) badge.textContent = fmt(state.calculated_total_cost);
+      if (ingSub) ingSub.textContent = fmt(state.ingredients_subtotal);
+      if (othSub) othSub.textContent = fmt(state.other_vars_subtotal);
+      if (labSub) labSub.textContent = fmt(state.labor_subtotal);
+      if (tot) tot.textContent = fmt(state.calculated_total_cost);
+      if (unit) unit.textContent = fmt(state.unit_serving_cost);
+      if (state.auto_sync_to_product_cost) {
+        const costInp = document.getElementById(ids.costInp);
+        const priceInp = document.getElementById(ids.priceInp);
+        const marginInp = document.getElementById(ids.marginInp);
+        if (costInp) costInp.value = String(state.unit_serving_cost);
+        if (priceInp && marginInp) {
+          const price = parseInt(String(priceInp.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+          const cp = parseInt(state.unit_serving_cost || 0, 10);
+          if (price > 0 && cp > 0 && cp <= price) {
+            const m = Math.round(((price - cp) / price) * 100);
+            marginInp.value = String(m);
+          }
+        }
+      }
+      refreshCostSummaryUI(scope);
+    }
+    function toggleRecipeBlockVisibility(scope){
+      const typeEl = document.getElementById((scope==='edit'?'edit':'create') + '-prod-cost-type');
+      const block = document.getElementById((scope==='edit'?'edit':'create') + '-prod-recipe-block');
+      if (!typeEl || !block) return;
+      const isRecipe = String(typeEl.value || '').toLowerCase() === 'recipe';
+      block.style.display = isRecipe ? 'block' : 'none';
+      if (isRecipe) recomputeRecipeTotals(scope);
+    }
+    function ensureRecipeListeners(scope){
+      const key = '__recipeBound_' + String(scope);
+      if (window[key]) return;
+      const ids = __recipeByIds(scope);
+      const typeEl = document.getElementById((scope==='edit'?'edit':'create') + '-prod-cost-type');
+      const addBtn = document.getElementById(ids.addBtn);
+      const addOtherBtn = document.getElementById(ids.addOtherBtn);
+      const listEl = document.getElementById(ids.list);
+      const yEl = document.getElementById(ids.yieldInp);
+      const pEl = document.getElementById(ids.prepInp);
+      const lEl = document.getElementById(ids.laborInp);
+      const aEl = document.getElementById(ids.autoSync);
+      if (typeEl) typeEl.addEventListener('change', () => toggleRecipeBlockVisibility(scope));
+      if (addBtn && listEl) addBtn.addEventListener('click', () => { listEl.appendChild(buildRecipeRow(scope)); recomputeRecipeTotals(scope); });
+      if (addOtherBtn) addOtherBtn.addEventListener('click', () => { document.getElementById(ids.otherList).appendChild(buildRecipeOtherRow(scope)); recomputeRecipeTotals(scope); });
+      if (yEl) yEl.addEventListener('input', () => recomputeRecipeTotals(scope));
+      if (pEl) pEl.addEventListener('input', () => recomputeRecipeTotals(scope));
+      if (lEl) lEl.addEventListener('input', () => recomputeRecipeTotals(scope));
+      if (aEl) aEl.addEventListener('change', () => recomputeRecipeTotals(scope));
+      window[key] = true;
+    }
+    function collectRecipePayloadForSave(scope){
+      const typeEl = document.getElementById((scope==='edit'?'edit':'create') + '-prod-cost-type');
+      const typeVal = String((typeEl && typeEl.value) || 'fixed').toLowerCase();
+      if (typeVal !== 'recipe') return null;
+      return recipeReadState(scope);
+    }
+    function populateRecipeFromProduct(scope, variantsJson){
+      try {
+        const v = typeof variantsJson === 'string' ? JSON.parse(variantsJson || '{}') : (variantsJson || {});
+        const rec = (v && typeof v === 'object' && v.recipe_cost_breakdown) ? v.recipe_cost_breakdown : null;
+        recipeApplyState(scope, rec || { ingredients: [], other_variables: [] });
+      } catch (_) {
+        recipeApplyState(scope, { ingredients: [], other_variables: [] });
+      }
+    }
+    ensureRecipeListeners('edit');
+    ensureRecipeListeners('create');
+    toggleRecipeBlockVisibility('edit');
+    toggleRecipeBlockVisibility('create');
 
     function refreshCostSummaryUI(scope) {
       const isEdit = scope === 'edit';
@@ -6529,6 +6810,10 @@
         const ct = String(product.cost_type || 'fixed').trim().toLowerCase();
         prodEditCostType.value = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
       }
+      if (typeof populateRecipeFromProduct === 'function') {
+        populateRecipeFromProduct('edit', product.variants_json || product.variants || '{}');
+      }
+      toggleRecipeBlockVisibility('edit');
       refreshCostSummaryUI('edit');
 
       // Preseleccionar categorías de filtro desde variants_json
@@ -6825,6 +7110,15 @@
             if (prodEditMarginPct) {
               const mv = parseInt(String(prodEditMarginPct.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
               payload.margin_percent = Math.max(0, Math.min(100, mv));
+            }
+            if (typeof collectRecipePayloadForSave === 'function') {
+              const rec = collectRecipePayloadForSave('edit');
+              if (rec && rec.ingredients && rec.ingredients.length) {
+                payload.recipe_cost_breakdown = rec;
+                variants.recipe_cost_breakdown = rec;
+              } else if (variants && typeof variants === 'object' && 'recipe_cost_breakdown' in variants) {
+                delete variants.recipe_cost_breakdown;
+              }
             }
             const positionRaw = String(prodEditPosition && prodEditPosition.value || '').trim();
             if (positionRaw) {
@@ -26524,6 +26818,38 @@
             <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="create-prod-margin-real">0%</b></div>
             <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="create-prod-price-suggested">—</b></div>
           </div>
+          <div id="create-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <h5 style="margin:0; font-size:14px; color:#0f172a;">🧾 Ingredientes / Escandallo</h5>
+                <span class="small" style="background:#ecfeff; color:#0c4a6e; padding:2px 8px; border-radius:999px; font-weight:700;" id="create-prod-recipe-total-badge">$0</span>
+                <label class="small" style="display:inline-flex; align-items:center; gap:4px; color:#334155; cursor:pointer;">
+                  <input type="checkbox" id="create-prod-recipe-auto-sync" checked> Sincronizar a Costo/Margen
+                </label>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Rendimiento (porciones)</span><input type="number" min="1" id="create-prod-recipe-yield" value="1" style="width:96px; padding:6px 8px;"></label>
+                <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Prep (min)</span><input type="number" min="0" id="create-prod-recipe-prep" value="0" style="width:80px; padding:6px 8px;"></label>
+                <label style="display:flex; flex-direction:column; gap:2px;"><span class="small" style="color:#475569;">Mano obra $/min</span><input type="number" min="0" id="create-prod-recipe-labor" value="0" style="width:100px; padding:6px 8px;"></label>
+                <button type="button" id="create-prod-recipe-add" style="background:#2e7d32; color:#fff; border:none; padding:0 12px; border-radius:8px; height:32px; align-self:end; cursor:pointer; white-space:nowrap;">+ Ingrediente</button>
+              </div>
+            </div>
+            <div style="display:grid; grid-template-columns: minmax(140px,1.4fr) 84px 76px 110px 96px 40px; gap:8px; padding:6px 8px; font-weight:700; font-size:12px; color:#475569; border-bottom:1px solid #e5e7eb;">
+              <span>Nombre</span><span>Cantidad</span><span>Unidad</span><span>Costo/Unidad</span><span>Subtotal</span><span></span>
+            </div>
+            <div id="create-prod-recipe-list" style="max-height:240px; overflow:auto;"></div>
+            <div style="margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+              <button type="button" id="create-prod-recipe-add-other" style="background:#0ea5e9; color:#fff; border:none; padding:0 12px; border-radius:8px; height:30px; cursor:pointer; font-weight:700; font-size:12px;">+ Otro costo fijo (envase, etc.)</button>
+              <div id="create-prod-recipe-other-list" style="display:flex; flex-direction:column; gap:6px; flex:1; min-width:240px;"></div>
+            </div>
+            <div style="margin-top:10px; padding:8px 10px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; font-size:12px; color:#334155; display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px 16px;">
+              <div>Subtotal ingredientes: <b id="create-prod-recipe-ing-sub">$0</b></div>
+              <div>Otros costos: <b id="create-prod-recipe-oth-sub">$0</b></div>
+              <div>Mano de obra: <b id="create-prod-recipe-lab-sub">$0</b></div>
+              <div>Costo total receta: <b id="create-prod-recipe-total">$0</b></div>
+              <div>Costo / porción: <b id="create-prod-recipe-unit" style="color:#1d4ed8;">$0</b></div>
+            </div>
+          </div>
         </div>
 
         <div class="edit-form-group">
@@ -27553,6 +27879,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pCost) pCost.value = '';
       if (pCostType) pCostType.value = 'fixed';
       if (pMargin) pMargin.value = '';
+      if (typeof recipeApplyState === 'function') {
+        recipeApplyState('create', { ingredients: [], other_variables: [], yield_servings: 1, prep_minutes: 0, labor_cost_per_minute: 0, auto_sync_to_product_cost: true });
+      }
+      if (typeof toggleRecipeBlockVisibility === 'function') toggleRecipeBlockVisibility('create');
       refreshCostSummaryUI('create');
       if (pPacksEnabled) pPacksEnabled.checked = false;
       if (pPacksPanel) pPacksPanel.dataset.expanded = '0';
@@ -27754,8 +28084,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const mm = parseInt(String(cCreateMargin.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
         payload.margin_percent = Math.max(0, Math.min(100, mm));
       }
+      if (typeof collectRecipePayloadForSave === 'function') {
+        const rec = collectRecipePayloadForSave('create');
+        if (rec && rec.ingredients && rec.ingredients.length) {
+          payload.recipe_cost_breakdown = rec;
+          payload.variants = payload.variants || {};
+          payload.variants.recipe_cost_breakdown = rec;
+        }
+      }
       if (packs.length) {
-        payload.variants = { packs: packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier })) };
+        payload.variants = payload.variants || {};
+        payload.variants.packs = packs.map(p => ({ id: p.id, label: p.label, price: p.price, multiplier: p.multiplier }));
       }
       const addons = collectAdminAddonsForSave({
         enabled: pAddonsEnabled,
