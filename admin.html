@@ -7111,20 +7111,6 @@
               const mv = parseInt(String(prodEditMarginPct.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
               payload.margin_percent = Math.max(0, Math.min(100, mv));
             }
-            if (typeof collectRecipePayloadForSave === 'function') {
-              const rec = collectRecipePayloadForSave('edit');
-              if (rec && rec.ingredients && rec.ingredients.length) {
-                payload.recipe_cost_breakdown = rec;
-                variants.recipe_cost_breakdown = rec;
-              } else if (variants && typeof variants === 'object' && 'recipe_cost_breakdown' in variants) {
-                delete variants.recipe_cost_breakdown;
-              }
-            }
-            const positionRaw = String(prodEditPosition && prodEditPosition.value || '').trim();
-            if (positionRaw) {
-                payload.position = Math.max(1, parseInt(positionRaw, 10) || 1);
-            }
-
             // Construir objeto variants para guardar sección y categorías
             let variants = {};
             try {
@@ -7137,6 +7123,20 @@
                 }
             } catch (e) {
                 variants = {};
+            }
+
+            if (typeof collectRecipePayloadForSave === 'function') {
+              const rec = collectRecipePayloadForSave('edit');
+              if (rec && rec.ingredients && rec.ingredients.length) {
+                payload.recipe_cost_breakdown = rec;
+                variants.recipe_cost_breakdown = rec;
+              } else if (variants && typeof variants === 'object' && 'recipe_cost_breakdown' in variants) {
+                delete variants.recipe_cost_breakdown;
+              }
+            }
+            const positionRaw = String(prodEditPosition && prodEditPosition.value || '').trim();
+            if (positionRaw) {
+                payload.position = Math.max(1, parseInt(positionRaw, 10) || 1);
             }
 
             if (prodEditSection) {
@@ -10495,13 +10495,16 @@
       const deliverySt = _normUser(order && order.delivery_status || '');
       if (mainSt === 'cancelado' || mainSt === 'entregado') return mainSt;
       if (deliverySt === 'failed') return 'failed';
+      if (mainSt === 'confirmado') return 'pendiente';
       return mainSt || 'pendiente';
     }
     function _getOrdersBoardStatusLabel(order, opts) {
       const options = (opts && typeof opts === 'object') ? opts : {};
+      const rawSt = _normUser(order && order.status || '');
       const stage = _getOrdersBoardStageKey(order);
       if (stage === 'failed') return 'Incidencia reparto';
       if (stage === 'por_aprobar') return 'por aprobar';
+      if (rawSt === 'confirmado') return 'nuevo';
       if (stage === 'en_camino' && options.isMesa) return 'mesa';
       return stage || 'pendiente';
     }
@@ -10884,6 +10887,25 @@
              }
           } catch(e) { console.error('Error auto-updating table status', e); }
       }
+
+      // Actualización global después de cualquier cambio de estado exitoso
+      // (no requiere F5: refresca vista activa + cards superiores + Pedidos Cerrados si es entregado/cancelado)
+      try {
+        const finalStatus = String(status || '').trim().toLowerCase();
+        const triggersClosed = (finalStatus === 'entregado' || finalStatus === 'cancelado');
+        if (typeof window.__statusUpdateTimer !== 'undefined') {
+          try { clearTimeout(window.__statusUpdateTimer); } catch(_) {}
+          window.__statusUpdateTimer = null;
+        }
+        window.__statusUpdateTimer = setTimeout(async () => {
+          try { if (typeof loadOrdersSafe === 'function') await loadOrdersSafe(); } catch(_) {}
+          try {
+            if (triggersClosed && typeof refreshClosedViews === 'function') {
+              await refreshClosedViews({ recent: true, archived: false });
+            }
+          } catch(_) {}
+        }, 320);
+      } catch(_) {}
 
       const out = await resp.json().catch(() => ({}));
       return out;
@@ -11593,7 +11615,7 @@
         const st = _getOrdersBoardStageKey(o);
         const ot = String(o && o.order_type || '').trim().toLowerCase();
         const pay = String(o && o.payment_status || '').trim().toLowerCase();
-        if (st === 'pendiente' || st === 'por_aprobar') buckets.pending.add(id);
+        if (st === 'pendiente' || st === 'por_aprobar' || st === 'confirmado') buckets.pending.add(id);
         if (st === 'preparacion') buckets.preparacion.add(id);
         if (st === 'listo') buckets.listo.add(id);
         if (st === 'en_camino' && ot === 'direccion') buckets.en_camino_delivery.add(id);
