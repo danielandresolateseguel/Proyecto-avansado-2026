@@ -147,8 +147,21 @@ def _previous_period(from_dt, to_dt, truncated_to_now):
     return prev_from, prev_to, prev_from.isoformat(), prev_to.isoformat()
 
 
-def _norm_channel(order_type):
+def _norm_channel(order_type, source=None):
     value = str(order_type or '').strip().lower()
+    src = str(source or '').strip().lower()
+    if src == 'pedidos_ya':
+        if value in ('direccion', 'delivery'):
+            return 'PedidosYa · Delivery'
+        if value == 'retiro':
+            return 'PedidosYa · Retiro'
+        return 'PedidosYa'
+    if src == 'rappi':
+        if value in ('direccion', 'delivery'):
+            return 'Rappi · Delivery'
+        if value == 'retiro':
+            return 'Rappi · Retiro'
+        return 'Rappi'
     if value == 'mesa':
         return 'Mesa'
     if value in ('direccion', 'delivery'):
@@ -719,23 +732,42 @@ def costs_recipe_preview():
     })
 
 
-def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=None, channel_filter=None):
+def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=None, channel_filter=None, source_filter=None):
     conn = get_db()
     cur = conn.cursor()
     status_filter_orders = ""
+    source_filter_sql = ""
     params = [tenant_slug]
     if channel_filter:
         cf = _safe_str(channel_filter).lower()
         if cf in ('mesa', 'delivery', 'retiro', 'espera'):
             status_filter_orders += " AND LOWER(COALESCE(o.order_type,'')) = ? "
             params.append(cf)
+    if source_filter:
+        sf = _safe_str(source_filter).lower()
+        if sf in ('ambos', 'all', '', 'none'):
+            source_filter_sql = ""
+        elif sf == 'local':
+            source_filter_sql += " AND (COALESCE(o.source,'') = '' OR LOWER(COALESCE(o.source,'')) IN ('local','','propio','mesa')) "
+        elif sf in ('pedidosya', 'pedidos_ya'):
+            source_filter_sql += " AND LOWER(COALESCE(o.source,'')) = 'pedidos_ya' "
+        elif sf == 'rappi':
+            source_filter_sql += " AND LOWER(COALESCE(o.source,'')) = 'rappi' "
+        elif sf in ('ifood', 'mercadopago', 'mp'):
+            source_filter_sql += " AND LOWER(COALESCE(o.source,'')) = ? "
+            params.append(sf.lower())
     params.extend([from_dt.isoformat(), to_dt.isoformat()])
+    from datetime import timedelta as _td_buff
+    _buffer_h = 36
+    from_buffered = (from_dt - _td_buff(hours=_buffer_h)).isoformat()
+    to_buffered = (to_dt + _td_buff(hours=_buffer_h)).isoformat()
+    params_buffered = list(params[:-2]) + [from_buffered, to_buffered]
     order_ids_sql = (
         "SELECT DISTINCT o.id FROM orders o "
         "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
         "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
         "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
-        + status_filter_orders +
+        + status_filter_orders + source_filter_sql +
         "  AND h.last_change BETWEEN ? AND ?"
     )
     base_sql = (
@@ -744,6 +776,7 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         "  COALESCE(NULLIF(TRIM(COALESCE(oi.name,'')),''), p.name) AS pname, "
         "  COALESCE(p.variants_json,'') AS variants, "
         "  COALESCE(o.order_type,'') AS order_type, "
+        "  COALESCE(o.source,'') AS order_source, "
         "  SUM(COALESCE(oi.qty,0)) AS qty, "
         "  SUM(COALESCE(oi.qty,0) * COALESCE(oi.unit_price,0)) AS revenue, "
         "  SUM(COALESCE(oi.qty,0) * COALESCE(oi.unit_cost,0)) AS cogs, "
@@ -755,12 +788,12 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
         "LEFT JOIN products p ON p.tenant_slug = o.tenant_slug AND p.product_id = oi.product_id "
         "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
-        + status_filter_orders +
+        + status_filter_orders + source_filter_sql +
         "  AND h.last_change BETWEEN ? AND ? "
-        "GROUP BY pid, pname, variants, order_type "
+        "GROUP BY pid, pname, variants, order_type, order_source "
         "ORDER BY revenue DESC"
     )
-    cur.execute(base_sql, params)
+    cur.execute(base_sql, params_buffered)
     rows = cur.fetchall() or []
     product_map = {}
     channel_map = {}
@@ -776,12 +809,14 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         pid = _safe_str(r[0])
         name = _safe_str(r[1]) or '(Sin nombre)'
         variants_raw = r[2] or ''
-        channel_key = _norm_channel(r[3])
-        qty = int(r[4] or 0)
-        revenue = int(r[5] or 0)
-        cogs = int(r[6] or 0)
-        line_blind_rev = int(r[7] or 0)
-        line_blind_lines = int(r[8] or 0)
+        ot = r[3]
+        osrc = r[4]
+        channel_key = _norm_channel(ot, source=osrc)
+        qty = int(r[5] or 0)
+        revenue = int(r[6] or 0)
+        cogs = int(r[7] or 0)
+        line_blind_rev = int(r[8] or 0)
+        line_blind_lines = int(r[9] or 0)
         net_sales += revenue
         total_cogs += cogs
         blind_revenue += line_blind_rev
@@ -823,7 +858,7 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
             except Exception:
                 pass
         if channel_key not in channel_map:
-            channel_map[channel_key] = {'channel': channel_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0}
+            channel_map[channel_key] = {'channel': channel_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0, 'external_fee': 0}
         ce = channel_map[channel_key]
         ce['qty'] += qty
         ce['revenue'] += revenue
@@ -833,14 +868,66 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         if category_filter and _safe_str(category_filter).lower() != cat_key.lower():
             pass
         if cat_key not in category_map:
-            category_map[cat_key] = {'category': cat_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0}
+            category_map[cat_key] = {'category': cat_key, 'qty': 0, 'revenue': 0, 'total_cost': 0, 'gross_profit': 0, 'external_fee': 0}
         ca = category_map[cat_key]
         ca['qty'] += qty
         ca['revenue'] += revenue
         ca['total_cost'] += cogs
         ca['gross_profit'] += gross
+    # Fase 5: external_fee_total (comisión PedidosYa/Rappi) por orden entregada en rango+canal+source
+    gross_sales_on_orders = 0
+    try:
+        fee_total_sql = (
+            "SELECT COALESCE(SUM(COALESCE(o.external_fee_amount,0)),0), "
+            "       COALESCE(SUM(COALESCE(o.total,0)),0) "
+            "FROM orders o "
+            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
+            "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
+            "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
+            + status_filter_orders + source_filter_sql +
+            "  AND h.last_change BETWEEN ? AND ?"
+        )
+        cur.execute(fee_total_sql, params_buffered)
+        fr = cur.fetchone()
+        external_fee_total = int(fr[0] or 0) if fr else 0
+        gross_sales_on_orders = int(fr[1] or 0) if fr else 0
+    except Exception:
+        external_fee_total = 0
+        gross_sales_on_orders = 0
+    # Fase 5: external fee por canal (desglose por source+order_type)
+    try:
+        fee_by_src_sql = (
+            "SELECT COALESCE(o.order_type,''), COALESCE(o.source,''), COALESCE(SUM(COALESCE(o.external_fee_amount,0)),0) "
+            "FROM orders o "
+            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
+            "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
+            "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
+            + status_filter_orders + source_filter_sql +
+            "  AND h.last_change BETWEEN ? AND ? "
+            "GROUP BY COALESCE(o.order_type,''), COALESCE(o.source,'')"
+        )
+        cur.execute(fee_by_src_sql, params_buffered)
+        fee_rows = cur.fetchall() or []
+        for frow in fee_rows:
+            ot = frow[0]
+            osrc = frow[1]
+            f = int(frow[2] or 0)
+            if f <= 0:
+                continue
+            ck = _norm_channel(ot, source=osrc)
+            if ck in channel_map:
+                channel_map[ck]['external_fee'] = int(channel_map[ck].get('external_fee') or 0) + f
+    except Exception:
+        pass
     gross_profit = net_sales - total_cogs
+    external_fee_total = int(external_fee_total or 0)
+    gross_sales_on_orders = int(gross_sales_on_orders or 0)
+    real_profit = gross_profit - external_fee_total
     gross_margin_pct = _percent(gross_profit, net_sales)
+    real_margin_percent = _percent(real_profit, net_sales)
+    external_fee_pct_effective = _percent(external_fee_total, net_sales) if net_sales > 0 else 0.0
+    external_fee_pct_contractual = _percent(external_fee_total, gross_sales_on_orders) if gross_sales_on_orders > 0 else 0.0
+    blind_costs_warning = blind_revenue > 0 or total_cogs == 0
     by_product_list = []
     for pid, p in product_map.items():
         if p['revenue'] <= 0 and p['qty'] <= 0:
@@ -870,12 +957,20 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
         m = _percent(c['gross_profit'], c['revenue'])
         c['margin_percent'] = m
         c['gross_margin_percent'] = m
+        fee = int(c.get('external_fee') or 0)
+        c['external_fee'] = fee
+        c['real_profit'] = int(c['gross_profit']) - fee
+        c['real_margin_percent'] = _percent(c['real_profit'], c['revenue'])
         c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
     by_channel_list = sorted(list(channel_map.values()), key=lambda x: x['gross_profit'], reverse=True)
     for c in by_channel_list:
         m = _percent(c['gross_profit'], c['revenue'])
         c['margin_percent'] = m
         c['gross_margin_percent'] = m
+        fee = int(c.get('external_fee') or 0)
+        c['external_fee'] = fee
+        c['real_profit'] = int(c['gross_profit']) - fee
+        c['real_margin_percent'] = _percent(c['real_profit'], c['revenue'])
         c['share_profit_percent'] = _percent(c['gross_profit'], gross_profit)
     by_product = [x for x in by_product_list if not category_filter or (_safe_str(x.get('category')).lower() == _safe_str(category_filter).lower())]
     most_profitable = by_product[0] if by_product else None
@@ -899,9 +994,16 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
     }
     summary = {
         'net_sales': int(net_sales),
+        'gross_sales_on_orders': int(gross_sales_on_orders),
         'total_cost_of_goods': int(total_cogs),
         'gross_profit': int(gross_profit),
         'gross_margin_percent': float(gross_margin_pct),
+        'external_fee_total': int(external_fee_total),
+        'external_fee_pct_effective': float(external_fee_pct_effective),
+        'external_fee_pct_contractual': float(external_fee_pct_contractual),
+        'real_profit': int(real_profit),
+        'real_margin_percent': float(real_margin_percent),
+        'blind_costs_warning': bool(blind_costs_warning),
         'products_without_cost': len(distinct_products_without_cost),
         'exposed_revenue_without_cost': int(blind_revenue),
         'blind_revenue': int(blind_revenue),
@@ -922,8 +1024,8 @@ def _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, catego
                 "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history "
                 "      WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
                 "WHERE o.tenant_slug = ? AND o.status = 'entregado' "
-                + status_filter_orders + " AND h.last_change BETWEEN ? AND ?",
-                params)
+                + status_filter_orders + source_filter_sql + " AND h.last_change BETWEEN ? AND ?",
+                params_buffered)
     cr = cur.fetchone()
     order_count_val = int(cr[0] or 0) if cr else 0
     payload['order_count'] = order_count_val
@@ -943,10 +1045,11 @@ def costs_analytics():
         to_raw = request.args.get('to') or request.args.get('to_date') or request.args.get('dateTo') or request.args.get('hasta')
         category_filter = request.args.get('category') or request.args.get('categoria')
         channel_filter = request.args.get('channel') or request.args.get('order_type') or request.args.get('canal')
+        source_filter = request.args.get('source') or request.args.get('canal_filtro') or request.args.get('fuente')
         from_dt, to_dt, from_iso, to_iso, truncated_to_now = _resolve_sales_range(from_raw, to_raw)
         prev_from_dt, prev_to_dt, prev_from_iso, prev_to_iso = _previous_period(from_dt, to_dt, truncated_to_now)
-        current = _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=category_filter, channel_filter=channel_filter)
-        previous = _compute_costs_payload(tenant_slug, prev_from_dt, prev_to_dt, truncated_to_now=False, category_filter=category_filter, channel_filter=channel_filter)
+        current = _compute_costs_payload(tenant_slug, from_dt, to_dt, truncated_to_now, category_filter=category_filter, channel_filter=channel_filter, source_filter=source_filter)
+        previous = _compute_costs_payload(tenant_slug, prev_from_dt, prev_to_dt, truncated_to_now=False, category_filter=category_filter, channel_filter=channel_filter, source_filter=source_filter)
         curr_sum = current['summary']
         prev_sum = previous['summary']
         current_gm = float(curr_sum.get('gross_margin_percent') or 0)
@@ -958,6 +1061,9 @@ def costs_analytics():
             'total_cost_of_goods': int(curr_sum.get('total_cost_of_goods') or 0),
             'gross_profit': int(curr_sum.get('gross_profit') or 0),
             'gross_margin_percent': float(curr_sum.get('gross_margin_percent') or 0),
+            'external_fee_total': int(curr_sum.get('external_fee_total') or 0),
+            'real_profit': int(curr_sum.get('real_profit') or 0),
+            'real_margin_percent': float(curr_sum.get('real_margin_percent') or 0),
             'products_without_cost': int(curr_sum.get('products_without_cost') or 0),
             'blind_revenue': int(curr_sum.get('blind_revenue') or curr_sum.get('exposed_revenue_without_cost') or 0),
             'order_count': cur_order_count
@@ -967,10 +1073,15 @@ def costs_analytics():
             'total_cost_of_goods': int(prev_sum.get('total_cost_of_goods') or 0),
             'gross_profit': int(prev_sum.get('gross_profit') or 0),
             'gross_margin_percent': float(prev_sum.get('gross_margin_percent') or 0),
+            'external_fee_total': int(prev_sum.get('external_fee_total') or 0),
+            'real_profit': int(prev_sum.get('real_profit') or 0),
+            'real_margin_percent': float(prev_sum.get('real_margin_percent') or 0),
             'products_without_cost': int(prev_sum.get('products_without_cost') or 0),
             'blind_revenue': int(prev_sum.get('blind_revenue') or prev_sum.get('exposed_revenue_without_cost') or 0),
             'order_count': prev_order_count
         }
+        current_rm = float(curr_sum.get('real_margin_percent') or 0)
+        prev_rm = float(prev_sum.get('real_margin_percent') or 0)
         comparison = {
             'previous_range': {'from': prev_from_iso, 'to': prev_to_iso},
             'current': current_block,
@@ -986,6 +1097,14 @@ def costs_analytics():
             'delta_gross_profit_percent': _delta_percent(curr_sum.get('gross_profit'), prev_sum.get('gross_profit')),
             'previous_gross_margin': float(prev_gm),
             'delta_gross_margin_pp': float(_pp_diff(current_gm, prev_gm)),
+            'previous_external_fee': int(prev_sum.get('external_fee_total') or 0),
+            'delta_external_fee': _delta_val(curr_sum.get('external_fee_total'), prev_sum.get('external_fee_total')),
+            'delta_external_fee_percent': _delta_percent(curr_sum.get('external_fee_total'), prev_sum.get('external_fee_total')),
+            'previous_real_profit': int(prev_sum.get('real_profit') or 0),
+            'delta_real_profit': _delta_val(curr_sum.get('real_profit'), prev_sum.get('real_profit')),
+            'delta_real_profit_percent': _delta_percent(curr_sum.get('real_profit'), prev_sum.get('real_profit')),
+            'previous_real_margin': float(prev_rm),
+            'delta_real_margin_pp': float(_pp_diff(current_rm, prev_rm)),
             'previous_products_without_cost': int(prev_sum.get('products_without_cost') or 0)
         }
         out = {
@@ -1039,6 +1158,9 @@ def costs_kpis_small():
                 'total_cost_of_goods': int(s.get('total_cost_of_goods') or 0),
                 'gross_profit': int(s.get('gross_profit') or 0),
                 'gross_margin_percent': float(s.get('gross_margin_percent') or 0.0),
+                'external_fee_total': int(s.get('external_fee_total') or 0),
+                'real_profit': int(s.get('real_profit') or 0),
+                'real_margin_percent': float(s.get('real_margin_percent') or 0.0),
                 'products_without_cost': int(s.get('products_without_cost') or 0),
                 'order_count': int(payload.get('order_count') or 0)
             }

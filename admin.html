@@ -3796,8 +3796,9 @@
                <div style="display: flex; flex-direction: column; gap: 4px;">
                   <label style="font-size: 12px; font-weight: 600; color: #495057;">Fecha en archivados</label>
                   <select id="arch-date-mode" style="padding: 7px; border: 1px solid #ced4da; border-radius: 4px; background: white;">
-                      <option value="archived" selected>Fecha de archivado</option>
+                      <option value="closed" selected>Fecha de cierre</option>
                       <option value="order">Fecha de pedido</option>
+                      <option value="archived">Fecha de archivado</option>
                   </select>
               </div>
           </div>
@@ -4107,6 +4108,84 @@
       </details>
     </div>
 
+    <div id="delivery-integrations-wrap">
+      <details id="delivery-integrations-panel" class="module-panel">
+        <summary>⚙ Configuración — Integraciones Delivery (PedidosYa / Rappi)</summary>
+        <div style="padding:16px 18px; background:#fff; border:1px solid var(--kds-border); border-radius:12px; margin-top:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0;">Proveedor: Pedidos Ya</h3>
+              <div style="color:#475569; font-size:0.9rem; margin-top:4px;">
+                Configurá acá las credenciales que Pedidos Ya te entrega. NUNCA compartas estas credenciales por WhatsApp ni las subas a GitHub.
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <label style="display:flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; cursor:pointer;">
+                <input id="pya-enabled" type="checkbox" />
+                <strong>Habilitar integración PedidosYa</strong>
+              </label>
+              <button id="pya-load-btn" class="btn btn-secondary" title="Cargar config actual desde DB">📂 Cargar</button>
+              <button id="pya-save-btn" class="btn btn-primary" title="Guardar en Qplato">💾 Guardar</button>
+              <button id="pya-test-btn" class="btn btn-secondary" title="Probar conexión a API PedidosYa">🔌 Probar Conexión</button>
+            </div>
+          </div>
+          <div id="pya-status-banner" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:14px;"></div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:14px;">
+            <div>
+              <label class="field-label">API Key (Bearer Token)</label>
+              <input id="pya-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="py-prod-xxxxxxxxxxxxxxxxxxxx" style="width:100%;" />
+              <div class="field-hint">Lo genera el Portal Admin de PedidosYa. Si empieza con <code>dev-</code> se usa modo debug local (bypass firma webhook).</div>
+            </div>
+            <div>
+              <label class="field-label">Webhook Secret (HMAC SHA256)</label>
+              <input id="pya-webhook-secret" type="password" autocomplete="off" spellcheck="false" placeholder="whsec_xxxxxxxxxxxxxxxxxxxx" style="width:100%;" />
+              <div class="field-hint">Validar firma X-PedidosYa-Signature en webhooks inbound. Si empieza con <code>dev</code> → bypass firma.</div>
+            </div>
+            <div>
+              <label class="field-label">Merchant ID (Sucursal PedidosYa)</label>
+              <input id="pya-merchant-id" type="text" autocomplete="off" spellcheck="false" placeholder="MER-123456" style="width:100%;" />
+              <div class="field-hint">Se envía como header <code>X-Merchant-Id</code> en Sync Outbound. Opcional si tu comercio es 1 sucursal.</div>
+            </div>
+            <div>
+              <label class="field-label">% Comisión pactada (0 - 100)</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input id="pya-commission-percent" type="number" min="0" max="100" step="1" value="25" style="width:100%;" />
+                <span style="font-size:1.1rem;">%</span>
+              </div>
+              <div class="field-hint">% que cobra PedidosYa por pedido → se usa para <code>external_fee_amount</code> en Rentabilidad. Default 25%.</div>
+            </div>
+            <div>
+              <label class="field-label">URL Base API (prod / sandbox)</label>
+              <input id="pya-api-base-url" type="text" spellcheck="false" placeholder="https://api.pedidosya.com" value="https://api.pedidosya.com" style="width:100%;" />
+              <div class="field-hint">Sandbox: <code>https://api.sandbox.pedidosya.com</code> · Producción: <code>https://api.pedidosya.com</code></div>
+            </div>
+            <div>
+              <label class="field-label">Timeout Sync Outbound (1 - 20s)</label>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input id="pya-http-timeout" type="number" min="1" max="20" step="1" value="6" style="width:100%;" />
+                <span style="font-size:1.1rem;">s</span>
+              </div>
+              <div class="field-hint">Tiempo máximo para Sync Outbound. Default 6s (NO superar 20s para no bloquear cocina).</div>
+            </div>
+          </div>
+          <div style="margin-top:18px; padding:14px 16px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
+            <h4 style="margin:0 0 6px 0;">📢 Webhook URL para copiar y pegar en Portal PedidosYa (Integraciones / Webhooks):</h4>
+            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+              <input id="pya-webhook-url" type="text" readonly style="width:100%; font-family: ui-monospace, Consolas, monospace; background:#ffffff; padding:8px 10px;" />
+              <button id="pya-copy-wh" class="btn btn-secondary" title="Copiar al portapapeles">📋 Copiar URL</button>
+              <label style="display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer;">
+                <input id="pya-webhook-debug-sync" type="checkbox" checked />
+                <small>Modo Debug (<code>?sync=1</code>)</small>
+              </label>
+            </div>
+            <div style="color:#475569; font-size:0.9rem; margin-top:8px;">
+              Eventos requeridos en webhook: <code>order_created</code>, <code>order_cancelled</code>, <code>order_status_changed</code>.
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+
     <div id="costs-analytics-wrap">
       <details id="costs-analytics-panel" class="module-panel">
         <summary>Análisis de Costos y Rentabilidad</summary>
@@ -4128,6 +4207,13 @@
             </label>
             <label>Hasta
               <input id="costs-analytics-to" type="date" />
+            </label>
+            <label>Canal
+              <select id="costs-analytics-source">
+                <option value="ambos" selected>Ambos</option>
+                <option value="local">Local</option>
+                <option value="pedidosya">PedidosYa</option>
+              </select>
             </label>
             <button id="costs-analytics-apply" style="background:#1565c0; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer;">Actualizar</button>
             <button id="costs-analytics-reload" style="background:#f3f4f6; color:#374151; border:1px solid #d1d5db; padding:8px 14px; border-radius:8px; cursor:pointer;">Recargar</button>
@@ -10000,10 +10086,17 @@
     }
     function syncClosedFilterInputsToState() {
       window.archivedSearch = archSearchInput ? archSearchInput.value.trim() : '';
-      window.archivedFrom = archFromInput ? archFromInput.value : '';
-      window.archivedTo = archToInput ? archToInput.value : '';
+      let fromVal = archFromInput ? String(archFromInput.value || '').trim() : '';
+      let toVal = archToInput ? String(archToInput.value || '').trim() : '';
+      if (fromVal && toVal && fromVal.length === 10 && toVal.length === 10 && fromVal > toVal) {
+        const tmp = fromVal; fromVal = toVal; toVal = tmp;
+        if (archFromInput) archFromInput.value = fromVal;
+        if (archToInput) archToInput.value = toVal;
+      }
+      window.archivedFrom = fromVal;
+      window.archivedTo = toVal;
       window.archOrderType = archOrderTypeSelect ? archOrderTypeSelect.value : '';
-      window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'archived';
+      window.archDateMode = archDateModeSelect ? archDateModeSelect.value : 'closed';
     }
     function getClosedFilterSummaryText() {
       const parts = [];
@@ -18628,6 +18721,7 @@
     const costsApplyBtn = document.getElementById('costs-analytics-apply');
     const costsReloadBtn = document.getElementById('costs-analytics-reload');
     const costsRangeLabel = document.getElementById('costs-analytics-range-label');
+    const costsSourceSel = document.getElementById('costs-analytics-source');
     const costsLeadersEl = document.getElementById('costs-analytics-leaders');
     const costsTopProfitEl = document.getElementById('costs-analytics-top-profit');
     const costsBottomMarginEl = document.getElementById('costs-analytics-bottom-margin');
@@ -18715,12 +18809,19 @@
       const prv = comp ? comp.previous : {};
 
       const netSales = Number(sum.net_sales || 0);
+      const grossOrdersTotal = Number(sum.gross_sales_on_orders || 0);
       const cogs = Number(sum.total_cost_of_goods || 0);
       const gp = Number(sum.gross_profit || 0);
       const gmPct = sum.gross_margin_percent != null ? Number(sum.gross_margin_percent) : null;
+      const extFee = Number(sum.external_fee_total || 0);
+      const extFeePctEff = sum.external_fee_pct_effective != null ? Number(sum.external_fee_pct_effective) : null;
+      const extFeePctCon = sum.external_fee_pct_contractual != null ? Number(sum.external_fee_pct_contractual) : null;
+      const realProfit = Number(sum.real_profit || 0);
+      const rmPct = sum.real_margin_percent != null ? Number(sum.real_margin_percent) : null;
       const orderCount = Number(sum.order_count || 0);
       const withoutCost = Number(sum.products_without_cost || 0);
       const blindRev = Number(sum.blind_revenue || 0);
+      const blindCostsWarn = !!sum.blind_costs_warning;
 
       const kpis = [
         {
@@ -18731,10 +18832,12 @@
           deltaHtml: costsBuildDelta(cur.net_sales, prv.net_sales, false)
         },
         {
-          label: 'CMV (Costo Vendido)',
+          label: (blindCostsWarn ? '⚠ CMV (Costo Vendido)' : 'CMV (Costo Vendido)'),
           value: `$${costsIntl$(cogs)}`,
-          sub: (cogs > 0 && netSales > 0) ? `= ${Math.round((cogs / netSales) * 100)}% de ventas` : (withoutCost > 0 ? `${withoutCost} productos sin costo` : ''),
-          accent: 'accent-costs',
+          sub: (blindCostsWarn
+                 ? (extFee > 0 ? `⚠ Costo estimado NO cargado · Margen Bruto 100% es FALSO. Cargar costos en Inventario` : `${withoutCost} productos sin costo · Cargalos en Inventario`)
+                 : ((cogs > 0 && netSales > 0) ? `= ${Math.round((cogs / netSales) * 100)}% de ventas` : (withoutCost > 0 ? `${withoutCost} productos sin costo` : ''))),
+          accent: (blindCostsWarn ? 'accent-cancel' : 'accent-costs'),
           deltaHtml: costsBuildDelta(cur.total_cost_of_goods, prv.total_cost_of_goods, true)
         },
         {
@@ -18754,6 +18857,30 @@
             (prv.gross_margin_percent != null ? Number(prv.gross_margin_percent) : null),
             false,
             true
+          )
+        },
+        {
+          label: 'Comisión Delivery',
+          value: `$${costsIntl$(extFee)}`,
+          sub: (extFee > 0
+                 ? (extFeePctCon != null && extFeePctCon > 0
+                       ? `Contractual ${extFeePctCon.toFixed(1)}% · Efectiva ${(extFeePctEff != null ? extFeePctEff : 0).toFixed(1)}%${(grossOrdersTotal > 0 ? ' · Venta bruta $'+costsIntl$(grossOrdersTotal) : '')}`
+                       : `≈ ${((extFee / Math.max(1, netSales)) * 100).toFixed(1)}% de ventas${(grossOrdersTotal > 0 ? ' · Venta bruta $'+costsIntl$(grossOrdersTotal) : '')}`)
+                 : 'Sin comisiones en período'),
+          accent: 'accent-cancel',
+          deltaHtml: costsBuildDelta(cur.external_fee_total, prv.external_fee_total, true)
+        },
+        {
+          label: (blindCostsWarn ? '⚠ Margen Real' : 'Margen Real'),
+          value: `$${costsIntl$(realProfit)}`,
+          sub: (blindCostsWarn
+                 ? `= ${(rmPct != null ? rmPct.toFixed(1)+'%' : '—')} sobre ventas · ⚠ CMV ciego — Cargar costos en Inventario`
+                 : (rmPct != null ? `= ${rmPct.toFixed(1)}% sobre ventas · Bruta − Comisiones` : 'Ganancia − Comisión delivery')),
+          accent: 'accent-profit',
+          deltaHtml: costsBuildDelta(
+            (cur.real_profit != null ? Number(cur.real_profit) : null),
+            (prv.real_profit != null ? Number(prv.real_profit) : null),
+            false
           )
         },
         {
@@ -18846,10 +18973,21 @@
         const gp = Number(it.gross_profit || 0);
         const cmv = Math.max(0, rev - gp);
         const gm = (rev > 0) ? (gp / rev) * 100 : null;
+        const fee = Number(it.external_fee || 0);
+        const realProfit = Number(it.real_profit != null ? it.real_profit : (gp - fee));
+        const realMargin = it.real_margin_percent != null ? Number(it.real_margin_percent)
+          : (rev > 0 ? (realProfit / rev) * 100 : null);
         const pctRev = (totalRev > 0) ? (rev / totalRev) * 100 : 0;
         const barW = Math.max(1, (rev / maxRev) * 100);
         const mcCls = costsMarginClass(gm);
+        const rmCls = costsMarginClass(realMargin);
         const mTxt = (gm == null || isNaN(gm)) ? '—' : `${gm.toFixed(1)}%`;
+        const extraLine = (titleType === 'channel' && (fee > 0 || realProfit !== gp))
+          ? `<div class="small" style="color:#475569; margin-top:3px;">
+               Comisión $${costsIntl$(fee)} · Real <span style="font-weight:700; color:${realProfit >= 0 ? '#15803d' : '#b91c1c'};">$${costsIntl$(Math.abs(realProfit))}</span>
+               <span class="costs-margin-pill costs-margin-${rmCls}" style="margin-left:4px;">${(realMargin == null || isNaN(realMargin)) ? '—' : realMargin.toFixed(1) + '%'}</span>
+             </div>`
+          : '';
         return `
           <div style="padding:7px 0; border-bottom:1px dashed #e5e7eb;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
@@ -18860,6 +18998,7 @@
               <div style="text-align:right; white-space:nowrap; font-weight:800; color:${gp >= 0 ? '#15803d' : '#b91c1c'};">${gp >= 0 ? '+' : '−'}$${costsIntl$(Math.abs(gp))}</div>
             </div>
             <div class="small" style="color:#64748b; margin-top:2px;">$${costsIntl$(rev)} · CMV $${costsIntl$(cmv)} · ${pctRev.toFixed(0)}% total</div>
+            ${extraLine}
             <div style="height:5px; background:#f1f5f9; border-radius:999px; margin-top:5px; overflow:hidden;">
               <div style="width:${barW}%; height:100%; background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%);"></div>
             </div>
@@ -19082,7 +19221,7 @@
     async function costsLoadAnalytics() {
       const r = costsUpdateRangeLabelAndDefaults();
       if (!r) return;
-      if (costsSummaryEl) costsSummaryEl.innerHTML = Array(6).fill(0).map(() =>
+      if (costsSummaryEl) costsSummaryEl.innerHTML = Array(8).fill(0).map(() =>
         `<div class="analytics-card"><div class="label">…</div><div class="value" style="color:#cbd5e1;">Cargando</div><div class="sub" style="color:#cbd5e1;">…</div></div>`
       ).join('');
       if (costsProdTbody) costsProdTbody.innerHTML = `<tr><td colspan="7" class="small" style="text-align:center; padding:18px; color:#64748b;">Actualizando datos…</td></tr>`;
@@ -19093,6 +19232,17 @@
         url.searchParams.set('range', r.range);
         if (r.from) url.searchParams.set('from_date', r.from);
         if (r.to) url.searchParams.set('to_date', r.to);
+        const srcOpts = (costsSourceSel && costsSourceSel.options) ? costsSourceSel.options : null;
+        const srcIdx = (costsSourceSel && costsSourceSel.selectedIndex != null) ? costsSourceSel.selectedIndex : -1;
+        let srcVal = (costsSourceSel && costsSourceSel.value != null) ? String(costsSourceSel.value).trim() : '';
+        if ((!srcVal || srcVal === '') && srcOpts && srcIdx >= 0 && srcOpts[srcIdx] && srcOpts[srcIdx].value != null) {
+          srcVal = String(srcOpts[srcIdx].value).trim();
+        }
+        if (!srcVal) srcVal = 'ambos';
+        url.searchParams.set('source', srcVal);
+        if (typeof console !== 'undefined' && console && console.log) {
+          try { console.log('[CostsAnalytics] fetch source=' + srcVal + ' url=' + url.toString()); } catch (_) {}
+        }
         const resp = await fetch(url.toString(), { credentials: 'include' });
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok || !data || !data.ok) {
@@ -19136,6 +19286,7 @@
       if (costsRangeSel) costsRangeSel.value = 'custom';
       costsUpdateRangeLabelAndDefaults();
     });
+    if (costsSourceSel) costsSourceSel.addEventListener('change', costsLoadAnalytics);
     if (costsProdSearch) costsProdSearch.addEventListener('input', () => {
       window.__costsAnalyticsPageIdx = 0;
       costsRenderProductsTable((window.__costsAnalyticsLastData && Array.isArray(window.__costsAnalyticsLastData.by_product)) ? window.__costsAnalyticsLastData.by_product : []);
@@ -19149,6 +19300,215 @@
     costsUpdateRangeLabelAndDefaults();
 
     // --------- Fin Módulo Costos Analytics ---------
+
+    // --------- Módulo Configuración Integraciones Delivery ---------
+    (function initDeliveryIntegrationsUI() {
+      const pyaEnabled = document.getElementById('pya-enabled');
+      const pyaApiKey = document.getElementById('pya-api-key');
+      const pyaWhSecret = document.getElementById('pya-webhook-secret');
+      const pyaMerchant = document.getElementById('pya-merchant-id');
+      const pyaCommission = document.getElementById('pya-commission-percent');
+      const pyaBaseUrl = document.getElementById('pya-api-base-url');
+      const pyaTimeout = document.getElementById('pya-http-timeout');
+      const pyaWhUrl = document.getElementById('pya-webhook-url');
+      const pyaWhDebug = document.getElementById('pya-webhook-debug-sync');
+      const pyaCopyWh = document.getElementById('pya-copy-wh');
+      const pyaLoadBtn = document.getElementById('pya-load-btn');
+      const pyaSaveBtn = document.getElementById('pya-save-btn');
+      const pyaTestBtn = document.getElementById('pya-test-btn');
+      const pyaBanner = document.getElementById('pya-status-banner');
+
+      if (!pyaEnabled) return; // este módulo no está renderizado en este admin
+
+      function pyaTenantSlug() {
+        try {
+          return (window.activeTenant || window.currentTenant ||
+                  (typeof getCachedTenant === 'function' ? getCachedTenant() : '') ||
+                  (window._currentTenantSlug) ||
+                  new URLSearchParams(window.location.search).get('tenant_slug') ||
+                  new URLSearchParams(window.location.search).get('slug') ||
+                  'planeta-pancho').toString().trim();
+        } catch (_) { return 'planeta-pancho'; }
+      }
+
+      function pyaWhHost() {
+        // En localhost: usa placeholder; si host público (Render) usa window.location.origin
+        const origin = (window.location && window.location.origin) ? String(window.location.origin).replace(/\/+$/, '') : '';
+        if (!origin || /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(origin)) {
+          return 'https://<TU-HOST-RENDER>.onrender.com';
+        }
+        return origin;
+      }
+
+      function pyaRebuildWebhookUrl() {
+        if (!pyaWhUrl) return;
+        const slug = encodeURIComponent(pyaTenantSlug());
+        const base = pyaWhHost();
+        const sync = (pyaWhDebug && pyaWhDebug.checked) ? '?sync=1' : '';
+        pyaWhUrl.value = `${base}/api/webhooks/pedidosya/${slug}${sync}`;
+      }
+
+      function pyaShowBanner(kind, messageHtml) {
+        if (!pyaBanner) return;
+        pyaBanner.style.display = 'block';
+        const palette = {
+          ok:     ['#dcfce7', '#166534', '✅ '],
+          warn:   ['#fef9c3', '#854d0e', '⚠️ '],
+          error:  ['#fee2e2', '#991b1b', '❌ '],
+          info:   ['#dbeafe', '#1e40af', 'ℹ️ ']
+        };
+        const [bg, fg, prefix] = palette[kind] || palette.info;
+        pyaBanner.style.background = bg;
+        pyaBanner.style.color = fg;
+        pyaBanner.style.border = '1px solid ' + fg + '22';
+        pyaBanner.innerHTML = prefix + messageHtml;
+      }
+
+      function pyaHideBanner() {
+        if (pyaBanner) pyaBanner.style.display = 'none';
+      }
+
+      function pyaGetCsrf() {
+        try {
+          if (typeof window.getCsrfToken === 'function') return String(window.getCsrfToken() || '');
+          const m = (document.cookie || '').match(/(?:^|;\s*)csrf-token=([^;]+)/);
+          return m ? decodeURIComponent(m[1]) : '';
+        } catch (_) { return ''; }
+      }
+
+      function pyaFetchJson(url, opts) {
+        const baseOpts = {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+        };
+        const token = pyaGetCsrf();
+        if (token) baseOpts.headers['X-CSRF-Token'] = token;
+        return fetch(url, Object.assign({}, baseOpts, (opts || {})));
+      }
+
+      async function pyaLoad() {
+        pyaHideBanner();
+        try {
+          const slug = encodeURIComponent(pyaTenantSlug());
+          const r = await pyaFetchJson(`/api/delivery/config/${slug}`, { method: 'GET' });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          const del = j.delivery_integrations || {};
+          const p = del.pedidosya || {};
+          pyaEnabled.checked = !!p.enabled;
+          pyaApiKey.value = String(p.api_key || '');
+          pyaWhSecret.value = String(p.webhook_secret || '');
+          pyaMerchant.value = String(p.merchant_id || '');
+          pyaCommission.value = (p.commission_percent != null ? p.commission_percent : 25);
+          pyaBaseUrl.value = String(p.api_base_url || 'https://api.pedidosya.com');
+          pyaTimeout.value = (p.http_timeout_seconds != null ? p.http_timeout_seconds : 6);
+          pyaRebuildWebhookUrl();
+          if (p.enabled && p.api_key) {
+            pyaShowBanner('ok', `Configuración cargada desde DB · API Key mask: ${(String(p.api_key || '').slice(0, 4) + '***' + String(p.api_key || '').slice(-4))}`);
+          } else {
+            pyaShowBanner('info', 'Configuración vacía · Cargá las credenciales de PedidosYa y guardá.');
+          }
+        } catch (e) {
+          pyaShowBanner('error', `Error cargando config: ${String(e && e.message ? e.message : e)}`);
+        }
+      }
+
+      async function pyaSave() {
+        pyaHideBanner();
+        try {
+          const enabled = !!pyaEnabled.checked;
+          const commission = Math.max(0, Math.min(100, parseInt(pyaCommission.value || '25', 10) || 25));
+          const timeout = Math.max(1, Math.min(20, parseInt(pyaTimeout.value || '6', 10) || 6));
+          const baseUrl = String((pyaBaseUrl.value || '').trim() || 'https://api.pedidosya.com').replace(/\/+$/, '');
+          const payload = {
+            delivery_integrations: {
+              pedidosya: {
+                enabled: enabled,
+                api_key: String(pyaApiKey.value || '').trim(),
+                webhook_secret: String(pyaWhSecret.value || '').trim(),
+                merchant_id: String(pyaMerchant.value || '').trim(),
+                commission_percent: commission,
+                api_base_url: baseUrl,
+                http_timeout_seconds: timeout
+              }
+            }
+          };
+          const slug = encodeURIComponent(pyaTenantSlug());
+          const r = await pyaFetchJson(`/api/delivery/config/${slug}`, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          pyaShowBanner('ok', `✅ Guardado OK · Habilitado=${enabled ? 'SÍ' : 'NO'} · Comisión=${commission}% · Timeout=${timeout}s · Base=${baseUrl}`);
+          pyaRebuildWebhookUrl();
+        } catch (e) {
+          pyaShowBanner('error', `❌ Error guardando: ${String(e && e.message ? e.message : e)}`);
+        }
+      }
+
+      async function pyaTest() {
+        pyaHideBanner();
+        try {
+          pyaShowBanner('info', '🔌 Probando conexión a API PedidosYa… (esto demora hasta 20s)');
+          const slug = encodeURIComponent(pyaTenantSlug());
+          const r = await pyaFetchJson(`/api/delivery/config/${slug}/test`, { method: 'POST', body: '{}' });
+          const j = await r.json();
+          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          const st = String(j.status || '');
+          const latency = j.latency_ms != null ? ` ${j.latency_ms}ms` : '';
+          const mask = j.api_key_masked ? ` Key mask: <code>${j.api_key_masked}</code>` : '';
+          const httpStatus = j.http_status != null ? ` HTTP=${j.http_status}` : '';
+          const note = j.note ? `<div style="margin-top:4px;">${String(j.note).replace(/</g,'&lt;')}</div>` : '';
+          const authMsg = (j.http_status === 401 || j.http_status === 403)
+                ? '<div style="margin-top:4px;">Auth 401/403 = Verificar API Key o permisos del Merchant ID en PedidosYa.</div>'
+                : '';
+          if (st === 'ok' || (j.connectivity_ok && !(j.http_status === 401 || j.http_status === 403))) {
+            pyaShowBanner('ok', `Conectividad OK · ${httpStatus}${latency}${mask}${authMsg}${note}`);
+          } else if (j.status === 'skip') {
+            pyaShowBanner('warn', `⏭ Skip: ${String(j.message || j.reason || '')}. Habilitá la integración y guardá antes de probar.`);
+          } else if (j.connectivity_ok && (j.http_status === 401 || j.http_status === 403)) {
+            pyaShowBanner('warn', `Conectividad OK pero auth falló · ${httpStatus}${latency}${mask}${authMsg}${note}`);
+          } else {
+            const errMsg = (j.error ? ' · ' + String(j.error).slice(0, 300).replace(/</g,'&lt;') : '');
+            pyaShowBanner('error', `Conexión fallida · ${httpStatus || 'timeout/red'}${latency}${mask}${errMsg}${note}`);
+          }
+        } catch (e) {
+          pyaShowBanner('error', `❌ Error probando: ${String(e && e.message ? e.message : e)}`);
+        }
+      }
+
+      pyaRebuildWebhookUrl();
+      if (pyaWhDebug) pyaWhDebug.addEventListener('change', pyaRebuildWebhookUrl);
+      if (pyaCopyWh) pyaCopyWh.addEventListener('click', async () => {
+        try {
+          pyaWhUrl.select();
+          if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(String(pyaWhUrl.value || ''));
+          }
+          pyaShowBanner('ok', '📋 Webhook URL copiada al portapapeles. Pegala en el Portal PedidosYa → Webhooks.');
+        } catch (e) {
+          pyaShowBanner('warn', `No se pudo copiar automáticamente: ${String(e && e.message ? e.message : e)}. Seleccioná manualmente y Ctrl+C.`);
+        }
+      });
+      if (pyaLoadBtn) pyaLoadBtn.addEventListener('click', pyaLoad);
+      if (pyaSaveBtn) pyaSaveBtn.addEventListener('click', pyaSave);
+      if (pyaTestBtn) pyaTestBtn.addEventListener('click', pyaTest);
+      // Cargar config automáticamente al abrir panel la primera vez (si hay sesión)
+      try {
+        const wrapEl = document.getElementById('delivery-integrations-panel');
+        if (wrapEl) {
+          wrapEl.addEventListener('toggle', function _onOpenOnce() {
+            if (wrapEl.open) {
+              wrapEl.removeEventListener('toggle', _onOpenOnce);
+              pyaLoad();
+            }
+          });
+        }
+      } catch (_) {}
+      try { window.pyaLoadDeliveryConfig = pyaLoad; window.pyaSaveDeliveryConfig = pyaSave; } catch (_) {}
+    })();
+    // --------- Fin Módulo Config Integraciones Delivery ---------
 
     if (delPageSizeSelect) {
       delPageSizeSelect.addEventListener('change', async () => {
