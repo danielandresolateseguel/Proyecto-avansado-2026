@@ -19397,7 +19397,8 @@
             if (r.status === 401) throw new Error('Sesión expirada · Volvé a iniciar sesión en Qplato.');
             if (r.status === 403) throw new Error('Permisos insuficientes · Necesitás rol Admin / Owner para gestionar integraciones.');
             if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) {
-              pyaShowBanner('warn', 'Módulo Delivery no disponible todavía · Verificá en el panel de Render que el deploy del commit 2191b77 haya terminado (el build suele demorar 2-5 minutos). Si ya pasó más tiempo, revisá los logs del servicio o forzá un Manual Deploy desde el commit main más reciente.');
+              pyaShowBanner('info', 'Integración en preparación · Podés cargar las credenciales de PedidosYa y guardarlas. Si este mensaje persistiera después de 5 minutos, contactá a soporte.');
+              console.warn('[Delivery Config] Módulo Delivery routes no encontradas (404 Ruta de API no válida). INFO TÉCNICA DEV: Verificá que el backend deploy actual haya registrado delivery.bp (app/__init__.py register_blueprint delivery) y que los endpoints /api/delivery/config existan en el URL map.');
               pyaCommission.value = 25;
               pyaTimeout.value = 6;
               pyaBaseUrl.value = 'https://api.pedidosya.com';

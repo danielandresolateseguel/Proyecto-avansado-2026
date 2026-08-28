@@ -805,36 +805,63 @@ def metrics():
         cur = conn.cursor()
         cur.execute("SELECT COUNT(*) FROM orders WHERE tenant_slug = ? AND status NOT IN ('entregado','cancelado') AND id NOT IN (SELECT order_id FROM archived_orders)", (tenant_slug,))
         active_count = cur.fetchone()[0]
-        base_join_del = (
-            "SELECT COUNT(*) FROM orders o "
-            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id "
-            "WHERE o.tenant_slug = ? AND o.status = 'entregado'"
-        )
-        base_join_can = (
-            "SELECT COUNT(*) FROM orders o "
-            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = 'cancelado' GROUP BY order_id) h ON h.order_id = o.id "
-            "WHERE o.tenant_slug = ? AND o.status = 'cancelado'"
-        )
-        params_del = [tenant_slug]
-        params_can = [tenant_slug]
-        if from_date:
-            base_join_del += " AND h.last_change >= ?"
-            base_join_can += " AND h.last_change >= ?"
-            params_del.append(from_date)
-            params_can.append(from_date)
-        if to_date:
-            base_join_del += " AND h.last_change <= ?"
-            base_join_can += " AND h.last_change <= ?"
-            params_del.append(to_date)
-            params_can.append(to_date)
-        cur.execute(base_join_del, params_del)
+        def _parse_iso_any(s):
+            s = str(s or '').strip()
+            if not s: return None
+            for fmt in (
+                '%Y-%m-%dT%H:%M:%S.%fZ','%Y-%m-%dT%H:%M:%S.%f','%Y-%m-%dT%H:%M:%SZ','%Y-%m-%dT%H:%M:%S',
+                '%Y-%m-%d %H:%M:%S.%f','%Y-%m-%d %H:%M:%S','%Y-%m-%d %H:%M','%Y-%m-%d',
+            ):
+                try: return datetime.strptime(s, fmt)
+                except Exception: continue
+            try: return datetime.fromisoformat(s.replace('Z',''))
+            except Exception: return None
+        _from_dt = _parse_iso_any(from_date)
+        _to_dt = _parse_iso_any(to_date)
+        _from_has_no_time = bool(from_date and len(str(from_date).strip()) == 10)
+        _to_has_no_time = bool(to_date and len(str(to_date).strip()) == 10)
+        if _from_dt is not None and _to_dt is not None and _to_dt < _from_dt:
+            _from_dt, _to_dt = _to_dt, _from_dt
+            _from_has_no_time, _to_has_no_time = _to_has_no_time, _from_has_no_time
+            from_date, to_date = to_date, from_date
+        elif from_date and to_date and len(str(from_date).strip()) == len(str(to_date).strip()) and str(to_date).strip() < str(from_date).strip():
+            from_date, to_date = to_date, from_date
+            _from_has_no_time, _to_has_no_time = _to_has_no_time, _from_has_no_time
+        _start_buf = timedelta(hours=36) if (_from_has_no_time or (_from_dt is not None and _from_dt.hour==0 and _from_dt.minute==0 and _from_dt.second==0)) else timedelta(hours=12)
+        _end_buf = timedelta(hours=36) if (_to_has_no_time or (_to_dt is not None and _to_dt.hour==23 and _to_dt.minute==59 and _to_dt.second==59)) else timedelta(hours=24)
+        if _from_dt is None and _from_has_no_time:
+            try: _from_dt = datetime.strptime(str(from_date).strip(), '%Y-%m-%d')
+            except Exception: _from_dt = None
+        if _to_dt is None and _to_has_no_time:
+            try: _to_dt = datetime.strptime(str(to_date).strip(), '%Y-%m-%d') + timedelta(hours=23, minutes=59, seconds=59)
+            except Exception: _to_dt = None
+        if _from_dt is not None: _from_dt = _from_dt - _start_buf
+        if _to_dt is not None: _to_dt = _to_dt + _end_buf
+        _from_for_sql = _from_dt.strftime('%Y-%m-%dT%H:%M:%S') if _from_dt else (str(from_date).replace(' ', 'T') if from_date else None)
+        _to_for_sql = _to_dt.strftime('%Y-%m-%dT%H:%M:%S') if _to_dt else (str(to_date).replace(' ', 'T') if to_date else None)
+        closed_eff = "COALESCE(o.delivered_at, h.last_change, o.created_at)"
+        def _base_agg(status_label, alias_h_status=None):
+            hs = alias_h_status or status_label
+            return (
+                f"FROM orders o "
+                f"LEFT JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = '{hs}' GROUP BY order_id) h ON h.order_id = o.id "
+                f"WHERE o.tenant_slug = ? AND o.status = '{status_label}'"
+            )
+        base_from_del = _base_agg('entregado')
+        base_from_can = _base_agg('cancelado')
+        sql_date_where = ""
+        params_date = []
+        if str(_from_for_sql or ''):
+            sql_date_where += f" AND {closed_eff} >= ?"; params_date.append(_from_for_sql)
+        if str(_to_for_sql or ''):
+            sql_date_where += f" AND {closed_eff} <= ?"; params_date.append(_to_for_sql)
+        params_del = [tenant_slug] + params_date
+        params_can = [tenant_slug] + params_date
+        cur.execute(f"SELECT COUNT(*) {base_from_del} {sql_date_where}", params_del)
         delivered_count = cur.fetchone()[0]
-        cur.execute(base_join_can, params_can)
+        cur.execute(f"SELECT COUNT(*) {base_from_can} {sql_date_where}", params_can)
         canceled_count = cur.fetchone()[0]
-        cur.execute(
-            base_join_del.replace("SELECT COUNT(*)", "SELECT COALESCE(SUM(o.total),0)"),
-            params_del
-        )
+        cur.execute(f"SELECT COALESCE(SUM(o.total),0) {base_from_del} {sql_date_where}", params_del)
         delivered_total = int(cur.fetchone()[0] or 0)
         tip = (delivered_total + 5) // 10
         delivered_total_with_tip = delivered_total + tip
@@ -842,23 +869,24 @@ def metrics():
         avg_listo = 0
         avg_entregado = 0
         try:
-            where_exists = "EXISTS(SELECT 1 FROM order_status_history h WHERE h.order_id = o.id AND h.status = 'entregado'"
+            where_clause = (
+                f"EXISTS(SELECT 1 FROM order_status_history hh WHERE hh.order_id = o.id AND hh.status = 'entregado') "
+                f"AND o.status = 'entregado'"
+            )
             p2 = [tenant_slug]
-            if from_date:
-                where_exists += " AND h.changed_at >= ?"
-                p2.append(from_date)
-            if to_date:
-                where_exists += " AND h.changed_at <= ?"
-                p2.append(to_date)
-            where_exists += ")"
+            if str(_from_for_sql or ''):
+                where_clause += f" AND {closed_eff} >= ?"; p2.append(_from_for_sql)
+            if str(_to_for_sql or ''):
+                where_clause += f" AND {closed_eff} <= ?"; p2.append(_to_for_sql)
             cur.execute(
                 f"""
                 SELECT o.id, o.created_at,
-                       (SELECT h.changed_at FROM order_status_history h WHERE h.order_id = o.id AND h.status = 'preparacion' ORDER BY h.id ASC LIMIT 1) AS prep_at,
-                       (SELECT h.changed_at FROM order_status_history h WHERE h.order_id = o.id AND h.status = 'listo' ORDER BY h.id ASC LIMIT 1) AS listo_at,
-                       (SELECT h.changed_at FROM order_status_history h WHERE h.order_id = o.id AND h.status = 'entregado' ORDER BY h.id ASC LIMIT 1) AS entregado_at
+                       (SELECT hh.changed_at FROM order_status_history hh WHERE hh.order_id = o.id AND hh.status = 'preparacion' ORDER BY hh.id ASC LIMIT 1) AS prep_at,
+                       (SELECT hh.changed_at FROM order_status_history hh WHERE hh.order_id = o.id AND hh.status = 'listo' ORDER BY hh.id ASC LIMIT 1) AS listo_at,
+                       COALESCE(o.delivered_at, (SELECT hh.changed_at FROM order_status_history hh WHERE hh.order_id = o.id AND hh.status = 'entregado' ORDER BY hh.id DESC LIMIT 1)) AS entregado_at
                 FROM orders o
-                WHERE o.tenant_slug = ? AND {where_exists}
+                LEFT JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = 'entregado' GROUP BY order_id) h ON h.order_id = o.id
+                WHERE o.tenant_slug = ? AND {where_clause}
                 """,
                 p2
             )
@@ -873,7 +901,6 @@ def metrics():
                         dt = s
                     
                     if dt:
-                        # Normalize to naive UTC
                         if dt.tzinfo is not None:
                             dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
                         return dt

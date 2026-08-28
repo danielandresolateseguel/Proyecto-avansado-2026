@@ -79,7 +79,7 @@ def create_app(test_config=None):
     start_background_tasks(app)
 
     # Register Blueprints
-    from .blueprints import auth, orders, cash, products, carousel, public, archive, tenants, system, costs
+    from .blueprints import auth, orders, cash, products, carousel, public, archive, tenants, system, costs, delivery
     
     app.register_blueprint(auth.bp)
     app.register_blueprint(orders.bp)
@@ -90,6 +90,7 @@ def create_app(test_config=None):
     app.register_blueprint(archive.bp)
     app.register_blueprint(tenants.bp)
     app.register_blueprint(system.bp)
+    app.register_blueprint(delivery.bp)
 
     # Register public last to avoid catching API routes
     app.register_blueprint(public.bp)

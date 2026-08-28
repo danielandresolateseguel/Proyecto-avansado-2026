@@ -1739,13 +1739,15 @@ def list_orders():
         ensure_orders_tenant_number_columns(conn, cur)
     except Exception:
         pass
+    closed_eff = "COALESCE(o.delivered_at, h.last_change, o.created_at)" if use_closed_date else "created_at"
     if use_closed_date:
         base = (
             "SELECT o.id, o.tenant_slug, o.tenant_order_number, o.order_type, o.table_number, o.address_json, o.status, o.total, o.created_at, "
             "o.customer_phone, o.customer_name, o.payment_status, o.payment_method, o.tip_amount, o.shipping_cost, o.delivery_assigned_to, "
-            "o.delivery_status, o.delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at, h.last_change AS closed_at "
+            "o.delivery_status, o.delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at, "
+            + closed_eff + " AS closed_at "
             "FROM orders o "
-            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
+            "LEFT JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
             "WHERE o.tenant_slug = ?"
         )
         params = [str(status).strip().lower(), tenant_slug]
@@ -1788,13 +1790,86 @@ def list_orders():
                 " OR COALESCE(" + ("o.table_number" if use_closed_date else "table_number") + ",'') LIKE ?)"
             )
             params.extend([like, like, like, like])
-    if from_date:
-        base += " AND " + ("h.last_change" if use_closed_date else "created_at") + " >= ?"
-        params.append(from_date)
-    if to_date:
-        base += " AND " + ("h.last_change" if use_closed_date else "created_at") + " <= ?"
-        params.append(to_date)
-    base += " ORDER BY " + ("h.last_change DESC, o.id DESC" if use_closed_date else "id DESC") + " LIMIT ? OFFSET ?"
+
+    def _parse_iso_any(s):
+        s = str(s or '').strip()
+        if not s:
+            return None
+        for fmt in (
+            '%Y-%m-%dT%H:%M:%S.%fZ',
+            '%Y-%m-%dT%H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%d %H:%M:%S',
+            '%Y-%m-%d %H:%M',
+            '%Y-%m-%d',
+        ):
+            try:
+                return datetime.strptime(s, fmt)
+            except Exception:
+                continue
+        try:
+            return datetime.fromisoformat(s.replace('Z', ''))
+        except Exception:
+            return None
+
+    _from_dt = _parse_iso_any(from_date)
+    _to_dt = _parse_iso_any(to_date)
+    _from_has_no_time = bool(from_date and len(str(from_date).strip()) == 10)
+    _to_has_no_time = bool(to_date and len(str(to_date).strip()) == 10)
+    if _from_dt is not None and _to_dt is not None and _to_dt < _from_dt:
+        _from_dt, _to_dt = _to_dt, _from_dt
+        _from_has_no_time, _to_has_no_time = _to_has_no_time, _from_has_no_time
+        from_date, to_date = to_date, from_date
+    elif from_date and to_date and len(str(from_date).strip()) == len(str(to_date).strip()) and str(to_date).strip() < str(from_date).strip():
+        from_date, to_date = to_date, from_date
+        _from_has_no_time, _to_has_no_time = _to_has_no_time, _from_has_no_time
+    if use_closed_date:
+        _start_buf = timedelta(hours=36) if (_from_has_no_time or _from_dt is not None and _from_dt.hour == 0 and _from_dt.minute == 0 and _from_dt.second == 0) else timedelta(hours=12)
+        _end_buf = timedelta(hours=36) if (_to_has_no_time or _to_dt is not None and _to_dt.hour == 23 and _to_dt.minute == 59 and _to_dt.second == 59) else timedelta(hours=24)
+        if _from_dt is None and _from_has_no_time:
+            try:
+                _from_dt = datetime.strptime(str(from_date).strip(), '%Y-%m-%d')
+            except Exception:
+                _from_dt = None
+        if _to_dt is None and _to_has_no_time:
+            try:
+                _to_dt = datetime.strptime(str(to_date).strip(), '%Y-%m-%d') + timedelta(hours=23, minutes=59, seconds=59)
+            except Exception:
+                _to_dt = None
+        if _from_dt is not None:
+            _from_dt = _from_dt - _start_buf
+        if _to_dt is not None:
+            _to_dt = _to_dt + _end_buf
+    else:
+        if _from_dt is None and _from_has_no_time:
+            try:
+                _from_dt = datetime.strptime(str(from_date).strip(), '%Y-%m-%d')
+            except Exception:
+                _from_dt = None
+        if _to_dt is None and _to_has_no_time:
+            try:
+                _to_dt = datetime.strptime(str(to_date).strip(), '%Y-%m-%d') + timedelta(hours=23, minutes=59, seconds=59)
+            except Exception:
+                _to_dt = None
+    _from_for_sql = None
+    _to_for_sql = None
+    if _from_dt is not None:
+        _from_for_sql = _from_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    elif from_date:
+        _from_for_sql = str(from_date).replace(' ', 'T')
+    if _to_dt is not None:
+        _to_for_sql = _to_dt.strftime('%Y-%m-%dT%H:%M:%S')
+    elif to_date:
+        _to_for_sql = str(to_date).replace(' ', 'T')
+    if str(_from_for_sql or ''):
+        base += " AND " + (closed_eff if use_closed_date else "created_at") + " >= ?"
+        params.append(_from_for_sql)
+    if str(_to_for_sql or ''):
+        base += " AND " + (closed_eff if use_closed_date else "created_at") + " <= ?"
+        params.append(_to_for_sql)
+    base += " ORDER BY " + ((closed_eff + " DESC, o.id DESC") if use_closed_date else "id DESC") + " LIMIT ? OFFSET ?"
     params.extend([limit, offset])
     cur.execute(base, params)
     rows = cur.fetchall()
@@ -1805,7 +1880,7 @@ def list_orders():
         count_sql = (
             "SELECT COUNT(*) "
             "FROM orders o "
-            "JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
+            "LEFT JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
             "WHERE o.tenant_slug = ?"
         )
         count_params = [str(status).strip().lower(), tenant_slug]
@@ -1848,17 +1923,34 @@ def list_orders():
                 " OR COALESCE(" + ("o.table_number" if use_closed_date else "table_number") + ",'') LIKE ?)"
             )
             count_params.extend([like, like, like, like])
-    if from_date:
-        count_sql += " AND " + ("h.last_change" if use_closed_date else "created_at") + " >= ?"
-        count_params.append(from_date)
-    if to_date:
-        count_sql += " AND " + ("h.last_change" if use_closed_date else "created_at") + " <= ?"
-        count_params.append(to_date)
+    if from_date and _from_for_sql:
+        count_sql += " AND " + (closed_eff if use_closed_date else "created_at") + " >= ?"
+        count_params.append(_from_for_sql)
+    if to_date and _to_for_sql:
+        count_sql += " AND " + (closed_eff if use_closed_date else "created_at") + " <= ?"
+        count_params.append(_to_for_sql)
 
     cur.execute(count_sql, count_params)
     total_count = cur.fetchone()[0]
     
-    resp = jsonify({'orders': data, 'count': len(data), 'total': total_count, 'limit': limit, 'offset': offset})
+    debug_filter = {
+        'date_field': 'closed' if use_closed_date else 'created',
+        'input_from': str(from_date or ''),
+        'input_to': str(to_date or ''),
+        'from_has_no_time': _from_has_no_time,
+        'to_has_no_time': _to_has_no_time,
+        'parsed_from': _from_dt.isoformat() if _from_dt else None,
+        'parsed_to': _to_dt.isoformat() if _to_dt else None,
+        'sql_from_final': _from_for_sql,
+        'sql_to_final': _to_for_sql,
+        'start_buf_hours': (_start_buf.total_seconds() / 3600) if use_closed_date and _from_dt else 0,
+        'end_buf_hours': (_end_buf.total_seconds() / 3600) if use_closed_date and _to_dt else 0,
+    } if use_closed_date or from_date or to_date else None
+    
+    resp_data = {'orders': data, 'count': len(data), 'total': total_count, 'limit': limit, 'offset': offset}
+    if debug_filter:
+        resp_data['_filter_debug'] = debug_filter
+    resp = jsonify(resp_data)
     resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     resp.headers['Pragma'] = 'no-cache'
     resp.headers['Expires'] = '0'
@@ -2146,6 +2238,32 @@ def update_order_status(order_id):
             'delivery_assigned_to': '',
             'delivery_notes': None,
         })
+
+    # Fase 3 — Sync bidireccional Qplato → PedidosYa (outbound status change)
+    # NUNCA debe fallar ni influir en la respuesta HTTP principal.
+    try:
+        from app.blueprints.delivery import try_sync_pedidosya_status_outbound
+        _pya_sync_result = try_sync_pedidosya_status_outbound(
+            tenant_slug=tenant_slug,
+            order_id=order_id,
+            new_status=new_status,
+            reason=(reason if new_status == 'cancelado' else None),
+            actor=(actor or session.get('admin_user') or ''),
+        )
+        response['_pedidosya_sync'] = {
+            'enabled': True,
+            'sent_ok': bool(_pya_sync_result),
+        }
+    except Exception as _pya_e:
+        try:
+            response['_pedidosya_sync'] = {
+                'enabled': True,
+                'error': f"{type(_pya_e).__name__}: {str(_pya_e)[:200]}",
+                'sent_ok': False,
+            }
+        except Exception:
+            pass
+
     return jsonify(response)
 
 @bp.route('/delivery/orders', methods=['GET'])
@@ -2773,7 +2891,7 @@ def pay_order(order_id):
         if isinstance(pm_cfg, dict):
             pm_list = pm_cfg.get('methods') if isinstance(pm_cfg.get('methods'), list) else []
         elif isinstance(pm_cfg, list):
-            pm_list = pm_cfg
+            pm_list = pm_list
         for it in pm_list or []:
             if not isinstance(it, dict):
                 continue
@@ -2784,7 +2902,26 @@ def pay_order(order_id):
             if not pid or not base or base not in base_allowed:
                 continue
             allowed_map[pid] = base
-        
+
+        try:
+            cur.execute("SELECT source FROM orders WHERE id = ? LIMIT 1", (order_id,))
+            src_row = cur.fetchone()
+        except Exception:
+            src_row = None
+        order_src = str((src_row or [None])[0] or '').strip().lower() if src_row else ''
+
+        delivery_source_allowed = False
+        if order_src and order_src not in ('', 'local'):
+            delivery_source_allowed = True
+            safe_delivery_key = order_src.replace('_', '').replace('-', '')
+            method_clean = method.replace('_', '').replace('-', '')
+            if method != 'mixed' and safe_delivery_key.startswith(method_clean):
+                allowed_map[method] = 'transferencia'
+            _extra_allowed = (order_src, method.replace('_',''), 'pedidosya', 'rappi', 'ifood', 'mercado_pago', 'mercadopago', 'mp')
+            for pmx in _extra_allowed:
+                if pmx and pmx not in allowed_map:
+                    allowed_map[pmx] = 'transferencia'
+
         if method != 'mixed' and method not in allowed_map:
             try: conn.rollback()
             except Exception: pass

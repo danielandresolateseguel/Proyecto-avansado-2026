@@ -282,7 +282,11 @@ def init_db_postgres(cur):
             delivery_sequence INTEGER,
             delivery_notes TEXT,
             delivery_assigned_at TEXT,
-            delivered_at TEXT
+            delivered_at TEXT,
+            source TEXT DEFAULT 'local',
+            external_order_id TEXT,
+            external_fee_amount INTEGER DEFAULT 0,
+            external_payload_json TEXT
         )
         """
     )
@@ -386,6 +390,34 @@ def init_db_postgres(cur):
         cur.execute("RELEASE SAVEPOINT add_tenant_order_number")
     except Exception:
         cur.execute("ROLLBACK TO SAVEPOINT add_tenant_order_number")
+
+    cur.execute("SAVEPOINT add_source")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN source TEXT DEFAULT 'local'")
+        cur.execute("RELEASE SAVEPOINT add_source")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_source")
+
+    cur.execute("SAVEPOINT add_external_order_id")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN external_order_id TEXT")
+        cur.execute("RELEASE SAVEPOINT add_external_order_id")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_external_order_id")
+
+    cur.execute("SAVEPOINT add_external_fee_amount")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN external_fee_amount INTEGER DEFAULT 0")
+        cur.execute("RELEASE SAVEPOINT add_external_fee_amount")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_external_fee_amount")
+
+    cur.execute("SAVEPOINT add_external_payload_json")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN external_payload_json TEXT")
+        cur.execute("RELEASE SAVEPOINT add_external_payload_json")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_external_payload_json")
 
     try:
         cur.execute(
@@ -818,7 +850,11 @@ def init_db_sqlite(cur):
             delivery_sequence INTEGER,
             delivery_notes TEXT,
             delivery_assigned_at TEXT,
-            delivered_at TEXT
+            delivered_at TEXT,
+            source TEXT DEFAULT 'local',
+            external_order_id TEXT,
+            external_fee_amount INTEGER DEFAULT 0,
+            external_payload_json TEXT
         )
         """
     )
@@ -876,6 +912,14 @@ def init_db_sqlite(cur):
             cur.execute("ALTER TABLE orders ADD COLUMN delivered_at TEXT")
         if 'tenant_order_number' not in cols:
             cur.execute("ALTER TABLE orders ADD COLUMN tenant_order_number INTEGER")
+        if 'source' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN source TEXT DEFAULT 'local'")
+        if 'external_order_id' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN external_order_id TEXT")
+        if 'external_fee_amount' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN external_fee_amount INTEGER DEFAULT 0")
+        if 'external_payload_json' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN external_payload_json TEXT")
     except Exception:
         pass
 
