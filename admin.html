@@ -19397,7 +19397,7 @@
             if (r.status === 401) throw new Error('Sesión expirada · Volvé a iniciar sesión en Qplato.');
             if (r.status === 403) throw new Error('Permisos insuficientes · Necesitás rol Admin / Owner para gestionar integraciones.');
             if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) {
-              pyaShowBanner('warn', 'Módulo Delivery no disponible todavía · Verificá en el panel de Render que el deploy del commit 0ce800e haya terminado (el build suele demorar 2-5 minutos). Si ya pasó más tiempo, revisá los logs del servicio.');
+              pyaShowBanner('warn', 'Módulo Delivery no disponible todavía · Verificá en el panel de Render que el deploy del commit 2191b77 haya terminado (el build suele demorar 2-5 minutos). Si ya pasó más tiempo, revisá los logs del servicio o forzá un Manual Deploy desde el commit main más reciente.');
               pyaCommission.value = 25;
               pyaTimeout.value = 6;
               pyaBaseUrl.value = 'https://api.pedidosya.com';
