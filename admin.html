@@ -19391,8 +19391,21 @@
         try {
           const slug = encodeURIComponent(pyaTenantSlug());
           const r = await pyaFetchJson(`/api/delivery/config/${slug}`, { method: 'GET' });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const msg = String(j && j.error ? j.error : '');
+            if (r.status === 401) throw new Error('Sesión expirada · Volvé a iniciar sesión en Qplato.');
+            if (r.status === 403) throw new Error('Permisos insuficientes · Necesitás rol Admin / Owner para gestionar integraciones.');
+            if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) {
+              pyaShowBanner('warn', 'Módulo Delivery no disponible todavía · Verificá en el panel de Render que el deploy del commit 0ce800e haya terminado (el build suele demorar 2-5 minutos). Si ya pasó más tiempo, revisá los logs del servicio.');
+              pyaCommission.value = 25;
+              pyaTimeout.value = 6;
+              pyaBaseUrl.value = 'https://api.pedidosya.com';
+              pyaRebuildWebhookUrl();
+              return;
+            }
+            throw new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`);
+          }
           const del = j.delivery_integrations || {};
           const p = del.pedidosya || {};
           pyaEnabled.checked = !!p.enabled;
@@ -19404,9 +19417,11 @@
           pyaTimeout.value = (p.http_timeout_seconds != null ? p.http_timeout_seconds : 6);
           pyaRebuildWebhookUrl();
           if (p.enabled && p.api_key) {
-            pyaShowBanner('ok', `Configuración cargada desde DB · API Key mask: ${(String(p.api_key || '').slice(0, 4) + '***' + String(p.api_key || '').slice(-4))}`);
+            const key = String(p.api_key || '');
+            const mask = key.length >= 8 ? (key.slice(0, 4) + '***' + key.slice(-4)) : '***';
+            pyaShowBanner('ok', `Configuración cargada desde DB · API Key mask: <code>${mask}</code>`);
           } else {
-            pyaShowBanner('info', 'Configuración vacía · Cargá las credenciales de PedidosYa y guardá.');
+            pyaShowBanner('info', 'Sin configurar todavía · Cargá las credenciales que te entregue PedidosYa y guardá.');
           }
         } catch (e) {
           pyaShowBanner('error', `Error cargando config: ${String(e && e.message ? e.message : e)}`);
@@ -19438,8 +19453,17 @@
             method: 'POST',
             body: JSON.stringify(payload)
           });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const msg = String(j && j.error ? j.error : '');
+            if (r.status === 401) throw new Error('Sesión expirada · Volvé a iniciar sesión.');
+            if (r.status === 403) {
+              if (msg.toLowerCase().includes('csrf')) throw new Error('Token CSRF vencido · Refrescá la página (F5) y volvé a intentar.');
+              throw new Error('Permisos insuficientes · Necesitás rol Admin/Owner.');
+            }
+            if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) throw new Error('Módulo Delivery no disponible todavía · Esperá a que termine el deploy Render.');
+            throw new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`);
+          }
           pyaShowBanner('ok', `✅ Guardado OK · Habilitado=${enabled ? 'SÍ' : 'NO'} · Comisión=${commission}% · Timeout=${timeout}s · Base=${baseUrl}`);
           pyaRebuildWebhookUrl();
         } catch (e) {
@@ -19453,8 +19477,17 @@
           pyaShowBanner('info', '🔌 Probando conexión a API PedidosYa… (esto demora hasta 20s)');
           const slug = encodeURIComponent(pyaTenantSlug());
           const r = await pyaFetchJson(`/api/delivery/config/${slug}/test`, { method: 'POST', body: '{}' });
-          const j = await r.json();
-          if (!r.ok) throw new Error(j && j.error ? j.error : `HTTP ${r.status}`);
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const msg = String(j && j.error ? j.error : '');
+            if (r.status === 401) throw new Error('Sesión expirada · Volvé a iniciar sesión.');
+            if (r.status === 403) {
+              if (msg.toLowerCase().includes('csrf')) throw new Error('Token CSRF vencido · Refrescá la página (F5) y volvé a intentar.');
+              throw new Error('Permisos insuficientes · Necesitás rol Admin/Owner para probar conexiones.');
+            }
+            if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) throw new Error('Módulo Delivery no disponible todavía · Esperá a que termine el deploy Render.');
+            throw new Error(`HTTP ${r.status}${msg ? ' · ' + msg : ''}`);
+          }
           const st = String(j.status || '');
           const latency = j.latency_ms != null ? ` ${j.latency_ms}ms` : '';
           const mask = j.api_key_masked ? ` Key mask: <code>${j.api_key_masked}</code>` : '';

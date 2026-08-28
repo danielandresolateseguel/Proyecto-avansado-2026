@@ -914,6 +914,35 @@ def get_delivery_config(tenant_slug):
         conn = get_db()
         cur = conn.cursor()
         delivery_cfg, _ = _load_tenant_delivery_config(cur, tenant_slug)
+        pedidosya_raw = delivery_cfg.get('pedidosya') if isinstance(delivery_cfg, dict) else None
+        if not isinstance(pedidosya_raw, dict):
+            pedidosya_raw = {}
+        defaults_pedidosya = {
+            'enabled': False,
+            'api_key': '',
+            'webhook_secret': '',
+            'merchant_id': '',
+            'commission_percent': 25,
+            'api_base_url': 'https://api.pedidosya.com',
+            'status_endpoint': '/v1/orders/{external_order_id}/status',
+            'status_http_method': 'PATCH',
+            'http_timeout_seconds': 6,
+            '_version': 1,
+        }
+        for k, v in defaults_pedidosya.items():
+            if k not in pedidosya_raw or pedidosya_raw.get(k) is None or pedidosya_raw.get(k) == '':
+                pedidosya_raw.setdefault(k, v)
+        if isinstance(pedidosya_raw.get('commission_percent'), (int, float)):
+            pedidosya_raw['commission_percent'] = max(0, min(100, int(pedidosya_raw['commission_percent'])))
+        else:
+            pedidosya_raw['commission_percent'] = 25
+        if isinstance(pedidosya_raw.get('http_timeout_seconds'), (int, float)):
+            pedidosya_raw['http_timeout_seconds'] = max(1, min(20, int(pedidosya_raw['http_timeout_seconds'])))
+        else:
+            pedidosya_raw['http_timeout_seconds'] = 6
+        if pedidosya_raw.get('api_base_url'):
+            pedidosya_raw['api_base_url'] = str(pedidosya_raw['api_base_url']).rstrip('/')
+        delivery_cfg['pedidosya'] = pedidosya_raw
         return jsonify({
             'tenant_slug': tenant_slug,
             'delivery_integrations': delivery_cfg
