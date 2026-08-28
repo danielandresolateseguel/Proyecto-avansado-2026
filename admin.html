@@ -4706,14 +4706,26 @@
                   </select>
                 </div>
                 <div class="edit-form-group">
-                  <label>Margen Sugerido (%)</label>
-                  <input type="number" id="edit-prod-margin-percent" min="0" max="100" placeholder="Ej: 60">
+                  <label>Margen Sugerido (%)
+                    <span class="small" style="color:#64748b; font-weight:400;">· se aplica como <b>Margen sobre Precio</b> (estándar)</span>
+                  </label>
+                  <input type="number" id="edit-prod-margin-percent" min="0" max="99" placeholder="Ej: 60">
                 </div>
               </div>
-              <div id="edit-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
-                <div><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="edit-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
-                <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="edit-prod-margin-real">0%</b></div>
-                <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="edit-prod-price-suggested">—</b></div>
+              <div id="edit-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
+                <div style="width:100%;"><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="edit-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
+                <div style="width:100%;"><span class="small" style="color:#64748b;">Margen real:</span> <b id="edit-prod-margin-real">0%</b> <span class="small" style="color:#64748b;">· sobre el precio final</span></div>
+                <div id="edit-prod-suggested-block" style="width:100%; padding-top:6px; border-top:1px dashed #cbd5e1; display:none; flex-direction:column; gap:4px;">
+                  <div><span class="small" style="color:#64748b;">💰 Precio (Margen sobre precio):</span> <b id="edit-prod-price-suggested" style="color:#1d4ed8;">—</b>
+                    <span class="small" style="color:#64748b;">· de cada $100 cobrados, $X son ganancia</span>
+                  </div>
+                  <div><span class="small" style="color:#64748b;">➕ Precio (Recargo/Markup):</span> <b id="edit-prod-price-markup" style="color:#15803d;">—</b>
+                    <span class="small" style="color:#64748b;">· le sumas X% a tu costo (el más intuitivo)</span>
+                  </div>
+                  <div class="small" style="color:#475569; padding-top:4px;">
+                    💡 Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
+                  </div>
+                </div>
               </div>
               <div id="edit-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
@@ -5821,6 +5833,8 @@
       const profitEl = isEdit ? prodEditProfitUnit : document.getElementById('create-prod-profit-unit');
       const realEl = isEdit ? prodEditMarginReal : document.getElementById('create-prod-margin-real');
       const suggestedEl = isEdit ? prodEditPriceSuggested : document.getElementById('create-prod-price-suggested');
+      const markupEl = document.getElementById((isEdit ? 'edit' : 'create') + '-prod-price-markup');
+      const suggestedBlock = document.getElementById((isEdit ? 'edit' : 'create') + '-prod-suggested-block');
       const badgeEl = isEdit ? prodEditCostBadge : document.getElementById('create-prod-cost-mode-badge');
       const typeEl = isEdit ? prodEditCostType : document.getElementById('create-prod-cost-type');
       if (!priceEl || !costEl || !marginEl || !sumEl) return;
@@ -5838,26 +5852,40 @@
       const hasAny = price > 0 || cost > 0 || marginUser > 0;
       if (!hasAny) {
         sumEl.style.display = 'none';
+        if (suggestedBlock) suggestedBlock.style.display = 'none';
         return;
       }
       sumEl.style.display = 'flex';
+      const canSuggest = marginUser > 0 && marginUser < 100 && cost > 0;
+      const priceSuggested = canSuggest ? Math.ceil(cost / (1 - (marginUser / 100))) : 0;
+      const priceMarkup = canSuggest ? Math.ceil(cost * (1 + (marginUser / 100))) : 0;
+      const effectivePrice = canSuggest ? priceSuggested : price;
       if (priceEl && cost > 0) {
-        const profit = Math.max(0, price - cost);
+        const profit = Math.max(0, effectivePrice - cost);
         if (profitEl) profitEl.textContent = '$' + new Intl.NumberFormat('es-AR').format(profit);
       } else if (profitEl) {
         profitEl.textContent = '$0';
       }
       if (realEl) {
-        const pct = price > 0 ? Math.round(((price - cost) / price) * 100) : 0;
+        const pct = effectivePrice > 0 ? Math.round(((effectivePrice - cost) / effectivePrice) * 100) : 0;
         realEl.textContent = pct + '%';
         realEl.style.color = pct >= 50 ? '#2e7d32' : (pct >= 35 ? '#ca8a04' : '#c62828');
       }
+      if (suggestedBlock) {
+        suggestedBlock.style.display = canSuggest ? 'flex' : 'none';
+      }
       if (suggestedEl) {
-        if (marginUser > 0 && marginUser < 100 && cost > 0) {
-          const priceSuggested = Math.ceil(cost / (1 - (marginUser / 100)));
+        if (canSuggest) {
           suggestedEl.textContent = '$' + new Intl.NumberFormat('es-AR').format(priceSuggested);
         } else {
           suggestedEl.textContent = '—';
+        }
+      }
+      if (markupEl) {
+        if (canSuggest) {
+          markupEl.textContent = '$' + new Intl.NumberFormat('es-AR').format(priceMarkup);
+        } else {
+          markupEl.textContent = '—';
         }
       }
     }
@@ -5877,9 +5905,9 @@
               refreshCostSummaryUI('edit');
             } else if (prodEditMarginPct.value && prodEditCostPrice.value) {
               const margin = parseFloat(prodEditMarginPct.value || '0');
-              if (margin > 0 && margin < 100) {
+              if (margin > 0 && margin < 100 && cost > 0) {
                 const suggested = Math.ceil(cost / (1 - (margin / 100)));
-                if (suggested > 0 && !prodEditPrice.value) {
+                if (suggested > 0) {
                   prodEditPrice.value = String(suggested);
                 }
               }
@@ -5902,6 +5930,15 @@
             const cost = parseInt(String((cc && cc.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
             if (cost > 0 && price > cost && cm) {
               cm.value = String(Math.round(((price - cost) / price) * 100));
+              refreshCostSummaryUI('create');
+            } else if (cm && cc) {
+              const margin = parseFloat(String((cm && cm.value) || '0'));
+              if (margin > 0 && margin < 100 && cost > 0) {
+                const suggested = Math.ceil(cost / (1 - (margin / 100)));
+                if (suggested > 0 && cp) {
+                  cp.value = String(suggested);
+                }
+              }
               refreshCostSummaryUI('create');
             }
           });
@@ -15042,8 +15079,8 @@
       renderClosedOverview();
     }
     // INITIAL DATA for gastronomia-local1.html, local2, local3, local4, local5
-    async function fetchProducts(includeInactive = false) {
-      const slug = tenantInput.value.trim() || defaultSlug();
+    async function fetchProducts(includeInactive = false, overrideSlug = null) {
+      const slug = (overrideSlug ? String(overrideSlug).trim() : '') || tenantInput.value.trim() || defaultSlug();
       const url = new URL('/api/products', API_BASE);
       url.searchParams.set('tenant_slug', slug);
       if (includeInactive) {
@@ -22862,6 +22899,12 @@
       async function resetCreateOrderModalState() {
         cart = [];
         baseShippingCost = 0;
+        products = [];
+        try {
+          window.__kdsProductConfigTenantSlug = undefined;
+          window.__tenantCatalogProductsLocalSlug = undefined;
+        } catch (_) {}
+        if (productsGrid) productsGrid.innerHTML = '<div class="small">Cargando...</div>';
         if (searchInput) searchInput.value = '';
         if (typeSelect) typeSelect.value = 'mesa';
         const tableSelect = document.getElementById('new-order-table');
@@ -22992,7 +23035,12 @@
         const nextTenant = String(tenantSlug || '').trim();
         window.__tenantCatalogProducts = nextList;
         window.__tenantCatalogProductsTenantSlug = nextTenant;
-        if (nextList.length) products = nextList.slice();
+        window.__tenantCatalogProductsLocalSlug = nextTenant;
+        if (nextList.length) {
+          products = nextList.slice();
+        } else {
+          products = [];
+        }
       }
 
       function getAdminCatalogProducts(preferredTenantSlug) {
@@ -23002,6 +23050,10 @@
           if (!wantedTenant || !cachedTenant || cachedTenant === wantedTenant) {
             return window.__tenantCatalogProducts;
           }
+        }
+        const localSlug = String(window.__tenantCatalogProductsLocalSlug || '').trim();
+        if (wantedTenant && localSlug && localSlug !== wantedTenant) {
+          return [];
         }
         return Array.isArray(products) ? products : [];
       }
@@ -23807,12 +23859,12 @@
       async function loadProducts() {
         productsGrid.innerHTML = '<div class="small">Cargando...</div>';
         try {
-          window.__kdsProductConfigTenantSlug = resolveCreateOrderTenantSlug();
-          await loadTenantPromotionEntry(resolveCreateOrderTenantSlug());
-          const allProducts = await fetchProducts(); // Uses existing function
-          // No additional filtering needed as fetchProducts uses tenant_slug
+          const resolvedSlug = resolveCreateOrderTenantSlug();
+          window.__kdsProductConfigTenantSlug = resolvedSlug;
+          await loadTenantPromotionEntry(resolvedSlug);
+          const allProducts = await fetchProducts(false, resolvedSlug);
           products = allProducts;
-          setAdminCatalogProducts(allProducts, resolveCreateOrderTenantSlug());
+          setAdminCatalogProducts(allProducts, resolvedSlug);
           
           renderProducts();
           if (window.renderCreateOrderShortcuts) window.renderCreateOrderShortcuts();
@@ -27225,14 +27277,26 @@
               </select>
             </div>
             <div class="edit-form-group">
-              <label>Margen Sugerido (%)</label>
-              <input type="number" id="create-prod-margin-percent" min="0" max="100" placeholder="Ej: 60">
+              <label>Margen Sugerido (%)
+                <span class="small" style="color:#64748b; font-weight:400;">· se aplica como <b>Margen sobre Precio</b> (estándar)</span>
+              </label>
+              <input type="number" id="create-prod-margin-percent" min="0" max="99" placeholder="Ej: 60">
             </div>
           </div>
-          <div id="create-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
-            <div><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="create-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
-            <div><span class="small" style="color:#64748b;">Margen real:</span> <b id="create-prod-margin-real">0%</b></div>
-            <div><span class="small" style="color:#64748b;">Precio sugerido p/ margen:</span> <b id="create-prod-price-suggested">—</b></div>
+          <div id="create-prod-cost-summary" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px; font-size:13px; color:#334155; display:none; gap:10px; flex-wrap:wrap;">
+            <div style="width:100%;"><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="create-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
+            <div style="width:100%;"><span class="small" style="color:#64748b;">Margen real:</span> <b id="create-prod-margin-real">0%</b> <span class="small" style="color:#64748b;">· sobre el precio final</span></div>
+            <div id="create-prod-suggested-block" style="width:100%; padding-top:6px; border-top:1px dashed #cbd5e1; display:none; flex-direction:column; gap:4px;">
+              <div><span class="small" style="color:#64748b;">💰 Precio (Margen sobre precio):</span> <b id="create-prod-price-suggested" style="color:#1d4ed8;">—</b>
+                <span class="small" style="color:#64748b;">· de cada $100 cobrados, $X son ganancia</span>
+              </div>
+              <div><span class="small" style="color:#64748b;">➕ Precio (Recargo/Markup):</span> <b id="create-prod-price-markup" style="color:#15803d;">—</b>
+                <span class="small" style="color:#64748b;">· le sumas X% a tu costo (el más intuitivo)</span>
+              </div>
+              <div class="small" style="color:#475569; padding-top:4px;">
+                💡 Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
+              </div>
+            </div>
           </div>
           <div id="create-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
