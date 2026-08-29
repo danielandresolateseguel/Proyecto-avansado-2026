@@ -1826,8 +1826,8 @@ def list_orders():
         from_date, to_date = to_date, from_date
         _from_has_no_time, _to_has_no_time = _to_has_no_time, _from_has_no_time
     if use_closed_date:
-        _start_buf = timedelta(hours=36) if (_from_has_no_time or _from_dt is not None and _from_dt.hour == 0 and _from_dt.minute == 0 and _from_dt.second == 0) else timedelta(hours=12)
-        _end_buf = timedelta(hours=36) if (_to_has_no_time or _to_dt is not None and _to_dt.hour == 23 and _to_dt.minute == 59 and _to_dt.second == 59) else timedelta(hours=24)
+        _start_buf = timedelta(hours=36) if (_from_has_no_time or _from_dt is not None and _from_dt.hour == 0 and _from_dt.minute == 0 and _from_dt.second == 0) else timedelta(hours=0)
+        _end_buf = timedelta(hours=36) if (_to_has_no_time or _to_dt is not None and _to_dt.hour == 23 and _to_dt.minute == 59 and _to_dt.second == 59) else timedelta(hours=0)
         if _from_dt is None and _from_has_no_time:
             try:
                 _from_dt = datetime.strptime(str(from_date).strip(), '%Y-%m-%d')
