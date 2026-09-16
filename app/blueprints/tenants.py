@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify, session, current_app
 from app.database import get_db, is_postgres
-from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config
+from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config, sync_demo_filesystem_config
 import os
+import re
 import json
 import unicodedata
 import secrets
@@ -605,6 +606,7 @@ def get_tenant_header():
             cur.execute("INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)", 
                        (slug, json.dumps(current_cfg, ensure_ascii=False)))
             conn.commit()
+            sync_demo_filesystem_config(slug, current_cfg, current_app.root_path)
             invalidate_tenant_config(slug)
             return jsonify({'ok': True})
         except Exception as e:
@@ -787,6 +789,7 @@ def tenant_checkout():
                 (slug, json.dumps(current_cfg, ensure_ascii=False))
             )
             conn.commit()
+            sync_demo_filesystem_config(slug, current_cfg, current_app.root_path)
             invalidate_tenant_config(slug)
             return jsonify({'ok': True, 'checkout': checkout, 'orderStatusWhatsapp': order_status_whatsapp})
         except Exception as e:
@@ -1450,6 +1453,7 @@ def update_tenant_tables():
     try:
         cur.execute("INSERT OR REPLACE INTO tenant_config (tenant_slug, config_json) VALUES (?, ?)", (slug, json.dumps(current_cfg, ensure_ascii=False)))
         conn.commit()
+        sync_demo_filesystem_config(slug, current_cfg, current_app.root_path)
         invalidate_tenant_config(slug)
     except Exception as e:
         print(f"Error saving tables: {e}")

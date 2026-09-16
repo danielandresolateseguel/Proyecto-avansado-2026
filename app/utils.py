@@ -22,27 +22,47 @@ def get_cached_tenant_config(slug):
     safe_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', str(slug or '').strip())
 
     FILESYSTEM_FIRST_SLUGS = {"miprueba", "qplato-demo"}
-    # Para demos por JSON: SIN CACHE NUNCA y SIN DB. Solo leemos el archivo del filesystem
-    # para evitar inventados guardados en DB ni stuck cache TTL 5min en Render.
-    if safe_slug and safe_slug in FILESYSTEM_FIRST_SLUGS:
+    is_demo_slug = bool(safe_slug and safe_slug in FILESYSTEM_FIRST_SLUGS)
+
+    def _read_filesystem_fallback(slug_key):
         try:
-            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
             candidate_paths = [
-                os.path.join(project_root, 'config', f'{safe_slug}.json'),
-                os.path.join(os.path.dirname(__file__), '..', '..', 'config', f'{safe_slug}.json'),
+                os.path.join(project_root, 'config', f'{slug_key}.json'),
+                os.path.join(os.path.dirname(__file__), '..', 'config', f'{slug_key}.json'),
             ]
             for cfg_path in candidate_paths:
                 resolved = os.path.abspath(cfg_path)
                 if os.path.isfile(resolved):
                     try:
                         with open(resolved, 'r', encoding='utf-8') as f:
-                            cfg = json.load(f)
-                        return cfg
+                            return json.load(f)
                     except Exception as e:
-                        print(f"Error reading filesystem-first config {resolved}: {e}")
+                        print(f"Error reading filesystem config {resolved}: {e}")
         except Exception as e:
-            print(f"Error resolving filesystem-first config for {slug}: {e}")
-        return {}
+            print(f"Error resolving fallback config for {slug_key}: {e}")
+        return None
+
+    # Demo slugs: SIN CACHE, pero PRIMERO DB, si no existe → JSON filesystem
+    # Así el JSON es el valor inicial por defecto, y los cambios desde el panel
+    # (que guardan en DB) tienen precedencia y persisten correctamente.
+    if is_demo_slug:
+        try:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("SELECT config_json FROM tenant_config WHERE tenant_slug = ?", (slug,))
+            row = cur.fetchone()
+            if row and row[0]:
+                try:
+                    cfg = json.loads(row[0])
+                    if cfg and isinstance(cfg, dict):
+                        return cfg
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f"Error fetching DB config for demo slug {slug}: {e}")
+        fallback = _read_filesystem_fallback(safe_slug)
+        return fallback if fallback is not None else {}
 
     if slug in _config_cache:
         data, ts = _config_cache[slug]
@@ -67,30 +87,50 @@ def get_cached_tenant_config(slug):
 
     # Fallback: read from config/<slug>.json in project root (filesystem demo tenants)
     if safe_slug:
-        try:
-            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-            candidate_paths = [
-                os.path.join(project_root, 'config', f'{safe_slug}.json'),
-                os.path.join(os.path.dirname(__file__), '..', '..', 'config', f'{safe_slug}.json'),
-            ]
-            for cfg_path in candidate_paths:
-                resolved = os.path.abspath(cfg_path)
-                if os.path.isfile(resolved):
-                    try:
-                        with open(resolved, 'r', encoding='utf-8') as f:
-                            cfg = json.load(f)
-                        _config_cache[slug] = (cfg, now)
-                        return cfg
-                    except Exception as e:
-                        print(f"Error reading filesystem config {resolved}: {e}")
-        except Exception as e:
-            print(f"Error resolving fallback config for {slug}: {e}")
+        fallback = _read_filesystem_fallback(safe_slug)
+        if fallback is not None:
+            _config_cache[slug] = (fallback, now)
+            return fallback
 
     return {}
 
 def invalidate_tenant_config(slug):
     if slug in _config_cache:
         del _config_cache[slug]
+
+def sync_demo_filesystem_config(slug, config_dict, app_root_path=None):
+    import re as _re
+    safe_slug = _re.sub(r'[^a-zA-Z0-9_\-]', '', str(slug or '').strip())
+    FILESYSTEM_SYNC_SLUGS = {"miprueba", "qplato-demo"}
+    if not (safe_slug and safe_slug in FILESYSTEM_SYNC_SLUGS):
+        return
+    if not isinstance(config_dict, dict):
+        return
+    try:
+        import os as _os
+        import json as _json
+        base = app_root_path or _os.path.dirname(__file__)
+        project_root = _os.path.abspath(_os.path.join(base, '..'))
+        candidate_paths = [
+            _os.path.join(project_root, 'config', f'{safe_slug}.json'),
+            _os.path.join(base, '..', 'config', f'{safe_slug}.json'),
+        ]
+        for cfg_path in candidate_paths:
+            resolved = _os.path.abspath(cfg_path)
+            if _os.path.isfile(resolved):
+                try:
+                    with open(resolved, 'r', encoding='utf-8') as f:
+                        file_cfg = _json.load(f)
+                    if isinstance(file_cfg, dict):
+                        for k, v in config_dict.items():
+                            file_cfg[k] = v
+                        with open(resolved, 'w', encoding='utf-8') as f:
+                            _json.dump(file_cfg, f, ensure_ascii=False, indent=2)
+                    break
+                except Exception as e:
+                    print(f"Error syncing filesystem config {resolved}: {e}")
+    except Exception as e:
+        print(f"Error resolving filesystem sync for {safe_slug}: {e}")
 
 def is_authed():
     return bool(session.get('admin_auth'))
