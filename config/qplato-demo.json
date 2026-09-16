@@ -17,13 +17,72 @@
         "instagram": "elpatio.cocina",
         "location": "https://maps.google.com/?q=Av.+San+Mart%C3%ADn+1234,+Mendoza,+Argentina",
         "opening_hours": {
-          "mon": [["11:30", "15:30"], ["19:00", "23:30"]],
-          "tue": [["11:30", "15:30"], ["19:00", "23:30"]],
-          "wed": [["11:30", "15:30"], ["19:00", "23:30"]],
-          "thu": [["11:30", "15:30"], ["19:00", "23:30"]],
-          "fri": [["11:30", "15:30"], ["19:00", "01:00"]],
-          "sat": [["11:30", "01:00"]],
-          "sun": [["11:30", "16:30"], ["19:00", "23:00"]]
+          "mon": [
+            [
+              "11:30",
+              "15:30"
+            ],
+            [
+              "19:00",
+              "23:30"
+            ]
+          ],
+          "tue": [
+            [
+              "11:30",
+              "15:30"
+            ],
+            [
+              "19:00",
+              "23:30"
+            ]
+          ],
+          "wed": [
+            [
+              "11:30",
+              "15:30"
+            ],
+            [
+              "19:00",
+              "23:30"
+            ]
+          ],
+          "thu": [
+            [
+              "11:30",
+              "15:30"
+            ],
+            [
+              "19:00",
+              "23:30"
+            ]
+          ],
+          "fri": [
+            [
+              "11:30",
+              "15:30"
+            ],
+            [
+              "19:00",
+              "01:00"
+            ]
+          ],
+          "sat": [
+            [
+              "11:30",
+              "01:00"
+            ]
+          ],
+          "sun": [
+            [
+              "11:30",
+              "16:30"
+            ],
+            [
+              "19:00",
+              "23:00"
+            ]
+          ]
         }
       }
     }
@@ -56,13 +115,41 @@
       "combos"
     ],
     "synonyms": {
-      "milanesa": ["milanesa napolitana", "milanesas", "mila"],
-      "hamburguesa": ["burger", "hamburguesas", "hamburguesa gourmet"],
-      "papas": ["papas fritas", "papas bravas", "papa"],
-      "pizza": ["pizzas", "pizza napolitana", "muzzarella"],
-      "cerveza": ["cervezas", "brasa", "pinta"],
-      "agua": ["agua mineral", "sin gas", "agua con gas"],
-      "ravioles": ["raviolioles", "ravioli", "pasta rellena"]
+      "milanesa": [
+        "milanesa napolitana",
+        "milanesas",
+        "mila"
+      ],
+      "hamburguesa": [
+        "burger",
+        "hamburguesas",
+        "hamburguesa gourmet"
+      ],
+      "papas": [
+        "papas fritas",
+        "papas bravas",
+        "papa"
+      ],
+      "pizza": [
+        "pizzas",
+        "pizza napolitana",
+        "muzzarella"
+      ],
+      "cerveza": [
+        "cervezas",
+        "brasa",
+        "pinta"
+      ],
+      "agua": [
+        "agua mineral",
+        "sin gas",
+        "agua con gas"
+      ],
+      "ravioles": [
+        "raviolioles",
+        "ravioli",
+        "pasta rellena"
+      ]
     }
   },
   "themes": {
@@ -93,18 +180,32 @@
       "id": "feat-01",
       "name": "Lomo a lo Pobre · Especialidad de la casa",
       "price": 12900,
-      "image_url": "Imagenes/lomo a lo pobre.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20gourmet%20de%20un%20Lomo%20a%20lo%20Pobre%20argentino%20sobre%20plato%20blanco%2C%20carne%20de%20res%20jugosa%20con%20huevos%20fritos%20coronando%2C%20papas%20fritas%20doradas%20crujientes%2C%20cebolla%20caramelizada%2C%20perejil%20fresco%2C%20fondo%20restaurante%20oscuro%20navy%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20dorada%2C%20foco%20selectivo%20plato%2C%20%C3%A1ngulo%2045%20grados%2C%20alta%20resoluci%C3%B3n%20food%20styling%20profesional%2C%20texturas%20n%C3%ADtidas&image_size=square_hd",
       "details": "2 medallones de lomo de 180g sellados a la plancha con hierbas, papas fritas rústicas, huevos estrellados a punto justo, plátano maduro frito, ensalada de rúcula fresca y chimichurri criollo. Plato estrella de El Patio desde 2019.",
-      "tags": ["destacados"],
+      "tags": [
+        "destacados"
+      ],
       "stock": 18,
       "variants": {
         "section": "featured",
-        "food_categories": ["principales"],
+        "food_categories": [
+          "principales"
+        ],
         "interest_tag": "Especialidad de la casa",
         "packs": [
-          { "label": "Individual · 1 persona", "price": 12900, "default": true },
-          { "label": "Para 2 personas", "price": 23900 },
-          { "label": "Compartir · 3 personas", "price": 33900 }
+          {
+            "label": "Individual · 1 persona",
+            "price": 12900,
+            "default": true
+          },
+          {
+            "label": "Para 2 personas",
+            "price": 23900
+          },
+          {
+            "label": "Compartir · 3 personas",
+            "price": 33900
+          }
         ]
       }
     },
@@ -112,17 +213,29 @@
       "id": "feat-02",
       "name": "Combo Familiar · 4 Hamburguesas + Papas XXL + 4 Gaseosas",
       "price": 31900,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20familiar%20de%20Combo%20Familiar%204%20hamburguesas%20XXL%20gourmet%20con%20papas%20fritas%20extra%20grandes%20canasta%20y%204%20vasos%20gaseosa%20con%20hielo%2C%20sobre%20mesa%20de%20madera%20restaurante%20fondo%20navy%20dark%2C%20composici%C3%B3n%20abundante%20apetitosa%2C%20vista%20desde%20arriba%20flat%20lay%2C%20iluminaci%C3%B3n%20c%C3%A1lida%2C%20detalles%20crujientes%20papas%20y%20queso%20derretido%2C%20alta%20calidad%20food%20photography&image_size=square_hd",
       "details": "4 Hamburguesas Gourmet doble carne, cebolla caramelizada, cheddar fundido, panceta ahumada, pickles, salsa de la casa, lechuga y tomate. Acompaña Papas Fritas XXL con cheddar + panceta + ciboulette. 4 Coca-Cola 500ml.",
-      "tags": ["destacados", "combos"],
+      "tags": [
+        "destacados",
+        "combos"
+      ],
       "stock": 9,
       "variants": {
         "section": "featured",
-        "food_categories": ["combos"],
+        "food_categories": [
+          "combos"
+        ],
         "interest_tag": "Combos",
         "packs": [
-          { "label": "Combo 4 personas", "price": 31900, "default": true },
-          { "label": "Combo 6 personas", "price": 46900 }
+          {
+            "label": "Combo 4 personas",
+            "price": 31900,
+            "default": true
+          },
+          {
+            "label": "Combo 6 personas",
+            "price": 46900
+          }
         ]
       }
     },
@@ -130,25 +243,55 @@
       "id": "feat-03",
       "name": "Pizza Napolitana Premium",
       "price": 9900,
-      "image_url": "Imagenes/napolitana.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20macro%20food%20photography%20Pizza%20Napolitana%20Premium%20italiana%2C%20masa%20fermentada%20borde%20alto%20inflado%20carbonizado%20le%C3%B1a%2C%20tomate%20San%20Marzano%2C%20mozzarella%20di%20bufala%2C%20albahaca%20fresca%20verde%2C%20aceite%20de%20oliva%20virgen%20extra%20chorreado%2C%20horno%20piedra%2C%20fondo%20madera%20rustic%2C%20iluminaci%C3%B3n%20natural%20c%C3%A1lida%2C%20detalles%20micro%20texturas%2C%20%C3%A1ngulo%20tres%20cuartos%2C%20high%20detail%204k&image_size=square_hd",
       "details": "Masa madre fermentada 72h, tomates San Marzano DOP, fior di latte, albahaca fresca de huerta propia, aceite de oliva extra virgen, horno de barro 380°C. Tradición napolitana auténtica.",
-      "tags": ["destacados", "pizzas"],
+      "tags": [
+        "destacados",
+        "pizzas"
+      ],
       "stock": 3,
       "variants": {
         "section": "featured",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "interest_tag": "Especialidad de la casa",
         "packs": [
-          { "label": "Individual · 28cm", "price": 5500 },
-          { "label": "Mediana · 36cm", "price": 9900, "default": true },
-          { "label": "Grande · 42cm", "price": 13900 },
-          { "label": "2 Pizzas Grandes + 2 Empanadas", "price": 26900 }
+          {
+            "label": "Individual · 28cm",
+            "price": 5500
+          },
+          {
+            "label": "Mediana · 36cm",
+            "price": 9900,
+            "default": true
+          },
+          {
+            "label": "Grande · 42cm",
+            "price": 13900
+          },
+          {
+            "label": "2 Pizzas Grandes + 2 Empanadas",
+            "price": 26900
+          }
         ],
         "addons": [
-          { "label": "+ Jamón crudo", "price": 2800 },
-          { "label": "+ Rúcula + parmesano", "price": 1600 },
-          { "label": "+ Pepperoni picante", "price": 2200 },
-          { "label": "+ Queso extra", "price": 1800 }
+          {
+            "label": "+ Jamón crudo",
+            "price": 2800
+          },
+          {
+            "label": "+ Rúcula + parmesano",
+            "price": 1600
+          },
+          {
+            "label": "+ Pepperoni picante",
+            "price": 2200
+          },
+          {
+            "label": "+ Queso extra",
+            "price": 1800
+          }
         ]
       }
     },
@@ -156,22 +299,52 @@
       "id": "feat-04",
       "name": "Hamburguesa Gourmet La Patio",
       "price": 7800,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20de%20Hamburguesa%20Gourmet%20La%20Patio%2C%20doble%20medall%C3%B3n%20carne%20150grs%20c/u%20jugoso%20desgarrandose%2C%20cheddar%20derretido%2C%20panceta%20crispy%2C%20aros%20de%20cebolla%20empanizados%2C%20tomate%20fresco%20lechuga%20mantecosa%2C%20pan%20brioche%20dorado%2C%20mayonesa%20ahumada%2C%20papel%20manteca%2C%20tabla%20madera%20rustic%2C%20fondo%20navy%20oscuro%20bokeh%2C%20iluminaci%C3%B3n%20lateral%20c%C3%A1lida&image_size=square_hd",
       "details": "Blend 180g de cortes premium (asado + pecho + vacío), cheddar madurado 12 meses, panceta ahumada en casa, cebolla crispy encurtida, pickles agridulces, salsa burger secreta con chipotle, pan brioche.",
-      "tags": ["destacados", "hamburguesas"],
+      "tags": [
+        "destacados",
+        "hamburguesas"
+      ],
       "stock": 0,
       "variants": {
         "section": "featured",
-        "food_categories": ["hamburguesas"],
+        "food_categories": [
+          "hamburguesas"
+        ],
         "interest_tag": "Promociones",
         "addons": [
-          { "label": "Medio punto en carne", "price": 0, "free": true },
-          { "label": "Tres cuartos (recomendado)", "price": 0, "free": true, "default": true },
-          { "label": "Bien cocida", "price": 0, "free": true },
-          { "label": "+ Doble carne", "price": 3200 },
-          { "label": "+ Huevo frito", "price": 900 },
-          { "label": "+ Cheddar extra", "price": 1000 },
-          { "label": "+ Aros de cebolla", "price": 1100 }
+          {
+            "label": "Medio punto en carne",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Tres cuartos (recomendado)",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Bien cocida",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "+ Doble carne",
+            "price": 3200
+          },
+          {
+            "label": "+ Huevo frito",
+            "price": 900
+          },
+          {
+            "label": "+ Cheddar extra",
+            "price": 1000
+          },
+          {
+            "label": "+ Aros de cebolla",
+            "price": 1100
+          }
         ]
       }
     },
@@ -179,13 +352,18 @@
       "id": "feat-05",
       "name": "2x1 en Ensaladas · Lleva 2 paga 1",
       "price": 6900,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20de%20promoci%C3%B3n%202x1%20Ensaladas%20gourmet%20%E2%80%94%20ensalada%20C%C3%A9sar%20con%20pollo%20grill%20%2B%20ensalada%20caprese%20burrata%20%E2%80%94%20en%20cuencos%20cer%C3%A1mica%20blanca%20lado%20a%20lado%2C%20croutons%20dorados%2C%20parmesano%20lascas%2C%20albahaca%2C%20aceitunas%20negras%2C%20tomates%20cherry%20confitados%2C%20hinojo%20fresco%2C%20dressing%20aparte%2C%20mesa%20blanca%20marble%2C%20iluminaci%C3%B3n%20soft%20light%20d%C3%ADa%2C%20food%20styling%20profesional&image_size=square_hd",
       "details": "Promoción lunes a jueves: elegí dos ensaladas de la carta y pagás solo la más cara. Ideal para almorzar en oficina o casa. Promo aplica a Ensalada César, Caprese, Griega, Oriental y Caesar Pollo Grill.",
-      "tags": ["destacados", "ensaladas"],
+      "tags": [
+        "destacados",
+        "ensaladas"
+      ],
       "stock": 20,
       "variants": {
         "section": "featured",
-        "food_categories": ["ensaladas"],
+        "food_categories": [
+          "ensaladas"
+        ],
         "interest_tag": "2x1"
       }
     },
@@ -193,23 +371,46 @@
       "id": "feat-06",
       "name": "Pizza Margarita Clásica",
       "price": 8900,
-      "image_url": "Imagenes/PIZZAMARGARITA.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Pizza%20Margarita%20cl%C3%A1sica%20napolitana%20al%20horno%20le%C3%B1a%2C%20masa%20alta%20irregular%2C%20tomate%20triturado%2C%20mozzarella%20fior%20di%20latte%20hilos%20dorados%2C%20albahaca%20fresca%20verde%20intenso%2C%20aceite%20oliva%20brillante%2C%20placa%20piedra%20caliente%2C%20fondo%20oscuro%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20restaurant%2C%20foco%20selectivo%20centro%20pizza%2C%20textura%20perfecta&image_size=square_hd",
       "details": "Masa casera, salsa pomodoro fresco, mozzarella fior di latte, albahaca fresca, aceite de oliva extra virgen y una pizca de sal de grano. El clásico italiano que nunca falla.",
-      "tags": ["pizzas"],
+      "tags": [
+        "pizzas"
+      ],
       "stock": 14,
       "variants": {
         "section": "main",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "interest_tag": "Entradas rápidas",
         "packs": [
-          { "label": "Mediana · 36cm", "price": 8900, "default": true },
-          { "label": "Grande · 42cm", "price": 12900 },
-          { "label": "Muzza + Jamón", "price": 10900 }
+          {
+            "label": "Mediana · 36cm",
+            "price": 8900,
+            "default": true
+          },
+          {
+            "label": "Grande · 42cm",
+            "price": 12900
+          },
+          {
+            "label": "Muzza + Jamón",
+            "price": 10900
+          }
         ],
         "addons": [
-          { "label": "+ Aceitunas negras", "price": 900 },
-          { "label": "+ Anchoas", "price": 2100 },
-          { "label": "+ Morrón asado", "price": 1200 }
+          {
+            "label": "+ Aceitunas negras",
+            "price": 900
+          },
+          {
+            "label": "+ Anchoas",
+            "price": 2100
+          },
+          {
+            "label": "+ Morrón asado",
+            "price": 1200
+          }
         ]
       }
     },
@@ -217,16 +418,27 @@
       "id": "pizza-02",
       "name": "Pizza Fugazza con Jamón",
       "price": 9500,
-      "image_url": "Imagenes/napolitana.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Pizza%20Fugazza%20con%20jam%C3%B3n%20cocido%20argentino%2C%20cebolla%20blanca%20caramelizada%20en%20l%C3%A1minas%20tiernas%2C%20queso%20mozzarella%20cremoso%2C%20jam%C3%B3n%20york%20lonchas%20gruesas%2C%20or%C3%A9gano%20molido%2C%20aceitunas%20verdes%20picadas%2C%20masa%20alta%20borde%20aireado%2C%20bandeja%20hierro%2C%20fondo%20madera%20r%C3%BAstica%2C%20iluminaci%C3%B3n%20c%C3%A1lida%2C%20detalle%20chorro%20aceitunas&image_size=square_hd",
       "details": "Base de cebolla caramelizada en manteca, mozzarella, jamón york, queso parmesano rallado fresco, orégano molido y oliva final. Plato infaltable porteño.",
-      "tags": ["pizzas"],
+      "tags": [
+        "pizzas"
+      ],
       "stock": 11,
       "variants": {
         "section": "main",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "packs": [
-          { "label": "Mediana · 36cm", "price": 9500, "default": true },
-          { "label": "Grande · 42cm", "price": 13500 }
+          {
+            "label": "Mediana · 36cm",
+            "price": 9500,
+            "default": true
+          },
+          {
+            "label": "Grande · 42cm",
+            "price": 13500
+          }
         ]
       }
     },
@@ -234,17 +446,29 @@
       "id": "pizza-03",
       "name": "Pizza Rúcula y Parmesano",
       "price": 10200,
-      "image_url": "Imagenes/PIZZAMARGARITA.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Pizza%20R%C3%BAcula%20y%20Parmesano%20gourmet%2C%20base%20crujiente%20napolitana%2C%20tomate%2C%20mozzarella%2C%20crema%20de%20parmesano%2C%20r%C3%BAcula%20fresca%20verde%20pimienta%20reci%C3%A9n%20agregada%2C%20lascas%20parmesano%20reggiano%2036%20meses%2C%20aceite%20oliva%20lim%C3%B3n%2C%20pimienta%20negra%20molida%2C%20plato%20porcelana%20blanca%2C%20fondo%20navy%20restaurante%20elegante%2C%20iluminaci%C3%B3n%20soft&image_size=square_hd",
       "details": "Base de muzzarella, pomodoro San Marzano, rúcula fresca de huerta, lascas de parmesano Reggiano laminadas, cherry confitados y reducción balsámica.",
-      "tags": ["pizzas", "veganos"],
+      "tags": [
+        "pizzas",
+        "veganos"
+      ],
       "stock": 5,
       "variants": {
         "section": "main",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "interest_tag": "Entradas rápidas",
         "packs": [
-          { "label": "Mediana", "price": 10200, "default": true },
-          { "label": "Grande", "price": 14500 }
+          {
+            "label": "Mediana",
+            "price": 10200,
+            "default": true
+          },
+          {
+            "label": "Grande",
+            "price": 14500
+          }
         ]
       }
     },
@@ -252,17 +476,28 @@
       "id": "pizza-04",
       "name": "Pizza Pepperoni Picante",
       "price": 10800,
-      "image_url": "Imagenes/napolitana.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Pizza%20Pepperoni%20Picante%20estilo%20New%20York%2C%20rodajas%20pepperoni%20graso%20enrollado%20crujiente%2C%20queso%20mozzarella%20el%C3%A1stico%2C%20salsa%20tomate%20picante%2C%20or%C3%A9gano%2C%20hojuelas%20chile%20rojo%20sprinkled%2C%20masa%20delgada%20crocante%2C%20bandeja%20cart%C3%B3n%20pizzer%C3%ADa%2C%20fondo%20brick%20rojo%20oscuro%2C%20humo%20vapor%20leve%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20dram%C3%A1tica&image_size=square_hd",
       "details": "Pepperoni ahumado picante, mozzarella, salsa de tomates con ají molido, hojuelas de chili, orégano y goteo de aceite de oliva final. Para los que aman el picante!",
-      "tags": ["pizzas"],
+      "tags": [
+        "pizzas"
+      ],
       "stock": 16,
       "variants": {
         "section": "main",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "interest_tag": "Promociones",
         "packs": [
-          { "label": "Mediana", "price": 10800, "default": true },
-          { "label": "Grande", "price": 15500 }
+          {
+            "label": "Mediana",
+            "price": 10800,
+            "default": true
+          },
+          {
+            "label": "Grande",
+            "price": 15500
+          }
         ]
       }
     },
@@ -270,16 +505,27 @@
       "id": "pizza-05",
       "name": "Pizza Jamón y Queso",
       "price": 9600,
-      "image_url": "Imagenes/PIZZAMARGARITA.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Pizza%20Jam%C3%B3n%20y%20Queso%20familiar%2C%20jam%C3%B3n%20cocido%20premium%20en%20abundancia%2C%20mozzarella%20super%20cremosa%20derretida%20hilos%20el%C3%A1sticos%2C%20salsa%20tomate%20casero%2C%20aceitunas%20verdes%20sin%20carozo%2C%20or%C3%A9gano%20fresco%2C%20masa%20mediana%2C%20sobre%20tabla%20madera%20circular%2C%20aceite%20oliva%20chorro%2C%20plato%20gigante%2C%20%C3%A1ngulo%20cenital%2C%20textura%20queso%20brillante&image_size=square_hd",
       "details": "Clásica y amada por chicos y grandes. Mozzarella, jamón york en láminas, cubos de mozzarella cocido, orégano y un toque de aceite de oliva.",
-      "tags": ["pizzas"],
+      "tags": [
+        "pizzas"
+      ],
       "stock": 22,
       "variants": {
         "section": "main",
-        "food_categories": ["pizzas"],
+        "food_categories": [
+          "pizzas"
+        ],
         "packs": [
-          { "label": "Mediana", "price": 9600, "default": true },
-          { "label": "Grande", "price": 13900 }
+          {
+            "label": "Mediana",
+            "price": 9600,
+            "default": true
+          },
+          {
+            "label": "Grande",
+            "price": 13900
+          }
         ]
       }
     },
@@ -287,22 +533,44 @@
       "id": "pasta-01",
       "name": "Raviolones de Ricota y Nueces",
       "price": 7800,
-      "image_url": "Imagenes/raviolioles de ricota.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20gourmet%20Raviolones%20de%20Ricota%20y%20Nueces%20gigantes%2C%20pasta%20fresca%20amarilla%20casera%20al%20dente%2C%20relleno%20abundante%20ricota%20cremosa%20nueces%20tostadas%2C%20manteca%20marr%C3%B3n%20dorada%20%28beurre%20noisette%29%2C%20salvia%20frita%20crisp%2C%20queso%20parmesano%20rallado%2C%20pimienta%20negra%2C%20cuenco%20cer%C3%A1mica%20blanca%20profunda%2C%20fondo%20madera%20rustic%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20lateral&image_size=square_hd",
       "details": "Pasta fresca hecha a mano diariamente, rellena de ricota de cabra, nueces mariposas tostadas, parmesano y menta fresca. Salsa pomodoro y albahaca criolla.",
-      "tags": ["pastas"],
+      "tags": [
+        "pastas"
+      ],
       "stock": 12,
       "variants": {
         "section": "main",
-        "food_categories": ["pastas"],
+        "food_categories": [
+          "pastas"
+        ],
         "interest_tag": "Entradas rápidas",
         "packs": [
-          { "label": "Porción 1/2 Kg", "price": 7800, "default": true },
-          { "label": "Porción 1 Kg (4 personas)", "price": 14200 }
+          {
+            "label": "Porción 1/2 Kg",
+            "price": 7800,
+            "default": true
+          },
+          {
+            "label": "Porción 1 Kg (4 personas)",
+            "price": 14200
+          }
         ],
         "addons": [
-          { "label": "Salsa pomodoro", "price": 0, "free": true, "default": true },
-          { "label": "Salsa blanca 4 quesos", "price": 1500 },
-          { "label": "Manteca y salvia", "price": 900 }
+          {
+            "label": "Salsa pomodoro",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Salsa blanca 4 quesos",
+            "price": 1500
+          },
+          {
+            "label": "Manteca y salvia",
+            "price": 900
+          }
         ]
       }
     },
@@ -310,16 +578,27 @@
       "id": "pasta-02",
       "name": "Ravioles de Jamón y Queso",
       "price": 6900,
-      "image_url": "Imagenes/raviolioles de ricota.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Ravioles%20de%20Jam%C3%B3n%20y%20Queso%20estilo%20casa%20de%20empanadas%20argentina%2C%20pasta%20fresca%20amarilla%2C%20relleno%20cremoso%20jam%C3%B3n%20york%20mozzarella%2C%20salsa%20de%20tomate%20casera%20chunky%20con%20albahaca%2C%20queso%20rallado%2C%20aceite%20oliva%2C%20plato%20hondo%20cer%C3%A1mica%2C%20vapor%20suave%2C%20cubiertos%20plata%2C%20fondo%20mantel%20blanco%20cuadriculado%20tradicional&image_size=square_hd",
       "details": "Pasta fresca rellena de jamón york, mozzarella y provolone. Salsa pomodoro casera, albahaca fresca y una lluvia de parmesano.",
-      "tags": ["pastas"],
+      "tags": [
+        "pastas"
+      ],
       "stock": 2,
       "variants": {
         "section": "main",
-        "food_categories": ["pastas"],
+        "food_categories": [
+          "pastas"
+        ],
         "packs": [
-          { "label": "Porción 1/2 Kg", "price": 6900, "default": true },
-          { "label": "Porción 1 Kg (4 personas)", "price": 12900 }
+          {
+            "label": "Porción 1/2 Kg",
+            "price": 6900,
+            "default": true
+          },
+          {
+            "label": "Porción 1 Kg (4 personas)",
+            "price": 12900
+          }
         ]
       }
     },
@@ -327,17 +606,28 @@
       "id": "pasta-03",
       "name": "Tallarines a la Bolognesa",
       "price": 7400,
-      "image_url": "Imagenes/raviolioles de ricota.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Tallarines%20a%20la%20Bolognesa%20tradicional%20italiana%2C%20pasta%20al%20dente%20larga%20enrollada%2C%20salsa%20rag%C3%BA%20bolognesa%20carne%20ternera%20cerdo%20molida%20cocci%C3%B3n%20lenta%206hs%2C%20tomate%20perita%2C%20zanahoria%20apio%20cebolla%20mirepoix%2C%20parmesano%20reggiano%2C%20albahaca%20fresca%2C%20pimienta%20negra%2C%20plato%20pasta%2C%20cuchara%20madera%2C%20fondo%20r%C3%BAstico%2C%20iluminaci%C3%B3n%20c%C3%A1lida&image_size=square_hd",
       "details": "Tallarines frescos al huevo, ragú de carne cocción lenta 5hs, zanahoria, apio, cebolla, tomate perita y vino tinto Malbec Mendoza.",
-      "tags": ["pastas"],
+      "tags": [
+        "pastas"
+      ],
       "stock": 8,
       "variants": {
         "section": "main",
-        "food_categories": ["pastas"],
+        "food_categories": [
+          "pastas"
+        ],
         "interest_tag": "Especialidad de la casa",
         "packs": [
-          { "label": "Porción individual", "price": 7400, "default": true },
-          { "label": "Para 2 personas", "price": 13900 }
+          {
+            "label": "Porción individual",
+            "price": 7400,
+            "default": true
+          },
+          {
+            "label": "Para 2 personas",
+            "price": 13900
+          }
         ]
       }
     },
@@ -345,24 +635,54 @@
       "id": "prin-01",
       "name": "Milanesa a la Napolitana con Puré Cremoso",
       "price": 8900,
-      "image_url": "Imagenes/milacpure.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Milanes%20a%20la%20Napolitana%20con%20pur%C3%A9%20cremoso%20cl%C3%A1sico%20argentino%2C%20milanesa%20suprema%20pollo%20dorada%20crujiente%20pan%20rallado%20panko%2C%20cobertura%20jam%C3%B3n%20mozzarella%20salsa%20tomate%20al%20horno%20gratinada%2C%20pur%C3%A9%20papas%20pat%C3%A9%20con%20mantequilla%2C%20perejil%20picado%2C%20plato%20principal%20grande%2C%20cubiertos%20acero%2C%20fondo%20navy%20restaurante%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20cenital&image_size=square_hd",
       "details": "Suprema de peceto empanada en panko, salsa pomodoro San Marzano, jamón york, mozzarella fior di latte, orégano. Puré cremoso de papas con manteca y parmesano rallado.",
-      "tags": ["principales"],
+      "tags": [
+        "principales"
+      ],
       "stock": 4,
       "variants": {
         "section": "main",
-        "food_categories": ["principales"],
+        "food_categories": [
+          "principales"
+        ],
         "interest_tag": "Promociones",
         "packs": [
-          { "label": "Milanesa simple", "price": 8900, "default": true },
-          { "label": "Milanesa napolitana", "price": 9900 },
-          { "label": "Milanesa rellena jamón y queso", "price": 10900 }
+          {
+            "label": "Milanesa simple",
+            "price": 8900,
+            "default": true
+          },
+          {
+            "label": "Milanesa napolitana",
+            "price": 9900
+          },
+          {
+            "label": "Milanesa rellena jamón y queso",
+            "price": 10900
+          }
         ],
         "addons": [
-          { "label": "Puré de papas", "price": 0, "free": true, "default": true },
-          { "label": "Papas fritas", "price": 0, "free": true },
-          { "label": "Ensalada mixta", "price": 0, "free": true },
-          { "label": "Papas noisette", "price": 800 }
+          {
+            "label": "Puré de papas",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Papas fritas",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Ensalada mixta",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Papas noisette",
+            "price": 800
+          }
         ]
       }
     },
@@ -370,18 +690,37 @@
       "id": "prin-02",
       "name": "Suprema de Pollo Grill con Guarnición",
       "price": 7200,
-      "image_url": "Imagenes/milacpure.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Suprema%20de%20Pollo%20Grill%20con%20guarnici%C3%B3n%2C%20pechuga%20pollo%20a%20la%20parrilla%20marcas%20perfectas%20grill%2C%20jugoso%20punto%20justo%2C%20pur%C3%A9%20de%20calabaza%20naranja%20cremosa%2C%20vegetales%20salteados%20%28zapallito%20zanahoria%20morr%C3%B3n%29%2C%20aceite%20oliva%20hierbas%20provenzal%2C%20plato%20blanco%20rectangular%2C%20sal%20marina%20gruesa%2C%20pimienta%2C%20fondo%20r%C3%BAstico%20madera%20clara&image_size=square_hd",
       "details": "Suprema de pollo marinada 24h en yogurt, limón, ajo y hierbas, sellada a la parrilla, jugosa por dentro y crocante por fuera. Papas rústicas al horno.",
-      "tags": ["principales"],
+      "tags": [
+        "principales"
+      ],
       "stock": 15,
       "variants": {
         "section": "main",
-        "food_categories": ["principales"],
+        "food_categories": [
+          "principales"
+        ],
         "addons": [
-          { "label": "Papas rústicas", "price": 0, "free": true, "default": true },
-          { "label": "Puré de calabaza", "price": 900 },
-          { "label": "Ensalada verde", "price": 0, "free": true },
-          { "label": "Salsa de champignones", "price": 1200 }
+          {
+            "label": "Papas rústicas",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Puré de calabaza",
+            "price": 900
+          },
+          {
+            "label": "Ensalada verde",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Salsa de champignones",
+            "price": 1200
+          }
         ]
       }
     },
@@ -389,18 +728,32 @@
       "id": "prin-03",
       "name": "Asado de Tira · 1/2 Kg",
       "price": 11900,
-      "image_url": "Imagenes/milacpure.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Asado%20de%20Tira%20argentino%201/2kg%2C%20costillar%20de%20res%20a%20la%20parrilla%20llama%20le%C3%B1a%2C%20marcas%20quemadas%20perfectas%20cruzadas%2C%20jugoso%20rosado%20interno%20%28medium%29%2C%20chimichurri%20verde%20cl%C3%A1sico%20al%20lado%2C%20salsa%20criolla%2C%20ensalada%20rusa%20chica%2C%20pan%20criollo%20chico%2C%20tabla%20parrilla%20madera%20quemada%2C%20fondo%20carb%C3%B3n%20negro%2C%20humo%20leve%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20dram%C3%A1tica&image_size=square_hd",
       "details": "Corte clásico argentino asado a la cruz con leña de quebracho blanco, servido con chimichurri casero, ensalada mixta y papas al plomo.",
-      "tags": ["principales"],
+      "tags": [
+        "principales"
+      ],
       "stock": 7,
       "variants": {
         "section": "main",
-        "food_categories": ["principales"],
+        "food_categories": [
+          "principales"
+        ],
         "interest_tag": "Especialidad de la casa",
         "packs": [
-          { "label": "1/2 Kg · 1 persona", "price": 11900, "default": true },
-          { "label": "1 Kg · 2 personas", "price": 22900 },
-          { "label": "2 Kg · 4 personas", "price": 43900 }
+          {
+            "label": "1/2 Kg · 1 persona",
+            "price": 11900,
+            "default": true
+          },
+          {
+            "label": "1 Kg · 2 personas",
+            "price": 22900
+          },
+          {
+            "label": "2 Kg · 4 personas",
+            "price": 43900
+          }
         ]
       }
     },
@@ -408,13 +761,17 @@
       "id": "prin-04",
       "name": "Bife de Chorizo con Papas Noisette",
       "price": 14500,
-      "image_url": "Imagenes/milacpure.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Bife%20de%20Chorizo%20premium%20con%20papas%20noisette%20doradas%2C%20corte%20vac%C3%ADo%20argentino%203cm%20grosor%2C%20a%20la%20parrilla%20jugoso%20punto%20medio%2C%20mantequilla%20hierbas%20derretida%20encima%2C%20papas%20francesas%20peque%C3%B1as%20doradas%20crujientes%20con%20perejil%20ajo%2C%20chimichurri%2C%20sal%20parrillera%20gruesa%2C%20tabla%20madera%20parrilla%2C%20fondo%20carb%C3%B3n%20oscuro%20bokeh&image_size=square_hd",
       "details": "Bife de chorizo Black Angus 300g, madurado 21 días, sellado a la plancha con manteca romero, papas noisette salteadas y chimichurri de hierbas.",
-      "tags": ["principales"],
+      "tags": [
+        "principales"
+      ],
       "stock": 2,
       "variants": {
         "section": "main",
-        "food_categories": ["principales"],
+        "food_categories": [
+          "principales"
+        ],
         "interest_tag": "Especialidad de la casa"
       }
     },
@@ -422,21 +779,48 @@
       "id": "ham-01",
       "name": "Hamburguesa Crispy BBQ Bacon",
       "price": 7500,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Hamburguesa%20Crispy%20BBQ%20Bacon%2C%20pan%20brioche%20brillo%20mantequilla%20tostado%2C%20medall%C3%B3n%20res%20180gr%20jugoso%2C%20cheddar%20doble%2C%20panceta%20bacon%20crispy%20encrespada%2C%20aros%20cebolla%20tempura%20crispy%2C%20salsa%20barbacoa%20ahumada%20St%20Louis%20estilo%20BBQ%20americano%2C%20lechuga%20iceberg%2C%20tomate%2C%20papel%20manteca%20marr%C3%B3n%2C%20tabla%20madera%2C%20fondo%20oscuro%20navy&image_size=square_hd",
       "details": "Carne 150g, aros de cebolla crispy, panceta ahumada, cheddar fundido, salsa BBQ hickory casera, tomate fresco, lechuga romana, pan de papa con semillas.",
-      "tags": ["hamburguesas"],
+      "tags": [
+        "hamburguesas"
+      ],
       "stock": 17,
       "variants": {
         "section": "main",
-        "food_categories": ["hamburguesas"],
+        "food_categories": [
+          "hamburguesas"
+        ],
         "interest_tag": "Entradas rápidas",
         "addons": [
-          { "label": "Punto: 3/4 (recomendado)", "price": 0, "free": true, "default": true },
-          { "label": "Punto: medio", "price": 0, "free": true },
-          { "label": "Punto: bien cocida", "price": 0, "free": true },
-          { "label": "Sin gluten · Pan de quinoa", "price": 800 },
-          { "label": "Quitar cebolla", "price": 0, "free": true },
-          { "label": "+ Doble panceta", "price": 1400 }
+          {
+            "label": "Punto: 3/4 (recomendado)",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Punto: medio",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Punto: bien cocida",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Sin gluten · Pan de quinoa",
+            "price": 800
+          },
+          {
+            "label": "Quitar cebolla",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "+ Doble panceta",
+            "price": 1400
+          }
         ]
       }
     },
@@ -444,13 +828,19 @@
       "id": "ham-02",
       "name": "Hamburguesa Vegana Plant-Based",
       "price": 6900,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Hamburguesa%20Vegana%20Plant-Based%2C%20medall%C3%B3n%20de%20garbanzos%20quinoa%20remolacha%20color%20terracota%20jugoso%2C%20queso%20vegano%20cremosos%2C%20aguacate%20palta%20laminado%2C%20lechuga%20mantecosa%20color%20verde%20intenso%2C%20tomate%20heirloom%2C%20pepinillos%20encurtidos%2C%20pan%20brioche%20integral%20tostado%2C%20salsa%20pesto%20vegano%2C%20plato%20cer%C3%A1mica%20blanca%2C%20fondo%20marble%20gris%20claro&image_size=square_hd",
       "details": "Patty de porotos negros + soja texturizada, queso vegano de castañas de cajú, mayonesa de soja, tomate, lechuga, pepinillos encurtidos y pan brioche vegano.",
-      "tags": ["hamburguesas", "veganos"],
+      "tags": [
+        "hamburguesas",
+        "veganos"
+      ],
       "stock": 8,
       "variants": {
         "section": "main",
-        "food_categories": ["hamburguesas", "veganos"],
+        "food_categories": [
+          "hamburguesas",
+          "veganos"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -458,17 +848,31 @@
       "id": "ham-03",
       "name": "Clásica Americana con Queso Cheddar",
       "price": 5900,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Hamburguesa%20Cl%C3%A1sica%20Americana%20con%20Queso%20Cheddar%2C%20pan%20brioche%20brioch%C3%A9%20tostado%20mantequilla%2C%20doble%20medall%C3%B3n%20carne%20res%20angus%20jugoso%2C%20doble%20cheddar%20cremosos%20derretido%2C%20lechuga%2C%20tomate%2C%20cebolla%20roja%20cruda%2C%20pepinillos%2C%20mostaza%20amarilla%2C%20mayonesa%2C%20ketchup%20cl%C3%A1sico%2C%20plato%20cart%C3%B3n%20americana%2C%20fondo%20americano%20diner%20rojo&image_size=square_hd",
       "details": "Blend de carne 130g, rodaja de cheddar fundido, pepinillos, mostaza amarilla, ketchup, cebolla picada fresca, lechuga y tomate.",
-      "tags": ["hamburguesas"],
+      "tags": [
+        "hamburguesas"
+      ],
       "stock": 28,
       "variants": {
         "section": "main",
-        "food_categories": ["hamburguesas"],
+        "food_categories": [
+          "hamburguesas"
+        ],
         "addons": [
-          { "label": "Cheddar doble", "price": 900 },
-          { "label": "+ Bacon extra", "price": 1300 },
-          { "label": "Quitar cebolla", "price": 0, "free": true }
+          {
+            "label": "Cheddar doble",
+            "price": 900
+          },
+          {
+            "label": "+ Bacon extra",
+            "price": 1300
+          },
+          {
+            "label": "Quitar cebolla",
+            "price": 0,
+            "free": true
+          }
         ]
       }
     },
@@ -476,13 +880,17 @@
       "id": "ham-04",
       "name": "Hamburguesa Completa Doble",
       "price": 8900,
-      "image_url": "Imagenes/hambuerguesagour.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Hamburguesa%20Completa%20Doble%20premium%2C%20pan%20brioche%20dorado%20tostado%2C%20DOBLE%20medall%C3%B3n%20carne%20200grs%20c/u%20jugoso%2C%20DOBLE%20queso%20cheddar%20cremosos%20derretido%2C%20panceta%20bacon%20crispy%20encrespada%2C%20huevo%20frito%20coronando%2C%20aros%20de%20cebolla%20empanizados%2C%20lechuga%20iceberg%20fresca%2C%20tomate%20rodajas%2C%20pepinillos%20agridulces%2C%20salsa%20barbacoa%20%2B%20mayonesa%20t%C3%A1rtara%2C%20papel%20manteca%2C%20fondo%20parrilla%20restaurante%2C%20iluminaci%C3%B3n%20c%C3%A1lida&image_size=square_hd",
       "details": "DOBLE carne 260g, doble cheddar, doble panceta, huevo frito, jamón york, aros de cebolla, lechuga, tomate y salsa de la casa. ¡Para hamburgueseros exigentes!",
-      "tags": ["hamburguesas"],
+      "tags": [
+        "hamburguesas"
+      ],
       "stock": 13,
       "variants": {
         "section": "main",
-        "food_categories": ["hamburguesas"],
+        "food_categories": [
+          "hamburguesas"
+        ],
         "interest_tag": "Especialidad de la casa"
       }
     },
@@ -490,22 +898,42 @@
       "id": "ent-01",
       "name": "Papas Bravas 2 salsas",
       "price": 4500,
-      "image_url": "Imagenes/papas bravas.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Papas%20Bravas%20espa%C3%B1olas%20con%202%20salsas%20%E2%80%94%20salsa%20brava%20roja%20picante%20%2B%20alioli%20ajo%20amarillo%20cremoso%20%E2%80%94%20papas%20patatas%20bravas%20cortadas%20cubos%20doradas%20crujientes%20por%20fuera%20suaves%20por%20dentro%2C%20perejil%2C%20piment%C3%B3n%20de%20la%20Vera%2C%20fuente%20cuadrada%20cer%C3%A1mica%20blanca%2C%20tabla%20madera%2C%20aceite%20oliva%2C%20iluminaci%C3%B3n%20c%C3%A1lida%2C%20detalle%20salsas%20chorreadas&image_size=square_hd",
       "details": "Papas cortadas cuadro freídas crocantes, acompañadas de salsa brava picante ahumada y ali-oli cremoso de ajo. Tapas clásicas españolas.",
-      "tags": ["entradas"],
+      "tags": [
+        "entradas"
+      ],
       "stock": 22,
       "variants": {
         "section": "main",
-        "food_categories": ["entradas"],
+        "food_categories": [
+          "entradas"
+        ],
         "interest_tag": "Entradas rápidas",
         "packs": [
-          { "label": "Porción individual", "price": 4500, "default": true },
-          { "label": "Porción grande · 4 personas", "price": 8900 }
+          {
+            "label": "Porción individual",
+            "price": 4500,
+            "default": true
+          },
+          {
+            "label": "Porción grande · 4 personas",
+            "price": 8900
+          }
         ],
         "addons": [
-          { "label": "+ Queso cheddar rallado", "price": 1200 },
-          { "label": "+ Panceta ahumada", "price": 1500 },
-          { "label": "+ Cebolla de verdeo", "price": 600 }
+          {
+            "label": "+ Queso cheddar rallado",
+            "price": 1200
+          },
+          {
+            "label": "+ Panceta ahumada",
+            "price": 1500
+          },
+          {
+            "label": "+ Cebolla de verdeo",
+            "price": 600
+          }
         ]
       }
     },
@@ -513,28 +941,55 @@
       "id": "ent-02",
       "name": "Empanadas de Carne · Docena",
       "price": 8800,
-      "image_url": "Imagenes/enpanadas.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Docena%20de%20empanadas%20de%20carne%20argentinas%20cocci%C3%B3n%20al%20horno%2C%2012%20unidades%20doradas%2C%20repulgue%20t%C3%ADpico%20empanada%20tucumana%2C%20bandeja%20hierro%20desgastado%2C%20chimichurri%20al%20lado%2C%20salsa%20criolla%20chica%2C%20pan%20criollo%2C%20sobre%20mesa%20madera%20parrilla%2C%20fondo%20oscuro%20textura%20le%C3%B1a%2C%20vapor%20leve%20calientes%2C%20iluminaci%C3%B3n%20c%C3%A1lida&image_size=square_hd",
       "details": "Docena de empanadas tucumanas rellenas de carne cortada a cuchillo, cebolla de verdeo, huevo duro, aceitunas, pasas y comino. Masa hojaldre crocante.",
-      "tags": ["entradas"],
+      "tags": [
+        "entradas"
+      ],
       "stock": 5,
       "variants": {
         "section": "main",
-        "food_categories": ["entradas"],
+        "food_categories": [
+          "entradas"
+        ],
         "interest_tag": "Promociones",
         "packs": [
-          { "label": "Media docena · 6 unidades", "price": 4500 },
-          { "label": "Docena · 12 unidades", "price": 8800, "default": true },
-          { "label": "2 docenas · 24 unidades", "price": 16900 }
+          {
+            "label": "Media docena · 6 unidades",
+            "price": 4500
+          },
+          {
+            "label": "Docena · 12 unidades",
+            "price": 8800,
+            "default": true
+          },
+          {
+            "label": "2 docenas · 24 unidades",
+            "price": 16900
+          }
         ],
         "mix_builder": {
           "label": "Armá tu combinación de sabores",
           "options": [
-            { "label": "Carne cortada a cuchillo", "default": true },
-            { "label": "Jamón y queso" },
-            { "label": "Cebolla y queso" },
-            { "label": "Atún" },
-            { "label": "Verdura vegana" },
-            { "label": "Pollo al verdeo" }
+            {
+              "label": "Carne cortada a cuchillo",
+              "default": true
+            },
+            {
+              "label": "Jamón y queso"
+            },
+            {
+              "label": "Cebolla y queso"
+            },
+            {
+              "label": "Atún"
+            },
+            {
+              "label": "Verdura vegana"
+            },
+            {
+              "label": "Pollo al verdeo"
+            }
           ],
           "maxMix": 12
         }
@@ -544,13 +999,17 @@
       "id": "ent-03",
       "name": "Provoleta a la Parrilla",
       "price": 5800,
-      "image_url": "Imagenes/enpanadas.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Provoleta%20a%20la%20parrilla%20cl%C3%A1sica%20argentina%2C%20queso%20provolone%202cm%20grosor%20a%20la%20parrilla%2C%20marcas%20quemadas%20perfectas%2C%20superficie%20dorada%20gratinada%20crujiente%20por%20fuera%20cremoso%20por%20dentro%2C%20chimichurri%20verde%2C%20rodaja%20tomate%20natural%2C%20or%C3%A9gano%2C%20aceitunas%2C%20tabla%20de%20madera%20parrilla%2C%20carb%C3%B3n%2C%20fondo%20oscuro%20restaurant%20asado&image_size=square_hd",
       "details": "Provoleta artesanal de 180g, sellada a la plancha con aceite de oliva, orégano y ají molido. Acompaña chimichurri y pan casero.",
-      "tags": ["entradas"],
+      "tags": [
+        "entradas"
+      ],
       "stock": 6,
       "variants": {
         "section": "main",
-        "food_categories": ["entradas"],
+        "food_categories": [
+          "entradas"
+        ],
         "interest_tag": "Especialidad de la casa"
       }
     },
@@ -558,13 +1017,18 @@
       "id": "veg-01",
       "name": "Bowl Vegano Energético",
       "price": 6400,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Bowl%20Vegano%20Energ%C3%A9tico%2C%20bowl%20cer%C3%A1mica%20blanco%2C%20base%20quinoa%20cocida%2C%20garbanzos%20tostados%20especiados%20c%C3%BArcuma%2C%20palta%20aguacate%20laminado%2C%20zanahorias%20spiralizadas%2C%20remolacha%20asada%2C%20pepino%2C%20brotes%20alfalfa%2C%20semillas%20ch%C3%ADa%20lino%20s%C3%A9samo%20tostadas%2C%20vegetales%20verdes%20kale%20baby%2C%20dressing%20tahini%20lim%C3%B3n%20cremosos%2C%20sobre%20mesa%20marble%20claro%2C%20iluminaci%C3%B3n%20natural%20d%C3%ADa&image_size=square_hd",
       "details": "Base de quinoa tricolor, mix de verdes frescos, palta, garbanzos asados con pimentón ahumado, zanahorias encurtidas, brotes, semillas mix y dressing de tahini limón.",
-      "tags": ["veganos", "ensaladas"],
+      "tags": [
+        "veganos",
+        "ensaladas"
+      ],
       "stock": 9,
       "variants": {
         "section": "main",
-        "food_categories": ["veganos"],
+        "food_categories": [
+          "veganos"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -572,26 +1036,34 @@
       "id": "veg-02",
       "name": "Wrap Vegano De la Casa",
       "price": 5600,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Wrap%20Vegano%20De%20la%20Casa%2C%20tortilla%20integral%20grande%20enrollado%20perfecto%20rebanado%20mitad%20diagonal%2C%20interior%20visible%20relleno%20abundante%3A%20hummus%20berenjena%20asada%2C%20zanahorias%20rayadas%2C%20lechuga%20romana%2C%20pepinillo%2C%20pimiento%20rojo%20asado%2C%20cebolla%20morada%2C%20tahini%20lim%C3%B3n%2C%20perejil%2C%20plato%20rectangular%20cer%C3%A1mica%20blanca%2C%20ensalada%20fresca%20acompa%C3%B1amiento%2C%20fondo%20claro&image_size=square_hd",
       "details": "Tortilla integral vegana, hummus de garbanzo, falafel crocante, zanahoria rallada, repollo morado, palta, pepino, lechuga y salsa tahini.",
-      "tags": ["veganos"],
+      "tags": [
+        "veganos"
+      ],
       "stock": 0,
       "variants": {
         "section": "main",
-        "food_categories": ["veganos"]
+        "food_categories": [
+          "veganos"
+        ]
       }
     },
     {
       "id": "ens-01",
       "name": "Ensalada César con Pollo Grill",
       "price": 6200,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Ensalada%20C%C3%A9sar%20con%20Pollo%20Grill%20cl%C3%A1sica%2C%20croutons%20brioche%20dorados%20cubos%20grandes%2C%20pechuga%20pollo%20a%20la%20parrilla%20grill%20marks%2C%20lechuga%20romana%20coraz%C3%B3n%20verde%20oscuro%20fresco%2C%20queso%20parmesano%20lascas%2C%20salsa%20c%C3%A9sar%20anchoas%20cremosos%2C%20pimienta%20negra%20molida%2C%20cuenco%20cer%C3%A1mica%20profundo%2C%20cubiertos%2C%20fondo%20navy%20restaurante%20elegante&image_size=square_hd",
       "details": "Lechuga romana, pechuga de pollo grillada marinada, crutones caseros, parmesano Reggiano lascado, dressing César anchoa y huevo.",
-      "tags": ["ensaladas"],
+      "tags": [
+        "ensaladas"
+      ],
       "stock": 19,
       "variants": {
         "section": "main",
-        "food_categories": ["ensaladas"],
+        "food_categories": [
+          "ensaladas"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -599,13 +1071,17 @@
       "id": "ens-02",
       "name": "Ensalada Caprese Burrata",
       "price": 7800,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Ensalada%20Caprese%20con%20Burrata%20Pugliese%20italiana%2C%20rodajas%20tomate%20heirloom%20maduro%20rojo%20rosa%20amarillo%2C%20mozzarella%20burrata%20cremosa%20centro%20l%C3%ADquido%20reventado%2C%20albahaca%20fresca%20verde%20gigante%20Genovese%2C%20aceite%20oliva%20extra%20virgen%2C%20reducci%C3%B3n%20aceto%20bals%C3%A1mico%20de%20M%C3%B3dena%20chorreado%20art%C3%ADsticamente%2C%20sal%20marina%20Maldon%2C%20pimienta%2C%20plato%20blanco%2C%20albahaca%20flores&image_size=square_hd",
       "details": "Tomate heirloom mix, burrata di bufala, albahaca fresca, reducción balsámica tradicional 12 años, aceite de oliva extra virgen, sal Maldon.",
-      "tags": ["ensaladas"],
+      "tags": [
+        "ensaladas"
+      ],
       "stock": 4,
       "variants": {
         "section": "main",
-        "food_categories": ["ensaladas"],
+        "food_categories": [
+          "ensaladas"
+        ],
         "interest_tag": "Promociones"
       }
     },
@@ -613,26 +1089,34 @@
       "id": "ens-03",
       "name": "Ensalada Griega Tradicional",
       "price": 5400,
-      "image_url": "Imagenes/ensaladacesar.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Ensalada%20Griega%20Tradicional%20Horiatiki%2C%20tomates%20cherry%20roma%2C%20pepino%20en%20rodajas%2C%20cebolla%20roja%20violeta%20finas%20l%C3%A1minas%2C%20pimiento%20verde%20tiras%2C%20aceitunas%20Kalamata%20negras%20brillantes%2C%20queso%20feta%20bloque%20grande%20encima%2C%20or%C3%A9gano%20griego%2C%20aceite%20oliva%20extra%20virgen%2C%20sal%20marina%2C%20cuenco%20cer%C3%A1mica%20azul%20greco%20cl%C3%A1sico%2C%20fondo%20marino%20azul%20claro&image_size=square_hd",
       "details": "Tomate, pepino, cebolla morada, morrón, aceitunas Kalamata, queso feta de Grecia, orégano griego y aceite de oliva extra virgen.",
-      "tags": ["ensaladas"],
+      "tags": [
+        "ensaladas"
+      ],
       "stock": 25,
       "variants": {
         "section": "main",
-        "food_categories": ["ensaladas"]
+        "food_categories": [
+          "ensaladas"
+        ]
       }
     },
     {
       "id": "beb-01",
       "name": "Limonada Casera con Menta",
       "price": 2300,
-      "image_url": "Imagenes/Limonadacasera.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Limonada%20Casera%20con%20Menta%20y%20Jengibre%2C%20jarra%20vidrio%20transparente%20grande%2C%20rodajas%20lim%C3%B3n%20amarillo%20ecol%C3%B3gico%2C%20menta%20fresca%20verde%20abundante%2C%20gajo%20jengibre%2C%20hielos%20cristalinos%20brillantes%2C%20pajita%20reutilizable%20metal%20dorado%2C%20detalle%20gotas%20agua%20en%20jarra%2C%20fondo%20blanco%20marble%2C%20luz%20natural%20ventana%20d%C3%ADa%2C%20refrescante%20vibrante&image_size=square_hd",
       "details": "Limón exprimido fresco, jarabe de menta natural, hojas de menta fresca y soda. Sin colorantes ni conservantes. 700ml servida fría.",
-      "tags": ["bebidas"],
+      "tags": [
+        "bebidas"
+      ],
       "stock": 55,
       "variants": {
         "section": "main",
-        "food_categories": ["bebidas"],
+        "food_categories": [
+          "bebidas"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -640,16 +1124,27 @@
       "id": "beb-02",
       "name": "Agua Mineral con Gas",
       "price": 1200,
-      "image_url": "Imagenes/Limonadacasera.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Agua%20Mineral%20con%20Gas%20premium%2C%20botella%20vidrio%20verde%20elegante%20agua%20con%20gas%2C%20copa%20de%20cristal%20alto%2C%20burbujas%20efervescentes%20brillantes%20subiendo%2C%20rodaja%20lim%C3%B3n%2C%20hielo%2C%20hinojo%20fresco%20decoraci%C3%B3n%2C%20sobre%20table%20marble%20gris%2C%20fondo%20blanco%20limpio%20minimalista%2C%20luz%20natural%2C%20alta%20calidad%20comercial&image_size=square_hd",
       "details": "Botella 500ml.",
-      "tags": ["bebidas"],
+      "tags": [
+        "bebidas"
+      ],
       "stock": 120,
       "variants": {
         "section": "main",
-        "food_categories": ["bebidas"],
+        "food_categories": [
+          "bebidas"
+        ],
         "packs": [
-          { "label": "500ml", "price": 1200, "default": true },
-          { "label": "1,5L", "price": 1800 }
+          {
+            "label": "500ml",
+            "price": 1200,
+            "default": true
+          },
+          {
+            "label": "1,5L",
+            "price": 1800
+          }
         ]
       }
     },
@@ -657,17 +1152,31 @@
       "id": "beb-03",
       "name": "Coca Cola",
       "price": 1500,
-      "image_url": "Imagenes/Limonadacasera.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20comercial%20Coca-Cola%20lata%20fr%C3%ADa%20condensada%2C%20lata%20cl%C3%A1sica%20roja%20355ml%20gotas%20agua%20condensada%20brillante%2C%20hielo%20cubos%20alrededor%2C%20vaso%20vidrio%2C%20pajita%20roja%20cl%C3%A1sica%2C%20lima%20gajo%2C%20superficie%20negra%20reflectante%2C%20fondo%20rojo%20coca%20cola%20logo%20desenfocado%2C%20bokeh%20luces%2C%20iluminaci%C3%B3n%20estudio%20producto&image_size=square_hd",
       "details": "Botella descartable 500ml servida fría.",
-      "tags": ["bebidas"],
+      "tags": [
+        "bebidas"
+      ],
       "stock": 95,
       "variants": {
         "section": "main",
-        "food_categories": ["bebidas"],
+        "food_categories": [
+          "bebidas"
+        ],
         "packs": [
-          { "label": "500ml", "price": 1500, "default": true },
-          { "label": "1,5L", "price": 2400 },
-          { "label": "Lata 354ml", "price": 1300 }
+          {
+            "label": "500ml",
+            "price": 1500,
+            "default": true
+          },
+          {
+            "label": "1,5L",
+            "price": 2400
+          },
+          {
+            "label": "Lata 354ml",
+            "price": 1300
+          }
         ]
       }
     },
@@ -675,26 +1184,34 @@
       "id": "beb-04",
       "name": "Jugo Exprimido de Naranja",
       "price": 2600,
-      "image_url": "Imagenes/Limonadacasera.jpg",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Jugo%20de%20Naranja%20Exprimido%20Fresco%20natural%20100%25%2C%20vaso%20alto%20vidrio%20transparente%2C%20color%20naranja%20dorado%20intenso%20brillante%2C%20medio%20naranja%20exprimido%20al%20lado%2C%20rodaja%20naranja%20borde%20vaso%2C%20pajita%20blanca%2C%20hielos%20opcionales%2C%20gotas%20condensaci%C3%B3n%20frio%20en%20vaso%2C%20luz%20natural%20ventana%2C%20cortinas%20blancas%2C%20fondo%20claro%2C%20sensaci%C3%B3n%20fresca%20vitamina&image_size=square_hd",
       "details": "500ml 100% naranjas frescas exprimidas en el momento. Sin azúcar agregada.",
-      "tags": ["bebidas"],
+      "tags": [
+        "bebidas"
+      ],
       "stock": 40,
       "variants": {
         "section": "main",
-        "food_categories": ["bebidas"]
+        "food_categories": [
+          "bebidas"
+        ]
       }
     },
     {
       "id": "cer-01",
       "name": "Cerveza IPA Artesanal · Pinta 500ml",
       "price": 3600,
-      "image_url": "Imagenes/producto2.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Cerveza%20IPA%20Artesanal%20India%20Pale%20Ale%20pinta%20500ml%20vaso%20pint%20ingles%2C%20color%20dorado%20%C3%A1mbar%20intenso%20turbio%20sin%20filtrar%2C%20espuma%20blanca%20cremosa%20capa%20gruesa%203cm%20persistente%2C%20copa%20beer%20glass%2C%20lupulada%2C%20l%C3%BApulo%20citrus%2C%20copo%20condensaci%C3%B3n%20frio%20gotas%20en%20vidrio%2C%20fondo%20pub%20madera%20oscura%2C%20iluminaci%C3%B3n%20c%C3%A1lida%20luz%20%C3%A1mbar&image_size=square_hd",
       "details": "Cerveza India Pale Ale con lúpulo Cascade y Mosaic, notas cítricas de pomelo y naranja amarga. IBU 55 · Alc 6,2%.",
-      "tags": ["cervezas"],
+      "tags": [
+        "cervezas"
+      ],
       "stock": 38,
       "variants": {
         "section": "main",
-        "food_categories": ["cervezas"],
+        "food_categories": [
+          "cervezas"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -702,17 +1219,28 @@
       "id": "cer-02",
       "name": "Quilmes Clásica · Porrón 1L",
       "price": 2400,
-      "image_url": "Imagenes/producto2.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Quilmes%20Cl%C3%A1sica%20porr%C3%B3n%201%20litro%20argentino%2C%20botella%20vidrio%20%C3%A1mbar%20oscuro%20cl%C3%A1sica%2C%20etiqueta%20Quilmes%20azul%20amarillo%20tradicional%2C%20vaso%20cerveza%20espuma%20dorada%20blanca%20cremosa%2C%20hielo%20al%20lado%2C%20mantel%20cuadr%C3%ADcula%20roja%20blanco%20parrilla%20asado%2C%20fondo%20mesa%20madera%20asador%2C%20sombra%20natural%2C%20t%C3%ADpico%20porr%C3%B3n%20argentino&image_size=square_hd",
       "details": "Cerveza rubia clásica argentina. Porrón de 1 Litro frío.",
-      "tags": ["cervezas"],
+      "tags": [
+        "cervezas"
+      ],
       "stock": 85,
       "variants": {
         "section": "main",
-        "food_categories": ["cervezas"],
+        "food_categories": [
+          "cervezas"
+        ],
         "interest_tag": "Promociones",
         "packs": [
-          { "label": "1 porrón 1L", "price": 2400, "default": true },
-          { "label": "Porron x3 · ahorra 10%", "price": 6500 }
+          {
+            "label": "1 porrón 1L",
+            "price": 2400,
+            "default": true
+          },
+          {
+            "label": "Porron x3 · ahorra 10%",
+            "price": 6500
+          }
         ]
       }
     },
@@ -720,13 +1248,17 @@
       "id": "cer-03",
       "name": "Stout Imperial de Cacao",
       "price": 3900,
-      "image_url": "Imagenes/producto2.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Cerveza%20Stout%20Imperial%20de%20Cacao%2C%20vaso%20snifter%20tulipa%20vidrio%20transparente%2C%20color%20marr%C3%B3n%20negro%20opaco%2C%20espuma%20caf%C3%A9%20con%20leche%20cremosa%20persistente%20capa%20gruesa%2C%20aromas%20chocolate%2C%20cacao%20nibs%2C%20caf%C3%A9%20espresso%2C%20copo%20condensado%2C%20fondo%20bar%20oscuro%20estanteria%20botellas%2C%20iluminaci%C3%B3n%20c%C3%A1lida%2C%20close-up%20detalle%20textura%20espuma&image_size=square_hd",
       "details": "Cerveza negra robusta con cacao 70% del Valle de Uco, notas de café tostado y chocolate amargo. Alc 8,5%.",
-      "tags": ["cervezas"],
+      "tags": [
+        "cervezas"
+      ],
       "stock": 14,
       "variants": {
         "section": "main",
-        "food_categories": ["cervezas"],
+        "food_categories": [
+          "cervezas"
+        ],
         "interest_tag": "Especialidad de la casa"
       }
     },
@@ -734,13 +1266,17 @@
       "id": "tra-01",
       "name": "Mojito Cubano Clásico",
       "price": 4500,
-      "image_url": "Imagenes/mojito.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Mojito%20Cubano%20Cl%C3%A1sico%2C%20vaso%20highball%20alto%20vidrio%20transparente%2C%20ron%20blanco%20cubano%2C%207up%20soda%20burbujeante%2C%20hierbabuena%20abundante%20verdes%20enormes%20tallos%2C%20az%C3%BAcar%20moreno%2C%20lima%20rodajas%206%20unidades%2C%20hielo%20picado%20abundante%20mojito%2C%20pajita%20blanca%2C%20gotas%20condensaci%C3%B3n%20en%20vidrio%2C%20fondo%20bar%20hawaiano%20palmeras%2C%20luz%20tropical&image_size=square_hd",
       "details": "Ron blanco havana club, hojas de menta fresca maceradas, limón exprimido, azúcar mascabo, soda y abundante hielo picado. Receta auténtica.",
-      "tags": ["tragos"],
+      "tags": [
+        "tragos"
+      ],
       "stock": 26,
       "variants": {
         "section": "main",
-        "food_categories": ["tragos"],
+        "food_categories": [
+          "tragos"
+        ],
         "interest_tag": "Entradas rápidas"
       }
     },
@@ -748,16 +1284,27 @@
       "id": "tra-02",
       "name": "Fernet Branca con Coca",
       "price": 3800,
-      "image_url": "Imagenes/mojito.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Fernet%20Branca%20con%20Coca%20argentino%20cl%C3%A1sico%2C%20vaso%20alto%20vidrio%20transparente%20500ml%2C%20Fernet%20Branca%2030%25%20botella%20marr%C3%B3n%20oscura%20etiqueta%20cl%C3%A1sica%20detr%C3%A1s%2C%20Coca%20Cola%20burbujeante%2C%20hielo%20abundante%20cubos%20grandes%2C%20rodaja%20lim%C3%B3n%2C%20pajita%20negra%2C%20t%C3%ADpico%20trago%20argentino%2C%20fondo%20bar%20restaurante%20luces%20c%C3%A1lidas&image_size=square_hd",
       "details": "Fernet Branca 50ml con Coca-Cola 250ml, abundante hielo y rodaja de limón. Ícono argentino.",
-      "tags": ["tragos"],
+      "tags": [
+        "tragos"
+      ],
       "stock": 33,
       "variants": {
         "section": "main",
-        "food_categories": ["tragos"],
+        "food_categories": [
+          "tragos"
+        ],
         "packs": [
-          { "label": "50ml · 1 trago", "price": 3800, "default": true },
-          { "label": "Jarra 1L · 4 tragos", "price": 12900 }
+          {
+            "label": "50ml · 1 trago",
+            "price": 3800,
+            "default": true
+          },
+          {
+            "label": "Jarra 1L · 4 tragos",
+            "price": 12900
+          }
         ]
       }
     },
@@ -765,13 +1312,17 @@
       "id": "tra-03",
       "name": "Spritz Aperol Tardeo",
       "price": 4200,
-      "image_url": "Imagenes/mojito.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Spritz%20Aperol%20Tardeo%20italiano%2C%20copa%20de%20c%C3%B3ctel%20bal%C3%B3n%20grande%20transparente%2C%20Aperol%20naranja%20brillante%2C%20prosecco%20espumoso%2C%20soda%20agua%20con%20gas%2C%20rodaja%20naranja%20Valencia%20grande%20decorativa%2C%20aceituna%20verde%20sin%20carozo%2C%20hielo%20cubos%20grandes%2C%20pajita%20met%C3%A1lica%20dorada%2C%20terraza%20atardecer%20dorado%2C%20luz%20c%C3%A1lida%20atardecer%2C%20bokeh%20fondo%20terraza&image_size=square_hd",
       "details": "Aperol 60ml, prosecco brut, soda, rodaja de naranja valenciana y abundante hielo. Trago de la tarde ideal para previas.",
-      "tags": ["tragos"],
+      "tags": [
+        "tragos"
+      ],
       "stock": 42,
       "variants": {
         "section": "main",
-        "food_categories": ["tragos"],
+        "food_categories": [
+          "tragos"
+        ],
         "interest_tag": "Promociones"
       }
     },
@@ -779,19 +1330,38 @@
       "id": "pos-01",
       "name": "Brownie Caliente con Helado",
       "price": 4600,
-      "image_url": "Imagenes/brownie con helado.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Brownie%20Caliente%20con%20Helado%20postre%20premium%2C%20brownie%20chocolate%2070%25%20cacao%20denso%20centro%20h%C3%BAmedo%20pegajoso%2C%20corte%20transversal%2C%20helado%20crema%20americana%20%28vanilla%29%203%20bochas%2C%20salsa%20caliente%20de%20chocolate%20caliente%20derretida%20chorreado%2C%20nueces%20pec%C3%A1n%20tostadas%2C%20chantilly%20crema%20montada%2C%20plato%20porcelana%20blanco%2C%20vapor%20caliente%2C%20fondo%20oscuro%20restaurant%20elegante&image_size=square_hd",
       "details": "Brownie double chocolate casero, centro fundido, nueces tostadas, helado de crema americana, goteo de chocolate semi-amargo.",
-      "tags": ["postres"],
+      "tags": [
+        "postres"
+      ],
       "stock": 29,
       "variants": {
         "section": "main",
-        "food_categories": ["postres"],
+        "food_categories": [
+          "postres"
+        ],
         "interest_tag": "Especialidad de la casa",
         "addons": [
-          { "label": "Helado: crema americana", "price": 0, "free": true, "default": true },
-          { "label": "Helado: dulce de leche granizado", "price": 300 },
-          { "label": "Helado: mantecado", "price": 0, "free": true },
-          { "label": "Salsa de frutos rojos", "price": 500 }
+          {
+            "label": "Helado: crema americana",
+            "price": 0,
+            "free": true,
+            "default": true
+          },
+          {
+            "label": "Helado: dulce de leche granizado",
+            "price": 300
+          },
+          {
+            "label": "Helado: mantecado",
+            "price": 0,
+            "free": true
+          },
+          {
+            "label": "Salsa de frutos rojos",
+            "price": 500
+          }
         ]
       }
     },
@@ -799,13 +1369,17 @@
       "id": "pos-02",
       "name": "Tarta Sacher de Chocolate",
       "price": 5200,
-      "image_url": "Imagenes/tartadechocolate.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Torta%20Sacher%20de%20Chocolate%20Austr%C3%ADaca%20cl%C3%A1sica%2C%20capa%20bizcocho%20chocolate%20esponjoso%203%20capas%2C%20mermelada%20albaricoque%20damasco%20centro%2C%20cobertura%20ganache%20chocolate%20glaseado%20espejo%20negro%20brillante%2C%20crema%20chantilly%20lado%2C%20rodajas%20albaricoque%2C%20plato%20porcelana%2C%20cuchara%20postre%20plata%2C%20iluminaci%C3%B3n%20soft%20estudio%2C%20fondo%20elegante%20oscuro&image_size=square_hd",
       "details": "Bizcochuelo de chocolate relleno de mermelada de damasco, cobertura ganache, goteo de chocolate y crema chantilly.",
-      "tags": ["postres"],
+      "tags": [
+        "postres"
+      ],
       "stock": 7,
       "variants": {
         "section": "main",
-        "food_categories": ["postres"],
+        "food_categories": [
+          "postres"
+        ],
         "interest_tag": "Especialidad de la casa"
       }
     },
@@ -813,13 +1387,17 @@
       "id": "pos-03",
       "name": "Postre de Queso y Frutos Rojos",
       "price": 4200,
-      "image_url": "Imagenes/tartadechocolate.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Postre%20de%20Queso%20y%20Frutos%20Rojos%20%28Cheesecake%20de%20New%20York%20estilo%20cl%C3%A1sico%29%2C%20base%20galletitas%20Mar%C3%ADa%20Oreo%20triturada%20chocolate%2C%20queso%20crema%20philadelphia%20textura%20cremosa%20sedosa%2C%20coulis%20frutos%20rojos%20%28frambuesas%20moras%20ar%C3%A1ndanos%20rojos%20negros%20azulados%29%2C%20frutos%20rojos%20frescos%20enteros%2C%20decoraci%C3%B3n%20menta%2C%20plato%20blanco%2C%20cuchara%2C%20fondo%20claro%20marble&image_size=square_hd",
       "details": "Base crocante de galleta integral, crema de queso mascarpone, gelatina de vino tinto, coulis de frutos rojos silvestres y frutos secos tostados.",
-      "tags": ["postres"],
+      "tags": [
+        "postres"
+      ],
       "stock": 16,
       "variants": {
         "section": "main",
-        "food_categories": ["postres"],
+        "food_categories": [
+          "postres"
+        ],
         "interest_tag": "Promociones"
       }
     },
@@ -827,40 +1405,69 @@
       "id": "pos-04",
       "name": "Flan Casero con Dulce de Leche",
       "price": 3800,
-      "image_url": "Imagenes/tartadechocolate.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Flan%20Casero%20con%20Dulce%20de%20Leche%20argentino%20cl%C3%A1sico%2C%20flan%20de%20huevo%20cremosos%20dorado%20naranja%20perfecta%20forma%20molde%2C%20salsa%20dulce%20de%20leche%20repostero%20caramelizado%20oscuro%20chorreado%20abundante%2C%20crema%20chantilly%20lado%2C%20cereza%20marraschino%2C%20plato%20cer%C3%A1mica%20blanco%20cl%C3%A1sico%2C%20cuchara%2C%20mantel%20cuadriculado%20tradicional%2C%20fondo%20cocina%20hogare%C3%B1a&image_size=square_hd",
       "details": "Flan de huevo casero, caramelo crocante, dulce de leche colonial y crema.",
-      "tags": ["postres"],
+      "tags": [
+        "postres"
+      ],
       "stock": 46,
       "variants": {
         "section": "main",
-        "food_categories": ["postres"]
+        "food_categories": [
+          "postres"
+        ]
       }
     },
     {
       "id": "combo-01",
       "name": "Combo Noche de Pizza · 2 Grandes + 6 Empanadas + 2 Bebidas",
       "price": 28900,
-      "image_url": "Imagenes/PIZZAMARGARITA.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Combo%20Noche%20de%20Pizza%20Familiar%2C%202%20pizzas%20grandes%20%28Muzzarella%20%2B%20Pepperoni%29%20redondas%20gigantes%2C%206%20empanadas%20de%20carne%2C%202%20botellas%20gaseosa%201.5L%20con%20hielo%2C%201%20ensalada%20fresca%20chica%2C%20bandeja%20gigante%20madera%20circular%2C%20mesa%20familiar%20grande%2C%20luz%20c%C3%A1lida%20cena%2C%20vista%20cenital%20flat-lay%20abundante%20apetitosa%2C%20familia%20noche%20pizza&image_size=square_hd",
       "details": "Promo viernes y sábados! 2 pizzas grandes (a elección: muzza, napolitana, jamón y queso, fugazza), 6 empanadas combinadas, 2 bebidas 1,5L (agua/gaseosa). Delivery gratis zona centro.",
-      "tags": ["combos"],
+      "tags": [
+        "combos"
+      ],
       "stock": 24,
       "variants": {
         "section": "main",
-        "food_categories": ["combos"],
+        "food_categories": [
+          "combos"
+        ],
         "interest_tag": "Combos",
         "packs": [
-          { "label": "Combo 4 personas", "price": 28900, "default": true },
-          { "label": "Combo XL 6 personas", "price": 38900 }
+          {
+            "label": "Combo 4 personas",
+            "price": 28900,
+            "default": true
+          },
+          {
+            "label": "Combo XL 6 personas",
+            "price": 38900
+          }
         ],
         "mix_builder": {
           "label": "Elegí tus sabores de pizza (no repetibles)",
           "options": [
-            { "label": "Muzarella", "default": true },
-            { "label": "Napolitana", "default": true },
-            { "label": "Jamón y Queso" },
-            { "label": "Fugazza" },
-            { "label": "Rúcula y Parmesano" },
-            { "label": "Pepperoni picante" }
+            {
+              "label": "Muzarella",
+              "default": true
+            },
+            {
+              "label": "Napolitana",
+              "default": true
+            },
+            {
+              "label": "Jamón y Queso"
+            },
+            {
+              "label": "Fugazza"
+            },
+            {
+              "label": "Rúcula y Parmesano"
+            },
+            {
+              "label": "Pepperoni picante"
+            }
           ],
           "maxMix": 2
         }
@@ -870,13 +1477,17 @@
       "id": "combo-02",
       "name": "Combo Almuerzo Ejecutivo · Plato principal + Bebida + Postre",
       "price": 8900,
-      "image_url": "Imagenes/producto3.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Combo%20Almuerzo%20Ejecutivo%20men%C3%BA%20del%20d%C3%ADa%20oficina%20%E2%80%94%20Plato%20principal%20Milanesa%20napolitana%20%2B%20Bebida%20Coca%20cola%20lata%20sin%20abrir%20%2B%20Postre%20Flan%20casero%20con%20dulce%20de%20leche%20%E2%80%94%20servicio%20de%20delivery%20caja%20cart%C3%B3n%20kraft%20ecol%C3%B3gica%2C%20cubiertos%20papel%20individual%2C%20servilleta%2C%20sobre%20mesa%20oficina%20madera%20clara%2C%20almuerzo%20ejecutivo%20r%C3%A1pido%20rico&image_size=square_hd",
       "details": "Menú diario de lunes a viernes 11:30 a 15:30. Entrada del día + plato principal del día + bebida 500ml + postre casero. Opción vegana disponible.",
-      "tags": ["combos"],
+      "tags": [
+        "combos"
+      ],
       "stock": 60,
       "variants": {
         "section": "main",
-        "food_categories": ["combos"],
+        "food_categories": [
+          "combos"
+        ],
         "interest_tag": "2x1"
       }
     },
@@ -884,13 +1495,19 @@
       "id": "combo-03",
       "name": "Happy Hour 2x1 Tragos + Papas Bravas",
       "price": 9500,
-      "image_url": "Imagenes/deliverymot.webp",
+      "image_url": "https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=Fotograf%C3%ADa%20Happy%20Hour%202x1%20Promo%20Tragos%20%2B%20Papas%20bravas%2C%202%20tragos%20cocteler%C3%ADa%20%28Mojito%20%2B%20Spritz%20Aperol%29%20brillantes%20colores%20vibrantes%2C%20fuente%20papas%20bravas%20espa%C3%B1olas%20salsa%20brava%20alioli%2C%20tabla%20madera%20picoteo%2C%20nachos%2C%20salsa%20guacamole%2C%20nachos%20con%20queso%20cheddar%2C%20pico%20de%20gallo%2C%20mesa%20bar%2C%20atardecer%20luces%20c%C3%A1lidas%20naranja%20terraza%2C%20ambiente%20relajado%20despu%C3%A9s%20oficina&image_size=square_hd",
       "details": "TODOS los días de 18:00 a 20:00. 2 tragos de la carta (Mojito / Spritz / Daikiri / Caipirinha) + Porción grande de papas bravas con 2 salsas.",
-      "tags": ["combos", "tragos"],
+      "tags": [
+        "combos",
+        "tragos"
+      ],
       "stock": 80,
       "variants": {
         "section": "main",
-        "food_categories": ["combos", "tragos"],
+        "food_categories": [
+          "combos",
+          "tragos"
+        ],
         "interest_tag": "Promociones"
       }
     }
