@@ -19,16 +19,11 @@ CACHE_TTL = 300  # 5 minutes
 
 def get_cached_tenant_config(slug):
     now = time.time()
-    if slug in _config_cache:
-        data, ts = _config_cache[slug]
-        if now - ts < CACHE_TTL:
-            return data
-
-    # Para slugs marcados como "edición demo por JSON" (DB puede tener basura inventada),
-    # leemos PRIMERO filesystem config/<slug>.json y SI existe lo usamos antes que DB.
-    # Asi garantizamos que el JSON de demos limpias gane sin tocar DB.
-    FILESYSTEM_FIRST_SLUGS = {"miprueba", "qplato-demo"}
     safe_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', str(slug or '').strip())
+
+    FILESYSTEM_FIRST_SLUGS = {"miprueba", "qplato-demo"}
+    # Para demos por JSON: SIN CACHE NUNCA y SIN DB. Solo leemos el archivo del filesystem
+    # para evitar inventados guardados en DB ni stuck cache TTL 5min en Render.
     if safe_slug and safe_slug in FILESYSTEM_FIRST_SLUGS:
         try:
             project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -42,12 +37,17 @@ def get_cached_tenant_config(slug):
                     try:
                         with open(resolved, 'r', encoding='utf-8') as f:
                             cfg = json.load(f)
-                        _config_cache[slug] = (cfg, now)
                         return cfg
                     except Exception as e:
                         print(f"Error reading filesystem-first config {resolved}: {e}")
         except Exception as e:
             print(f"Error resolving filesystem-first config for {slug}: {e}")
+        return {}
+
+    if slug in _config_cache:
+        data, ts = _config_cache[slug]
+        if now - ts < CACHE_TTL:
+            return data
 
     # Fetch from DB
     try:
