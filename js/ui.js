@@ -372,8 +372,7 @@ function setImageWithTenantFallback(img, primaryUrl) {
 }
 
 export function applyProductImageFallbacks() {
-    const fallback = getTenantLogoUrl();
-    if (!fallback) return;
+    const logoFallback = getTenantLogoUrl();
     document.querySelectorAll('.product-card .product-image').forEach((wrap) => {
         if (!wrap) return;
         let img = wrap.querySelector('img');
@@ -386,12 +385,57 @@ export function applyProductImageFallbacks() {
         attachTenantLogoFallback(img);
         const current = String(img.getAttribute('src') || img.src || '').trim();
         if (!current || current.startsWith('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')) {
-            img.dataset.fallbackApplied = '1';
-            img.src = fallback;
+            if (logoFallback) {
+                img.dataset.fallbackApplied = '1';
+                img.src = logoFallback;
+            }
         }
     });
 }
 try { window.applyProductImageFallbacks = applyProductImageFallbacks; } catch (_) {}
+
+export function ensureProductImagesRendered() {
+    try {
+        const prods = Array.isArray(window.__tenantCatalogProducts) ? window.__tenantCatalogProducts : [];
+        const byId = new Map();
+        prods.forEach(p => { if (p && p.id) byId.set(String(p.id), p); });
+        if (!byId.size) return;
+        let created = 0;
+        document.querySelectorAll('.product-card').forEach((card) => {
+            const btn = card.querySelector('.add-to-cart-btn');
+            const pid = String(card.getAttribute('data-product-id') || (btn && btn.getAttribute('data-id')) || (card.id || '').split('--')[0] || '').trim();
+            if (!pid) return;
+            let wrap = card.querySelector(':scope > .product-image, .product-image');
+            let img = wrap ? wrap.querySelector('img') : null;
+            const existingSrc = img ? String(img.getAttribute('src') || img.src || '').trim() : '';
+            if (img && existingSrc && !existingSrc.startsWith('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///')) return;
+            const product = byId.get(pid);
+            if (!product) return;
+            const name = String(product.name || 'Producto');
+            const url = resolveProductImageUrl(product.image_url);
+            if (!wrap) {
+                wrap = document.createElement('div');
+                wrap.className = 'product-image';
+                const info = card.querySelector('.product-info, .card-body, .product-body');
+                if (info) card.insertBefore(wrap, info);
+                else card.prepend(wrap);
+            }
+            if (!img) {
+                img = document.createElement('img');
+                img.loading = 'lazy';
+                img.decoding = 'async';
+                wrap.appendChild(img);
+            }
+            img.alt = name;
+            setImageWithTenantFallback(img, url);
+            created++;
+        });
+        return created;
+    } catch (_) {
+        return 0;
+    }
+}
+try { window.ensureProductImagesRendered = ensureProductImagesRendered; } catch (_) {}
 
 function normalizeAddonsConfig(raw) {
     let value = raw;
@@ -1526,6 +1570,7 @@ export function closeCartUI() {
         closeDialog(shoppingCart);
     }
     if (overlay) overlay.classList.remove('active');
+    document.body.classList.remove('has-open-cart');
     updateCartDisplay();
     updateCartCount();
 }
@@ -1646,6 +1691,7 @@ export async function initDynamicProducts() {
                 card.setAttribute('data-product-category', fcStr);
             }
         });
+        ensureProductImagesRendered();
         const featuredGrid = document.querySelector('#featured-dishes .discounts-grid') || document.querySelector('.special-discounts .discounts-grid');
         const mainGrid = document.querySelector('#menu-gastronomia .products-grid') || document.querySelector('#menu-electronica .products-grid');
         const interestGrid = document.querySelector('.interest-products .products-grid');
@@ -1875,6 +1921,7 @@ export async function initDynamicProducts() {
 
         // Re-initialize modals and search items after dynamic content is loaded
         initProductModals();
+        ensureProductImagesRendered();
         applyProductImageFallbacks();
         refreshSearchableItems();
         
