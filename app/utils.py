@@ -6,6 +6,7 @@ import io
 import zipfile
 import unicodedata
 import re
+import os
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape as _xml_escape
 from datetime import datetime, timezone
@@ -39,6 +40,28 @@ def get_cached_tenant_config(slug):
     except Exception as e:
         print(f"Error fetching config for {slug}: {e}")
         
+    # Fallback: read from config/<slug>.json in project root (filesystem demo tenants)
+    safe_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', str(slug or '').strip())
+    if safe_slug:
+        try:
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            candidate_paths = [
+                os.path.join(project_root, 'config', f'{safe_slug}.json'),
+                os.path.join(os.path.dirname(__file__), '..', '..', 'config', f'{safe_slug}.json'),
+            ]
+            for cfg_path in candidate_paths:
+                resolved = os.path.abspath(cfg_path)
+                if os.path.isfile(resolved):
+                    try:
+                        with open(resolved, 'r', encoding='utf-8') as f:
+                            cfg = json.load(f)
+                        _config_cache[slug] = (cfg, now)
+                        return cfg
+                    except Exception as e:
+                        print(f"Error reading filesystem config {resolved}: {e}")
+        except Exception as e:
+            print(f"Error resolving fallback config for {slug}: {e}")
+    
     return {}
 
 def invalidate_tenant_config(slug):
