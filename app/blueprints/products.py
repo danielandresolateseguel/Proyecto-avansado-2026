@@ -527,20 +527,78 @@ def list_products():
     tenant_slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
     include_inactive_requested = request.args.get('include_inactive') == 'true'
     include_inactive = bool(include_inactive_requested and is_authed())
+
+    # Para slugs demo editados por JSON (miprueba, qplato-demo), NO consultamos tabla products DB
+    # (que puede tener 46 productos inventados fusionados). Devolvemos catalog desde
+    # get_cached_tenant_config() que ya lee SOLO config/<slug>.json filesystem (sin DB).
+    FILESYSTEM_FIRST_SLUGS = {"miprueba", "qplato-demo"}
+    safe_slug = re.sub(r'[^a-zA-Z0-9_\-]', '', str(tenant_slug or '').strip())
+    if safe_slug and safe_slug in FILESYSTEM_FIRST_SLUGS:
+        cfg = get_cached_tenant_config(safe_slug) or {}
+        catalog = cfg.get('catalog') if isinstance(cfg, dict) else None
+        if isinstance(catalog, list):
+            seen_ids_fs = set()
+            items_fs = []
+            for p in catalog:
+                if not isinstance(p, dict):
+                    continue
+                pid = str(p.get('id') or '').strip()
+                if not pid or pid in seen_ids_fs:
+                    continue
+                active = bool(p.get('active', True))
+                if (not include_inactive) and (not active):
+                    continue
+                seen_ids_fs.add(pid)
+                variants_raw = p.get('variants') or ''
+                if isinstance(variants_raw, (dict, list)):
+                    try:
+                        variants_raw_str = json.dumps(variants_raw, ensure_ascii=False)
+                    except Exception:
+                        variants_raw_str = ''
+                else:
+                    variants_raw_str = str(variants_raw or '').strip()
+                position = p.get('position', 0)
+                try:
+                    position_int = int(position)
+                except Exception:
+                    position_int = 0
+                items_fs.append({
+                    'id': pid,
+                    'name': str(p.get('name') or ''),
+                    'price': int(p.get('price') or 0),
+                    'cost_price': int(p.get('cost_price') or 0),
+                    'cost_type': str(p.get('cost_type') or 'fixed').strip() or 'fixed',
+                    'margin_percent': int(p.get('margin_percent') or 0),
+                    'stock': int(p.get('stock') or 0),
+                    'position': position_int,
+                    'active': active,
+                    'details': str(p.get('details') or ''),
+                    'variants': variants_raw_str,
+                    'last_modified': str(p.get('last_modified') or ''),
+                    'image_url': str(p.get('image_url') or '').strip(),
+                })
+            items_fs.sort(key=lambda it: (
+                1 if int(it['position'] or 0) <= 0 else 0,
+                int(it['position'] or 0),
+                str(it['name'] or '').lower(),
+                it['id'],
+            ))
+            return jsonify({'products': items_fs, 'tenant_slug': safe_slug, '_source': 'filesystem_config_json'})
+
     conn = get_db()
     cur = conn.cursor()
-    
+
     query = "SELECT product_id, name, price, COALESCE(cost_price, 0), COALESCE(cost_type, 'fixed'), COALESCE(margin_percent, 0), stock, COALESCE(position, 0) as position, active, COALESCE(details,'') as details, COALESCE(variants_json,'') as variants_json, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url FROM products WHERE tenant_slug = ?"
     params = [tenant_slug]
-    
+
     if not include_inactive:
         query += " AND active = 1"
-        
+
     query += " ORDER BY CASE WHEN COALESCE(position, 0) <= 0 THEN 1 ELSE 0 END ASC, COALESCE(position, 0) ASC, name ASC"
-    
+
     cur.execute(query, params)
     rows = cur.fetchall()
-    
+
     # Deduplicate by product_id
     seen_ids = set()
     items = []
@@ -549,22 +607,22 @@ def list_products():
         if pid not in seen_ids:
             seen_ids.add(pid)
             items.append({
-                'id': pid, 
-                'name': r[1], 
+                'id': pid,
+                'name': r[1],
                 'price': int(r[2] or 0),
                 'cost_price': int(r[3] or 0),
                 'cost_type': r[4] or 'fixed',
                 'margin_percent': int(r[5] or 0),
-                'stock': int(r[6] or 0), 
+                'stock': int(r[6] or 0),
                 'position': int(r[7] or 0),
-                'active': bool(r[8]), 
-                'details': r[9] or '', 
-                'variants': r[10] or '', 
-                'last_modified': r[11] or '', 
+                'active': bool(r[8]),
+                'details': r[9] or '',
+                'variants': r[10] or '',
+                'last_modified': r[11] or '',
                 'image_url': r[12] or ''
             })
-            
-    return jsonify({'products': items, 'tenant_slug': tenant_slug})
+
+    return jsonify({'products': items, 'tenant_slug': tenant_slug, '_source': 'database_products_table'})
 
 @bp.route('/products', methods=['POST'])
 def create_product():
