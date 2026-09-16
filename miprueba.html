@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Carta digital de Mi Prueba · Demo Gastronómica QPlato. Demo oficial QPlato con todas las funcionalidades: destacados, presentaciones, adicionales, packs, 2x1, combos, carrito y checkout WhatsApp.">
+    <link rel="canonical" href="https://www.qplato.com/miprueba.html">
+    <title>Mi Prueba · Demo Gastronómica QPlato</title>
+    <meta name="robots" content="index,follow">
+    <meta name="theme-color" content="#ff6a00">
+    <meta property="og:title" content="Mi Prueba · Demo Gastronómica | Admin Habilitado">
+    <meta property="og:description" content="Demo 100% funcional: carrito, packs, adicionales, stock, integración Pedidos Ya. Usala como comercio real con credenciales admin.">
+    <meta property="og:type" content="restaurant">
+    <meta property="og:url" content="https://www.qplato.com/miprueba.html">
+    <meta property="og:image" content="/static/Imagenes/lomo a lo pobre.webp">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mi Prueba · Demo Gastronómica QPlato">
+    <meta name="twitter:description" content="Carta digital demo QPlato. Configurala desde el panel admin con tus productos.">
+    <meta name="twitter:image" content="/static/Imagenes/lomo a lo pobre.webp">
+    <link rel="icon" href="/static/Imagenes/Epalogo.png" type="image/png">
+    <script>
+      (function () {
+        try {
+          var params = new URLSearchParams(window.location.search || '');
+          var slug = (params.get('slug') || params.get('tenant') || params.get('tenant_slug') || '').trim();
+          if (!slug) {
+            var file = (window.location.pathname.split('/').pop() || '').replace(/\.html$/i, '').trim();
+            if (file && file !== 'index') slug = file;
+          }
+          if (!slug || slug === 'public-menu-base') slug = 'miprueba';
+
+          var cachedThemeColor = localStorage.getItem('cached_theme_color_' + slug);
+          if (!cachedThemeColor) return;
+
+          function normalizeHex(hex) {
+            var value = String(hex || '').trim().replace(/^#/, '');
+            if (value.length === 3) value = value[0] + value[0] + value[1] + value[1] + value[2] + value[2];
+            return /^([0-9a-fA-F]{6})$/.test(value) ? ('#' + value) : '';
+          }
+
+          function getContrastColor(hex) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return '#121212';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            var yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return yiq >= 140 ? '#121212' : '#ffffff';
+          }
+
+          function shiftHex(hex, amount) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return hex;
+            var num = parseInt(clean, 16);
+            var clamp = function (value) { return Math.max(0, Math.min(255, value)); };
+            var r = clamp((num >> 16) + amount);
+            var g = clamp(((num >> 8) & 255) + amount);
+            var b = clamp((num & 255) + amount);
+            return '#' + [r, g, b].map(function (part) { return part.toString(16).padStart(2, '0'); }).join('');
+          }
+
+          function hexToRgba(hex, alpha) {
+            var clean = normalizeHex(hex).replace(/^#/, '');
+            if (!clean) return 'rgba(255, 106, 0, ' + alpha + ')';
+            var num = parseInt(clean, 16);
+            var r = (num >> 16) & 255;
+            var g = (num >> 8) & 255;
+            var b = num & 255;
+            return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+          }
+
+          var root = document.documentElement;
+          var accent = normalizeHex(cachedThemeColor);
+          var contrast = getContrastColor(accent);
+          root.style.setProperty('--gastro-accent', accent);
+          root.style.setProperty('--gastro-accent-dark', shiftHex(accent, -40));
+          root.style.setProperty('--gastro-accent-contrast', contrast);
+          [0.08, 0.18, 0.22, 0.25, 0.28, 0.35, 0.42, 0.55, 0.85].forEach(function (alpha) {
+            root.style.setProperty('--gastro-accent-' + String(alpha).replace('.', ''), hexToRgba(accent, alpha));
+          });
+
+          var metaTheme = document.querySelector('meta[name="theme-color"]');
+          if (metaTheme) metaTheme.setAttribute('content', accent);
+        } catch (_) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="/static/image-optimizations.css">
+    <link rel="stylesheet" href="/static/gastronomia.css?v=27">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preload" as="image" href="/static/Imagenes/lomo%20a%20lo%20pobre.webp">
+    <link rel="preload" as="image" href="/static/Imagenes/hambuerguesagour.jpg">
+    <link rel="preload" as="image" href="/static/Imagenes/napolitana.webp">
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Restaurant",
+      "name": "Mi Prueba · Demo Gastronómica QPlato",
+      "url": "https://www.qplato.com/miprueba.html",
+      "image": [
+        "/static/Imagenes/lomo a lo pobre.webp",
+        "/static/Imagenes/hambuerguesagour.jpg",
+        "/static/Imagenes/napolitana.webp",
+        "/static/Imagenes/PIZZAMARGARITA.webp"
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Av. San Martín 1234",
+        "addressLocality": "Mendoza",
+        "addressRegion": "Mendoza",
+        "postalCode": "5500",
+        "addressCountry": "AR"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "-32.8894587",
+        "longitude": "-68.8458386"
+      },
+      "telephone": "+5492615893590",
+      "priceRange": "$$",
+      "servesCuisine": ["Argentina", "Italiana", "Parrilla", "Vegana", "Coctelería"],
+      "sameAs": [
+        "https://www.instagram.com/qplato.arg",
+        "https://wa.me/5492615893590"
+      ],
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday"], "opens": "11:30", "closes": "23:30" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Friday", "opens": "11:30", "closes": "01:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "11:30", "closes": "01:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "11:30", "closes": "23:00" }
+      ],
+      "acceptsReservations": "True",
+      "hasMenu": "https://www.qplato.com/miprueba.html"
+    }
+  </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "itemListElement": [
+        {
+          "@type": "Product",
+          "position": 1,
+          "name": "Lomo a lo Pobre · Especialidad de la casa",
+          "image": "/static/Imagenes/lomo a lo pobre.webp",
+          "description": "2 medallones de lomo 180g, papas fritas rústicas, huevos estrellados, plátano y chimichurri criollo.",
+          "brand": { "@type": "Brand", "name": "Mi Prueba · Demo Gastronómica QPlato" },
+          "offers": {
+            "@type": "Offer",
+            "price": "12900",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock",
+            "seller": { "@type": "Organization", "name": "Mi Prueba · Demo Gastronómica QPlato" }
+          }
+        },
+        {
+          "@type": "Product",
+          "position": 2,
+          "name": "Pizza Napolitana Premium",
+          "image": "/static/Imagenes/napolitana.webp",
+          "description": "Masa madre 72h, tomate San Marzano DOP, fior di latte, albahaca, horno de barro 380°C.",
+          "offers": {
+            "@type": "Offer",
+            "price": "9900",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock"
+          }
+        },
+        {
+          "@type": "Product",
+          "position": 3,
+          "name": "Combo Familiar · 4 Hamburguesas + Papas XXL",
+          "image": "/static/Imagenes/hambuerguesagour.jpg",
+          "description": "4 hamburguesas gourmet doble carne, papas fritas XXL y 4 gaseosas 500ml.",
+          "offers": {
+            "@type": "Offer",
+            "price": "31900",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock"
+          }
+        },
+        {
+          "@type": "Product",
+          "position": 4,
+          "name": "Milanesa a la Napolitana con Puré Cremoso",
+          "image": "/static/Imagenes/milacpure.webp",
+          "description": "Milanesa napolitana + puré cremoso de papas con manteca y parmesano.",
+          "offers": {
+            "@type": "Offer",
+            "price": "9900",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock"
+          }
+        },
+        {
+          "@type": "Product",
+          "position": 5,
+          "name": "Ensalada César con Pollo Grill",
+          "image": "/static/Imagenes/ensaladacesar.webp",
+          "description": "Pollo grill marinado, crutones caseros, parmesano Reggiano, dressing César anchoa.",
+          "offers": {
+            "@type": "Offer",
+            "price": "6200",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock"
+          }
+        },
+        {
+          "@type": "Product",
+          "position": 6,
+          "name": "Brownie Caliente con Helado",
+          "image": "/static/Imagenes/brownie con helado.webp",
+          "description": "Brownie double chocolate centro fundido, nueces tostadas, helado crema americana.",
+          "offers": {
+            "@type": "Offer",
+            "price": "4600",
+            "priceCurrency": "ARS",
+            "availability": "https://schema.org/InStock"
+          }
+        }
+      ]
+    }
+    </script>
+</head>
+<body class="sector-gastronomia" data-category="gastronomia" data-vendor="gastronomia" data-slug="miprueba" data-tenant="miprueba" data-page="gastronomia" data-theme="default">
+    <div id="announcement-banner" class="announcement-banner" style="display:none;">
+        <span id="announcement-text"></span>
+        <button id="announcement-close" aria-label="Cerrar anuncio">&times;</button>
+    </div>
+    <header>
+        <div class="header-top">
+            <h1 class="site-logo">
+                <a href="#" class="site-logo-link" aria-label="Inicio">
+                    <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Mi Prueba · Demo Gastronómica QPlato" loading="eager" fetchpriority="high" decoding="async" style="min-width: 48px; min-height: 48px; border-radius: 50%;">
+                </a>
+            </h1>
+            <div class="header-contact">
+                <a href="#" target="_blank" class="contact-item-compact" data-tooltip="WhatsApp">
+                    <i class="fab fa-whatsapp"></i>
+                    <span>WhatsApp</span>
+                </a>
+                <a href="https://www.instagram.com/qplato.arg" target="_blank" class="contact-item-compact" data-tooltip="Instagram @elpatio.cocina">
+                    <i class="fab fa-instagram"></i>
+                    <span>Instagram</span>
+                </a>
+                <a href="https://maps.google.com/?q=Av.+San+Mart%C3%ADn+1234,+Mendoza,+Argentina" target="_blank" class="contact-item-compact" data-tooltip="Av. San Martín 1234, Mendoza">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Mendoza</span>
+                </a>
+                <div class="contact-item-compact clock-status" data-tooltip="Horarios · Lun-Jue 11:30-23:30 · Vie-Sáb hasta 01:00">
+                    <i class="fas fa-clock"></i>
+                    <span>Abierto ahora</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="header-bottom">
+            <div class="search-container">
+                <form id="search-form">
+                    <input type="text" id="search-input" placeholder="Buscá tu plato: milanesa, pizza, hamburguesa, tragos..." autocomplete="off">
+                    <button type="submit" aria-label="Buscar en carta"><i class="fas fa-search"></i></button>
+                    <button type="button" id="clear-search-btn" class="clear-search-btn" style="display: none;">Limpiar</button>
+                </form>
+                <div id="search-suggestions-dropdown" class="search-suggestions-dropdown">
+                    <div class="suggestions-section">
+                        <div class="suggestions-header">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Sugerencias populares</span>
+                        </div>
+                        <div id="suggestions-list" class="suggestions-list"></div>
+                    </div>
+                    <div class="history-section">
+                        <div class="suggestions-header">
+                            <div class="header-left">
+                                <i class="fas fa-history"></i>
+                                <span>Búsquedas recientes</span>
+                            </div>
+                            <button id="clear-all-history" class="clear-all-btn" title="Limpiar historial">
+                                <i class="fas fa-trash-alt"></i>
+                                <span>Limpiar</span>
+                            </button>
+                        </div>
+                        <div id="history-list" class="suggestions-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="search-results">
+            <div id="results-container">
+                <p class="no-results">Explora nuestro menú o busca tu plato favorito 🔍</p>
+            </div>
+        </section>
+
+        <section class="carousel-section">
+            <div class="carousel-container">
+                <div class="carousel-slides"></div>
+                <button class="carousel-btn carousel-prev" aria-label="Imagen anterior">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="carousel-btn carousel-next" aria-label="Siguiente imagen">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <div class="carousel-indicators"></div>
+                <div class="carousel-controls">
+                    <div class="carousel-play-button" aria-label="Pausar/Reanudar carrusel" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleAutoPlay();event.preventDefault();}" title="Pausar/reanudar">
+                        <svg class="progress-ring" viewBox="0 0 36 36">
+                            <circle class="progress-ring-circle" cx="18" cy="18" r="16" />
+                            <circle class="progress-ring-progress" cx="18" cy="18" r="16" />
+                        </svg>
+                        <div class="play-button-center">
+                            <i id="play-pause-icon" class="fas fa-pause" aria-hidden="true"></i>
+                        </div>
+                        <span class="sr-only" id="autoplay-status">Reproducción automática activa</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="special-discounts" id="featured-dishes">
+            <div class="section-heading-group">
+                <span class="section-kicker">⭐ Selección rápida</span>
+                <h2 id="featured-dishes-title" class="section-title">Platos destacados</h2>
+                <p class="section-support">Lo más pedido de la semana. Elegí rápido y llegás antes a la mesa.</p>
+            </div>
+            <div class="discounts-wrapper">
+                <div class="discounts-container">
+                    <div class="discounts-grid">
+                    </div>
+                </div>
+                <button class="discounts-nav-btn prev" onclick="scrollDiscounts('left')" aria-label="Anterior">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button class="discounts-nav-btn next" onclick="scrollDiscounts('right')" aria-label="Siguiente">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </section>
+        <section class="interest-section" id="interest-index" aria-labelledby="interest-section-title">
+            <h2 id="interest-section-title" class="section-title">Explora y aprovecha</h2>
+            <div class="interest-strip" role="list">
+                <button class="interest-item" role="listitem" data-term="Entradas rápidas" aria-label="Ver entradas rápidas">
+                    <span class="interest-circle">
+                        <i class="fas fa-bolt" aria-hidden="true"></i>
+                    </span>
+                    <span class="interest-label">Rápidas</span>
+                </button>
+                <button class="interest-item" role="listitem" data-term="Promociones" aria-label="Ver promociones">
+                    <span class="interest-circle">
+                        <i class="fas fa-tags" aria-hidden="true"></i>
+                    </span>
+                    <span class="interest-label">Promos</span>
+                </button>
+                <button class="interest-item" role="listitem" data-term="Especialidad de la casa" aria-label="Especialidad de la casa">
+                    <span class="interest-circle">
+                        <i class="fas fa-crown" aria-hidden="true"></i>
+                    </span>
+                    <span class="interest-label">Especiales</span>
+                </button>
+                <button class="interest-item" role="listitem" data-term="Combos" aria-label="Ver combos">
+                    <span class="interest-circle">
+                        <i class="fas fa-layer-group" aria-hidden="true"></i>
+                    </span>
+                    <span class="interest-label">Combos</span>
+                </button>
+                <button class="interest-item" role="listitem" data-term="2x1" aria-label="Ver 2x1">
+                    <span class="interest-circle">
+                        <i class="fas fa-gift" aria-hidden="true"></i>
+                    </span>
+                    <span class="interest-label">2x1</span>
+                </button>
+            </div>
+            <button class="interest-nav-btn prev" aria-label="Anterior">
+                <i class="fas fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button class="interest-nav-btn next" aria-label="Siguiente">
+                <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            </button>
+        </section>
+        <div id="shopping-cart" class="shopping-cart" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="cart-title" aria-describedby="cart-desc" tabindex="-1">
+            <div class="cart-header">
+                <div class="cart-header-copy">
+                    <h2 id="cart-title">Tu pedido</h2>
+                    <p class="cart-header-subtitle">Revisá productos, seleccioná la modalidad y enviás el pedido directo por WhatsApp.</p>
+                </div>
+                <p id="cart-desc" class="sr-only">Carrito de compras. Lista de productos y acciones disponibles.</p>
+                <button id="close-cart" class="close-cart" aria-label="Cerrar carrito" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+            </div>
+            <div id="cart-items" class="cart-items">
+                <p class="empty-cart">Tu carrito está vacío · Agregá productos desde la carta 👆</p>
+            </div>
+            <div class="cart-order-options">
+                <label class="order-type-label">¿Cómo querés tu pedido?</label>
+                <div class="order-type-switch">
+                    <label><input type="radio" name="orderType" value="mesa" checked> En mesa</label>
+                    <label><input type="radio" name="orderType" value="direccion"> Delivery</label>
+                    <label><input type="radio" name="orderType" value="espera"> Para retirar</label>
+                </div>
+                <div id="cart-order-mode-summary" class="cart-order-mode-summary" aria-live="polite">Pedido en el local · Recordá indicar número de mesa.</div>
+                <div class="order-extra order-mesa" id="order-mesa-fields">
+                    <label for="mesa-number">Número de mesa</label>
+                    <input type="text" id="mesa-number" placeholder="Ej: 12 o terraza 3" inputmode="text">
+                </div>
+                <div class="order-extra order-direccion" id="order-address-fields" style="display: none;">
+                    <label for="delivery-address">Dirección de entrega</label>
+                    <input type="text" id="delivery-address" placeholder="Calle, altura, piso/depto, referencias">
+                    <label for="delivery-locality" style="margin-top:8px;">Localidad / Barrio</label>
+                    <input type="text" id="delivery-locality" placeholder="Ej: Las Heras, Mendoza">
+                    <label for="contact-phone" style="margin-top:8px;">Teléfono contacto</label>
+                    <input type="tel" id="contact-phone" placeholder="Ej: +54 9 261 123-4567" inputmode="tel">
+                    <label for="delivery-name" style="margin-top:8px;">Nombre quién recibe</label>
+                    <input type="text" id="delivery-name" placeholder="Nombre completo">
+                </div>
+                <div class="order-extra order-espera" id="order-espera-fields" style="display: none;">
+                    <label for="espera-name">Tu nombre</label>
+                    <input type="text" id="espera-name" placeholder="Ej: María López">
+                    <label for="espera-phone" style="margin-top:8px;">Teléfono</label>
+                    <input type="tel" id="espera-phone" placeholder="Ej: +54 9 261 123-4567" inputmode="tel">
+                </div>
+                <div class="order-extra" id="order-notes-box" style="margin-top:8px;">
+                    <label for="order-notes">Observaciones del pedido (opcional)</label>
+                    <textarea id="order-notes" rows="2" placeholder="Ej: Lomo sin condimentos, sin cebolla, celiaca, etc."></textarea>
+                </div>
+            </div>
+            <div class="cart-footer">
+                <div class="cart-total">
+                    <span>Total:</span>
+                    <span id="cart-total-price" aria-live="polite" aria-atomic="true">$0 ARS</span>
+                </div>
+                <p id="cart-checkout-hint" class="cart-checkout-hint">Al confirmar se abre WhatsApp automáticamente con todo el pedido armado.</p>
+                <div id="cart-announcements" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+                <button id="checkout-btn" class="checkout-btn">💬 Enviar por WhatsApp</button>
+                <button id="clear-cart-btn" class="clear-cart-btn">Vaciar carrito</button>
+            </div>
+        </div>
+        <div class="floating-cart" id="floating-cart" role="button" tabindex="0" aria-label="Abrir carrito de compras">
+            <div class="cart-icon-float">
+                <i class="fas fa-shopping-cart"></i>
+                <span class="cart-count-float" id="floating-cart-count">0</span>
+            </div>
+            <div class="floating-cart-copy">
+                <span class="cart-text">Ver carrito</span>
+                <span class="cart-total-float" id="floating-cart-total"></span>
+            </div>
+        </div>
+        <section class="products searchable-section" id="menu-gastronomia">
+            <div class="category-filter" id="category-filter">
+                <button class="filter-btn active" data-filter="todos">Todos</button>
+                <button class="filter-btn" data-filter="destacados">Destacados</button>
+                <button class="filter-btn" data-filter="entradas">Entradas</button>
+                <button class="filter-btn" data-filter="pizzas">Pizzas</button>
+                <button class="filter-btn" data-filter="pastas">Pastas</button>
+                <button class="filter-btn" data-filter="hamburguesas">Hamburguesas</button>
+                <button class="filter-btn" data-filter="principales">Principales</button>
+                <button class="filter-btn" data-filter="veganos">Veganos</button>
+                <button class="filter-btn" data-filter="ensaladas">Ensaladas</button>
+                <button class="filter-btn" data-filter="bebidas">Bebidas</button>
+                <button class="filter-btn" data-filter="postres">Postres</button>
+                <button class="filter-btn" data-filter="cervezas">Cervezas</button>
+                <button class="filter-btn" data-filter="tragos">Tragos</button>
+                <button class="filter-btn" data-filter="combos">Combos</button>
+            </div>
+            <div class="section-heading-group menu-main-heading">
+                <span class="section-kicker">🍽️ Carta completa · 45 platos</span>
+                <h2 class="section-title">Menú principal</h2>
+                <p class="section-support">Filtrá por categoría o usá el buscador. Cada plato muestra stock, presentaciones y adicionales.</p>
+            </div>
+            <div class="products-grid">
+            </div>
+        </section>
+        <section class="products interest-products searchable-section">
+            <h2 id="interest-products-index-title" class="section-title">Recomendados para vos</h2>
+            <div class="products-grid"></div>
+        </section>
+    </main>
+    <footer>
+        <div class="footer-shell">
+            <div class="footer-top-summary">
+                <div class="footer-brand-badge" aria-hidden="true">
+                    <i class="fas fa-store"></i>
+                </div>
+                <div class="footer-top-copy">
+                    <span class="footer-kicker">· Demo Carta Digital QPlato ·</span>
+                    <h3 class="footer-summary-title">Todo lo que QPlato puede ofrecer en una sola carta</h3>
+                    <p class="footer-summary-text">Presentaciones, adicionales, packs, combos, stock, promociones 2x1, carrito y checkout WhatsApp integrado.</p>
+                </div>
+                <div class="footer-summary-links" aria-label="Accesos rápidos carta">
+                    <a href="#featured-dishes" class="footer-summary-link">⭐ Destacados</a>
+                    <a href="#menu-gastronomia" class="footer-summary-link">🍽️ Menú completo</a>
+                    <a href="#search-form" class="footer-summary-link">🔍 Buscar</a>
+                </div>
+            </div>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>🍽️ El Patio · Demo QPlato</h4>
+                    <p>Carta online con todas las funcionalidades QPlato. Plataforma multi-tenant gastronómica Argentina.</p>
+                    <p class="footer-secondary-copy">¿Querés tu propia carta digital como esta? Entrá a <a href="/" style="color:#ff7a16; font-weight:700;">www.qplato.com</a> y pedí tu primer mes GRATIS.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>💬 Contacto</h4>
+                    <p><a href="https://wa.me/5492615893590" target="_blank" style="color:inherit;"><i class="fab fa-whatsapp"></i> +54 9 261 5893590</a></p>
+                    <p><i class="fas fa-envelope"></i> demo@qplato.com</p>
+                    <p class="footer-secondary-copy">Atención al cliente por WhatsApp de L a S · 9:00 a 23:00.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>📍 Ubicación · Horarios</h4>
+                    <p>Av. San Martín 1234, Mendoza, Argentina</p>
+                    <p>Lun-Jue 11:30-23:30 · Vie-Sáb 11:30-01:00 · Dom 11:30-23:00</p>
+                    <p class="footer-secondary-copy">Delivery en todo Mendoza · Envío GRATIS superando $12.000 🎁</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 QPlato Demo · El Patio · Todos los derechos reservados · <a href="/" style="color:#ff7a16; font-weight:600;">Generado con QPlato plataforma gastronómica</a>.</p>
+            </div>
+        </div>
+    </footer>
+    <div id="product-modal" class="product-modal" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-product-title" aria-describedby="modal-product-description" tabindex="-1">
+      <div class="modal-content">
+        <button class="close-modal" aria-label="Cerrar modal" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+        <div class="modal-body">
+          <div class="modal-media">
+            <img id="modal-product-image" alt="Foto del producto seleccionado">
+          </div>
+          <div class="modal-info">
+            <span class="modal-product-eyebrow">Detalle del producto</span>
+            <h3 id="modal-product-title"></h3>
+            <p id="modal-product-description"></p>
+            <ul id="modal-product-features"></ul>
+            <div class="modal-purchase-card">
+                <div class="modal-price-meta">
+                    <span class="modal-price-label">Precio actual</span>
+                    <div class="modal-price" id="modal-product-price"></div>
+                </div>
+                <p id="modal-product-helper" class="modal-product-helper">Elegí la presentación que querés (si hay opciones) o sumale adicionales antes de añadir al carrito.</p>
+            </div>
+            <div class="modal-notes-panel">
+                <label for="modal-product-notes" class="modal-notes-label">Aclaraciones para cocina / mozo</label>
+                <p class="modal-notes-help">Ej: sin sal, salsa aparte, sin cebolla, celiaca, alergias, etc.</p>
+                <div class="notes-container">
+                    <textarea id="modal-product-notes" class="styled-textarea" placeholder="Escribí una preferencia opcional para este producto (se envía en el pedido por WhatsApp)"></textarea>
+                </div>
+            </div>
+            <button id="modal-add-to-cart-btn" class="add-to-cart-btn">🛒 Añadir al carrito</button>
+            <p class="modal-cta-help">Si aparecen presentaciones, packs o adicionales los seleccionás en los próximos pasos 👇</p>
+          </div>
+        </div>
+    </div>
+    </div>
+    <button id="back-to-top-float" class="back-to-top-float" aria-label="Volver arriba" title="Volver arriba">
+        <i class="fas fa-arrow-up" aria-hidden="true"></i>
+    </button>
+
+    <button id="order-status-float" class="order-status-float" aria-label="Estado del pedido" title="Estado de mi pedido">
+        <i class="fas fa-receipt" aria-hidden="true"></i>
+    </button>
+
+    <div id="order-status-modal" class="order-status-modal" style="display: none;" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="status-modal-title" tabindex="-1">
+        <div class="modal-content status-content">
+            <button class="close-status-modal" aria-label="Cerrar" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
+            <div class="status-header">
+                <h3 id="status-modal-title">Estado de tu pedido</h3>
+            </div>
+            <div class="status-body" id="order-status-body">
+                <div class="status-loading">
+                    <i class="fas fa-spinner fa-spin"></i> Cargando...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+      (function(){
+        function titleFromSlug(slug) {
+          return String(slug || '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, function(ch){ return ch.toUpperCase(); })
+            .trim();
+        }
+
+        var urlParams = new URLSearchParams(window.location.search);
+        var qsSlug = urlParams.get('slug') || urlParams.get('tenant') || urlParams.get('tenant_slug');
+        
+        if (qsSlug) {
+            window.BUSINESS_SLUG = qsSlug.trim();
+        }
+
+        if (!window.BUSINESS_SLUG) {
+          try {
+            var name = (window.location.pathname.split('/').pop() || '').replace(/\.html$/,'').trim();
+            window.BUSINESS_SLUG = (name && name !== 'public-menu-base') ? name : 'miprueba';
+          } catch(e) {
+            window.BUSINESS_SLUG = 'miprueba';
+          }
+        }
+
+        try {
+            var cachedTitle = localStorage.getItem('cached_tenant_name_' + window.BUSINESS_SLUG);
+            document.title = (cachedTitle && cachedTitle.trim()) || 'Mi Prueba · Demo Gastronómica QPlato';
+        } catch(e) {
+            document.title = 'Mi Prueba · Demo Gastronómica QPlato';
+        }
+        
+        try {
+            var cachedBg = localStorage.getItem('cached_header_bg_' + window.BUSINESS_SLUG);
+            if (cachedBg) {
+                document.body.style.setProperty('--header-bg', cachedBg);
+            }
+        } catch(e) {}
+      })();
+    </script>
+    <script src="/static/theme-loader.js?v=3" defer></script>
+    <script type="module" src="/static/js/app.js?v=33"></script>
+    <script src="/static/media-loader.js?v=3" defer></script>
+    </body>
+    </html>
