@@ -8,6 +8,31 @@
     <title>Carta Online | Menu y pedidos online</title>
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#ff6a00">
+    <script>
+      // Ejecutar LO MÁS TEMPRANO POSIBLE.
+      // Evita que Android Chrome / navegadores RESTAUREN la posición de scroll
+      // al entrar a la carta (te salta directo al menú). Fuerza inicio en cabecera.
+      (function () {
+        try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+        function goTop() {
+          try {
+            window.scrollTo(0, 0);
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+          } catch (_) {}
+        }
+        goTop();
+        window.addEventListener('pageshow', function (e) {
+          goTop();
+          // BF-cache / persisted restoration: doble seguro.
+          if (e && e.persisted) setTimeout(goTop, 60);
+        });
+        window.addEventListener('load', function () {
+          goTop();
+          setTimeout(goTop, 120);
+        }, { once: true });
+      })();
+    </script>
     <meta property="og:title" content="Carta Online | Menu y pedidos online">
     <meta property="og:description" content="Descubri la carta online del local, con especialidades de la casa, bebidas y pedidos directos.">
     <meta property="og:type" content="website">
@@ -87,7 +112,7 @@
     </script>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="image-optimizations.css">
-    <link rel="stylesheet" href="gastronomia.css?v=24">
+    <link rel="stylesheet" href="gastronomia.css?v=27">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
   <script type="application/ld+json">
@@ -560,7 +585,7 @@
       })();
     </script>
     <script src="theme-loader.js?v=3" defer></script>
-    <script type="module" src="js/app.js?v=30"></script>
+    <script type="module" src="js/app.js?v=33"></script>
     <script src="media-loader.js?v=3" defer></script>
     </body>
     </html>

@@ -4,10 +4,44 @@ let statusActionInterval = null;
 let isPaymentMode = false;
 let celebrationShown = false;
 
+// Asegurar que la carta ONLINE SIEMPRE inicie arriba de todo (cabecera).
+// Multi-capa: evita restauración automática de scroll del navegador (Android Chrome)
+// y saltos causados por focus/layout shifts durante la hidratación.
+(function forcePageStartOnTop() {
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+    function goTop() {
+        try {
+            window.scrollTo(0, 0);
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+        } catch (_) {}
+    }
+    goTop();
+    let topAttempts = 0;
+    const topTimer = setInterval(() => {
+        goTop();
+        topAttempts++;
+        if (topAttempts >= 3) clearInterval(topTimer);
+    }, 60);
+    window.addEventListener('load', () => { goTop(); setTimeout(goTop, 80); setTimeout(goTop, 240); }, { once: true });
+    let productsTopDone = false;
+    document.addEventListener('productsLoaded', () => {
+        if (productsTopDone) return;
+        productsTopDone = true;
+        goTop();
+        setTimeout(goTop, 60);
+    });
+    document.addEventListener('businessconfig:ready', () => {
+        setTimeout(goTop, 30);
+    }, { once: true });
+})();
 
 // Esperar a que el DOM esté completamente cargado
 let backToTopForceVisibleUntil = 0; // Visibilidad forzada tras clic en círculos
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicio en cabecera (scroll arriba)
+    try { window.scrollTo(0, 0); if (document.documentElement) document.documentElement.scrollTop = 0; if (document.body) document.body.scrollTop = 0; } catch (_) {}
+
     // Elementos del DOM
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');

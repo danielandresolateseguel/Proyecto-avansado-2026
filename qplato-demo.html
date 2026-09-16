@@ -8,6 +8,21 @@
     <title>El Patio · Carta Digital QPlato Demo</title>
     <meta name="robots" content="index,follow">
     <meta name="theme-color" content="#ff6a00">
+    <script>
+      (function () {
+        try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
+        function goTop() {
+          try {
+            window.scrollTo(0, 0);
+            if (document.documentElement) document.documentElement.scrollTop = 0;
+            if (document.body) document.body.scrollTop = 0;
+          } catch (_) {}
+        }
+        goTop();
+        window.addEventListener('pageshow', function (e) { goTop(); if (e && e.persisted) setTimeout(goTop, 60); });
+        window.addEventListener('load', function () { goTop(); setTimeout(goTop, 120); }, { once: true });
+      })();
+    </script>
     <meta property="og:title" content="El Patio · Carta Digital | Demo Oficial QPlato">
     <meta property="og:description" content="Explora la carta digital completa con destacados, combos, promociones 2x1, presentaciones, adicionales y checkout por WhatsApp. Demo funcional QPlato.">
     <meta property="og:type" content="restaurant">
