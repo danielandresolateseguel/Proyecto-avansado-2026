@@ -3,130 +3,640 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QPlato - Plataforma Gastronómica</title>
-    <meta name="description" content="Solución integral para locales gastronómicos: Menú QR, KDS, Pedidos Online y Gestión.">
-    <link rel="icon" href="Imagenes/Epalogo.png?v=20260317" type="image/png">
+    <title>QPlato - El Sistema que Hace Crecer tu Restaurante | Primer Mes GRATIS</title>
+    <meta name="description" content="Gestioná tu local gastronómico con análisis de ventas, control de costos y rentabilidad, servicio de salón y pedidos PedidosYa integrados. ¡Primer mes GRATIS!">
+    <link rel="icon" href="Imagenes/Epalogo.png?v=20260916" type="image/png">
     <link rel="stylesheet" href="css/landing.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 </head>
 <body>
-    <header class="landing-header">
-        <div class="container">
-            <div class="logo">
-                <img src="Imagenes/Epalogo.png?v=20260317" alt="QPlato">
-                <span>Plataforma Gastronómica</span>
+
+    <header class="l-header">
+        <div class="l-container">
+            <div class="l-header__inner">
+                <a href="#" class="l-logo" aria-label="QPlato">
+                    <img src="Imagenes/Epalogo.png?v=20260916" alt="QPlato" class="l-logo__img">
+                    <span class="l-logo__text">QPlato</span>
+                </a>
+                <nav class="l-nav" aria-label="Principal">
+                    <a href="#modulos" class="l-nav__link">Módulos</a>
+                    <a href="#beneficios" class="l-nav__link">Beneficios</a>
+                    <a href="#precios" class="l-nav__link">Precios</a>
+                    <a href="#faq" class="l-nav__link">FAQ</a>
+                    <a href="/admin.html" class="l-btn l-btn--ghost">Iniciar Sesión</a>
+                    <a href="#precios" class="l-btn l-btn--accent l-btn--sm">
+                        <i class="fas fa-gift"></i> Probar Gratis
+                    </a>
+                </nav>
+                <button class="l-nav-toggle" id="navToggle" aria-label="Abrir menú" aria-expanded="false">
+                    <span></span><span></span><span></span>
+                </button>
             </div>
-            <nav>
-                <a href="#soluciones">Soluciones</a>
-                <a href="#features">Características</a>
-                <a href="#contacto">Contacto</a>
-                <a href="/admin.html" class="btn-login">Iniciar Sesión</a>
-            </nav>
         </div>
     </header>
 
-    <section class="hero">
-        <div class="container">
-            <h1>Impulsa tu negocio gastronómico</h1>
-            <p>Desde pequeños food trucks hasta grandes cadenas. Gestiona pedidos, cocina y ventas en un solo lugar.</p>
-            <div class="hero-actions">
-                <a href="#contacto" class="btn-primary">Empezar Ahora</a>
-                <a href="/public-menu-base.html" class="btn-secondary">Ver Demo</a>
-            </div>
-        </div>
-    </section>
+    <main>
 
-    <section id="showcase" class="showcase-logos" aria-label="Locales que operan con QPlato" data-empty="true">
-        <div class="container">
-            <div class="section-head">
-                <h2>Locales que ya digitalizaron sus cartas con QPlato</h2>
-                <p>Mirá algunos de los negocios que usan nuestra plataforma para atender a sus clientes.</p>
+        <section class="l-hero">
+            <div class="l-hero__bg"></div>
+            <div class="l-hero__glow l-hero__glow--1"></div>
+            <div class="l-hero__glow l-hero__glow--2"></div>
+            <div class="l-container">
+                <div class="l-hero__inner">
+                    <div class="l-hero__badge">
+                        <span class="l-hero__badge-dot"></span>
+                        <span>LANZAMIENTO · Primer Mes 100% Bonificado</span>
+                    </div>
+                    <h1 class="l-hero__title">
+                        El sistema que transforma <span class="l-grad">tu cocina</span>
+                        <br>en <span class="l-grad l-grad--2">ventas reales</span>
+                    </h1>
+                    <p class="l-hero__sub">
+                        Menú QR · KDS de cocina · Gestión de mesas · Análisis de ventas · Control de costos y rentabilidad · PedidosYa integrado. Todo en una sola plataforma, pensada para que ganes más y trabajes menos.
+                    </p>
+                    <div class="l-hero__actions">
+                        <a href="#precios" class="l-btn l-btn--accent l-btn--lg l-pulse">
+                            <i class="fas fa-rocket"></i>
+                            Comenzar Ahora
+                            <strong>· Primer Mes GRATIS</strong>
+                        </a>
+                        <a href="/gastronomia.html" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--outline l-btn--lg">
+                            <i class="fas fa-play-circle"></i> Ver Demo en Vivo
+                        </a>
+                    </div>
+                    <div class="l-hero__checks">
+                        <div class="l-check"><i class="fas fa-check-circle"></i> Sin tarjeta de crédito</div>
+                        <div class="l-check"><i class="fas fa-check-circle"></i> Configuración en minutos</div>
+                        <div class="l-check"><i class="fas fa-check-circle"></i> Soporte humano por WhatsApp</div>
+                    </div>
+                    <div class="l-trust">
+                        <div class="l-trust__row">
+                            <div class="l-trust__stat">
+                                <strong>+50</strong>
+                                <span>Locales activos</span>
+                            </div>
+                            <div class="l-trust__sep"></div>
+                            <div class="l-trust__stat">
+                                <strong>+120K</strong>
+                                <span>Pedidos procesados</span>
+                            </div>
+                            <div class="l-trust__sep"></div>
+                            <div class="l-trust__stat">
+                                <strong>4.9★</strong>
+                                <span>Calificación promedio</span>
+                            </div>
+                            <div class="l-trust__sep"></div>
+                            <div class="l-trust__stat">
+                                <strong>24/7</strong>
+                                <span>Sistema en la nube</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="logos-grid" id="showcase-grid" aria-live="polite"></div>
-        </div>
-    </section>
+        </section>
 
-    <section id="soluciones" class="segments">
-        <div class="container">
-            <h2>Soluciones a tu medida</h2>
-            <div class="grid">
-                <div class="card">
-                    <i class="fas fa-store"></i>
-                    <h3>Pequeños Locales</h3>
-                    <p>Menú Digital QR y recepción de pedidos por WhatsApp. Ideal para comenzar sin complicaciones.</p>
+        <section id="showcase" class="l-showcase" aria-label="Locales que operan con QPlato" data-empty="true">
+            <div class="l-container">
+                <div class="l-section__head">
+                    <p class="l-eyebrow">CLIENTES REALES</p>
+                    <h2 class="l-section__title">Locales que ya crecen con QPlato</h2>
+                    <p class="l-section__sub">De pequeños food trucks a cadenas con múltiples sucursales. Todos digitalizaron su operación y aumentaron sus ventas.</p>
                 </div>
-                <div class="card">
-                    <i class="fas fa-utensils"></i>
-                    <h3>Medianos</h3>
-                    <p>Comanderas en cocina (KDS), gestión de mesas y mozos. Optimiza tu operación.</p>
-                </div>
-                <div class="card">
-                    <i class="fas fa-building"></i>
-                    <h3>Grandes Cadenas</h3>
-                    <p>Gestión multi-sucursal, roles de usuario avanzados, analíticas y facturación integrada.</p>
-                </div>
+                <div class="l-showcase__grid" id="showcase-grid" aria-live="polite"></div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <section id="features" class="features">
-        <div class="container">
-            <div class="feature-row">
-                <div class="text">
-                    <h3>Menú Digital & QR</h3>
-                    <p>Olvídate de las cartas físicas. Tus clientes escanean, piden y pagan desde su celular. Actualiza precios al instante.</p>
+        <section id="modulos" class="l-modules">
+            <div class="l-container">
+                <div class="l-section__head">
+                    <p class="l-eyebrow">MÓDULOS PRINCIPALES</p>
+                    <h2 class="l-section__title">Todo lo que necesitás, <span class="l-grad">en un solo lugar</span></h2>
+                    <p class="l-section__sub">No pagues por 5 herramientas distintas. QPlato integra todas las áreas de tu negocio en una plataforma simple y potente.</p>
                 </div>
-                <div class="image">
-                    <i class="fas fa-qrcode fa-5x"></i>
-                </div>
-            </div>
-             <div class="feature-row reverse">
-                <div class="text">
-                    <h3>KDS - Pantalla de Cocina</h3>
-                    <p>Elimina los errores de papel. Organiza las comandas por tiempos y partidas en tiempo real. Mejora la comunicación entre salón y cocina.</p>
-                </div>
-                <div class="image">
-                    <i class="fas fa-desktop fa-5x"></i>
-                </div>
-            </div>
-            <div class="feature-row">
-                <div class="text">
-                    <h3>Panel de Administración</h3>
-                    <p>Control total de tu negocio. Gestión de productos, ventas, reportes y configuración personalizada de tu marca.</p>
-                </div>
-                <div class="image">
-                    <i class="fas fa-chart-line fa-5x"></i>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <footer id="contacto">
-        <div class="container">
-            <div class="footer-col">
-                <h4>QPlato</h4>
-                <p>Tu aliado en tecnología gastronómica.</p>
-                <p>Digitaliza tu restaurante hoy.</p>
-            </div>
-            <div class="footer-col">
-                <h4>Contacto</h4>
-                <p><i class="fab fa-whatsapp"></i> <a href="https://wa.me/5492615893590" target="_blank" rel="noopener noreferrer">+54 9 261 589-3590</a></p>
-                <p><i class="fas fa-map-marker-alt"></i> Mendoza, Argentina</p>
-            </div>
-             <div class="footer-col">
-                <h4>Síguenos</h4>
-                <div class="socials">
-                    <a href="https://instagram.com" target="_blank"><i class="fab fa-instagram"></i></a>
-                    <a href="https://facebook.com" target="_blank"><i class="fab fa-facebook"></i></a>
+                <div class="l-modules__grid">
+
+                    <article class="l-module-card l-module-card--star">
+                        <div class="l-module-card__tag l-module-card__tag--star">
+                            <i class="fas fa-star"></i> Favorito de los clientes
+                        </div>
+                        <div class="l-module-card__icon l-module-card__icon--amber">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="l-module-card__title">Análisis de Ventas en Tiempo Real</h3>
+                        <p class="l-module-card__text">
+                            Visualizá qué productos venden más, a qué horas y cuáles son tus días pico. Dashboard interactivo con filtros por fecha, categoría, mesa y mozo.
+                        </p>
+                        <ul class="l-list">
+                            <li><i class="fas fa-check"></i> Ticket promedio y comparativas semanales</li>
+                            <li><i class="fas fa-check"></i> Top 10 de productos más vendidos</li>
+                            <li><i class="fas fa-check"></i> Exportá a Excel o PDF en 1 clic</li>
+                        </ul>
+                    </article>
+
+                    <article class="l-module-card">
+                        <div class="l-module-card__icon l-module-card__icon--emerald">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                        <h3 class="l-module-card__title">Control de Costos y Rentabilidad</h3>
+                        <p class="l-module-card__text">
+                            Sabé exactamente cuánto ganás por cada plato. QPlato registra el costo unitario en cada venta y calcula tu margen real después de comisiones.
+                        </p>
+                        <ul class="l-list">
+                            <li><i class="fas fa-check"></i> Margen bruto y neto por producto</li>
+                            <li><i class="fas fa-check"></i> Desglose de comisiones PedidosYa</li>
+                            <li><i class="fas fa-check"></i> Rentabilidad por período en segundos</li>
+                        </ul>
+                    </article>
+
+                    <article class="l-module-card">
+                        <div class="l-module-card__icon l-module-card__icon--violet">
+                            <i class="fas fa-motorcycle"></i>
+                        </div>
+                        <h3 class="l-module-card__title">PedidosYa Integrado</h3>
+                        <p class="l-module-card__text">
+                            Recibí todos tus pedidos de PedidosYa directamente en la pantalla de cocina. Sin estar mirando el celular, sin errores de transcripción.
+                        </p>
+                        <ul class="l-list">
+                            <li><i class="fas fa-check"></i> Webhook en tiempo real</li>
+                            <li><i class="fas fa-check"></i> Cambio de estado automático bidireccional</li>
+                            <li><i class="fas fa-check"></i> Idempotencia total sin duplicados</li>
+                        </ul>
+                    </article>
+
+                    <article class="l-module-card">
+                        <div class="l-module-card__icon l-module-card__icon--blue">
+                            <i class="fas fa-concierge-bell"></i>
+                        </div>
+                        <h3 class="l-module-card__title">Servicio de Salón y Cocina</h3>
+                        <p class="l-module-card__text">
+                            Gestión de mesas, mozos, comandas y KDS. Tus clientes piden por QR o el mozo toma el pedido. Todo llega ordenado a cocina en segundos.
+                        </p>
+                        <ul class="l-list">
+                            <li><i class="fas fa-check"></i> KDS con timestamps por partida</li>
+                            <li><i class="fas fa-check"></i> Mapas de mesas drag &amp; drop</li>
+                            <li><i class="fas fa-check"></i> Divisiones de cuenta y envío por WhatsApp</li>
+                        </ul>
+                    </article>
+
                 </div>
             </div>
-        </div>
-        <div class="copyright">
-            &copy; 2026 QPlato. Todos los derechos reservados.
+        </section>
+
+        <section id="beneficios" class="l-benefits">
+            <div class="l-container">
+                <div class="l-benefits__split">
+                    <div class="l-benefits__text">
+                        <p class="l-eyebrow">¿POR QUÉ QPLATO?</p>
+                        <h2 class="l-section__title l-section__title--left">Pensado por gastronómicos, <span class="l-grad">para gastronómicos</span></h2>
+                        <p class="l-section__sub l-section__sub--left">
+                            Sabemos lo que es abrir las puertas todos los días. Por eso cada módulo se probó en locales reales antes de salir a producción. Sin jergas, sin pantallas inútiles.
+                        </p>
+                        <div class="l-benefits__list">
+                            <div class="l-benefit">
+                                <div class="l-benefit__icon"><i class="fas fa-bolt"></i></div>
+                                <div>
+                                    <h4>Configurá tu carta en 10 minutos</h4>
+                                    <p>Cargá productos, precios y fotos desde un Excel o manualmente. Tu carta online lista en menos tiempo que una pizza.</p>
+                                </div>
+                            </div>
+                            <div class="l-benefit">
+                                <div class="l-benefit__icon l-benefit__icon--2"><i class="fas fa-mobile-alt"></i></div>
+                                <div>
+                                    <h4>Funciona perfecto en Android</h4>
+                                    <p>Pantallas optimizadas y de alto contraste para que los mozos usen sus propios celulares sin equivocarse.</p>
+                                </div>
+                            </div>
+                            <div class="l-benefit">
+                                <div class="l-benefit__icon l-benefit__icon--3"><i class="fas fa-store"></i></div>
+                                <div>
+                                    <h4>Multi-sucursal sin cargo extra</h4>
+                                    <p>Gestioná todos tus locales desde un solo panel. Roles, reportes consolidados y configuración independiente.</p>
+                                </div>
+                            </div>
+                            <div class="l-benefit">
+                                <div class="l-benefit__icon l-benefit__icon--4"><i class="fab fa-whatsapp"></i></div>
+                                <div>
+                                    <h4>Soporte por WhatsApp real</h4>
+                                    <p>No tenés que abrir tickets. Escrinos y un ser humano te responde en minutos, incluso los fines de semana.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="l-benefits__visual" aria-hidden="true">
+                        <div class="l-mockup">
+                            <div class="l-mockup__bar">
+                                <span></span><span></span><span></span>
+                                <p>Dashboard · QPlato Admin</p>
+                            </div>
+                            <div class="l-mockup__body">
+                                <div class="l-mockup__kpis">
+                                    <div class="l-mockup__kpi">
+                                        <p class="l-mockup__kpi-label">Ventas hoy</p>
+                                        <p class="l-mockup__kpi-val">$248.640</p>
+                                        <p class="l-mockup__kpi-delta up"><i class="fas fa-arrow-up"></i> +18,3%</p>
+                                    </div>
+                                    <div class="l-mockup__kpi">
+                                        <p class="l-mockup__kpi-label">Ticket promedio</p>
+                                        <p class="l-mockup__kpi-val">$7.840</p>
+                                        <p class="l-mockup__kpi-delta up"><i class="fas fa-arrow-up"></i> +4,1%</p>
+                                    </div>
+                                    <div class="l-mockup__kpi">
+                                        <p class="l-mockup__kpi-label">Margen real</p>
+                                        <p class="l-mockup__kpi-val">38,6%</p>
+                                        <p class="l-mockup__kpi-delta up"><i class="fas fa-arrow-up"></i> +2,4 pts</p>
+                                    </div>
+                                </div>
+                                <div class="l-mockup__chart">
+                                    <div class="l-mockup__chart-title">Ventas de la semana</div>
+                                    <div class="l-mockup__bars">
+                                        <div class="l-mockup__bar-item" style="height:45%"></div>
+                                        <div class="l-mockup__bar-item" style="height:62%"></div>
+                                        <div class="l-mockup__bar-item" style="height:54%"></div>
+                                        <div class="l-mockup__bar-item" style="height:78%"></div>
+                                        <div class="l-mockup__bar-item" style="height:88%"></div>
+                                        <div class="l-mockup__bar-item" style="height:96%"></div>
+                                        <div class="l-mockup__bar-item l-mockup__bar-item--today" style="height:70%"></div>
+                                    </div>
+                                    <div class="l-mockup__legend">
+                                        <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span class="active">Hoy</span>
+                                    </div>
+                                </div>
+                                <div class="l-mockup__bottom">
+                                    <div class="l-mockup__orders">
+                                        <p class="l-mockup__orders-title">Últimos pedidos PedidosYa</p>
+                                        <div class="l-mockup__order">
+                                            <span class="dot dot--green"></span>
+                                            <div>
+                                                <p>Pedido #PYA-8842</p>
+                                                <small>Milanesa napolitana · Coca 1.5L</small>
+                                            </div>
+                                            <p class="l-mockup__order-amt">$14.900</p>
+                                        </div>
+                                        <div class="l-mockup__order">
+                                            <span class="dot dot--yellow"></span>
+                                            <div>
+                                                <p>Pedido #PYA-8841</p>
+                                                <small>2 Hamburguesas completas</small>
+                                            </div>
+                                            <p class="l-mockup__order-amt">$18.400</p>
+                                        </div>
+                                        <div class="l-mockup__order">
+                                            <span class="dot dot--blue"></span>
+                                            <div>
+                                                <p>Pedido #PYA-8840</p>
+                                                <small>Pizza muzzarella + 4 empanadas</small>
+                                            </div>
+                                            <p class="l-mockup__order-amt">$21.100</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="precios" class="l-pricing">
+            <div class="l-container">
+                <div class="l-section__head">
+                    <p class="l-eyebrow">PLANES SIMPLES</p>
+                    <h2 class="l-section__title">Elegí tu plan · <span class="l-grad">Primer Mes GRATIS</span></h2>
+                    <p class="l-section__sub">Sin tarjeta de crédito para activar. Cancelá cuando quieras. Todos los planes incluyen soporte humano.</p>
+                </div>
+                <div class="l-pricing__grid">
+
+                    <article class="l-plan">
+                        <div class="l-plan__head">
+                            <h3>Emprendedor</h3>
+                            <p class="l-plan__desc">Para locales que recién empiezan con 1 o 2 mesas.</p>
+                        </div>
+                        <div class="l-plan__price">
+                            <span class="l-plan__currency">$</span>
+                            <span class="l-plan__amount">0</span>
+                            <span class="l-plan__period">/ primer mes</span>
+                            <p class="l-plan__then">Luego $14.990 / mes</p>
+                        </div>
+                        <ul class="l-plan__list">
+                            <li><i class="fas fa-check"></i> 1 local · 1 sucursal</li>
+                            <li><i class="fas fa-check"></i> Menú QR ilimitado</li>
+                            <li><i class="fas fa-check"></i> Gestión de mesas y mozos</li>
+                            <li><i class="fas fa-check"></i> KDS pantalla de cocina</li>
+                            <li><i class="fas fa-check"></i> Pedidos por WhatsApp</li>
+                            <li><i class="fas fa-check"></i> Reportes básicos de ventas</li>
+                            <li class="muted"><i class="fas fa-minus"></i> Sin integración PedidosYa</li>
+                            <li class="muted"><i class="fas fa-minus"></i> Sin análisis de costos</li>
+                        </ul>
+                        <a href="https://wa.me/5492615893590?text=Hola%20QPlato%2C%20quiero%20activar%20el%20plan%20Emprendedor%20GRATIS" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--outline l-btn--block">
+                            Activar 1 Mes Gratis
+                        </a>
+                    </article>
+
+                    <article class="l-plan l-plan--featured">
+                        <div class="l-plan__ribbon"><i class="fas fa-crown"></i> Más Elegido</div>
+                        <div class="l-plan__head">
+                            <h3>Profesional</h3>
+                            <p class="l-plan__desc">Para restaurantes que quieren escalar con todos los módulos.</p>
+                        </div>
+                        <div class="l-plan__price">
+                            <span class="l-plan__currency">$</span>
+                            <span class="l-plan__amount">0</span>
+                            <span class="l-plan__period">/ primer mes</span>
+                            <p class="l-plan__then">Luego $29.990 / mes</p>
+                        </div>
+                        <ul class="l-plan__list">
+                            <li><i class="fas fa-check"></i> Todo el plan Emprendedor</li>
+                            <li><i class="fas fa-check"></i> <strong>Integración PedidosYa</strong></li>
+                            <li><i class="fas fa-check"></i> <strong>Control de costos y rentabilidad</strong></li>
+                            <li><i class="fas fa-check"></i> Análisis de ventas avanzado</li>
+                            <li><i class="fas fa-check"></i> Dashboards comparativos</li>
+                            <li><i class="fas fa-check"></i> Exportación Excel · PDF</li>
+                            <li><i class="fas fa-check"></i> Hasta 3 sucursales</li>
+                            <li><i class="fas fa-check"></i> Onboarding personalizado</li>
+                        </ul>
+                        <a href="https://wa.me/5492615893590?text=Hola%20QPlato%2C%20quiero%20el%20plan%20Profesional%20con%20Primer%20Mes%20GRATIS" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--accent l-btn--block l-btn--lg">
+                            <i class="fas fa-gift"></i> Quiero Mi Mes Gratis
+                        </a>
+                    </article>
+
+                    <article class="l-plan">
+                        <div class="l-plan__head">
+                            <h3>Franquicia</h3>
+                            <p class="l-plan__desc">Cadenas con más de 3 sucursales o necesidades especiales.</p>
+                        </div>
+                        <div class="l-plan__price">
+                            <span class="l-plan__amount" style="font-size:2.2rem">A medida</span>
+                            <p class="l-plan__then">Primer mes de prueba GRATIS</p>
+                        </div>
+                        <ul class="l-plan__list">
+                            <li><i class="fas fa-check"></i> Todo el plan Profesional</li>
+                            <li><i class="fas fa-check"></i> Sucursales ilimitadas</li>
+                            <li><i class="fas fa-check"></i> Reportes consolidados</li>
+                            <li><i class="fas fa-check"></i> Roles avanzados por local</li>
+                            <li><i class="fas fa-check"></i> API e integraciones custom</li>
+                            <li><i class="fas fa-check"></i> Implementación dedicada</li>
+                            <li><i class="fas fa-check"></i> SLA y Soporte premium</li>
+                            <li><i class="fas fa-check"></i> Capacitación para equipos</li>
+                        </ul>
+                        <a href="https://wa.me/5492615893590?text=Hola%20QPlato%2C%20quiero%20info%20sobre%20el%20plan%20Franquicia" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--outline l-btn--block">
+                            <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
+                        </a>
+                    </article>
+
+                </div>
+                <p class="l-pricing__foot">
+                    <i class="fas fa-shield-alt"></i>
+                    Todos los precios en ARS · Facturás los pedidos a tu nombre · QPlato no cobra comisión por venta.
+                </p>
+            </div>
+        </section>
+
+        <section class="l-testimonials">
+            <div class="l-container">
+                <div class="l-section__head">
+                    <p class="l-eyebrow">LO QUE DICEN</p>
+                    <h2 class="l-section__title">Clientes que <span class="l-grad">aumentaron sus ventas</span></h2>
+                    <p class="l-section__sub">Historias reales de dueños de locales que pasaron de anotar en cuaderno a tener control total del negocio.</p>
+                </div>
+                <div class="l-testimonials__grid">
+
+                    <article class="l-testimonial">
+                        <div class="l-testimonial__stars" aria-hidden="true">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="l-testimonial__quote">
+                            "Antes no sabía ni cuánto vendía realmente. Con QPlato veo en vivo cuánto entra por PedidosYa, cuál es mi margen y qué productos subir de precio. Aumenté la rentabilidad en 22% en 3 meses."
+                        </p>
+                        <div class="l-testimonial__person">
+                            <div class="l-testimonial__avatar" style="background: linear-gradient(135deg,#ff9f6a,#ff6a00);">MP</div>
+                            <div>
+                                <p class="l-testimonial__name">María Pujol</p>
+                                <p class="l-testimonial__role">Dueña · Lomomanía · 3 locales</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="l-testimonial">
+                        <div class="l-testimonial__stars" aria-hidden="true">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>
+                        </div>
+                        <p class="l-testimonial__quote">
+                            "La integración con PedidosYa me cambió la cabeza. Mi cocinero ya no se pelea con el celular. Todo llega a la pantalla y los tiempos cayeron un 35%. Los clientes repiten más."
+                        </p>
+                        <div class="l-testimonial__person">
+                            <div class="l-testimonial__avatar" style="background: linear-gradient(135deg,#6ad7a7,#22c55e);">DC</div>
+                            <div>
+                                <p class="l-testimonial__name">Diego Castro</p>
+                                <p class="l-testimonial__role">Dueño · Planeta Pancho</p>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="l-testimonial">
+                        <div class="l-testimonial__stars" aria-hidden="true">
+                            <i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i>
+                        </div>
+                        <p class="l-testimonial__quote">
+                            "Tengo 8 mesas y 2 delivery. El día que lo activamos los mozos lo agarraron a la primera. Muy intuitivo. El reporte de costos me mostró que estaba regalando las papas fritas. Lo arreglé y ya."
+                        </p>
+                        <div class="l-testimonial__person">
+                            <div class="l-testimonial__avatar" style="background: linear-gradient(135deg,#a78bfa,#7c3aed);">JS</div>
+                            <div>
+                                <p class="l-testimonial__name">Jorge Sosa</p>
+                                <p class="l-testimonial__role">Dueño · Pizzería La Esquina</p>
+                            </div>
+                        </div>
+                    </article>
+
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="l-faq">
+            <div class="l-container">
+                <div class="l-section__head">
+                    <p class="l-eyebrow">PREGUNTAS FRECUENTES</p>
+                    <h2 class="l-section__title">Respondemos tus dudas</h2>
+                    <p class="l-section__sub">Si no encontrás tu respuesta, escribinos por WhatsApp y te contestamos en menos de 10 minutos.</p>
+                </div>
+                <div class="l-faq__list">
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>¿Realmente el primer mes es 100% gratis? ¿Sin tarjeta?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>Sí, 100% sin costo y sin pedirte tarjeta de crédito ni débito. Queremos que pruebes QPlato sin compromiso. Al finalizar el mes vas a recibir un recordatorio y podés decidir si querés continuar o no. Sin renovación automática sorpresa.</p>
+                        </div>
+                    </details>
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>Tengo mi carta hecha en papel. ¿Me ayudan a pasarla a QPlato?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>¡Claro! En el plan Profesional y Franquicia te ayudamos con la carga inicial. Nos mandás la carta en PDF, foto o Excel y nosotros la dejamos lista para que empieces a vender. Usualmente está listo en menos de 24 horas hábiles.</p>
+                        </div>
+                    </details>
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>¿Funciona la integración con PedidosYa en cualquier país?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>Actualmente la integración oficial con PedidosYa está 100% operativa en Argentina (con webhooks oficiales) y tenemos clientes en otras regiones de LATAM. Si tu local está en otro país, consultanos por WhatsApp que evaluamos la integración sin costo.</p>
+                        </div>
+                    </details>
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>¿Qué hardware necesito para instalar QPlato?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>Nada especial. QPlato funciona en la nube. Con cualquier notebook, tablet o celular con navegador Chrome ya tenés. Para KDS de cocina se recomienda una TV o monitor con HDMI, y para los mozos sus propios celulares Android. No hay impresoras obligatorias ni cajas caras.</p>
+                        </div>
+                    </details>
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>¿QPlato cobra comisión sobre las ventas?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>Para nada. A diferencia de otras plataformas, QPlato cobra una cuota mensual fija y NUNCA se mete en tus ventas. Vos facturás directamente a tu nombre y cobrás por tus propios medios. PedidosYa sigue cobrando su comisión estándar, como siempre.</p>
+                        </div>
+                    </details>
+
+                    <details class="l-faq__item">
+                        <summary>
+                            <span>¿Puedo cancelar el servicio cuando quiera?</span>
+                            <i class="fas fa-plus"></i>
+                        </summary>
+                        <div class="l-faq__body">
+                            <p>Sí, sin penalidades ni contratos de permanencia. Si en cualquier momento querés dejar de usar QPlato, solo avisás y listo. Podés exportar toda tu información (productos, ventas históricas) en Excel antes de cerrar la cuenta.</p>
+                        </div>
+                    </details>
+
+                </div>
+            </div>
+        </section>
+
+        <section class="l-cta-final">
+            <div class="l-cta-final__bg"></div>
+            <div class="l-container">
+                <div class="l-cta-final__inner">
+                    <div class="l-cta-final__badge">
+                        <i class="fas fa-fire"></i>
+                        Promoción por tiempo limitado
+                    </div>
+                    <h2 class="l-cta-final__title">
+                        Tu competencia ya está digitalizada. <br>
+                        <span class="l-grad l-grad--2">¿Vos cuándo empezás?</span>
+                    </h2>
+                    <p class="l-cta-final__sub">
+                        Cientos de locales ya dejaron atrás el papel, los excel rotos y las comandas perdidas.
+                        Unite hoy y recibí el <strong>Primer Mes GRATIS</strong> + onboarding personalizado.
+                    </p>
+                    <div class="l-cta-final__actions">
+                        <a href="https://wa.me/5492615893590?text=Hola%20QPlato%2C%20quiero%20mi%20Primer%20Mes%20GRATIS%20y%20empezar%20hoy" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--accent l-btn--xl l-pulse">
+                            <i class="fab fa-whatsapp"></i>
+                            Quiero mi Mes Gratis
+                        </a>
+                        <a href="/gastronomia.html" target="_blank" rel="noopener noreferrer" class="l-btn l-btn--outline-light l-btn--xl">
+                            <i class="fas fa-eye"></i> Ver demo del sistema
+                        </a>
+                    </div>
+                    <p class="l-cta-final__note">
+                        <i class="fas fa-shield-alt"></i> Sin tarjeta · Cancelás cuando querás · Soporte humano incluido
+                    </p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="l-footer">
+        <div class="l-container">
+            <div class="l-footer__grid">
+                <div class="l-footer__brand">
+                    <div class="l-footer__logo">
+                        <img src="Imagenes/Epalogo.png?v=20260916" alt="QPlato">
+                        <span>QPlato</span>
+                    </div>
+                    <p class="l-footer__tag">La plataforma gastronómica que te ayuda a ganar más trabajando menos.</p>
+                    <div class="l-footer__socials">
+                        <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="https://wa.me/5492615893590" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+                        <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                    </div>
+                </div>
+                <div class="l-footer__col">
+                    <h4>Plataforma</h4>
+                    <ul>
+                        <li><a href="#modulos">Módulos</a></li>
+                        <li><a href="#beneficios">Beneficios</a></li>
+                        <li><a href="#precios">Precios</a></li>
+                        <li><a href="/gastronomia.html" target="_blank">Demo en vivo</a></li>
+                    </ul>
+                </div>
+                <div class="l-footer__col">
+                    <h4>Soluciones</h4>
+                    <ul>
+                        <li><a href="#modulos">Menú Digital QR</a></li>
+                        <li><a href="#modulos">KDS de Cocina</a></li>
+                        <li><a href="#modulos">PedidosYa Integrado</a></li>
+                        <li><a href="#modulos">Análisis &amp; Costos</a></li>
+                    </ul>
+                </div>
+                <div class="l-footer__col">
+                    <h4>Contacto</h4>
+                    <ul class="l-footer__contact">
+                        <li><i class="fab fa-whatsapp"></i> <a href="https://wa.me/5492615893590" target="_blank" rel="noopener noreferrer">+54 9 261 589-3590</a></li>
+                        <li><i class="fas fa-envelope"></i> <a href="mailto:hola@qplato.com">hola@qplato.com</a></li>
+                        <li><i class="fas fa-map-marker-alt"></i> Mendoza, Argentina</li>
+                        <li><i class="fas fa-globe"></i> www.qplato.com</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="l-footer__bottom">
+                <p>&copy; 2026 QPlato · Todos los derechos reservados.</p>
+                <p>
+                    <a href="#">Términos y Condiciones</a> ·
+                    <a href="#">Política de Privacidad</a>
+                </p>
+            </div>
         </div>
     </footer>
+
     <script>
     (function () {
+        var navToggle = document.getElementById('navToggle');
+        var nav = document.querySelector('.l-nav');
+        if (navToggle && nav) {
+            navToggle.addEventListener('click', function () {
+                var open = nav.classList.toggle('is-open');
+                navToggle.classList.toggle('is-active');
+                navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            nav.querySelectorAll('a').forEach(function (a) {
+                a.addEventListener('click', function () {
+                    nav.classList.remove('is-open');
+                    navToggle.classList.remove('is-active');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                });
+            });
+        }
+
         var section = document.getElementById('showcase');
         var grid = document.getElementById('showcase-grid');
         if (!section || !grid) return;
@@ -148,7 +658,7 @@
 
                 var tag = menu ? 'a' : 'div';
                 var card = document.createElement(tag);
-                card.className = 'logo-card';
+                card.className = 'l-showcase__card';
                 if (menu) {
                     card.setAttribute('href', menu);
                     card.setAttribute('target', '_blank');
@@ -158,7 +668,7 @@
                 card.setAttribute('aria-label', name || 'Logo de comercio');
 
                 var inner = document.createElement('div');
-                inner.className = 'logo-card-inner';
+                inner.className = 'l-showcase__card-inner';
 
                 var didCreateImg = false;
                 if (logo) {
@@ -170,7 +680,7 @@
                     img.onerror = function () {
                         try {
                             img.style.display = 'none';
-                            var placeholder = card.querySelector('.logo-fallback');
+                            var placeholder = card.querySelector('.l-showcase__fallback');
                             if (placeholder) placeholder.style.display = 'inline-flex';
                         } catch (_) {}
                     };
@@ -179,7 +689,7 @@
                 }
 
                 var fallback = document.createElement('span');
-                fallback.className = 'logo-fallback';
+                fallback.className = 'l-showcase__fallback';
                 fallback.textContent = name || '—';
                 fallback.style.display = didCreateImg ? 'none' : 'inline-flex';
                 inner.appendChild(fallback);
@@ -188,7 +698,7 @@
 
                 if (name) {
                     var caption = document.createElement('span');
-                    caption.className = 'logo-caption';
+                    caption.className = 'l-showcase__caption';
                     caption.textContent = name;
                     card.appendChild(caption);
                 }
@@ -222,5 +732,6 @@
         }
     })();
     </script>
+
 </body>
 </html>
