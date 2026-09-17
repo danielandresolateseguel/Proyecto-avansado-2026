@@ -94,7 +94,7 @@
     {
       "@context": "https://schema.org",
       "@type": "Restaurant",
-      "name": "Gastronomía Local 1",
+      "name": "GastronomÃ­a Local 1",
       "url": "http://localhost:8000/gastronomia-local1.html",
       "image": [
         "Imagenes/lomo a lo pobre.webp",
@@ -122,7 +122,7 @@
           "@type": "Product",
           "name": "Pizza Napolitana",
           "image": "Imagenes/napolitana.webp",
-          "description": "Tomate, mozzarella y orégano seleccionados.",
+          "description": "Tomate, mozzarella y orÃ©gano seleccionados.",
           "offers": {
             "@type": "Offer",
             "price": "6800",
@@ -132,9 +132,9 @@
         },
         {
           "@type": "Product",
-          "name": "Milanesa con puré",
+          "name": "Milanesa con purÃ©",
           "image": "Imagenes/milacpure.webp",
-          "description": "Clásico casero con papas cremosas.",
+          "description": "ClÃ¡sico casero con papas cremosas.",
           "offers": {
             "@type": "Offer",
             "price": "5400",
@@ -144,7 +144,7 @@
         },
         {
           "@type": "Product",
-          "name": "Ensalada César",
+          "name": "Ensalada CÃ©sar",
           "image": "Imagenes/ensaladacesar.webp",
           "description": "Lechuga fresca, pollo, crutones y aderezo.",
           "offers": {
@@ -205,7 +205,7 @@
         <div class="header-bottom">
             <div class="search-container">
                 <form id="search-form">
-                    <input type="text" id="search-input" placeholder="Buscar en el menú..." autocomplete="off">
+                    <input type="text" id="search-input" placeholder="Buscar en el menÃº..." autocomplete="off">
                     <button type="submit">Buscar</button>
                     <button type="button" id="clear-search-btn" class="clear-search-btn" style="display: none;">Limpiar</button>
                 </form>
@@ -221,7 +221,7 @@
                         <div class="suggestions-header">
                             <div class="header-left">
                                 <i class="fas fa-history"></i>
-                                <span>Búsquedas recientes</span>
+                                <span>BÃºsquedas recientes</span>
                             </div>
                             <button id="clear-all-history" class="clear-all-btn" title="Limpiar todo el historial">
                                 <i class="fas fa-trash-alt"></i>
@@ -238,7 +238,7 @@
     <main>
         <section class="search-results">
             <div id="results-container">
-                <p class="no-results">Explora nuestro menú o busca tu plato favorito</p>
+                <p class="no-results">Explora nuestro menÃº o busca tu plato favorito</p>
             </div>
         </section>
 
@@ -253,7 +253,7 @@
                 </button>
                 <div class="carousel-indicators"></div>
                 <div class="carousel-controls">
-                    <div class="carousel-play-button" aria-label="Pausar/Reanudar reproducción automática del carrusel" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleAutoPlay();event.preventDefault();}" title="Click para pausar/reanudar reproducción automática">
+                    <div class="carousel-play-button" aria-label="Pausar/Reanudar reproducciÃ³n automÃ¡tica del carrusel" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){toggleAutoPlay();event.preventDefault();}" title="Click para pausar/reanudar reproducciÃ³n automÃ¡tica">
                         <svg class="progress-ring" viewBox="0 0 36 36">
                             <circle class="progress-ring-circle" cx="18" cy="18" r="16" />
                             <circle class="progress-ring-progress" cx="18" cy="18" r="16" />
@@ -261,7 +261,7 @@
                         <div class="play-button-center">
                             <i id="play-pause-icon" class="fas fa-pause" aria-hidden="true"></i>
                         </div>
-                        <span class="sr-only" id="autoplay-status">Reproducción automática activa</span>
+                        <span class="sr-only" id="autoplay-status">ReproducciÃ³n automÃ¡tica activa</span>
                     </div>
                 </div>
             </div>
@@ -285,11 +285,11 @@
         <section class="interest-section" id="interest-index" aria-labelledby="interest-section-title">
             <h2 id="interest-section-title" class="section-title">Explora y aprovecha</h2>
             <div class="interest-strip" role="list">
-                <button class="interest-item" role="listitem" data-term="Entradas rápidas" aria-label="Ver entradas rápidas">
+                <button class="interest-item" role="listitem" data-term="Entradas rÃ¡pidas" aria-label="Ver entradas rÃ¡pidas">
                     <span class="interest-circle">
                         <i class="fas fa-utensils" aria-hidden="true"></i>
                     </span>
-                    <span class="interest-label">Entradas rápidas</span>
+                    <span class="interest-label">Entradas rÃ¡pidas</span>
                 </button>
                 <button class="interest-item" role="listitem" data-term="Promociones" aria-label="Ver promociones">
                     <span class="interest-circle">
@@ -330,25 +330,25 @@
                 <button id="close-cart" class="close-cart" aria-label="Cerrar carrito" title="Cerrar"><i class="fas fa-times" aria-hidden="true"></i></button>
             </div>
             <div id="cart-items" class="cart-items">
-                <p class="empty-cart">Tu carrito está vacío</p>
+                <p class="empty-cart">Tu carrito estÃ¡ vacÃ­o</p>
             </div>
             <div class="cart-order-options">
                 <label class="order-type-label">Pedido para:</label>
                 <div class="order-type-switch">
                     <label><input type="radio" name="orderType" value="mesa" checked> Mesa</label>
-                    <label><input type="radio" name="orderType" value="direccion"> Dirección</label>
+                    <label><input type="radio" name="orderType" value="direccion"> DirecciÃ³n</label>
                     <label><input type="radio" name="orderType" value="espera"> Espera</label>
                 </div>
                 <div class="order-extra order-mesa" id="order-mesa-fields">
-                    <label for="mesa-number">Número de mesa</label>
+                    <label for="mesa-number">NÃºmero de mesa</label>
                     <input type="text" id="mesa-number" placeholder="Ej: 12" inputmode="numeric">
                 </div>
                 <div class="order-extra order-direccion" id="order-address-fields" style="display: none;">
-                    <label for="delivery-address">Dirección de entrega</label>
+                    <label for="delivery-address">DirecciÃ³n de entrega</label>
                     <input type="text" id="delivery-address" placeholder="Calle, altura, referencias">
                     <label for="delivery-locality" style="margin-top:8px;">Localidad</label>
                     <input type="text" id="delivery-locality" placeholder="Ej: Las Heras, Mendoza">
-                    <label for="contact-phone" style="margin-top:8px;">Teléfono de contacto</label>
+                    <label for="contact-phone" style="margin-top:8px;">TelÃ©fono de contacto</label>
                     <input type="tel" id="contact-phone" placeholder="Ej: +54 9 261 123-4567" inputmode="tel">
                     <label for="delivery-name" style="margin-top:8px;">Nombre (quien recibe)</label>
                     <input type="text" id="delivery-name" placeholder="Nombre completo">
@@ -356,7 +356,7 @@
                 <div class="order-extra order-espera" id="order-espera-fields" style="display: none;">
                     <label for="espera-name">Nombre</label>
                     <input type="text" id="espera-name" placeholder="Tu nombre">
-                    <label for="espera-phone" style="margin-top:8px;">Teléfono</label>
+                    <label for="espera-phone" style="margin-top:8px;">TelÃ©fono</label>
                     <input type="tel" id="espera-phone" placeholder="Ej: +54 9 261 123-4567" inputmode="tel">
                 </div>
                 <div class="order-extra" id="order-notes-box" style="margin-top:8px;">
@@ -370,7 +370,7 @@
                     <span id="cart-total-price" aria-live="polite" aria-atomic="true">$0.00 ARS</span>
                 </div>
                 <div id="cart-announcements" class="sr-only" aria-live="polite" aria-atomic="true"></div>
-                <button id="checkout-btn" class="checkout-btn">🍽️ Realizar pedido</button>
+                <button id="checkout-btn" class="checkout-btn">ðŸ½ï¸ Realizar pedido</button>
                 <button id="clear-cart-btn" class="clear-cart-btn">Vaciar carrito</button>
             </div>
         </div>
@@ -384,7 +384,7 @@
         <section class="products searchable-section" id="menu-gastronomia">
             <div class="category-filter" id="category-filter">
                 <button class="filter-btn active" data-filter="todos">Todos</button>
-                <button class="filter-btn" data-filter="sandwich">Sándwich</button>
+                <button class="filter-btn" data-filter="sandwich">SÃ¡ndwich</button>
                 <button class="filter-btn" data-filter="pizzas">Pizzas</button>
                 <button class="filter-btn" data-filter="comen-dos">Comen dos</button>
                 <button class="filter-btn" data-filter="al-plato">Al plato</button>
@@ -392,28 +392,28 @@
                 <button class="filter-btn" data-filter="cocteles">Cocteles</button>
                 <button class="filter-btn" data-filter="postres">Postres</button>
             </div>
-            <h2 class="section-title">Menú principal</h2>
+            <h2 class="section-title">MenÃº principal</h2>
             <div class="products-grid">
             </div>
         </section>
         <section class="products interest-products searchable-section">
-            <h2 id="interest-products-index-title" class="section-title">Recomendados por interés</h2>
+            <h2 id="interest-products-index-title" class="section-title">Recomendados por interÃ©s</h2>
             <div class="products-grid"></div>
         </section>
     </main>
     <footer>
         <div class="footer-content">
             <div class="footer-section">
-                <h4>🍽️ Restaurante Independiente</h4>
-                <p>Sabores auténticos y platos de calidad.</p>
+                <h4>ðŸ½ï¸ Restaurante Independiente</h4>
+                <p>Sabores autÃ©nticos y platos de calidad.</p>
             </div>
             <div class="footer-section">
-                <h4>📞 Contacto</h4>
+                <h4>ðŸ“ž Contacto</h4>
                 <p><i class="fab fa-whatsapp"></i> WhatsApp</p>
                 <p><i class="fas fa-envelope"></i> info@resto-demo.com</p>
             </div>
             <div class="footer-section">
-                <h4>📍 Ubicación</h4>
+                <h4>ðŸ“ UbicaciÃ³n</h4>
                 <p>Mendoza, Argentina</p>
                 <p>Lun-Dom: 12:00-23:00</p>
             </div>
@@ -460,19 +460,19 @@
               }
             </style>
             <div class="notes-container">
-                <textarea id="modal-product-notes" class="styled-textarea" placeholder="¿Alguna preferencia? (ej: sin sal, salsa aparte...)"></textarea>
+                <textarea id="modal-product-notes" class="styled-textarea" placeholder="Â¿Alguna preferencia? (ej: sin sal, salsa aparte...)"></textarea>
             </div>
-            <button id="modal-add-to-cart-btn" class="add-to-cart-btn">Añadir al carrito</button>
+            <button id="modal-add-to-cart-btn" class="add-to-cart-btn">AÃ±adir al carrito</button>
           </div>
         </div>
     </div>
     </div>
-    <!-- Botón flotante para volver al inicio -->
+    <!-- BotÃ³n flotante para volver al inicio -->
     <button id="back-to-top-float" class="back-to-top-float" aria-label="Volver al inicio" title="Volver al inicio">
         <i class="fas fa-arrow-up" aria-hidden="true"></i>
     </button>
 
-    <!-- Botón flotante de estado de pedido -->
+    <!-- BotÃ³n flotante de estado de pedido -->
     <button id="order-status-float" class="order-status-float" aria-label="Estado del pedido" title="Ver estado de mi pedido">
         <i class="fas fa-receipt" aria-hidden="true"></i>
     </button>
@@ -492,7 +492,7 @@
         </div>
     </div>
 
-    <!-- Resolución dinámica del BUSINESS_SLUG según el nombre del archivo solicitado -->
+    <!-- ResoluciÃ³n dinÃ¡mica del BUSINESS_SLUG segÃºn el nombre del archivo solicitado -->
     <script>
       (function(){
         function titleFromSlug(slug) {
@@ -537,7 +537,7 @@
       })();
     </script>
     <script src="theme-loader.js?v=3" defer></script>
-    <script type="module" src="js/app.js?v=f09a9a7-cartfix2"></script>
+    <script type="module" src="js/app.js?v=3ff64d2-cartfix3"></script>
     <script src="media-loader.js?v=3" defer></script>
     </body>
     </html>

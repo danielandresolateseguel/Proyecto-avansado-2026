@@ -1521,9 +1521,8 @@ document.addEventListener('DOMContentLoaded', () => {
             // Alineamos .active class CON EL ESTADO VISIBLEMENTE RENDERIZADO (la unica fuente de verdad)
             if (isVisible && !hasActiveClass) {
                 targetCartEl.classList.add('active');
-            } else if (!isVisible && hasActiveClass && !fromObserver) {
-                // Si el classObserver dice active pero el carrito esta offscreen — no removemos a menos
-                // que venga de un fallback para evitar loop: el classObserver sync lo maneja.
+            } else if (!isVisible && hasActiveClass) {
+                targetCartEl.classList.remove('active');
             }
 
             const isCartOpenState = targetCartEl.classList.contains('active') || isVisible;
