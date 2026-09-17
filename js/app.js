@@ -1459,6 +1459,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shoppingCart.classList.add('active');
             overlay.classList.add('active');
             openDialog(shoppingCart);
+            document.body.classList.add('has-open-cart');
             if (floatingCart) floatingCart.classList.remove('show');
         });
     }
@@ -1469,6 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shoppingCart.classList.add('active');
             overlay.classList.add('active');
             openDialog(shoppingCart);
+            document.body.classList.add('has-open-cart');
             floatingCart.classList.remove('show');
         });
     }
@@ -1478,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
             shoppingCart.classList.remove('active');
             overlay.classList.remove('active');
             closeDialog(shoppingCart);
+            document.body.classList.remove('has-open-cart');
             updateCartDisplay(); 
             updateCartCount(); // Restore floating cart visibility
         });
@@ -1488,10 +1491,37 @@ document.addEventListener('DOMContentLoaded', () => {
             shoppingCart.classList.remove('active');
             overlay.classList.remove('active');
             closeDialog(shoppingCart);
+            document.body.classList.remove('has-open-cart');
             updateCartDisplay();
             updateCartCount(); // Restore floating cart visibility
         }
     });
+
+    // Sincronizacion GARANTIZADA de body.has-open-cart con el estado REAL del carrito
+    // Funciona SIN importar COMO se modifique el carrito (click icono, auto-open post addToCart,
+    // modal confirm, futuro codigo, etc.) — observa el atributo class de #shopping-cart.
+    const targetCartEl = document.getElementById('shopping-cart');
+    if (targetCartEl) {
+        const syncCartBodyState = () => {
+            const isCartOpen = targetCartEl.classList.contains('active');
+            document.body.classList.toggle('has-open-cart', isCartOpen);
+            const overlaySync = document.querySelector('.overlay');
+            if (overlaySync) overlaySync.classList.toggle('active', isCartOpen);
+            const floatingCartSync = document.getElementById('floating-cart');
+            if (isCartOpen && floatingCartSync) floatingCartSync.classList.remove('show');
+            if (!isCartOpen) {
+                updateCartDisplay();
+                updateCartCount();
+            }
+        };
+        syncCartBodyState();
+        const cartClassObserver = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.attributeName === 'class') { syncCartBodyState(); break; }
+            }
+        });
+        cartClassObserver.observe(targetCartEl, { attributes: true, attributeFilter: ['class'] });
+    }
 
     // Checkout Button
     const checkoutBtn = document.getElementById('checkout-btn');

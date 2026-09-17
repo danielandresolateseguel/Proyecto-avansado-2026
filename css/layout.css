@@ -1,17 +1,38 @@
 /* --- LAYOUT & SECTIONS --- */
 
-/* Fondos oscuros con aclarado lateral */
-body.sector-gastronomia .special-discounts {
+/*
+  BLOQUE CONTINUO NAVY DARK (fallback solo para sector-gastronomia;
+  la regla GENERAL que aplica a TODAS las cartas vive ahora en style.css).
+*/
+body.sector-gastronomia .special-discounts,
+body.sector-gastronomia .interest-section#interest-index,
+body.sector-gastronomia #menu-gastronomia.products.searchable-section {
   background: var(--gastro-special-discounts-bg, linear-gradient(90deg, rgba(12, 12, 12, 0.95) 0%, rgba(22, 22, 22, 0.88) 40%, rgba(55, 55, 55, 0.72) 100%));
-  margin-bottom: 0;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+body.sector-gastronomia .special-discounts {
+  padding-bottom: 8px !important;
+}
+body.sector-gastronomia .interest-section#interest-index {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+body.sector-gastronomia #menu-gastronomia.products.searchable-section {
+  padding-top: 12px !important;
 }
 body.sector-gastronomia .special-discounts .section-title,
-body.sector-gastronomia .special-discounts h2 {
+body.sector-gastronomia .special-discounts h2,
+body.sector-gastronomia .interest-section#interest-index .section-title,
+body.sector-gastronomia .interest-section#interest-index .interest-label,
+body.sector-gastronomia #menu-gastronomia.products.searchable-section .section-title {
   color: var(--gastro-special-discounts-text, #f5f5f5);
 }
-
-body.sector-gastronomia .interest-section#interest-index {
-  margin-bottom: 0;
+body.sector-gastronomia .interest-section#interest-index .section-title::before {
+  background: linear-gradient(135deg, #7c5cff, #b197fc);
+  box-shadow: 0 0 10px rgba(150, 120, 255, 0.55);
 }
 
 body.sector-gastronomia .section-kicker {

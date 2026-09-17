@@ -10,6 +10,132 @@ html, body {
     overflow-x: hidden;
 }
 
+/* =============================================================
+   BLOQUE CONTINUO NAVY DARK — UNIFICADO (GENERAL, TODAS LAS CARTAS)
+   - Elimina los "cortes" ópticos entre:
+     1. Platos destacados    (.special-discounts)
+     2. Explora y aprovecha   (.interest-section#interest-index)
+     3. Carta completa        (section.products.searchable-section / #menu-gastronomia)
+   - Aplica SIN depender de body.sector-gastronomia, por lo tanto
+     funciona en miprueba, planeta-pancho, gastronomia-localN, etc.
+   - Mismo gradiente, sin márgenes verticales, sin bordes, sin radios.
+   ============================================================= */
+.special-discounts,
+.interest-section#interest-index,
+section.products.searchable-section,
+#menu-gastronomia.products.searchable-section {
+    background: linear-gradient(90deg, rgba(12, 12, 12, 0.95) 0%, rgba(22, 22, 22, 0.88) 40%, rgba(55, 55, 55, 0.72) 100%);
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+.special-discounts {
+    padding-bottom: 8px !important;
+}
+.interest-section#interest-index {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+section.products.searchable-section,
+#menu-gastronomia.products.searchable-section {
+    padding-top: 12px !important;
+}
+.special-discounts .section-title,
+.special-discounts h2,
+.interest-section#interest-index .section-title,
+.interest-section#interest-index .interest-label,
+section.products.searchable-section .section-title,
+#menu-gastronomia.products.searchable-section .section-title {
+    color: #f5f5f5 !important;
+}
+.interest-section#interest-index .section-title::before {
+    background: linear-gradient(135deg, #7c5cff, #b197fc) !important;
+    box-shadow: 0 0 10px rgba(150, 120, 255, 0.55) !important;
+}
+
+/* ================================================================
+   ANTI-BREAK GLOBAL (FUERA DE MEDIA QUERIES, CON MAYOR SPECIFICITY)
+   Cuando el carrito esta abierto, el body tiene la clase:
+     - 'has-open-cart' (agregada via JS)
+   Y podemos usar body:has(.shopping-cart.active) (CSS nativo).
+
+   Todo elemento que calcula anchos contra el viewport (100vw)
+   O usa margenes negativos del tipo calc(-50vw + 50%) se rompe
+   al achicarse la celda grid izquierda. Asi que anulamos TODO.
+   ================================================================ */
+body.has-open-cart,
+body:has(.shopping-cart.active) {
+    --viewport-aware-off: 1;
+}
+body.has-open-cart .interest-section,
+body:has(.shopping-cart.active) .interest-section,
+body.has-open-cart .special-discounts,
+body:has(.shopping-cart.active) .special-discounts,
+body.has-open-cart .products.searchable-section,
+body:has(.shopping-cart.active) .products.searchable-section,
+body.has-open-cart .hero,
+body:has(.shopping-cart.active) .hero,
+body.has-open-cart .discounts-container,
+body:has(.shopping-cart.active) .discounts-container,
+body.has-open-cart .carousel,
+body:has(.shopping-cart.active) .carousel,
+body.has-open-cart .carousel-section,
+body:has(.shopping-cart.active) .carousel-section,
+body.has-open-cart .carousel-container,
+body:has(.shopping-cart.active) .carousel-container,
+body.has-open-cart .carousel-track,
+body:has(.shopping-cart.active) .carousel-track,
+body.has-open-cart .carousel-slide,
+body:has(.shopping-cart.active) .carousel-slide,
+body.has-open-cart .carousel-content,
+body:has(.shopping-cart.active) .carousel-content,
+body.has-open-cart .carousel-overlay,
+body:has(.shopping-cart.active) .carousel-overlay,
+body.has-open-cart #menu-gastronomia,
+body:has(.shopping-cart.active) #menu-gastronomia,
+body.has-open-cart section,
+body:has(.shopping-cart.active) section {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+}
+body.has-open-cart .carousel-slide img,
+body:has(.shopping-cart.active) .carousel-slide img {
+    width: 100% !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+}
+
+/* ================================================================
+   ANTI-BREAK SUPER-ESPECIFICO (CHILD COMBINATORS + ID SELECTOR)
+   APUNTA DIRECTAMENTE al hecho:
+     - #shopping-cart.active es HIJO DIRECTO de <main>
+     - Todos los demas hijos directos del main DEBEN resetear el
+       full-bleed hack (margin-left: calc(-50vw + 50%)) cuando el
+       main es display:grid de 2 columnas.
+   Specificity: IDs = 1, Classes/Pseudos = ~3 → 1,3,0 (IMPOSIBLE
+   de sobreescribir por .carousel-section 0,1,0).
+   Funciona SIN importar body.has-open-cart ni cómo se abrió el carrito.
+   ================================================================ */
+main:has(> #shopping-cart.active) > *:not(#shopping-cart):not(#floating-cart):not(script):not(link):not(style):not(meta) {
+    grid-column: 1 / 2 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+}
+
 /* Estilos del carrusel */
 .carousel-section {
     width: 100vw;
@@ -1922,15 +2048,15 @@ body:not([data-page="comercio"]) #interest-products-index-title.section-title::b
 
 /* Sección de descuentos especiales */
 .special-discounts {
-    margin: 20px 0 20px 0;
-    padding: 10px 10px 10px 10px;
+    margin: 0;
+    padding: 10px 10px 8px 10px;
     position: relative;
     background: linear-gradient(to bottom, 
-        rgba(255, 165, 0, 0) 0%,           /* Transparente al inicio */
-        rgba(255, 165, 0, 0.1) 20%,       /* Suave */
-        rgba(255, 165, 0, 0.3) 50%,       /* Máxima intensidad en la mitad */
-        rgba(255, 165, 0, 0.1) 80%,       /* Se revierte */
-        rgba(255, 165, 0, 0) 100%         /* Transparente al final */
+        rgba(255, 165, 0, 0) 0%,
+        rgba(255, 165, 0, 0.1) 20%,
+        rgba(255, 165, 0, 0.3) 50%,
+        rgba(255, 165, 0, 0.1) 80%,
+        rgba(255, 165, 0, 0) 100%
     );
 }
 
@@ -2189,8 +2315,8 @@ body:not([data-page="comercio"]) #interest-products-index-title.section-title::b
 /* Responsive para móviles */
 @media (max-width: 768px) {
     .special-discounts {
-        margin: 12px 0 12px 0;
-        padding: 8px 0 8px 0;
+        margin: 0;
+        padding: 8px 0 6px 0;
     }
     
     .discounts-container {
@@ -2222,8 +2348,8 @@ body:not([data-page="comercio"]) #interest-products-index-title.section-title::b
 /* Responsive para dispositivos muy pequeños */
 @media (max-width: 480px) {
     .special-discounts {
-        margin: 8px 0 8px 0;
-        padding: 6px 0 6px 0;
+        margin: 0;
+        padding: 6px 0 4px 0;
     }
     
     .special-discounts h2 {
@@ -3203,6 +3329,87 @@ footer {
     }
 }
 
+@media (max-width: 413px) {
+    .shopping-cart {
+        width: 100%;
+        max-width: 100%;
+        right: -100%;
+    }
+}
+
+@media (min-width: 414px) and (max-width: 768px) {
+    main:has(.shopping-cart.active),
+    body:has(.shopping-cart.active) main {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        column-gap: 0;
+        align-items: start;
+    }
+    main:has(.shopping-cart.active) > *:not(.shopping-cart):not(script):not(link):not(style):not(meta) {
+        grid-column: 1 / 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+    main:has(.shopping-cart.active) .shopping-cart {
+        position: sticky;
+        top: 0;
+        right: auto;
+        width: 320px;
+        max-width: 320px;
+        grid-column: 2 / 3;
+        grid-row: 1 / -1;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    }
+    body:has(.shopping-cart.active) .overlay,
+    body.has-open-cart .overlay {
+        display: none;
+    }
+    body:has(.shopping-cart.active) .floating-cart,
+    body.has-open-cart .floating-cart {
+        display: none !important;
+    }
+    /* ============================================================
+       ANTI-BREAK: Carrito abierto = desactivar anchos 100vw y
+       márgenes negativos que calculaban viewport completo, ya que
+       ahora el contenido vive en una celda grid mas chica.
+       ============================================================ */
+    body:has(.shopping-cart.active) .interest-section,
+    body.has-open-cart .interest-section,
+    body:has(.shopping-cart.active) .special-discounts,
+    body.has-open-cart .special-discounts,
+    body:has(.shopping-cart.active) .products.searchable-section,
+    body.has-open-cart .products.searchable-section,
+    body:has(.shopping-cart.active) .hero,
+    body.has-open-cart .hero,
+    body:has(.shopping-cart.active) .discounts-container,
+    body.has-open-cart .discounts-container,
+    body:has(.shopping-cart.active) #menu-gastronomia,
+    body.has-open-cart #menu-gastronomia {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    body:has(.shopping-cart.active) .carousel,
+    body.has-open-cart .carousel,
+    body:has(.shopping-cart.active) .carousel-track,
+    body.has-open-cart .carousel-track,
+    body:has(.shopping-cart.active) .carousel-slide,
+    body.has-open-cart .carousel-slide,
+    body:has(.shopping-cart.active) .carousel-slide img,
+    body.has-open-cart .carousel-slide img,
+    body:has(.shopping-cart.active) .carousel-overlay,
+    body.has-open-cart .carousel-overlay {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
 /* Desktop y pantallas grandes */
 @media (min-width: 1024px) {
     .carousel-indicators {
@@ -3219,6 +3426,201 @@ footer {
     .indicator.active {
         transform: scale(1.4);
         box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    }
+
+    main:has(.shopping-cart.active),
+    body:has(.shopping-cart.active) main {
+        display: grid;
+        grid-template-columns: 1fr 400px;
+        column-gap: 0;
+        align-items: start;
+    }
+    main:has(.shopping-cart.active) > *:not(.shopping-cart):not(script):not(link):not(style):not(meta) {
+        grid-column: 1 / 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+    main:has(.shopping-cart.active) .shopping-cart {
+        position: sticky;
+        top: 0;
+        right: auto;
+        width: 400px;
+        max-width: 400px;
+        grid-column: 2 / 3;
+        grid-row: 1 / -1;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    }
+    body:has(.shopping-cart.active) .overlay,
+    body.has-open-cart .overlay {
+        display: none;
+    }
+    body:has(.shopping-cart.active) .floating-cart,
+    body.has-open-cart .floating-cart {
+        display: none !important;
+    }
+    /* ============================================================
+       ANTI-BREAK: Carrito abierto = desactivar anchos 100vw y
+       márgenes negativos que calculaban viewport completo.
+       ============================================================ */
+    body:has(.shopping-cart.active) .interest-section,
+    body.has-open-cart .interest-section,
+    body:has(.shopping-cart.active) .special-discounts,
+    body.has-open-cart .special-discounts,
+    body:has(.shopping-cart.active) .products.searchable-section,
+    body.has-open-cart .products.searchable-section,
+    body:has(.shopping-cart.active) .hero,
+    body.has-open-cart .hero,
+    body:has(.shopping-cart.active) .discounts-container,
+    body.has-open-cart .discounts-container,
+    body:has(.shopping-cart.active) #menu-gastronomia,
+    body.has-open-cart #menu-gastronomia {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    body:has(.shopping-cart.active) .carousel,
+    body.has-open-cart .carousel,
+    body:has(.shopping-cart.active) .carousel-track,
+    body.has-open-cart .carousel-track,
+    body:has(.shopping-cart.active) .carousel-slide,
+    body.has-open-cart .carousel-slide,
+    body:has(.shopping-cart.active) .carousel-slide img,
+    body.has-open-cart .carousel-slide img,
+    body:has(.shopping-cart.active) .carousel-overlay,
+    body.has-open-cart .carousel-overlay {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (min-width: 1024px) and (max-width: 1200px) {
+    main:has(.shopping-cart.active),
+    body:has(.shopping-cart.active) main {
+        grid-template-columns: 1fr 340px;
+    }
+    main:has(.shopping-cart.active) > *:not(.shopping-cart):not(script):not(link):not(style):not(meta) {
+        grid-column: 1 / 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+    main:has(.shopping-cart.active) .shopping-cart {
+        width: 340px;
+        max-width: 340px;
+    }
+    /* ============================================================
+       ANTI-BREAK: Carrito abierto = desactivar anchos 100vw.
+       ============================================================ */
+    body:has(.shopping-cart.active) .interest-section,
+    body.has-open-cart .interest-section,
+    body:has(.shopping-cart.active) .special-discounts,
+    body.has-open-cart .special-discounts,
+    body:has(.shopping-cart.active) .products.searchable-section,
+    body.has-open-cart .products.searchable-section,
+    body:has(.shopping-cart.active) .hero,
+    body.has-open-cart .hero,
+    body:has(.shopping-cart.active) .discounts-container,
+    body.has-open-cart .discounts-container,
+    body:has(.shopping-cart.active) #menu-gastronomia,
+    body.has-open-cart #menu-gastronomia {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    body:has(.shopping-cart.active) .carousel,
+    body.has-open-cart .carousel,
+    body:has(.shopping-cart.active) .carousel-track,
+    body.has-open-cart .carousel-track,
+    body:has(.shopping-cart.active) .carousel-slide,
+    body.has-open-cart .carousel-slide,
+    body:has(.shopping-cart.active) .carousel-slide img,
+    body.has-open-cart .carousel-slide img,
+    body:has(.shopping-cart.active) .carousel-overlay,
+    body.has-open-cart .carousel-overlay {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    main:has(.shopping-cart.active),
+    body:has(.shopping-cart.active) main {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        column-gap: 0;
+        align-items: start;
+    }
+    main:has(.shopping-cart.active) > *:not(.shopping-cart):not(script):not(link):not(style):not(meta) {
+        grid-column: 1 / 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        transform: none !important;
+    }
+    main:has(.shopping-cart.active) .shopping-cart {
+        position: sticky;
+        top: 0;
+        right: auto;
+        width: 360px;
+        max-width: 360px;
+        grid-column: 2 / 3;
+        grid-row: 1 / -1;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    }
+    body:has(.shopping-cart.active) .overlay,
+    body.has-open-cart .overlay {
+        display: none;
+    }
+    body:has(.shopping-cart.active) .floating-cart,
+    body.has-open-cart .floating-cart {
+        display: none !important;
+    }
+    /* ============================================================
+       ANTI-BREAK: Carrito abierto = desactivar anchos 100vw.
+       ============================================================ */
+    body:has(.shopping-cart.active) .interest-section,
+    body.has-open-cart .interest-section,
+    body:has(.shopping-cart.active) .special-discounts,
+    body.has-open-cart .special-discounts,
+    body:has(.shopping-cart.active) .products.searchable-section,
+    body.has-open-cart .products.searchable-section,
+    body:has(.shopping-cart.active) .hero,
+    body.has-open-cart .hero,
+    body:has(.shopping-cart.active) .discounts-container,
+    body.has-open-cart .discounts-container,
+    body:has(.shopping-cart.active) #menu-gastronomia,
+    body.has-open-cart #menu-gastronomia {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+    body:has(.shopping-cart.active) .carousel,
+    body.has-open-cart .carousel,
+    body:has(.shopping-cart.active) .carousel-track,
+    body.has-open-cart .carousel-track,
+    body:has(.shopping-cart.active) .carousel-slide,
+    body.has-open-cart .carousel-slide,
+    body:has(.shopping-cart.active) .carousel-slide img,
+    body.has-open-cart .carousel-slide img,
+    body:has(.shopping-cart.active) .carousel-overlay,
+    body.has-open-cart .carousel-overlay {
+        width: 100% !important;
+        max-width: 100% !important;
     }
 }
 
@@ -3378,28 +3780,30 @@ footer {
     padding: 24px 16px;
     /* Full-bleed como el carrusel */
     width: 100vw;
+    margin: 0;
     margin-left: calc(-50vw + 50%);
 }
 .interest-section#interest-index {
   position: relative;
-  /* Variables para controlar opacidades del overlay de forma progresiva */
   --focus-linear: 0;
   --focus-radial: 0;
-  /* Fondo base + overlay controlado por variables (sin saltos bruscos) */
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(124, 92, 255, var(--focus-radial)) 0%, rgba(124, 92, 255, 0) 60%),
-    linear-gradient(135deg, rgba(124, 92, 255, var(--focus-linear)), rgba(185, 151, 252, var(--focus-linear))),
-    #f7f9fc;
-  /* Separación sutil de la banda */
-  box-shadow: inset 0 1px 0 rgba(90, 110, 140, 0.08), inset 0 -1px 0 rgba(90, 110, 140, 0.08);
-  transition: box-shadow 320ms ease-out;
-  /* Reducir espacios superior e inferior */
+  /* 
+     Fondo Navy Dark EXACTAMENTE igual que Platos Destacados y Carta Completa.
+     IMPORTANTE: NO superponer capas extras de gradiente radial/violeta
+     en estado normal (valen 0), asi no hay opacidades sumadas en el pixel
+     de union que generen un corte optico visible.
+  */
+  background: linear-gradient(90deg, rgba(12, 12, 12, 0.95) 0%, rgba(22, 22, 22, 0.88) 40%, rgba(55, 55, 55, 0.72) 100%);
+  margin: 0;
   padding: 14px 12px;
+  box-shadow: none;
+  border-radius: 0;
+  border: 0;
+  transition: box-shadow 320ms ease-out;
 }
 
-/* Estado: sección de intereses enfocada (centrada en viewport) */
 .interest-section#interest-index.focused {
-  box-shadow: inset 0 2px 0 rgba(90, 110, 140, 0.12), inset 0 -2px 0 rgba(90, 110, 140, 0.12);
+  box-shadow: none;
 }
 
 /* (Eliminado halo separado para evitar doble fondo y opacidades duplicadas) */
@@ -3436,11 +3840,11 @@ footer {
   }
   .interest-section#interest-index::before {
     left: 0;
-    background: linear-gradient(to right, #f7f9fc, rgba(247, 249, 252, 0));
+    background: linear-gradient(to right, rgba(12, 12, 12, 0.92), transparent);
   }
   .interest-section#interest-index::after {
     right: 0;
-    background: linear-gradient(to left, #f7f9fc, rgba(247, 249, 252, 0));
+    background: linear-gradient(to left, rgba(55, 55, 55, 0.78), transparent);
   }
   .interest-section#interest-index.has-left::before { opacity: 1; }
   .interest-section#interest-index.has-right::after { opacity: 1; }
@@ -3456,8 +3860,8 @@ footer {
 /* Título más sutil solo para index.html */
 .interest-section#interest-index .section-title {
     font-size: 1.1rem;
-    font-weight: 500;
-    color: #5a6f90;
+    font-weight: 600;
+    color: #f2f5fa;
     letter-spacing: 0.2px;
     margin: 0 16px 6px;
     padding-bottom: 0;
@@ -3468,7 +3872,7 @@ footer {
     transition: color 260ms ease-out;
 }
 .interest-section#interest-index.focused .section-title {
-    color: #000;
+    color: #ffffff;
 }
 .interest-section#interest-index .section-title::before {
     content: "";
@@ -3633,7 +4037,7 @@ footer {
 .interest-label {
     font-weight: 600;
     font-size: 0.95rem;
-    color: #333;
+    color: #f2f5fa;
 }
 
 @media (max-width: 768px) {
