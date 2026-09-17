@@ -5,9 +5,13 @@
     box-sizing: border-box;
 }
 
-/* Evitar desbordes horizontales que generan espacios en blanco laterales */
+/* Evitar desbordes horizontales que generan espacios en blanco laterales.
+   ADEMAS fijar fondo BLANCO PURO para matar el regla body { background-color:#f5f5f5 }
+   de la L663 (gris claro). Specificity 2 selectores (html,body) + !important le gana
+   a 1 selector body (0,0,1) posterior aunque aparezca despues en el cascade. */
 html, body {
     overflow-x: hidden;
+    background-color: #ffffff !important;
 }
 
 /* =============================================================
@@ -2669,6 +2673,29 @@ footer {
     display: block;
 }
 
+/* BLOQUEO OVERLAY EXCLUSIVAMENTE EN DESKTOP/TABLET ≥414px.
+   No rompemos mobile (<414px) donde SI se necesita el overlay para cerrar
+   el carrito tocando fuera. Aplicamos el selector MÁS ESPECÍFICO posible
+   y 6 !important para ganar SIEMPRE a cualquier race condition de JS que
+   agregue .overlay.active dinámicamente despues del parse CSS. */
+@media (min-width: 414px) {
+    .overlay,
+    body .overlay,
+    body.has-open-cart .overlay,
+    body:has(.shopping-cart.active) .overlay,
+    .overlay.active,
+    body .overlay.active,
+    body.has-open-cart .overlay.active,
+    body:has(.shopping-cart.active) .overlay.active {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        background: transparent !important;
+        pointer-events: none !important;
+        z-index: -1 !important;
+    }
+}
+
 /* Animación para añadir al carrito */
 .cart-animation {
     position: fixed;
@@ -4329,4 +4356,202 @@ button:focus-visible,
 a.site-logo-link:focus-visible {
     outline: 3px solid #ff9800;
     outline-offset: 2px;
+}
+
+/* =======================================================================
+   BLOQUE ANTI-GRID-STICKY-CARRITO DESKTOP (≥414px) — PRIORIDAD MÁXIMA
+   Final user: "al abrir el carrito en vez de ponerse sobre la carta se corre
+   todo y genera esos espacios". Causa raíz: commit ec5ce62 introdujo para
+   desktop un layout de MAIN en 2 cols (carta + carrito sticky en columna 2).
+   El carrito sticky OCUPA ESPACIO en el flow por ser position:sticky, por lo
+   que empuja las sections hermanas, deja huecos grises y rompe la vista.
+   SOLUCIÓN DEFINITIVA (cualquier pantalla ≥414px, 4 breakpoints anteriores):
+     (1) MAIN NUNCA MÁS es grid. Vuelve a ser display:block (flujo normal).
+     (2) .shopping-cart y .shopping-cart.active NUNCA MÁS son sticky ni
+         viven en grid-column 2/3. Vuelven a POSITION:FIXED, SOBRE la carta,
+         sin ocupar espacio en el flow → NO empuja nada = NO hay huecos.
+     (3) width 380px = regla base L1328. transition right 0.3s igual L1337.
+     (4) Floating cart vuelve a aparecer cuando carrito esta CERRADO (ya que
+         el patrón grid-2cols lo ocultaba con display:none). Ahora floating
+         cart siempre visible, solo se oculta si carrito esta abierto, por
+         regla original JS.
+   Usamos specificity MÁXIMA posible (main:has(.active) + body:has(.active) +
+   #shopping-cart id, y todo con !important) para ganar SIN EXCEPCIÓN a
+   cualquier media query ≥414px anterior (L3366, L3439, L3528, L3582).
+   Todo lo que sea .interest-section / .special-discounts / .products /
+   .carousel vuelve a width 100% viewport (ya no viven en celda grid chica).
+   ======================================================================= */
+@media (min-width: 414px) {
+    /* (1) MAIN: bloquear todo intento de display:grid / inline-grid */
+    main,
+    body main,
+    main:has(.shopping-cart.active),
+    body:has(.shopping-cart.active) main,
+    main:has(div.shopping-cart.active),
+    body.has-open-cart main,
+    body:has(body.has-open-cart) main {
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        grid-template-columns: unset !important;
+        column-gap: 0 !important;
+        align-items: stretch !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        left: auto !important;
+        right: auto !important;
+        transform: none !important;
+    }
+
+    /* Cualquier children directo de main que antes estaba forzado en
+       grid-column 1/2: volver a flow normal. Ninguna regla grid-column. */
+    main > *:not(.shopping-cart):not(script):not(link):not(style):not(meta),
+    main:has(.shopping-cart.active) > *:not(.shopping-cart):not(script):not(link):not(style):not(meta),
+    body:has(.shopping-cart.active) main > *:not(.shopping-cart):not(script):not(link):not(style):not(meta),
+    body.has-open-cart main > *:not(.shopping-cart):not(script):not(link):not(style):not(meta) {
+        grid-column: unset !important;
+        grid-row: unset !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        left: auto !important;
+        right: auto !important;
+        transform: none !important;
+        box-sizing: border-box !important;
+    }
+
+    /* (2) SHOPPING CART: POSITION FIXED (JAMÁS STICKY) sobreponerse sobre carta */
+    .shopping-cart,
+    #shopping-cart.shopping-cart,
+    body .shopping-cart,
+    body.has-open-cart .shopping-cart,
+    body:has(.shopping-cart.active) .shopping-cart,
+    .shopping-cart.active,
+    #shopping-cart.shopping-cart.active,
+    body .shopping-cart.active,
+    body.has-open-cart .shopping-cart.active,
+    body:has(.shopping-cart.active) .shopping-cart.active,
+    /* y selector main:has utilizado antes por ec5ce62 */
+    main:has(.shopping-cart.active) .shopping-cart,
+    main:has(.shopping-cart.active) #shopping-cart.shopping-cart {
+        position: fixed !important;
+        top: 0 !important;
+        right: -400px !important;     /* oculto por defecto (L1331 base) */
+        width: 380px !important;
+        max-width: 380px !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        grid-column: unset !important;
+        grid-row: unset !important;
+        transform: none !important;
+        display: flex !important;       /* L1338 base */
+        flex-direction: column !important;
+        overflow-y: auto !important;
+        background-color: #ffffff !important;
+        box-shadow: -5px 0 15px rgba(0,0,0,0.10) !important;
+        transition: right 0.30s ease !important;
+        z-index: 9999 !important;         /* más alto que cualquier sticky o elemento */
+        pointer-events: auto !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
+    /* Estado ABIERTO: carrito fixed pegado al borde derecho (right 0).
+       Specificidad MAXIMA (#id.class.active) para ganar a cualquier regla anterior
+       que ponga right:-400px incluso sobre .shopping-cart.active. */
+    .shopping-cart.active,
+    body.has-open-cart .shopping-cart,
+    body:has(.shopping-cart.active) .shopping-cart,
+    #shopping-cart.shopping-cart.active,
+    body .shopping-cart.active,
+    body #shopping-cart.shopping-cart.active,
+    body.has-open-cart #shopping-cart.shopping-cart.active,
+    body:has(#shopping-cart.shopping-cart.active) #shopping-cart.shopping-cart {
+        right: 0 !important;
+    }
+
+    /* (3) Floating cart: NUNCA MÁS usamos display:none !important en apertura
+         porque se ejecutaba INSTANTÁNEAMENTE después del click (30-50ms) ANTES
+         de que el shopping-cart transicione right:-400→0 (0.3s). Percepción user:
+         "le di click y no pasó nada".
+         SOLUCIÓN:
+           - El floating cart queda visible TODO el tiempo. Cuando el shopping-cart
+             (.active position:fixed z=9999) aparece a la derecha (380px),
+             simplemente TAPA VISUALMENTE al floating cart sin necesidad de CSS hacks.
+           - Como capa defensiva EXTRA, SOLO ocultamos el floating cart VISUALMENTE
+             (opacity + visibility, NO display) con un delay mínimo igual al tiempo
+             de transición del carrito (300ms).
+           - Elevamos el z-index a 99999 para garantizar que sea clickeable
+             incluso contra overlays invisibles superpuestos.
+           - pointer-events: auto ¡siempre!. */
+    .floating-cart.show,
+    body .floating-cart.show,
+    body.has-open-cart:not(:has(.shopping-cart.active)) .floating-cart.show {
+        display: flex !important;
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        z-index: 99999 !important;  /* 10x más alto que cualquier overlay */
+        width: auto !important;
+        min-width: 150px !important;
+        max-width: 280px !important;
+        height: auto !important;
+        min-height: 48px !important;
+        border-radius: 50px !important;
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+    /* (3b) OCULTACIÓN SUAVE con DELAY 300ms (igual transition del carrito).
+         NO usamos display:none (bug user). Solo opacity + visibility. */
+    body.has-open-cart:has(.shopping-cart.active) .floating-cart {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: opacity 0.25s ease 0.3s, visibility 0s linear 0.55s !important;
+    }
+
+    /* (4) SECTIONS NAVY DARK y carrusel: width 100% viewport, NO en grid.
+       Sobreescriben las reglas "anti-break" anteriores que las dejaban en
+       width:100% pero de celda grid 1fr = viewport - 400px. */
+    body:has(.shopping-cart.active) .interest-section,
+    body.has-open-cart .interest-section,
+    body:has(.shopping-cart.active) .special-discounts,
+    body.has-open-cart .special-discounts,
+    body:has(.shopping-cart.active) .products.searchable-section,
+    body.has-open-cart .products.searchable-section,
+    body:has(.shopping-cart.active) .carousel-section,
+    body.has-open-cart .carousel-section,
+    body:has(.shopping-cart.active) .hero,
+    body.has-open-cart .hero,
+    body:has(.shopping-cart.active) .discounts-container,
+    body.has-open-cart .discounts-container,
+    body:has(.shopping-cart.active) #menu-gastronomia,
+    body.has-open-cart #menu-gastronomia,
+    body:has(.shopping-cart.active) .carousel,
+    body.has-open-cart .carousel,
+    body:has(.shopping-cart.active) .carousel-track,
+    body.has-open-cart .carousel-track,
+    body:has(.shopping-cart.active) .carousel-slide,
+    body.has-open-cart .carousel-slide,
+    body:has(.shopping-cart.active) .carousel-slide img,
+    body.has-open-cart .carousel-slide img,
+    body:has(.shopping-cart.active) .carousel-overlay,
+    body.has-open-cart .carousel-overlay {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        left: auto !important;
+        right: auto !important;
+        transform: none !important;
+        box-sizing: border-box !important;
+    }
 }

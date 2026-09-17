@@ -1444,6 +1444,20 @@ document.addEventListener('DOMContentLoaded', () => {
     initSearch();
 
     // Setup Carrito UI (Overlay, toggle)
+    // LOCKOUT GLOBAL para sincronismo:
+    // Cuando el usuario hace UNA ACCION EXPLICITA (abrir / cerrar via botones),
+    // bloqueamos el sync automático por 650ms (2x tiempo transición 0.3s + 0.05s margen).
+    // Esto evita que el setInterval 250ms de syncCartByVisibleRect "deshaga" la acción del usuario
+    // durante la transición (por ejemplo: usuario clickea cerrar, handler quita .active;
+    // 250ms después el sync ve que el carrito todavía ocupa un poco el viewport (transición)
+    // y VUELVE A AGREGAR .active → usuario percibe "botón cerrar no funciona").
+    if (typeof window.__lastExplicitCartToggleMs === 'undefined') {
+        window.__lastExplicitCartToggleMs = 0;
+    }
+    function markExplicitCartToggle() {
+        window.__lastExplicitCartToggleMs = Date.now();
+    }
+
     const cartIcon = document.querySelector('.cart-icon');
     const shoppingCart = document.getElementById('shopping-cart');
     const closeCartBtn = document.getElementById('close-cart');
@@ -1456,27 +1470,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (cartIcon && shoppingCart) {
         cartIcon.addEventListener('click', () => {
+            markExplicitCartToggle(); // LOCKOUT: no sync revierta
             shoppingCart.classList.add('active');
             overlay.classList.add('active');
             openDialog(shoppingCart);
             document.body.classList.add('has-open-cart');
-            if (floatingCart) floatingCart.classList.remove('show');
         });
     }
 
     if (floatingCart) {
         floatingCart.addEventListener('click', () => {
             if (!shoppingCart) return;
+            markExplicitCartToggle(); // LOCKOUT: no sync revierta
             shoppingCart.classList.add('active');
             overlay.classList.add('active');
             openDialog(shoppingCart);
             document.body.classList.add('has-open-cart');
-            floatingCart.classList.remove('show');
         });
     }
 
     if (closeCartBtn && shoppingCart) {
         closeCartBtn.addEventListener('click', () => {
+            markExplicitCartToggle(); // LOCKOUT: no sync revierta
             shoppingCart.classList.remove('active');
             overlay.classList.remove('active');
             closeDialog(shoppingCart);
@@ -1488,6 +1503,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     overlay.addEventListener('click', () => {
         if (shoppingCart) {
+            markExplicitCartToggle(); // LOCKOUT: no sync revierta
             shoppingCart.classList.remove('active');
             overlay.classList.remove('active');
             closeDialog(shoppingCart);
@@ -1508,6 +1524,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (targetCartEl) {
         let overlaySync = document.querySelector('.overlay');
         const syncCartByVisibleRect = (fromObserver) => {
+            // ✅ LOCKOUT PRIMERO:
+            // Si hubo acción EXPLÍCITA (botón abrir/cerrar usuario) hace MENOS DE 650ms → IGNORAR SYNC.
+            // Respetamos el estado que pidió el handler del botón, incluso si la transición
+            // CSS todavía no terminó (getBoundingClientRect todavía ve "carrito medio abierto/cerrado").
+            if (Date.now() - (window.__lastExplicitCartToggleMs || 0) < 650) {
+                return;
+            }
             const cartRect = targetCartEl.getBoundingClientRect();
             const viewportW = window.innerWidth || document.documentElement.clientWidth;
             const cartWidth = targetCartEl.offsetWidth || 400;
@@ -1518,7 +1541,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 cartRect.right > viewportW - cartWidth + 30;
             const hasActiveClass = targetCartEl.classList.contains('active');
 
-            // Alineamos .active class CON EL ESTADO VISIBLEMENTE RENDERIZADO (la unica fuente de verdad)
+            // SINCRONIZACION BIDIRECCIONAL SEGURA (solo DESPUES del lockout 650ms):
+            // Si visibilidad ABRE y falta clase → AGREGAMOS.
+            // Si visibilidad CIERRA y sobra clase → QUITAMOS (ahora seguro porque transición terminó).
             if (isVisible && !hasActiveClass) {
                 targetCartEl.classList.add('active');
             } else if (!isVisible && hasActiveClass) {
@@ -1529,13 +1554,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.toggle('has-open-cart', isCartOpenState);
             if (!overlaySync) overlaySync = document.querySelector('.overlay');
             if (overlaySync && window.matchMedia('(min-width: 414px)').matches) {
-                // En >= 414px grid layout no necesitamos overlay
+                // En >= 414px no necesitamos overlay desktop (carrito fixed superpuesto)
                 overlaySync.classList.remove('active');
             } else if (overlaySync) {
                 overlaySync.classList.toggle('active', isCartOpenState);
             }
-            const floatingCartSync = document.getElementById('floating-cart');
-            if (isCartOpenState && floatingCartSync) floatingCartSync.classList.remove('show');
+            // NO remover la clase .show del floating-cart desde aca.
+            // El ocultamiento suave del flotante (opacity 0, visibility hidden)
+            // lo maneja 100% el CSS con delay 300ms igual a la transicion del carrito.
             if (!isCartOpenState) {
                 try { updateCartDisplay(); updateCartCount(); } catch (_) {}
             }
