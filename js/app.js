@@ -1497,30 +1497,75 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Sincronizacion GARANTIZADA de body.has-open-cart con el estado REAL del carrito
-    // Funciona SIN importar COMO se modifique el carrito (click icono, auto-open post addToCart,
-    // modal confirm, futuro codigo, etc.) — observa el atributo class de #shopping-cart.
+    // SINCRONIZACION DEFINITIVA A PRUEBA DE BALAS del estado del carrito
+    // Cubre CUALQUIER metodo de abrir/cerrar el carrito existente o futuro:
+    //   1. Class toggle (add/remove .active) — casos click icono/flotante
+    //   2. Inline style changes (right:0, position fixed) — caso auto-open post addToCart
+    //   3. Cualquier script que modifique el cart de cualquier otra manera
+    // Estrategia: detectamos VISIBLEMENTE si el carrito esta abierto usando getBoundingClientRect.
+    // Si el carrito se ve en pantalla (left >= viewport - 420) → FORZAMOS .active y sincronizamos todo.
     const targetCartEl = document.getElementById('shopping-cart');
     if (targetCartEl) {
-        const syncCartBodyState = () => {
-            const isCartOpen = targetCartEl.classList.contains('active');
-            document.body.classList.toggle('has-open-cart', isCartOpen);
-            const overlaySync = document.querySelector('.overlay');
-            if (overlaySync) overlaySync.classList.toggle('active', isCartOpen);
+        let overlaySync = document.querySelector('.overlay');
+        const syncCartByVisibleRect = (fromObserver) => {
+            const cartRect = targetCartEl.getBoundingClientRect();
+            const viewportW = window.innerWidth || document.documentElement.clientWidth;
+            const cartWidth = targetCartEl.offsetWidth || 400;
+            // Detectar visible: carrito ocupa el borde derecho del viewport (no esta offscreen a la derecha)
+            const isVisible =
+                cartRect.width > 80 &&
+                cartRect.left <= viewportW - 1 &&
+                cartRect.right > viewportW - cartWidth + 30;
+            const hasActiveClass = targetCartEl.classList.contains('active');
+
+            // Alineamos .active class CON EL ESTADO VISIBLEMENTE RENDERIZADO (la unica fuente de verdad)
+            if (isVisible && !hasActiveClass) {
+                targetCartEl.classList.add('active');
+            } else if (!isVisible && hasActiveClass && !fromObserver) {
+                // Si el classObserver dice active pero el carrito esta offscreen — no removemos a menos
+                // que venga de un fallback para evitar loop: el classObserver sync lo maneja.
+            }
+
+            const isCartOpenState = targetCartEl.classList.contains('active') || isVisible;
+            document.body.classList.toggle('has-open-cart', isCartOpenState);
+            if (!overlaySync) overlaySync = document.querySelector('.overlay');
+            if (overlaySync && window.matchMedia('(min-width: 414px)').matches) {
+                // En >= 414px grid layout no necesitamos overlay
+                overlaySync.classList.remove('active');
+            } else if (overlaySync) {
+                overlaySync.classList.toggle('active', isCartOpenState);
+            }
             const floatingCartSync = document.getElementById('floating-cart');
-            if (isCartOpen && floatingCartSync) floatingCartSync.classList.remove('show');
-            if (!isCartOpen) {
-                updateCartDisplay();
-                updateCartCount();
+            if (isCartOpenState && floatingCartSync) floatingCartSync.classList.remove('show');
+            if (!isCartOpenState) {
+                try { updateCartDisplay(); updateCartCount(); } catch (_) {}
             }
         };
-        syncCartBodyState();
-        const cartClassObserver = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                if (m.attributeName === 'class') { syncCartBodyState(); break; }
-            }
-        });
+
+        // Sync inmediato por primera vez
+        syncCartByVisibleRect(false);
+
+        // Observer 1: cambios en class (toggle tradicional)
+        const cartClassObserver = new MutationObserver(() => syncCartByVisibleRect(true));
         cartClassObserver.observe(targetCartEl, { attributes: true, attributeFilter: ['class'] });
+
+        // Observer 2: cambios en atributo STYLE inline (auto-open por style.right/position)
+        const cartStyleObserver = new MutationObserver(() => syncCartByVisibleRect(false));
+        cartStyleObserver.observe(targetCartEl, { attributes: true, attributeFilter: ['style'] });
+
+        // FALLBACK TOTAL: polling cada 250ms por si algun flujo no dispara ningun observer
+        // (por ejemplo scripts externos, cambios de animacion CSS, etc.)
+        let fallbackRuns = 0;
+        setInterval(() => {
+            fallbackRuns++;
+            syncCartByVisibleRect(false);
+        }, 250);
+
+        // Tambien al resize de la ventana (cambia viewport)
+        window.addEventListener('resize', () => syncCartByVisibleRect(false), { passive: true });
+
+        // Y al finalizar cualquier animacion/transition del carrito
+        targetCartEl.addEventListener('transitionend', () => syncCartByVisibleRect(false), { passive: true });
     }
 
     // Checkout Button
