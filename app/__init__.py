@@ -38,7 +38,7 @@ def create_app(test_config=None):
         DATABASE=os.getenv('DATABASE_PATH', os.path.join(app.root_path, '..', 'orders.db')),
         DATABASE_URL=os.getenv('DATABASE_URL'),
         CONFIG_DIR=os.path.join(app.root_path, '..', 'config'),
-        JSON_AS_ASCII=True,  # Force ASCII JSON to avoid encoding issues with emojis
+        JSON_AS_ASCII=False,  # UTF-8 JSON: acentos, ñ, emojis correctos (evita mojibakes en respuestas API)
         SEND_FILE_MAX_AGE_DEFAULT=0,
         # Security: Session Cookie Configuration
         SESSION_COOKIE_HTTPONLY=True,
@@ -102,6 +102,12 @@ def create_app(test_config=None):
         response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
         response.headers.setdefault('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)')
         response.headers.setdefault('Content-Security-Policy', "base-uri 'self'; frame-ancestors 'self'; object-src 'none'")
+        ct = response.content_type or ''
+        if ('text/html' in ct or 'application/json' in ct or 'text/' in ct or
+            'application/javascript' in ct or 'text/css' in ct or 'application/' not in ct):
+            if ct and 'charset=' not in ct:
+                response.charset = 'utf-8'
+                response.headers['Content-Type'] = response.content_type
         if request.path.startswith('/api/auth/'):
             response.headers.setdefault('Cache-Control', 'no-store, max-age=0')
             response.headers.setdefault('Pragma', 'no-cache')
