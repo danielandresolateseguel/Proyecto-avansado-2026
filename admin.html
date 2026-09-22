@@ -4068,14 +4068,26 @@
       filter: brightness(0.97);
     }
 
-    /* 17. MODALES ELEVACIÓN UNIVERSAL — fix stacking context con panels/backdrop-filter
-       Ningún modal queda bajo ninguna capa: z-index 999999 + isolation:isolate
-       (más alto que settings-menu z:999998 y que cualquier panel con backdrop-filter) */
+    /* 17. MODALES ELEVACIÓN UNIVERSAL v2 — fix stacking context panels/backdrop-filter
+       BUG anterio: isolation:isolate + z:999999 aplicado TANTO a .kds-modal como a .kds-modal-overlay
+       (hijo). Al ser isolation, ambos competian por painting order en GLOBAL stack (no hijo interno)
+       => overlay terminaba pintado ENCIMA del content => PANTALLA GRIS no clickeable.
+       Solucion: SOLO el wrapper modal tiene z alto + isolation. Overlay (backdrop) = z:0,
+       Content (inputs/buttons) = z:1 (ambos dentro del stacking interno del wrapper, original L1347-L1351).
+       settings-menu z:999998 (menor que modales 999999) — se mete DENTRO del backdrop cuando modal abierto. */
     html body div[id$="-modal"]:not(.kds-tooltip):not(.kds-toast-container),
-    html body .kds-modal:not(.kds-tooltip),
-    html body .kds-modal-overlay {
+    html body .kds-modal:not(.kds-tooltip) {
       z-index: 999999 !important;
       isolation: isolate !important;
+    }
+    html body .kds-modal-content {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    html body .kds-modal-overlay {
+      position: fixed !important;
+      z-index: 0 !important;
+      isolation: auto !important;
     }
     html body #confirm-modal {
       z-index: 1000000 !important;
@@ -24356,110 +24368,8 @@
   }
 </style>
 <!-- Create Order Modal -->
-<div id="create-order-modal" class="kds-modal" autocomplete="off">
-  <div class="kds-modal-overlay"></div>
-  <div class="kds-modal-content create-order-modal-content">
-    <div class="create-order-header">
-      <h2 style="margin: 0; font-size: 1.25rem; color: #333;">Nuevo Pedido</h2>
-      <button class="close-modal-btn" style="background: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: auto; box-shadow: none;">&times;</button>
-    </div>
-    
-    <div class="create-order-body">
-      <!-- Product Selection (Left) -->
-      <div class="create-order-left">
-        <div class="create-order-search">
-          <input type="text" id="new-order-search" placeholder="Buscar productos..." autocomplete="off" spellcheck="false" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
-        </div>
-        <div id="new-order-products">
-          <!-- Products will be injected here -->
-        </div>
-      </div>
 
-      <!-- Order Details (Right) -->
-      <div class="create-order-right">
-        <div class="content-scroll">
-          <!-- Customer Info -->
-          <div class="create-order-fields">
-            <input type="text" tabindex="-1" aria-hidden="true" autocomplete="off" name="new_order_fake_user" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
-            <input type="password" tabindex="-1" aria-hidden="true" autocomplete="new-password" name="new_order_fake_pass" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Local</label>
-              <select id="new-order-tenant" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; font-size: 13px;">
-                <!-- Tenant options populated by JS -->
-              </select>
-            </div>
-            <div>
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Tipo</label>
-              <select id="new-order-type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
-                <option value="mesa">Mesa</option>
-                <option value="direccion">Delivery</option>
-                <option value="espera">Retiro / Para llevar</option>
-              </select>
-            </div>
-            
-            <div id="field-mesa" class="order-type-field">
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">N° Mesa</label>
-              <select id="new-order-table" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;">
-                <option value="">Seleccionar Mesa...</option>
-              </select>
-            </div>
 
-            <div id="field-address" class="order-type-field" style="display: none;">
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Dirección</label>
-              <input type="text" id="new-order-address" name="new_order_delivery_address_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Calle y número" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Localidad</label>
-              <input type="text" id="new-order-locality" name="new_order_delivery_locality_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Ej: Las Heras, Mendoza" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Envío</label>
-              <input type="number" id="new-order-shipping" name="new_order_shipping_amount_field" autocomplete="new-password" data-lpignore="true" placeholder="0" min="0" step="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-            </div>
-
-            <div id="field-contact" class="order-type-field" style="display: none;">
-               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Nombre Cliente</label>
-               <input type="text" id="new-order-name" name="new_order_customer_name_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Nombre" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Teléfono</label>
-               <input type="text" id="new-order-phone" name="new_order_customer_phone_field" autocomplete="new-password" data-lpignore="true" inputmode="tel" spellcheck="false" placeholder="WhatsApp" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
-            </div>
-            
-            <div>
-               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Notas</label>
-               <textarea id="new-order-notes" name="new_order_notes_field" autocomplete="off" spellcheck="false" placeholder="Notas del pedido..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical;"></textarea>
-            </div>
-          </div>
-
-          <div id="new-order-shortcuts-wrap" class="quick-order-shortcuts-wrap" style="display:none;">
-            <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #4a6fa5; letter-spacing: .03em;">Pedidos frecuentes</div>
-            <div class="small" style="margin-top:4px;">Toca un atajo para cargar productos reales al carrito de forma rápida.</div>
-            <div id="new-order-shortcuts" class="quick-order-shortcuts-grid"></div>
-          </div>
-
-          <!-- Cart Items -->
-          <h3 style="font-size: 14px; margin: 0 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 6px; color: #333;">Items</h3>
-          <div id="new-order-cart" style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Cart items here -->
-            <div class="small" style="text-align: center; padding: 20px; color: #999; font-style: italic;">Carrito vacío</div>
-          </div>
-        </div>
-
-        <!-- Footer / Totals -->
-        <div class="create-order-footer">
-          <div class="totals-row">
-            <span>Subtotal:</span>
-            <span id="new-order-subtotal">$0</span>
-          </div>
-          <div id="new-order-shipping-row" class="totals-row" style="display:none;">
-            <span>Envío:</span>
-            <span id="new-order-shipping-total">$0</span>
-          </div>
-          <div class="totals-row total-strong">
-            <span>Total:</span>
-            <span id="new-order-total">$0</span>
-          </div>
-          <button id="btn-create-order-confirm">Confirmar Pedido</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 <script>
   // --- Table Management Logic ---
   (function() {
@@ -27842,6 +27752,111 @@ document.addEventListener('DOMContentLoaded', () => {
 
   <!-- ============================================================ -->
   <!-- OVERLAYS MODALES ELEVADOS — movidos al final del <body>     -->
+
+<div id="create-order-modal" class="kds-modal" autocomplete="off">
+  <div class="kds-modal-overlay"></div>
+  <div class="kds-modal-content create-order-modal-content">
+    <div class="create-order-header">
+      <h2 style="margin: 0; font-size: 1.25rem; color: #333;">Nuevo Pedido</h2>
+      <button class="close-modal-btn" style="background: transparent; border: none; font-size: 24px; color: #666; cursor: pointer; padding: 0; width: auto; box-shadow: none;">&times;</button>
+    </div>
+    
+    <div class="create-order-body">
+      <!-- Product Selection (Left) -->
+      <div class="create-order-left">
+        <div class="create-order-search">
+          <input type="text" id="new-order-search" placeholder="Buscar productos..." autocomplete="off" spellcheck="false" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;">
+        </div>
+        <div id="new-order-products">
+          <!-- Products will be injected here -->
+        </div>
+      </div>
+
+      <!-- Order Details (Right) -->
+      <div class="create-order-right">
+        <div class="content-scroll">
+          <!-- Customer Info -->
+          <div class="create-order-fields">
+            <input type="text" tabindex="-1" aria-hidden="true" autocomplete="off" name="new_order_fake_user" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
+            <input type="password" tabindex="-1" aria-hidden="true" autocomplete="new-password" name="new_order_fake_pass" style="position:absolute; left:-9999px; top:auto; width:1px; height:1px; opacity:0; pointer-events:none;">
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Local</label>
+              <select id="new-order-tenant" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; background: #f9f9f9; font-size: 13px;">
+                <!-- Tenant options populated by JS -->
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Tipo</label>
+              <select id="new-order-type" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px;">
+                <option value="mesa">Mesa</option>
+                <option value="direccion">Delivery</option>
+                <option value="espera">Retiro / Para llevar</option>
+              </select>
+            </div>
+            
+            <div id="field-mesa" class="order-type-field">
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">N° Mesa</label>
+              <select id="new-order-table" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; background: #fff;">
+                <option value="">Seleccionar Mesa...</option>
+              </select>
+            </div>
+
+            <div id="field-address" class="order-type-field" style="display: none;">
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Dirección</label>
+              <input type="text" id="new-order-address" name="new_order_delivery_address_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Calle y número" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Localidad</label>
+              <input type="text" id="new-order-locality" name="new_order_delivery_locality_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Ej: Las Heras, Mendoza" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+              <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Envío</label>
+              <input type="number" id="new-order-shipping" name="new_order_shipping_amount_field" autocomplete="new-password" data-lpignore="true" placeholder="0" min="0" step="100" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+
+            <div id="field-contact" class="order-type-field" style="display: none;">
+               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Nombre Cliente</label>
+               <input type="text" id="new-order-name" name="new_order_customer_name_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" placeholder="Nombre" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px; margin-top: 8px;">Teléfono</label>
+               <input type="text" id="new-order-phone" name="new_order_customer_phone_field" autocomplete="new-password" data-lpignore="true" inputmode="tel" spellcheck="false" placeholder="WhatsApp" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;">
+            </div>
+            
+            <div>
+               <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #888; margin-bottom: 4px;">Notas</label>
+               <textarea id="new-order-notes" name="new_order_notes_field" autocomplete="off" spellcheck="false" placeholder="Notas del pedido..." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; min-height: 60px; resize: vertical;"></textarea>
+            </div>
+          </div>
+
+          <div id="new-order-shortcuts-wrap" class="quick-order-shortcuts-wrap" style="display:none;">
+            <div style="font-size: 12px; font-weight: 800; text-transform: uppercase; color: #4a6fa5; letter-spacing: .03em;">Pedidos frecuentes</div>
+            <div class="small" style="margin-top:4px;">Toca un atajo para cargar productos reales al carrito de forma rápida.</div>
+            <div id="new-order-shortcuts" class="quick-order-shortcuts-grid"></div>
+          </div>
+
+          <!-- Cart Items -->
+          <h3 style="font-size: 14px; margin: 0 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 6px; color: #333;">Items</h3>
+          <div id="new-order-cart" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Cart items here -->
+            <div class="small" style="text-align: center; padding: 20px; color: #999; font-style: italic;">Carrito vacío</div>
+          </div>
+        </div>
+
+        <!-- Footer / Totals -->
+        <div class="create-order-footer">
+          <div class="totals-row">
+            <span>Subtotal:</span>
+            <span id="new-order-subtotal">$0</span>
+          </div>
+          <div id="new-order-shipping-row" class="totals-row" style="display:none;">
+            <span>Envío:</span>
+            <span id="new-order-shipping-total">$0</span>
+          </div>
+          <div class="totals-row total-strong">
+            <span>Total:</span>
+            <span id="new-order-total">$0</span>
+          </div>
+          <button id="btn-create-order-confirm">Confirmar Pedido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- para garantizar stacking-context POR ENCIMA de los panels.   -->
   <!-- (módulo CSS 17 da z-index: 999999 + isolation:isolate)       -->
   <!-- ============================================================ -->
