@@ -537,6 +537,32 @@ def list_products():
         cfg = get_cached_tenant_config(safe_slug) or {}
         catalog = cfg.get('catalog') if isinstance(cfg, dict) else None
         if isinstance(catalog, list):
+            # ================================================================
+            # FIX COSTOS-PERSISTENCIA: Para estos slugs leen catálogo desde FS
+            # (config/<slug>.json) PERO los campos que edita admin
+            # (cost_price, cost_type, margin_percent, stock, position,
+            # active, last_modified, image_url) se guardan en la tabla
+            # products (products)porque el json de products se guarda POST/PATCH. Entonces
+            # para que el admin vea sus cambios y no queden "perdidos" al
+            # reabrir el mergeamos la DB y por id de cada producto y
+            # sobreescribimos esos campos admin-editables sobre el item
+            # catalog desde FS. Soluciona el bug reportado: "cuando pongo costos
+            # no se guardan, al reabrir estan 0".
+            # ================================================================
+            conn = None
+            cur = None
+            db_rows_by_id = {}
+            if is_authed():
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT product_id, price, COALESCE(cost_price, 0), COALESCE(cost_type, 'fixed'), COALESCE(margin_percent, 0), stock, COALESCE(position, 0), active, COALESCE(details,'') as details, COALESCE(last_modified, '') as last_modified, COALESCE(image_url, '') as image_url "
+                    "FROM products WHERE tenant_slug = ?",
+                    (safe_slug,)
+                )
+                for r in cur.fetchall() or []:
+                    db_rows_by_id[str(r[0])] = r
+
             seen_ids_fs = set()
             items_fs = []
             for p in catalog:
@@ -545,10 +571,49 @@ def list_products():
                 pid = str(p.get('id') or '').strip()
                 if not pid or pid in seen_ids_fs:
                     continue
-                active = bool(p.get('active', True))
+                # Valores base desde filesystem:
+                fs_price = int(p.get('price') or 0)
+                fs_cost_price = int(p.get('cost_price') or 0)
+                fs_cost_type = str(p.get('cost_type') or 'fixed').strip() or 'fixed'
+                fs_margin_percent = int(p.get('margin_percent') or 0)
+                fs_stock = int(p.get('stock') or 0)
+                fs_position = p.get('position', 0)
+                try:
+                    fs_position_int = int(fs_position)
+                except Exception:
+                    fs_position_int = 0
+                fs_active = bool(p.get('active', True))
+                fs_details = str(p.get('details') or '')
+                fs_last_modified = str(p.get('last_modified') or '')
+                fs_image_url = str(p.get('image_url') or '').strip()
+
+                # Merge admin DB:
+                active = fs_active
+                db_r = db_rows_by_id.get(pid)
+                if db_r is not None and len(db_r) >= 11:
+                    # DB row existe → merge de campos editables por admin
+                    # Prioridad: SIEMPRE DB para estos campos
+                    fs_price          = int(db_r[1] or 0)
+                    fs_cost_price       = int(db_r[2] or 0)
+                    fs_cost_type        = str(db_r[3] or 'fixed').strip() or 'fixed'
+                    fs_margin_percent   = int(db_r[4] or 0)
+                    fs_stock            = int(db_r[5] or 0)
+                    try:
+                        fs_position_int = int(db_r[6] or 0)
+                    except Exception:
+                        fs_position_int = 0
+                    active              = bool(db_r[7])
+                    if db_r[8] is not None and str(db_r[8]).strip():
+                        fs_details = str(db_r[8])
+                    if db_r[9] is not None and str(db_r[9]).strip():
+                        fs_last_modified = str(db_r[9])
+                    if db_r[10] is not None and str(db_r[10]).strip():
+                        fs_image_url = str(db_r[10]).strip()
+
                 if (not include_inactive) and (not active):
                     continue
                 seen_ids_fs.add(pid)
+
                 variants_raw = p.get('variants') or ''
                 if isinstance(variants_raw, (dict, list)):
                     try:
@@ -557,25 +622,20 @@ def list_products():
                         variants_raw_str = ''
                 else:
                     variants_raw_str = str(variants_raw or '').strip()
-                position = p.get('position', 0)
-                try:
-                    position_int = int(position)
-                except Exception:
-                    position_int = 0
                 items_fs.append({
                     'id': pid,
                     'name': str(p.get('name') or ''),
-                    'price': int(p.get('price') or 0),
-                    'cost_price': int(p.get('cost_price') or 0),
-                    'cost_type': str(p.get('cost_type') or 'fixed').strip() or 'fixed',
-                    'margin_percent': int(p.get('margin_percent') or 0),
-                    'stock': int(p.get('stock') or 0),
-                    'position': position_int,
+                    'price': fs_price,
+                    'cost_price': fs_cost_price,
+                    'cost_type': fs_cost_type,
+                    'margin_percent': fs_margin_percent,
+                    'stock': fs_stock,
+                    'position': fs_position_int,
                     'active': active,
-                    'details': str(p.get('details') or ''),
+                    'details': fs_details,
                     'variants': variants_raw_str,
-                    'last_modified': str(p.get('last_modified') or ''),
-                    'image_url': str(p.get('image_url') or '').strip(),
+                    'last_modified': fs_last_modified,
+                    'image_url': fs_image_url,
                 })
             items_fs.sort(key=lambda it: (
                 1 if int(it['position'] or 0) <= 0 else 0,
@@ -583,7 +643,7 @@ def list_products():
                 str(it['name'] or '').lower(),
                 it['id'],
             ))
-            return jsonify({'products': items_fs, 'tenant_slug': safe_slug, '_source': 'filesystem_config_json'})
+            return jsonify({'products': items_fs, 'tenant_slug': safe_slug, '_source': 'filesystem_config_json_merged_with_db'})
 
     conn = get_db()
     cur = conn.cursor()
@@ -869,7 +929,17 @@ def update_product(product_id):
         if not isinstance(current_variants, dict):
             current_variants = {}
         current_variants['recipe_cost_breakdown'] = final_recipe
-        recipe_updates = apply_recipe_to_product_fields(final_recipe, {'price': current_price})
+        recipe_field_updates = apply_recipe_to_product_fields(final_recipe, {'price': current_price})
+        if recipe_field_updates:
+            user_set_cost_price = bool('cost_price' in payload and payload.get('cost_price') is not None)
+            user_set_cost_type = bool('cost_type' in payload and payload.get('cost_type'))
+            user_set_margin = bool('margin_percent' in payload and payload.get('margin_percent') is not None)
+            if 'cost_price' in recipe_field_updates and not user_set_cost_price:
+                recipe_updates['cost_price'] = int(recipe_field_updates['cost_price'])
+            if 'cost_type' in recipe_field_updates and not user_set_cost_type:
+                recipe_updates['cost_type'] = str(recipe_field_updates['cost_type'])
+            if 'margin_percent' in recipe_field_updates and not user_set_margin:
+                recipe_updates['margin_percent'] = int(recipe_field_updates['margin_percent'])
         if 'variants_json' not in [f.split('=')[0].strip().lower() for f in fields]:
             fields.append('variants_json = ?')
             params.append(json.dumps(current_variants, ensure_ascii=False))

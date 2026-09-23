@@ -7007,7 +7007,9 @@
       if (labSub) labSub.textContent = fmt(state.labor_subtotal);
       if (tot) tot.textContent = fmt(state.calculated_total_cost);
       if (unit) unit.textContent = fmt(state.unit_serving_cost);
-      if (state.auto_sync_to_product_cost) {
+      const typeEl = document.getElementById((scope === 'edit' ? 'edit' : 'create') + '-prod-cost-type');
+      const typeVal = String((typeEl && typeEl.value) || 'fixed').toLowerCase();
+      if (state.auto_sync_to_product_cost && typeVal === 'recipe') {
         const costInp = document.getElementById(ids.costInp);
         const priceInp = document.getElementById(ids.priceInp);
         const marginInp = document.getElementById(ids.marginInp);
@@ -7074,17 +7076,17 @@
 
     function refreshCostSummaryUI(scope) {
       const isEdit = scope === 'edit';
-      const priceEl = isEdit ? prodEditPrice : document.getElementById('create-prod-price');
-      const costEl = isEdit ? prodEditCostPrice : document.getElementById('create-prod-cost-price');
-      const marginEl = isEdit ? prodEditMarginPct : document.getElementById('create-prod-margin-percent');
-      const sumEl = isEdit ? prodEditCostSummary : document.getElementById('create-prod-cost-summary');
-      const profitEl = isEdit ? prodEditProfitUnit : document.getElementById('create-prod-profit-unit');
-      const realEl = isEdit ? prodEditMarginReal : document.getElementById('create-prod-margin-real');
-      const suggestedEl = isEdit ? prodEditPriceSuggested : document.getElementById('create-prod-price-suggested');
+      const priceEl = isEdit ? (prodEditPrice || document.getElementById('edit-prod-price')) : document.getElementById('create-prod-price');
+      const costEl = isEdit ? (prodEditCostPrice || document.getElementById('edit-prod-cost-price')) : document.getElementById('create-prod-cost-price');
+      const marginEl = isEdit ? (prodEditMarginPct || document.getElementById('edit-prod-margin-percent')) : document.getElementById('create-prod-margin-percent');
+      const sumEl = isEdit ? (prodEditCostSummary || document.getElementById('edit-prod-cost-summary')) : document.getElementById('create-prod-cost-summary');
+      const profitEl = isEdit ? (prodEditProfitUnit || document.getElementById('edit-prod-profit-unit')) : document.getElementById('create-prod-profit-unit');
+      const realEl = isEdit ? (prodEditMarginReal || document.getElementById('edit-prod-margin-real')) : document.getElementById('create-prod-margin-real');
+      const suggestedEl = isEdit ? (prodEditPriceSuggested || document.getElementById('edit-prod-price-suggested')) : document.getElementById('create-prod-price-suggested');
       const markupEl = document.getElementById((isEdit ? 'edit' : 'create') + '-prod-price-markup');
       const suggestedBlock = document.getElementById((isEdit ? 'edit' : 'create') + '-prod-suggested-block');
-      const badgeEl = isEdit ? prodEditCostBadge : document.getElementById('create-prod-cost-mode-badge');
-      const typeEl = isEdit ? prodEditCostType : document.getElementById('create-prod-cost-type');
+      const badgeEl = isEdit ? (prodEditCostBadge || document.getElementById('edit-prod-cost-mode-badge')) : document.getElementById('create-prod-cost-mode-badge');
+      const typeEl = isEdit ? (prodEditCostType || document.getElementById('edit-prod-cost-type')) : document.getElementById('create-prod-cost-type');
       if (!priceEl || !costEl || !marginEl || !sumEl) return;
       const price = parseInt(String(priceEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
       const cost = parseInt(String(costEl.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
@@ -7139,24 +7141,32 @@
     }
     function bindCostPanelListeners() {
       if (!window.__costUI_bound) {
-        if (prodEditPrice) prodEditPrice.addEventListener('input', () => refreshCostSummaryUI('edit'));
-        if (prodEditCostPrice) prodEditCostPrice.addEventListener('input', () => refreshCostSummaryUI('edit'));
-        if (prodEditMarginPct) prodEditMarginPct.addEventListener('input', () => refreshCostSummaryUI('edit'));
-        if (prodEditCostType) prodEditCostType.addEventListener('change', () => refreshCostSummaryUI('edit'));
-        if (prodEditCalcMarginBtn) {
-          prodEditCalcMarginBtn.addEventListener('click', () => {
-            const price = parseInt(String(prodEditPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
-            const cost = parseInt(String(prodEditCostPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
-            if (cost > 0 && price > cost) {
+        const _ep = prodEditPrice || document.getElementById('edit-prod-price');
+        const _ec = prodEditCostPrice || document.getElementById('edit-prod-cost-price');
+        const _em = prodEditMarginPct || document.getElementById('edit-prod-margin-percent');
+        const _et = prodEditCostType || document.getElementById('edit-prod-cost-type');
+        const _eb = prodEditCalcMarginBtn || document.getElementById('edit-prod-calcmargin-btn');
+        if (_ep) _ep.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (_ec) _ec.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (_em) _em.addEventListener('input', () => refreshCostSummaryUI('edit'));
+        if (_et) _et.addEventListener('change', () => refreshCostSummaryUI('edit'));
+        if (_eb) {
+          _eb.addEventListener('click', () => {
+            const _p = prodEditPrice || document.getElementById('edit-prod-price');
+            const _c = prodEditCostPrice || document.getElementById('edit-prod-cost-price');
+            const _m = prodEditMarginPct || document.getElementById('edit-prod-margin-percent');
+            const price = parseInt(String((_p && _p.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            const cost = parseInt(String((_c && _c.value) || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            if (cost > 0 && price > cost && _m) {
               const margin = Math.round(((price - cost) / price) * 100);
-              prodEditMarginPct.value = String(margin);
+              _m.value = String(margin);
               refreshCostSummaryUI('edit');
-            } else if (prodEditMarginPct.value && prodEditCostPrice.value) {
-              const margin = parseFloat(prodEditMarginPct.value || '0');
-              if (margin > 0 && margin < 100 && cost > 0) {
+            } else if (_m && _c) {
+              const margin = parseFloat(String((_m && _m.value) || '0'));
+              if (margin > 0 && margin < 100 && cost > 0 && _p) {
                 const suggested = Math.ceil(cost / (1 - (margin / 100)));
                 if (suggested > 0) {
-                  prodEditPrice.value = String(suggested);
+                  _p.value = String(suggested);
                 }
               }
               refreshCostSummaryUI('edit');
@@ -8164,6 +8174,12 @@
       prodEditModal = prodEditModal || document.getElementById('product-edit-modal');
       if (!prodEditModal) return;
       currentEditingProduct = product;
+      console.log('[DIAG-OPEN-COSTOS] Producto pasado al modal:', {
+        id: product.id, name: product.name,
+        p_cost_price: product.cost_price,
+        p_cost_type: product.cost_type,
+        p_margin_percent: product.margin_percent
+      });
       await loadAdminMainMenuCategories();
 
       // Populate Form
@@ -8176,11 +8192,14 @@
       if (prodEditPosition) prodEditPosition.value = product.position || '';
       prodEditActive.checked = !!product.active;
       prodEditLastMod.textContent = product.last_modified ? 'última modificación: ' + formatARDate(product.last_modified) : 'Sin modificaciones recientes';
-      if (prodEditCostPrice)  prodEditCostPrice.value = String(Math.max(0, parseInt(product.cost_price || 0, 10) || 0));
-      if (prodEditMarginPct)  prodEditMarginPct.value = String(Math.max(0, Math.min(100, parseInt(product.margin_percent || 0, 10) || 0)));
-      if (prodEditCostType) {
+      const _lazyCostPrice = prodEditCostPrice || document.getElementById('edit-prod-cost-price');
+      const _lazyMarginPct = prodEditMarginPct || document.getElementById('edit-prod-margin-percent');
+      const _lazyCostType = prodEditCostType || document.getElementById('edit-prod-cost-type');
+      if (_lazyCostPrice)  _lazyCostPrice.value = String(Math.max(0, parseInt(product.cost_price || 0, 10) || 0));
+      if (_lazyMarginPct)  _lazyMarginPct.value = String(Math.max(0, Math.min(100, parseInt(product.margin_percent || 0, 10) || 0)));
+      if (_lazyCostType) {
         const ct = String(product.cost_type || 'fixed').trim().toLowerCase();
-        prodEditCostType.value = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
+        _lazyCostType.value = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
       }
       if (typeof populateRecipeFromProduct === 'function') {
         populateRecipeFromProduct('edit', product.variants_json || product.variants || '{}');
@@ -8473,16 +8492,19 @@
                 stock: parseInt(prodEditStock.value || '0', 10),
                 active: prodEditActive.checked
             };
-            if (prodEditCostPrice) {
-              const cp = parseInt(String(prodEditCostPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            const _gCostPrice = prodEditCostPrice || document.getElementById('edit-prod-cost-price');
+            const _gCostType = prodEditCostType || document.getElementById('edit-prod-cost-type');
+            const _gMarginPct = prodEditMarginPct || document.getElementById('edit-prod-margin-percent');
+            if (_gCostPrice) {
+              const cp = parseInt(String(_gCostPrice.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
               payload.cost_price = Math.max(0, cp);
             }
-            if (prodEditCostType) {
-              const ct = String(prodEditCostType.value || 'fixed').trim().toLowerCase();
+            if (_gCostType) {
+              const ct = String(_gCostType.value || 'fixed').trim().toLowerCase();
               payload.cost_type = ['fixed', 'recipe', 'percentage'].includes(ct) ? ct : 'fixed';
             }
-            if (prodEditMarginPct) {
-              const mv = parseInt(String(prodEditMarginPct.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
+            if (_gMarginPct) {
+              const mv = parseInt(String(_gMarginPct.value || '0').replace(/[^0-9]/g, ''), 10) || 0;
               payload.margin_percent = Math.max(0, Math.min(100, mv));
             }
             // Construir objeto variants para guardar sección y categorías
@@ -8606,6 +8628,26 @@
             // de flags/opciones cuando el objeto queda vacío.
             payload.variants = variants;
 
+            // ===== DIAGNÓSTICO COSTOS =====
+            console.log('[DIAG-COSTOS] payload enviado al PATCH:');
+            console.log({
+              cost_price: payload.cost_price,
+              cost_type: payload.cost_type,
+              margin_percent: payload.margin_percent,
+              tiene_recipe: !!payload.recipe_cost_breakdown,
+              variants_keys: Object.keys(payload.variants || {}),
+              product_id: currentEditingProduct && currentEditingProduct.id,
+              url: url.toString()
+            });
+            if (typeof console.table === 'function') {
+              console.table({
+                cost_price: { valor: payload.cost_price, tipo: typeof payload.cost_price },
+                cost_type: { valor: payload.cost_type, tipo: typeof payload.cost_type },
+                margin_percent: { valor: payload.margin_percent, tipo: typeof payload.margin_percent }
+              });
+            }
+            // ===== FIN DIAGNÓSTICO =====
+
             const resp = await wFetch(url.toString(), {
                 method: 'PATCH',
                 headers: { 
@@ -8614,6 +8656,10 @@
                 },
                 body: JSON.stringify(payload)
             });
+
+            let respText = '';
+            try { respText = await resp.clone().text(); } catch (_) {}
+            console.log('[DIAG-COSTOS] Respuesta del servidor:', resp.status, respText.slice(0, 500));
 
             if (resp.ok) {
                 alert('Producto actualizado exitosamente');
@@ -16340,6 +16386,7 @@
       const resp = await wFetch(url.toString());
       if (!resp.ok) return [];
       const data = await resp.json();
+      console.log('[DIAG-GET-COSTOS] GET /api/products _source=', data._source, 'tenant=', data.tenant_slug);
       const arr = Array.isArray(data.products) ? data.products : [];
       if (!includeInactive) {
         return arr.filter(p => p.active !== 0 && p.active !== false);
