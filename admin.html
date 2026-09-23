@@ -4312,7 +4312,7 @@
               <option value="xlarge">Extra Grande</option>
             </select>
             <button id="tm-add-table" style="background:#fff; color:#333; border:1px solid #ccc;">+ Agregar</button>
-            <button id="tm-merge-btn" style="background:#fff; color:#333; border:1px solid #ccc; margin-left: 4px;">?? Unir Mesas</button>
+            <button id="tm-merge-btn" style="background:#fff; color:#333; border:1px solid #ccc; margin-left: 4px;">Unir Mesas</button>
             <div id="tm-merge-controls" style="display:none; align-items:center; gap:8px; margin-left:8px;">
                 <span id="tm-merge-msg" style="font-size:12px; color:#666;">Selecciona mesas...</span>
                 <button id="tm-confirm-merge" style="background:#4caf50; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Confirmar</button>
@@ -4706,8 +4706,8 @@
           <button id="inv-export-inventory-xlsx" style="background-color:#455a64; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Exportar inventario</button>
           <div style="display:flex; align-items:center; gap:6px; padding-left:6px; border-left:1px solid #e2e8f0; margin-left:4px;">
             <span class="small" style="color:#334155; font-weight:700;">Costos:</span>
-            <button id="costs-download-template" style="background-color:#16a34a; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">? Plantilla de Costos</button>
-            <button id="costs-import-open" style="background-color:#ca8a04; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">? Importar Costos</button>
+            <button id="costs-download-template" style="background-color:#16a34a; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Plantilla de Costos</button>
+            <button id="costs-import-open" style="background-color:#ca8a04; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;">Importar Costos</button>
             <input type="file" id="costs-import-file" accept=".xlsx" style="display:none;">
           </div>
           <input type="file" id="inv-import-xlsx-file" accept=".xlsx" style="display:none;">
@@ -4827,7 +4827,7 @@
 
     <div id="delivery-integrations-wrap">
       <details id="delivery-integrations-panel" class="module-panel">
-        <summary>? Configuración - Integraciones Delivery (PedidosYa / Rappi)</summary>
+        <summary>Configuración - Integraciones Delivery (PedidosYa / Rappi)</summary>
         <div style="padding:16px 18px; background:#fff; border:1px solid var(--kds-border); border-radius:12px; margin-top:10px;">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
             <div>
@@ -4841,9 +4841,9 @@
                 <input id="pya-enabled" type="checkbox" />
                 <strong>Habilitar integración PedidosYa</strong>
               </label>
-              <button id="pya-load-btn" class="btn btn-secondary" title="Cargar config actual desde DB">?? Cargar</button>
-              <button id="pya-save-btn" class="btn btn-primary" title="Guardar en Qplato">?? Guardar</button>
-              <button id="pya-test-btn" class="btn btn-secondary" title="Probar conexión a API PedidosYa">?? Probar Conexión</button>
+              <button id="pya-load-btn" class="btn btn-secondary" title="Cargar config actual desde DB">Cargar</button>
+              <button id="pya-save-btn" class="btn btn-primary" title="Guardar en Qplato">Guardar</button>
+              <button id="pya-test-btn" class="btn btn-secondary" title="Probar conexión a API PedidosYa">Probar Conexión</button>
             </div>
           </div>
           <div id="pya-status-banner" style="display:none; padding:10px 14px; border-radius:8px; margin-bottom:14px;"></div>
@@ -4856,7 +4856,7 @@
             <div>
               <label class="field-label">Webhook Secret (HMAC SHA256)</label>
               <input id="pya-webhook-secret" type="password" autocomplete="off" spellcheck="false" placeholder="whsec_xxxxxxxxxxxxxxxxxxxx" style="width:100%;" />
-              <div class="field-hint">Validar firma X-PedidosYa-Signature en webhooks inbound. Si empieza con <code>dev</code> ? bypass firma.</div>
+              <div class="field-hint">Validar firma X-PedidosYa-Signature en webhooks inbound. Si empieza con <code>dev</code> → bypass firma.</div>
             </div>
             <div>
               <label class="field-label">Merchant ID (Sucursal PedidosYa)</label>
@@ -4869,7 +4869,7 @@
                 <input id="pya-commission-percent" type="number" min="0" max="100" step="1" value="25" style="width:100%;" />
                 <span style="font-size:1.1rem;">%</span>
               </div>
-              <div class="field-hint">% que cobra PedidosYa por pedido ? se usa para <code>external_fee_amount</code> en Rentabilidad. Default 25%.</div>
+              <div class="field-hint">% que cobra PedidosYa por pedido, se usa para <code>external_fee_amount</code> en Rentabilidad. Default 25%.</div>
             </div>
             <div>
               <label class="field-label">URL Base API (prod / sandbox)</label>
@@ -4886,10 +4886,10 @@
             </div>
           </div>
           <div style="margin-top:18px; padding:14px 16px; background:#f1f5f9; border-radius:10px; border:1px solid #e2e8f0;">
-            <h4 style="margin:0 0 6px 0;">?? Webhook URL para copiar y pegar en Portal PedidosYa (Integraciones / Webhooks):</h4>
+            <h4 style="margin:0 0 6px 0;">Webhook URL para copiar y pegar en Portal PedidosYa (Integraciones / Webhooks):</h4>
             <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
               <input id="pya-webhook-url" type="text" readonly style="width:100%; font-family: ui-monospace, Consolas, monospace; background:#ffffff; padding:8px 10px;" />
-              <button id="pya-copy-wh" class="btn btn-secondary" title="Copiar al portapapeles">?? Copiar URL</button>
+              <button id="pya-copy-wh" class="btn btn-secondary" title="Copiar al portapapeles">Copiar URL</button>
               <label style="display:flex; align-items:center; gap:6px; padding:6px 8px; border:1px solid #cbd5e1; border-radius:8px; background:#fff; cursor:pointer;">
                 <input id="pya-webhook-debug-sync" type="checkbox" checked />
                 <small>Modo Debug (<code>?sync=1</code>)</small>
@@ -5552,7 +5552,7 @@
 
             <div style="margin-top:18px; padding-top:16px; border-top:2px dashed #e2e8f0;">
               <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-                <h4 style="margin:0; font-size:15px; color:#0f172a;">?? Costos y Margen</h4>
+                <h4 style="margin:0; font-size:15px; color:#0f172a;">Costos y Margen</h4>
                 <span class="small" id="edit-prod-cost-mode-badge" style="background:#eef2ff; color:#3730a3; padding:3px 8px; border-radius:999px; font-weight:700;">Costo Fijo</span>
               </div>
               <div class="edit-form-group">
@@ -5584,21 +5584,21 @@
                 <div style="width:100%;"><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="edit-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
                 <div style="width:100%;"><span class="small" style="color:#64748b;">Margen real:</span> <b id="edit-prod-margin-real">0%</b> <span class="small" style="color:#64748b;">· sobre el precio final</span></div>
                 <div id="edit-prod-suggested-block" style="width:100%; padding-top:6px; border-top:1px dashed #cbd5e1; display:none; flex-direction:column; gap:4px;">
-                  <div><span class="small" style="color:#64748b;">?? Precio (Margen sobre precio):</span> <b id="edit-prod-price-suggested" style="color:#1d4ed8;">-</b>
+                  <div><span class="small" style="color:#64748b;">Precio (Margen sobre precio):</span> <b id="edit-prod-price-suggested" style="color:#1d4ed8;">-</b>
                     <span class="small" style="color:#64748b;">· de cada $100 cobrados, $X son ganancia</span>
                   </div>
-                  <div><span class="small" style="color:#64748b;">? Precio (Recargo/Markup):</span> <b id="edit-prod-price-markup" style="color:#15803d;">-</b>
+                  <div><span class="small" style="color:#64748b;">Precio (Recargo/Markup):</span> <b id="edit-prod-price-markup" style="color:#15803d;">-</b>
                     <span class="small" style="color:#64748b;">· le sumas X% a tu costo (el más intuitivo)</span>
                   </div>
                   <div class="small" style="color:#475569; padding-top:4px;">
-                    ?? Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
+                    Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
                   </div>
                 </div>
               </div>
               <div id="edit-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
                   <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                    <h5 style="margin:0; font-size:14px; color:#0f172a;">?? Ingredientes / Escandallo</h5>
+                    <h5 style="margin:0; font-size:14px; color:#0f172a;">Ingredientes / Escandallo</h5>
                     <span class="small" style="background:#ecfeff; color:#0c4a6e; padding:2px 8px; border-radius:999px; font-weight:700;" id="edit-prod-recipe-total-badge">$0</span>
                     <label class="small" style="display:inline-flex; align-items:center; gap:4px; color:#334155; cursor:pointer;">
                       <input type="checkbox" id="edit-prod-recipe-auto-sync" checked> Sincronizar a Costo/Margen
@@ -6395,7 +6395,7 @@
         <div id="tdm-qr-display" style="margin-top: 15px; display: none; flex-direction: column; align-items: center; gap: 8px;">
             <div id="tdm-qr-code"></div>
             <a id="tdm-qr-link" href="#" target="_blank" style="font-size: 12px; color: #2563eb;">Abrir enlace</a>
-            <button id="tdm-print-qr" style="background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 5px;">?? Imprimir QR</button>
+            <button id="tdm-print-qr" style="background: #10b981; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 5px;">Imprimir QR</button>
         </div>
       </div>
 
@@ -19990,7 +19990,7 @@
           const firstChanges = (Array.isArray(data.actions) ? data.actions.slice(0, 6) : []).map(a => {
             if (!a) return '';
             if (a.action === 'update') {
-              return `Fila ${a.row}: Actualizar ? Costo $${a.from && a.from.cost_price} ? $${a.to && a.to.cost_price}`;
+              return `Fila ${a.row}: Actualizar Costo $${a.from && a.from.cost_price} → $${a.to && a.to.cost_price}`;
             }
             if (a.action === 'create') {
               return `Fila ${a.row}: Crear producto nuevo "${String(a.name || '').slice(0, 28)}"`;
@@ -20115,7 +20115,7 @@
     }
     function costsBuildDelta(cur, prev, lowerIsBetter, isMarginPp) {
       if (prev == null || (isNaN(Number(prev)) && !isMarginPp)) {
-        return `<span class="costs-delta flat">? Sin comparar</span>`;
+        return `<span class="costs-delta flat">Sin comparar</span>`;
       }
       if (isMarginPp) {
         // Diferencia en puntos porcentuales
@@ -20125,7 +20125,7 @@
         return `<span class="costs-delta ${info.cls}" title="Margen período anterior: ${Number(prev || 0).toFixed(1)} pp">${info.arrow} ${info.sign}${Math.abs(dRounded)} pp</span>`;
       }
       const pct = costsDeltaPct(cur, prev);
-      if (pct == null) return `<span class="costs-delta flat">? Sin comparar</span>`;
+      if (pct == null) return `<span class="costs-delta flat">Sin comparar</span>`;
       const info = costsDeltaClassFromVals(cur, prev, !!lowerIsBetter);
       const diff = Number(cur || 0) - Number(prev || 0);
       const prefix = lowerIsBetter
@@ -20162,15 +20162,15 @@
         {
           label: 'Ventas Netas',
           value: `$${costsIntl$(netSales)}`,
-          sub: (netSales > 0 && blindRev > 0) ? `? $${costsIntl$(blindRev)} vendidos sin costo cargado` : `${orderCount} pedidos entregados`,
+          sub: (netSales > 0 && blindRev > 0) ? `$${costsIntl$(blindRev)} vendidos sin costo cargado` : `${orderCount} pedidos entregados`,
           accent: 'accent-sales',
           deltaHtml: costsBuildDelta(cur.net_sales, prv.net_sales, false)
         },
         {
-          label: (blindCostsWarn ? '? CMV (Costo Vendido)' : 'CMV (Costo Vendido)'),
+          label: (blindCostsWarn ? 'CMV (Costo Vendido)' : 'CMV (Costo Vendido)'),
           value: `$${costsIntl$(cogs)}`,
           sub: (blindCostsWarn
-                 ? (extFee > 0 ? `? Costo estimado NO cargado  ·  Margen Bruto 100% es FALSO. Cargar costos en Inventario` : `${withoutCost} productos sin costo  ·  Cargalos en Inventario`)
+                 ? (extFee > 0 ? `Costo estimado NO cargado  ·  Margen Bruto 100% es FALSO. Cargar costos en Inventario` : `${withoutCost} productos sin costo  ·  Cargalos en Inventario`)
                  : ((cogs > 0 && netSales > 0) ? `= ${Math.round((cogs / netSales) * 100)}% de ventas` : (withoutCost > 0 ? `${withoutCost} productos sin costo` : ''))),
           accent: (blindCostsWarn ? 'accent-cancel' : 'accent-costs'),
           deltaHtml: costsBuildDelta(cur.total_cost_of_goods, prv.total_cost_of_goods, true)
@@ -20178,7 +20178,7 @@
         {
           label: 'Ganancia Bruta',
           value: `$${costsIntl$(gp)}`,
-          sub: (netSales > 0 && blindRev > 0) ? `No incluye $${costsIntl$(blindRev)} vendidos con costo 0` : (orderCount > 0 ? `? $${costsIntl$(orderCount ? gp / orderCount : 0)}/pedido` : ''),
+          sub: (netSales > 0 && blindRev > 0) ? `No incluye $${costsIntl$(blindRev)} vendidos con costo 0` : (orderCount > 0 ? `$${costsIntl$(orderCount ? gp / orderCount : 0)}/pedido` : ''),
           accent: 'accent-profit',
           deltaHtml: costsBuildDelta(cur.gross_profit, prv.gross_profit, false)
         },
@@ -20200,17 +20200,17 @@
           sub: (extFee > 0
                  ? (extFeePctCon != null && extFeePctCon > 0
                        ? `Contractual ${extFeePctCon.toFixed(1)}% · Efectiva ${(extFeePctEff != null ? extFeePctEff : 0).toFixed(1)}%${(grossOrdersTotal > 0 ? ' · Venta bruta $'+costsIntl$(grossOrdersTotal) : '')}`
-                       : `? ${((extFee / Math.max(1, netSales)) * 100).toFixed(1)}% de ventas${(grossOrdersTotal > 0 ? '  ·  Venta bruta $'+costsIntl$(grossOrdersTotal) : '')}`)
+                       : `${((extFee / Math.max(1, netSales)) * 100).toFixed(1)}% de ventas${(grossOrdersTotal > 0 ? '  ·  Venta bruta $'+costsIntl$(grossOrdersTotal) : '')}`)
                  : 'Sin comisiones en período'),
           accent: 'accent-cancel',
           deltaHtml: costsBuildDelta(cur.external_fee_total, prv.external_fee_total, true)
         },
         {
-          label: (blindCostsWarn ? '? Margen Real' : 'Margen Real'),
+          label: (blindCostsWarn ? 'Margen Real' : 'Margen Real'),
           value: `$${costsIntl$(realProfit)}`,
           sub: (blindCostsWarn
                  ? `= ${(rmPct != null ? rmPct.toFixed(1)+'%' : '-')} sobre ventas · ⚠ CMV ciego - Cargar costos en Inventario`
-                 : (rmPct != null ? `= ${rmPct.toFixed(1)}% sobre ventas · Bruta ? Comisiones` : 'Ganancia ? Comisión delivery')),
+                 : (rmPct != null ? `= ${rmPct.toFixed(1)}% sobre ventas · Bruta - Comisiones` : 'Ganancia - Comisión delivery')),
           accent: 'accent-profit',
           deltaHtml: costsBuildDelta(
             (cur.real_profit != null ? Number(cur.real_profit) : null),
@@ -20226,11 +20226,11 @@
           deltaHtml: costsBuildDelta(cur.order_count, prv.order_count, false)
         },
         {
-          label: (withoutCost > 0 ? `? Productos sin costo` : 'Productos sin costo'),
+          label: (withoutCost > 0 ? `Productos sin costo` : 'Productos sin costo'),
           value: `${costsIntl$(withoutCost)}`,
           sub: (withoutCost > 0
             ? `$${costsIntl$(blindRev)} ciegos - Cargalos en Inventario`
-            : 'Todos los productos tienen costo cargado ?'),
+            : 'Todos los productos tienen costo cargado.'),
           accent: (withoutCost > 0 ? 'accent-cancel' : 'accent-extra'),
           deltaHtml: ''
         }
@@ -20252,7 +20252,7 @@
     function costsRenderTopList(containerEl, items, type) {
       if (!containerEl) return;
       if (!Array.isArray(items) || items.length === 0) {
-        containerEl.innerHTML = `<div class="costs-meta-empty">Sin datos en el período. <br><br>?? Record·: cargar costos en Inventario y correr backfill para que los pedidos históricos aparezcan acá.</div>`;
+        containerEl.innerHTML = `<div class="costs-meta-empty">Sin datos en el período. <br><br>Record·: cargar costos en Inventario y correr backfill para que los pedidos históricos aparezcan acá.</div>`;
         return;
       }
       const maxVal = Math.max(1, ...items.map(it => Number(it.gross_profit || it.revenue || it.qty || 1)));
@@ -20274,7 +20274,7 @@
             <div style="min-width:0;">
               <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
                 <div style="font-weight:700; color:#0f172a; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;" title="${costsEscapeHtml(String(it.name || it.product_name || ''))}">${costsEscapeHtml(name)}</div>
-                ${!hasCost ? '<span title="Al menos una venta se realiz· con costo 0" style="padding:1px 6px; background:#fff7ed; color:#9a3412; border-radius:999px; font-size:10px; font-weight:800;">? COSTO PARCIAL</span>' : ''}
+                ${!hasCost ? '<span title="Al menos una venta se realiz· con costo 0" style="padding:1px 6px; background:#fff7ed; color:#9a3412; border-radius:999px; font-size:10px; font-weight:800;">COSTO PARCIAL</span>' : ''}
                 <span class="costs-margin-pill costs-margin-${mcCls}">${mTxt}</span>
               </div>
               <div class="small" style="color:#64748b; margin-top:3px;">${qty} unid.  ·  Vta $${costsIntl$(rev)}  ·  CMV $${costsIntl$(Math.max(0, rev - gp))}</div>
@@ -20353,7 +20353,7 @@
       const cards = [];
       if (L.best_profit) {
         cards.push(`<div class="analytics-block" style="height:auto;">
-          <h3>?? Producto más rentable</h3>
+          <h3>Producto más rentable</h3>
           <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.best_profit.name || L.best_profit.product_name || '').slice(0, 40) || '-')}</div>
           <div style="margin-top:6px; font-size:14px; font-weight:800; color:#15803d;">+$${costsIntl$(Number(L.best_profit.gross_profit || 0))}</div>
           <div class="small" style="color:#64748b; margin-top:2px;">${Number(L.best_profit.qty || 0)} unid.  ·  Margen ${L.best_profit.gross_margin_percent != null ? Number(L.best_profit.gross_margin_percent).toFixed(1) + '%' : '-'}</div>
@@ -20361,7 +20361,7 @@
       }
       if (L.worst_margin) {
         cards.push(`<div class="analytics-block" style="height:auto;">
-          <h3>?? Peor margen (?1 venta)</h3>
+          <h3>Peor margen (≤1 venta)</h3>
           <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.worst_margin.name || L.worst_margin.product_name || '').slice(0, 40) || '-')}</div>
           <div style="margin-top:6px;"><span class="costs-margin-pill costs-margin-${costsMarginClass(L.worst_margin.gross_margin_percent)}">${L.worst_margin.gross_margin_percent != null ? Number(L.worst_margin.gross_margin_percent).toFixed(1) + '%' : '-'}</span></div>
           <div class="small" style="color:#64748b; margin-top:4px;">$${costsIntl$(Number(L.worst_margin.revenue || 0))} vendidos  ·  Ganancia $${costsIntl$(Number(L.worst_margin.gross_profit || 0))}</div>
@@ -20369,7 +20369,7 @@
       }
       if (L.best_category) {
         cards.push(`<div class="analytics-block" style="height:auto;">
-          <h3>?? Mejor categoría</h3>
+          <h3>Mejor categoría</h3>
           <div style="font-weight:800; font-size:16px; color:#0f172a;">${costsEscapeHtml(String(L.best_category.category || L.best_category.group_name || '').slice(0, 40) || '-')}</div>
           <div style="margin-top:6px; font-size:14px; font-weight:800; color:#15803d;">+$${costsIntl$(Number(L.best_category.gross_profit || 0))}</div>
           <div class="small" style="color:#64748b; margin-top:2px;">Margen ${L.best_category.gross_margin_percent != null ? Number(L.best_category.gross_margin_percent).toFixed(1) + '%' : '-'}  ·  $${costsIntl$(Number(L.best_category.revenue || 0))} vendidos</div>
@@ -20450,9 +20450,9 @@
       }
       if (costsProdNav) {
         const btns = [];
-        btns.push(`<button ${idx <= 0 ? 'disabled' : ''} data-costs-nav="prev" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx <= 0 ? 'not-allowed' : 'pointer'}; color:#334155;">? Anterior</button>`);
+        btns.push(`<button ${idx <= 0 ? 'disabled' : ''} data-costs-nav="prev" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx <= 0 ? 'not-allowed' : 'pointer'}; color:#334155;">Anterior</button>`);
         btns.push(`<span class="small" style="align-self:center; color:#475569; padding:0 4px;">Pág. ${idx + 1} / ${pages}</span>`);
-        btns.push(`<button ${idx >= pages - 1 ? 'disabled' : ''} data-costs-nav="next" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx >= pages - 1 ? 'not-allowed' : 'pointer'}; color:#334155;">Siguiente ?</button>`);
+        btns.push(`<button ${idx >= pages - 1 ? 'disabled' : ''} data-costs-nav="next" style="padding:6px 10px; border-radius:8px; border:1px solid #d1d5db; background:#fff; cursor:${idx >= pages - 1 ? 'not-allowed' : 'pointer'}; color:#334155;">Siguiente</button>`);
         costsProdNav.innerHTML = btns.join('');
         costsProdNav.querySelectorAll('button[data-costs-nav]').forEach(b => {
           b.addEventListener('click', () => {
@@ -20596,7 +20596,7 @@
         costsRenderProductsTable(Array.isArray(data.by_product) ? data.by_product : []);
       } catch (e) {
         console.error(e);
-        if (costsProdTbody) costsProdTbody.innerHTML = `<tr><td colspan="7" class="costs-meta-empty">? No se pudo conectar con el servidor de costos: ${costsEscapeHtml(e.message || 'error de red')}.</td></tr>`;
+        if (costsProdTbody) costsProdTbody.innerHTML = `<tr><td colspan="7" class="costs-meta-empty">No se pudo conectar con el servidor de costos: ${costsEscapeHtml(e.message || 'error de red')}.</td></tr>`;
       }
     }
 
@@ -20687,10 +20687,10 @@
         if (!pyaBanner) return;
         pyaBanner.style.display = 'block';
         const palette = {
-          ok:     ['#dcfce7', '#166534', '? '],
-          warn:   ['#fef9c3', '#854d0e', '?? '],
-          error:  ['#fee2e2', '#991b1b', '? '],
-          info:   ['#dbeafe', '#1e40af', '?? ']
+          ok:     ['#dcfce7', '#166534', ''],
+          warn:   ['#fef9c3', '#854d0e', ''],
+          error:  ['#fee2e2', '#991b1b', ''],
+          info:   ['#dbeafe', '#1e40af', '']
         };
         const [bg, fg, prefix] = palette[kind] || palette.info;
         pyaBanner.style.background = bg;
@@ -20800,17 +20800,17 @@
             if (r.status === 404 && msg.toLowerCase().includes('ruta de api no válida')) throw new Error('Módulo Delivery no disponible todavía · Esperá a que termine el deploy Render.');
             throw new Error(`HTTP ${r.status}${msg ? '  ·  ' + msg : ''}`);
           }
-          pyaShowBanner('ok', `? Guardado OK · Habilitado=${enabled ? 'Sí' : 'NO'} · Comisión=${commission}% · Timeout=${timeout}s  ·  Base=${baseUrl}`);
+          pyaShowBanner('ok', `Guardado OK · Habilitado=${enabled ? 'Sí' : 'NO'} · Comisión=${commission}% · Timeout=${timeout}s  ·  Base=${baseUrl}`);
           pyaRebuildWebhookUrl();
         } catch (e) {
-          pyaShowBanner('error', `? Error guardando: ${String(e && e.message ? e.message : e)}`);
+          pyaShowBanner('error', `Error guardando: ${String(e && e.message ? e.message : e)}`);
         }
       }
 
       async function pyaTest() {
         pyaHideBanner();
         try {
-          pyaShowBanner('info', '?? Probando conexión a API PedidosYa. (esto demora hasta 20s)');
+          pyaShowBanner('info', 'Probando conexión a API PedidosYa. (esto demora hasta 20s)');
           const slug = encodeURIComponent(pyaTenantSlug());
           const r = await pyaFetchJson(`/api/delivery/config/${slug}/test`, { method: 'POST', body: '{}' });
           const j = await r.json().catch(() => ({}));
@@ -20835,7 +20835,7 @@
           if (st === 'ok' || (j.connectivity_ok && !(j.http_status === 401 || j.http_status === 403))) {
             pyaShowBanner('ok', `Conectividad OK  ·  ${httpStatus}${latency}${mask}${authMsg}${note}`);
           } else if (j.status === 'skip') {
-            pyaShowBanner('warn', `? Skip: ${String(j.message || j.reason || '')}. Habilitá la integración y guardá antes de probar.`);
+            pyaShowBanner('warn', `Skip: ${String(j.message || j.reason || '')}. Habilitá la integración y guardá antes de probar.`);
           } else if (j.connectivity_ok && (j.http_status === 401 || j.http_status === 403)) {
             pyaShowBanner('warn', `Conectividad OK pero auth falló · ${httpStatus}${latency}${mask}${authMsg}${note}`);
           } else {
@@ -20843,7 +20843,7 @@
             pyaShowBanner('error', `Conexión fallida · ${httpStatus || 'timeout/red'}${latency}${mask}${errMsg}${note}`);
           }
         } catch (e) {
-          pyaShowBanner('error', `? Error probando: ${String(e && e.message ? e.message : e)}`);
+          pyaShowBanner('error', `Error probando: ${String(e && e.message ? e.message : e)}`);
         }
       }
 
@@ -20855,7 +20855,7 @@
           if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
             await navigator.clipboard.writeText(String(pyaWhUrl.value || ''));
           }
-          pyaShowBanner('ok', '?? Webhook URL copiada al portapapeles. Pegala en el Portal PedidosYa ? Webhooks.');
+          pyaShowBanner('ok', 'Webhook URL copiada al portapapeles. Pegala en el Portal PedidosYa → Webhooks.');
         } catch (e) {
           pyaShowBanner('warn', `No se pudo copiar automáticamente: ${String(e && e.message ? e.message : e)}. Seleccioná manualmente y Ctrl+C.`);
         }
@@ -21218,7 +21218,7 @@
                     const projected = Math.round(currentSales * (totalDurMs / actualDurMs));
                     const currentTickets = Number(summary.delivered_orders || 0);
                     const projectedTickets = Math.round(currentTickets * (totalDurMs / actualDurMs));
-                    const paceLine = `?? Proyección a cierre: ${formatMoney(projected)} (~${projectedTickets} pedidos · basado en ritmo actual)`;
+                    const paceLine = `Proyección a cierre: ${formatMoney(projected)} (~${projectedTickets} pedidos · basado en ritmo actual)`;
                     projectionLine = `<div class="small" style="margin: 10px 0 0; grid-column: 1 / -1; padding: 8px 12px; border-radius: 10px; background: #fef3c7; color: #92400e; font-weight: 700;">${paceLine}</div>`;
                   }
                 }
@@ -21350,7 +21350,7 @@
             }
           } catch (_) { showTruncBadge = truncatedToNow; }
           const truncatedBadge = showTruncBadge
-            ? `<div style="margin-bottom:8px;"><span class="analytics-badge" style="background:#fff7ed;color:#9a3412;">? Período actual truncado a la hora actual  ·  comparado contra mismo horario del período anterior</span></div>`
+            ? `<div style="margin-bottom:8px;"><span class="analytics-badge" style="background:#fff7ed;color:#9a3412;">Período actual truncado a la hora actual  ·  comparado contra mismo horario del período anterior</span></div>`
             : '';
           const deltaAvgPct = Number(comparison.delta_avg_ticket_percent || 0);
           const currentPeriodLine = `
@@ -21561,7 +21561,7 @@
         const rangeFrom = currentFrom ? formatARDate(currentFrom) : '';
         const rangeTo = currentTo ? formatARDate(currentTo) : '';
         const dailyRangeEl = document.getElementById('daily-range');
-        const rangeText = (rangeFrom || rangeTo) ? `Rango: ${rangeFrom || '-'} ? ${rangeTo || 'ahora'}` : '';
+        const rangeText = (rangeFrom || rangeTo) ? `Rango: ${rangeFrom || '-'} → ${rangeTo || 'ahora'}` : '';
         if (dailyRangeEl) dailyRangeEl.textContent = rangeText;
         el.innerHTML = `
           <div class="metrics-grid">
@@ -28263,7 +28263,7 @@
 
         <div style="margin-top:18px; padding-top:16px; border-top:2px dashed #e2e8f0;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
-            <h4 style="margin:0; font-size:15px; color:#0f172a;">?? Costos y Margen</h4>
+            <h4 style="margin:0; font-size:15px; color:#0f172a;">Costos y Margen</h4>
             <span class="small" id="create-prod-cost-mode-badge" style="background:#eef2ff; color:#3730a3; padding:3px 8px; border-radius:999px; font-weight:700;">Costo Fijo</span>
           </div>
           <div class="edit-form-group">
@@ -28295,21 +28295,21 @@
             <div style="width:100%;"><span class="small" style="color:#64748b;">Ganancia/Unidad:</span> <b id="create-prod-profit-unit" style="color:#2e7d32;">$0</b></div>
             <div style="width:100%;"><span class="small" style="color:#64748b;">Margen real:</span> <b id="create-prod-margin-real">0%</b> <span class="small" style="color:#64748b;">· sobre el precio final</span></div>
             <div id="create-prod-suggested-block" style="width:100%; padding-top:6px; border-top:1px dashed #cbd5e1; display:none; flex-direction:column; gap:4px;">
-              <div><span class="small" style="color:#64748b;">?? Precio (Margen sobre precio):</span> <b id="create-prod-price-suggested" style="color:#1d4ed8;">-</b>
+              <div><span class="small" style="color:#64748b;">Precio (Margen sobre precio):</span> <b id="create-prod-price-suggested" style="color:#1d4ed8;">-</b>
                 <span class="small" style="color:#64748b;">· de cada $100 cobrados, $X son ganancia</span>
               </div>
-              <div><span class="small" style="color:#64748b;">? Precio (Recargo/Markup):</span> <b id="create-prod-price-markup" style="color:#15803d;">-</b>
+              <div><span class="small" style="color:#64748b;">Precio (Recargo/Markup):</span> <b id="create-prod-price-markup" style="color:#15803d;">-</b>
                 <span class="small" style="color:#64748b;">· le sumas X% a tu costo (el más intuitivo)</span>
               </div>
               <div class="small" style="color:#475569; padding-top:4px;">
-                ?? Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
+                Toca <b>"Calc. Margen"</b> para aplicar el <b>Margen sobre Precio</b> (estándar gastronómico) al campo Precio.
               </div>
             </div>
           </div>
           <div id="create-prod-recipe-block" style="margin-top:14px; padding:12px 14px; background:#fafafa; border:1px solid #e5e7eb; border-radius:12px; display:none;">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                <h5 style="margin:0; font-size:14px; color:#0f172a;">?? Ingredientes / Escandallo</h5>
+                <h5 style="margin:0; font-size:14px; color:#0f172a;">Ingredientes / Escandallo</h5>
                 <span class="small" style="background:#ecfeff; color:#0c4a6e; padding:2px 8px; border-radius:999px; font-weight:700;" id="create-prod-recipe-total-badge">$0</span>
                 <label class="small" style="display:inline-flex; align-items:center; gap:4px; color:#334155; cursor:pointer;">
                   <input type="checkbox" id="create-prod-recipe-auto-sync" checked> Sincronizar a Costo/Margen
