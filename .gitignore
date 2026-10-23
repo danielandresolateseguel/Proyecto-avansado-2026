@@ -2,9 +2,23 @@ __pycache__/
 *.pyc
 *.log
 *.db
+*.sqlite
+*.sqlite3
 .env
 debug_*
 fix_*
 *.txt
 *.bat
 Imagenes/uploads/
+
+# Backups, parches y artefactos locales
+*.bak
+*.bak-*
+*.orig
+*.rej
+*.zip
+$null
+instance/
+.pytest_cache/
+.DS_Store
+Thumbs.db

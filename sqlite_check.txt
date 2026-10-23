@@ -1,2 +1,0 @@
-Start
-sqlite3 ok
