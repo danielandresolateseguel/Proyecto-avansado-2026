@@ -8,6 +8,21 @@ import re
 bp = Blueprint('public', __name__)
 PUBLIC_MENU_BASE_FILES = ('public-menu-base.html', 'gastronomia-local1.html')
 
+# Extensiones que se pueden servir desde la raiz del proyecto (static_folder='../').
+# Bloquea .db, .py, .env, .log, .bak y cualquier otro archivo sensible por el catch-all /<path:path>.
+ALLOWED_STATIC_EXTENSIONS = {
+    # Estructura y estilos
+    '.html', '.htm', '.css', '.js', '.mjs', '.json', '.map', '.webmanifest', '.xml',
+    # Imagenes
+    '.png', '.jpg', '.jpeg', '.jfif', '.gif', '.webp', '.avif', '.svg', '.ico', '.bmp',
+    # Fuentes
+    '.woff', '.woff2', '.ttf', '.otf', '.eot',
+    # Media
+    '.mp4', '.webm', '.ogg', '.mp3', '.wav',
+    # Documentos
+    '.pdf',
+}
+
 def _no_store(resp):
     try:
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -388,6 +403,10 @@ def static_proxy(path):
     # Evitar capturar prefijos de API que no hayan sido manejados por otros blueprints
     if path.startswith('api/'):
         return jsonify({'error': 'Ruta de API no válida'}), 404
+    # Whitelist de extensiones: la raiz del proyecto es el static_folder real, asi que
+    # sin este filtro quedaban expuestos orders.db, scripts .py, .env, logs, backups, etc.
+    if os.path.splitext(path)[1].lower() not in ALLOWED_STATIC_EXTENSIONS:
+        return jsonify({'error': 'Recurso no encontrado'}), 404
     try:
         resp = send_from_directory(current_app.static_folder, path)
         if path.endswith('.html'):
