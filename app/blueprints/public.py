@@ -1,6 +1,6 @@
 from flask import Blueprint, send_from_directory, current_app, jsonify, make_response, request
 from app.database import get_db
-from app.utils import get_cached_tenant_config
+from app.utils import get_cached_tenant_config, compute_order_availability
 import html
 import os
 import re
@@ -287,6 +287,19 @@ def index():
 @bp.route('/api/ping')
 def ping():
     return jsonify({'pong': True})
+
+
+@bp.route('/api/public/order_availability')
+def public_order_availability():
+    """Disponibilidad de pedidos: si el local está abierto y qué franjas se pueden programar."""
+    slug = request.args.get('tenant_slug') or request.args.get('slug') or 'gastronomia-local1'
+    try:
+        availability = compute_order_availability(slug, get_cached_tenant_config(slug))
+    except Exception:
+        return jsonify({'error': 'no disponible'}), 500
+    resp = jsonify(availability)
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
 
 @bp.route('/api/routes')
 def routes_list():

@@ -3,13 +3,14 @@ import time
 import json
 import hashlib
 import io
+import math
 import zipfile
 import unicodedata
 import re
 import os
 import xml.etree.ElementTree as ET
 from xml.sax.saxutils import escape as _xml_escape
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from flask import session, request
 from app.database import get_db
 
@@ -610,6 +611,286 @@ def normalize_recipe_breakdown(raw):
     return recipe
 
 
+# ---------------------------------------------------------------------------
+# Disponibilidad de pedidos / programación de pedidos (carta online)
+# ---------------------------------------------------------------------------
+
+DAY_KEYS = ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun')
+_WEEKDAY_LABELS = ('Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom')
+
+_HOURS_DAYS_MAP = {
+    'mon': 'mon', 'monday': 'mon', 'lunes': 'mon', 'lun': 'mon',
+    'tue': 'tue', 'tuesday': 'tue', 'martes': 'tue', 'mar': 'tue',
+    'wed': 'wed', 'wednesday': 'wed', 'miercoles': 'wed', 'miércoles': 'wed', 'mie': 'wed', 'mié': 'wed',
+    'thu': 'thu', 'thursday': 'thu', 'jueves': 'thu', 'jue': 'thu',
+    'fri': 'fri', 'friday': 'fri', 'viernes': 'fri', 'vie': 'fri',
+    'sat': 'sat', 'saturday': 'sat', 'sabado': 'sat', 'sábado': 'sat', 'sab': 'sat', 'sáb': 'sat',
+    'sun': 'sun', 'sunday': 'sun', 'domingo': 'sun', 'dom': 'sun',
+}
+
+
+def _parse_hours_intervals(value):
+    out = []
+    if isinstance(value, list):
+        for it in value:
+            if isinstance(it, list) and len(it) >= 2 and it[0] and it[1]:
+                out.append([str(it[0]), str(it[1])])
+            elif isinstance(it, str) and '-' in it:
+                parts = [p.strip() for p in it.split('-') if p.strip()]
+                if len(parts) >= 2:
+                    out.append([parts[0], parts[1]])
+    elif isinstance(value, str):
+        for seg in [s.strip() for s in value.split(',') if s.strip()]:
+            if '-' in seg:
+                a, b = [p.strip() for p in seg.split('-', 1)]
+                if a and b:
+                    out.append([a, b])
+    return out
+
+
+def normalize_opening_hours(raw):
+    """Normaliza horarios de apertura a {mon..sun: [[inicio, fin], ...]}."""
+    if isinstance(raw, dict):
+        res = {}
+        for k, v in raw.items():
+            key = _HOURS_DAYS_MAP.get(str(k).strip().lower())
+            if not key:
+                continue
+            parsed = _parse_hours_intervals(v)
+            if parsed:
+                res[key] = parsed
+        return res
+    if isinstance(raw, str):
+        parsed = _parse_hours_intervals(raw)
+        if parsed:
+            return {key: parsed for key in DAY_KEYS}
+    return {}
+
+
+def _hhmm_to_minutes(value):
+    parts = str(value or '').strip().split(':')
+    if len(parts) < 2:
+        return None
+    try:
+        hours = int(parts[0])
+        minutes = int(parts[1])
+    except Exception:
+        return None
+    if hours < 0 or hours > 24 or minutes < 0 or minutes > 59:
+        return None
+    return hours * 60 + minutes
+
+
+def resolve_timezone(name):
+    tz_name = str(name or '').strip() or 'America/Argentina/Mendoza'
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(tz_name)
+    except Exception:
+        # Fallback (Windows sin tzdata): Argentina no aplica horario de verano.
+        return timezone(timedelta(hours=-3))
+
+
+def get_order_settings(cfg):
+    """Configuración de pedidos del comercio con valores por defecto seguros."""
+    cfg = cfg if isinstance(cfg, dict) else {}
+    raw = cfg.get('order_settings') if isinstance(cfg.get('order_settings'), dict) else {}
+
+    def _int(key, default, lo, hi):
+        try:
+            val = int(raw.get(key))
+        except Exception:
+            val = default
+        return max(lo, min(hi, val))
+
+    types = []
+    types_raw = raw.get('schedule_order_types')
+    if isinstance(types_raw, list):
+        for item in types_raw:
+            value = str(item or '').strip().lower()
+            if value and value not in types:
+                types.append(value)
+    if not types:
+        types = ['direccion', 'espera']
+    return {
+        'prep_minutes': _int('prep_minutes', 30, 0, 240),
+        'slot_step_minutes': _int('slot_step_minutes', 30, 5, 240),
+        'max_days_ahead': _int('max_days_ahead', 2, 1, 2),
+        'block_when_closed': bool(raw.get('block_when_closed', True)),
+        'allow_schedule_when_open': bool(raw.get('allow_schedule_when_open', False)),
+        'schedule_order_types': types,
+    }
+
+
+def _tenant_opening_hours(cfg):
+    cfg = cfg if isinstance(cfg, dict) else {}
+    meta = cfg.get('meta') if isinstance(cfg.get('meta'), dict) else {}
+    branding = meta.get('branding') if isinstance(meta.get('branding'), dict) else {}
+    contact = branding.get('contact') if isinstance(branding.get('contact'), dict) else {}
+    return normalize_opening_hours(cfg.get('opening_hours') or contact.get('opening_hours') or {})
+
+
+def get_tenant_timezone_name(cfg):
+    cfg = cfg if isinstance(cfg, dict) else {}
+    meta = cfg.get('meta') if isinstance(cfg.get('meta'), dict) else {}
+    branding = meta.get('branding') if isinstance(meta.get('branding'), dict) else {}
+    contact = branding.get('contact') if isinstance(branding.get('contact'), dict) else {}
+    return str(cfg.get('timezone') or contact.get('timezone') or 'America/Argentina/Mendoza').strip()
+
+
+def _build_opening_windows(hours, tz, reference_local, days_back, days_ahead):
+    windows = []
+    for offset in range(-abs(days_back), days_ahead):
+        day_date = (reference_local + timedelta(days=offset)).date()
+        key = DAY_KEYS[day_date.weekday()]
+        for interval in hours.get(key) or []:
+            start_min = _hhmm_to_minutes(interval[0])
+            end_min = _hhmm_to_minutes(interval[1])
+            if start_min is None or end_min is None:
+                continue
+            start_min = start_min % (24 * 60)
+            start = datetime.combine(day_date, datetime.min.time()).replace(tzinfo=tz) + timedelta(minutes=start_min)
+            duration = (end_min - start_min) if end_min > start_min else (24 * 60 - start_min + end_min)
+            if duration <= 0:
+                duration = 24 * 60
+            windows.append((start, start + timedelta(minutes=duration)))
+    windows.sort(key=lambda w: w[0])
+    return windows
+
+
+def _slot_label(moment, reference_local):
+    day_delta = (moment.date() - reference_local.date()).days
+    if day_delta == 0:
+        prefix = 'Hoy'
+    elif day_delta == 1:
+        prefix = 'Mañana'
+    else:
+        prefix = f'{_WEEKDAY_LABELS[moment.weekday()]} {moment.strftime("%d/%m")}'
+    return f'{prefix} {moment.strftime("%H:%M")}'
+
+
+def _availability_payload(slug, tz_name, settings, has_hours, is_open, can_order_now, next_opening, closing_at, slots):
+    return {
+        'tenant_slug': slug,
+        'timezone': tz_name,
+        'has_hours': has_hours,
+        'is_open': bool(is_open),
+        'can_order_now': bool(can_order_now),
+        'block_when_closed': bool(settings.get('block_when_closed')),
+        'allow_schedule_when_open': bool(settings.get('allow_schedule_when_open')),
+        'schedule_order_types': list(settings.get('schedule_order_types') or []),
+        'prep_minutes': int(settings.get('prep_minutes') or 0),
+        'slot_step_minutes': int(settings.get('slot_step_minutes') or 0),
+        'max_days_ahead': int(settings.get('max_days_ahead') or 0),
+        'next_opening': next_opening.isoformat() if next_opening else None,
+        'closing_at': closing_at.isoformat() if closing_at else None,
+        'slots': slots,
+    }
+
+
+def _build_slots(windows, now_local, step, prep):
+    slots = []
+    for window_start, window_end in windows:
+        if window_end <= now_local:
+            continue
+        base = window_start + timedelta(minutes=prep)
+        last = window_end - timedelta(minutes=step)
+        if last < base:
+            continue
+        cursor = max(base, now_local)
+        if cursor > base:
+            delta_minutes = (cursor - base).total_seconds() / 60.0
+            cursor = base + timedelta(minutes=math.ceil(delta_minutes / step) * step)
+        while cursor <= last and len(slots) < 300:
+            slots.append({
+                'iso': cursor.astimezone(timezone.utc).isoformat(),
+                'local': cursor.strftime('%H:%M'),
+                'date': cursor.date().isoformat(),
+                'label': _slot_label(cursor, now_local),
+            })
+            cursor += timedelta(minutes=step)
+    return slots
+
+
+def compute_order_availability(slug, cfg=None, now=None):
+    """Calcula si el local está abierto, hasta cuándo y qué franjas se pueden programar."""
+    if cfg is None:
+        try:
+            cfg = get_cached_tenant_config(slug) or {}
+        except Exception:
+            cfg = {}
+    if not isinstance(cfg, dict):
+        cfg = {}
+    settings = get_order_settings(cfg)
+    hours = _tenant_opening_hours(cfg)
+    tz_name = get_tenant_timezone_name(cfg)
+    tz = resolve_timezone(tz_name)
+
+    now_utc = now or datetime.now(timezone.utc)
+    if now_utc.tzinfo is None:
+        now_utc = now_utc.replace(tzinfo=timezone.utc)
+    now_local = now_utc.astimezone(tz)
+
+    # Sin horarios configurados no bloqueamos nada: el comercio se asume siempre abierto.
+    if not hours:
+        return _availability_payload(slug, tz_name, settings, False, True, True, None, None, [])
+
+    step = settings['slot_step_minutes']
+    prep = settings['prep_minutes']
+    horizon = max(int(settings['max_days_ahead'] or 2), 1)
+    schedule_cutoff_local = now_local + timedelta(hours=(24 * horizon))
+    scan_days_ahead = horizon + 2
+
+    windows = _build_opening_windows(hours, tz, now_local, 1, scan_days_ahead)
+    slots = _build_slots(windows, now_local, step, prep)
+    filtered_slots = []
+    for slot in slots:
+        try:
+            slot_dt = datetime.fromisoformat(str(slot.get('iso') or '').replace('Z', '+00:00')).astimezone(tz)
+        except Exception:
+            continue
+        if slot_dt <= schedule_cutoff_local:
+            filtered_slots.append(slot)
+    slots = filtered_slots
+
+    is_open = any(start <= now_local < end for start, end in windows)
+    closing_at = None
+    current = [(start, end) for start, end in windows if start <= now_local < end]
+    if current:
+        closing_at = min(end for _, end in current)
+    future = [(start, end) for start, end in windows if start > now_local]
+    next_opening = future[0][0] if future else (min((start for start, _ in current), default=None))
+
+    return _availability_payload(
+        slug, tz_name, settings, True,
+        is_open, is_open, next_opening if not is_open else None, closing_at, slots
+    )
+
+
+def validate_scheduled_slot(availability, requested_iso):
+    """Devuelve (datetime UTC, '') si la franja pedida sigue siendo válida; si no (None, error)."""
+    raw = str(requested_iso or '').strip()
+    if not raw:
+        return None, 'Elegí un horario para tu pedido.'
+    try:
+        requested = datetime.fromisoformat(raw.replace('Z', '+00:00'))
+    except Exception:
+        return None, 'El horario elegido no es válido.'
+    if requested.tzinfo is None:
+        requested = requested.replace(tzinfo=timezone.utc)
+    requested_utc = requested.astimezone(timezone.utc).replace(second=0, microsecond=0)
+    for slot in availability.get('slots') or []:
+        try:
+            slot_dt = datetime.fromisoformat(str(slot.get('iso') or '').replace('Z', '+00:00'))
+        except Exception:
+            continue
+        if slot_dt.tzinfo is None:
+            slot_dt = slot_dt.replace(tzinfo=timezone.utc)
+        if abs((slot_dt - requested_utc).total_seconds()) < 60:
+            return slot_dt.astimezone(timezone.utc), ''
+    return None, 'Ese horario ya no está disponible. Elegí otra franja.'
+
+
 def apply_recipe_to_product_fields(recipe, current_fields=None):
     current_fields = current_fields or {}
     updates = {}
@@ -628,4 +909,3 @@ def apply_recipe_to_product_fields(recipe, current_fields=None):
             margin = int(round(((pr - cp) / float(pr)) * 100)) if pr else 0
             updates['margin_percent'] = max(0, min(1000, margin))
     return updates
-

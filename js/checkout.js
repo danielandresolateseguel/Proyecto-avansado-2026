@@ -204,6 +204,38 @@ export async function handleCheckout() {
     const esperaName = (document.getElementById('espera-name')?.value || '').trim();
     const esperaPhone = (document.getElementById('espera-phone')?.value || '').trim();
     const orderNotes = (document.getElementById('order-notes')?.value || '').trim();
+
+    // --- Programación de pedidos / local cerrado -----------------------------
+    const scheduleModeEl = document.querySelector('input[name="scheduleMode"]:checked');
+    let scheduleMode = scheduleModeEl ? String(scheduleModeEl.value || 'asap').trim().toLowerCase() : 'asap';
+    const slotSelectEl = document.getElementById('schedule-slot');
+    let scheduledFor = '';
+    if (scheduleMode === 'scheduled') {
+        scheduledFor = slotSelectEl ? String(slotSelectEl.value || '').trim() : '';
+        if (!scheduledFor) {
+            alert('Elegí el horario en que querés que esté listo tu pedido.');
+            return;
+        }
+    }
+    const availData = (__orderAvailabilityCache && __orderAvailabilityCache.data) ? __orderAvailabilityCache.data : null;
+    if (availData && availData.has_hours) {
+        if (availData.block_when_closed && !availData.is_open) {
+            const allowedTypes = Array.isArray(availData.schedule_order_types) ? availData.schedule_order_types : [];
+            if (!allowedTypes.includes(String(orderType || '').toLowerCase())) {
+                alert('El local está cerrado ahora. Para dejar un pedido programado elegí Delivery o Retiro en local.');
+                return;
+            }
+            if (scheduleMode !== 'scheduled') {
+                alert('El local está cerrado ahora. Programá tu pedido para más tarde.');
+                return;
+            }
+        } else if (availData.is_open && !availData.allow_schedule_when_open) {
+            scheduleMode = 'asap';
+            scheduledFor = '';
+        }
+    }
+    // -------------------------------------------------------------------------
+
     const whatsappEnabled = getWhatsappEnabled();
     const whatsappNumber = getWhatsappNumber();
     const latRaw = (document.getElementById('delivery-geo-lat')?.value || '').trim();
@@ -315,6 +347,13 @@ export async function handleCheckout() {
 
     let notas = '';
     if (orderNotes) notas = `\uD83D\uDCDD Detalle adicional: ${orderNotes}`;
+    if (scheduleMode === 'scheduled' && scheduledFor) {
+        const labelTxt = (slotSelectEl && slotSelectEl.selectedOptions && slotSelectEl.selectedOptions[0])
+            ? String(slotSelectEl.selectedOptions[0].textContent || '').trim()
+            : '';
+        const schedTxt = labelTxt || scheduledFor;
+        notas = (notas ? notas + '\n' : '') + `\u23F0 Pedido programado para estar listo: ${schedTxt}`;
+    }
 
     // 2. Get Template
     let template = getWhatsappTemplate();
@@ -365,7 +404,7 @@ ${notas}`;
     mensaje = mensaje.replace(/\n{3,}/g, '\n\n').trim();
 
     try {
-        await sendOrderToBackend(orderType, { mesaNumber, address, locality, contactPhone, esperaName, esperaPhone, deliveryName, orderNotes, geo }, totalNumber);
+        await sendOrderToBackend(orderType, { mesaNumber, address, locality, contactPhone, esperaName, esperaPhone, deliveryName, orderNotes, geo, scheduleMode, scheduledFor }, totalNumber);
 
         // 4. Send to WhatsApp (Use api.whatsapp.com directly to avoid redirect encoding issues)
         if (whatsappEnabled) {
@@ -441,7 +480,9 @@ async function sendOrderToBackend(orderType, data, total) {
             modifiers: it.modifiers || {},
             notes: it.notes || ''
         })),
-        order_notes: data.orderNotes
+        order_notes: data.orderNotes,
+        schedule_mode: data.scheduleMode === 'scheduled' ? 'scheduled' : 'asap',
+        scheduled_for: data.scheduleMode === 'scheduled' ? String(data.scheduledFor || '') : ''
     };
 
     const origin = window.location.origin || '';
@@ -804,6 +845,209 @@ function initDeliveryGeoUI() {
     });
 }
 
+// ---------------------------------------------------------------------------
+// Disponibilidad del local y programación de pedidos (carta online)
+// ---------------------------------------------------------------------------
+const ORDER_AVAILABILITY_TTL_MS = 60 * 1000;
+let __orderAvailabilityCache = { at: 0, slug: '', data: null };
+
+function resolveAvailabilitySlug() {
+    let slug = getBusinessSlug();
+    const alias = {
+        'gatrolocal1': 'gastronomia-local1',
+        'gastro-local1': 'gastronomia-local1',
+        'gastro1': 'gastronomia-local1'
+    };
+    return alias[slug] || slug || 'gastronomia-local1';
+}
+
+async function fetchOrderAvailability(force) {
+    const slug = resolveAvailabilitySlug();
+    const now = Date.now();
+    if (
+        !force
+        && __orderAvailabilityCache.data
+        && __orderAvailabilityCache.slug === slug
+        && (now - __orderAvailabilityCache.at) < ORDER_AVAILABILITY_TTL_MS
+    ) {
+        return __orderAvailabilityCache.data;
+    }
+    const origin = window.location.origin || '';
+    const API_BASE = /^file:/i.test(origin) ? 'http://127.0.0.1:8000' : origin;
+    try {
+        const url = new URL('/api/public/order_availability', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        url.searchParams.set('_', String(now));
+        const res = await fetch(url.toString(), { cache: 'no-store', credentials: 'same-origin' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        __orderAvailabilityCache = { at: now, slug, data };
+        return data;
+    } catch (e) {
+        console.warn('No se pudo obtener la disponibilidad del local:', e);
+        return __orderAvailabilityCache.data || null;
+    }
+}
+
+function buildOrderScheduleBox() {
+    if (document.getElementById('order-schedule-box')) return;
+    const anchor = document.getElementById('order-notes-box') || document.querySelector('.cart-order-options');
+    if (!anchor || !anchor.parentNode) return;
+
+    const wrap = document.createElement('div');
+    wrap.className = 'order-extra order-schedule-extra';
+    wrap.id = 'order-schedule-box';
+    wrap.style.marginTop = '8px';
+    wrap.style.display = 'none';
+    wrap.innerHTML = '' +
+        '<p id="store-status-banner" style="display:none;margin:0 0 8px;padding:8px 10px;border-radius:8px;background:#fff4e5;color:#8a4b00;font-weight:600;font-size:13px;"></p>' +
+        '<label class="order-type-label">Horario del pedido</label>' +
+        '<div class="order-type-switch order-schedule-switch" id="schedule-mode-switch">' +
+        '  <label id="schedule-asap-label" class="schedule-mode-option"><input type="radio" name="scheduleMode" value="asap" checked> Lo antes posible</label>' +
+        '  <label id="schedule-later-label" class="schedule-mode-option"><input type="radio" name="scheduleMode" value="scheduled"> <i class="fas fa-calendar-check" aria-hidden="true"></i> Programar</label>' +
+        '</div>' +
+        '<div id="schedule-slot-wrap" class="schedule-slot-wrap" style="display:none;margin-top:8px;">' +
+        '  <label for="schedule-slot">Quiero que esté listo a las...</label>' +
+        '  <div class="schedule-select-wrap"><select id="schedule-slot" class="schedule-slot-select"></select></div>' +
+        '  <div id="schedule-selected-summary" class="cart-order-mode-summary schedule-selected-summary" style="display:none;"></div>' +
+        '</div>';
+
+    anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
+
+    wrap.querySelectorAll('input[name="scheduleMode"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            const slotWrap = document.getElementById('schedule-slot-wrap');
+            if (slotWrap) slotWrap.style.display = (radio.checked && radio.value === 'scheduled') ? '' : 'none';
+            syncScheduleModeUI();
+            syncScheduleSelectedSummary();
+        });
+    });
+    const slotSel = wrap.querySelector('#schedule-slot');
+    if (slotSel) {
+        slotSel.addEventListener('change', () => {
+            syncScheduleSelectedSummary();
+        });
+    }
+}
+
+function syncScheduleModeUI() {
+    const switchEl = document.getElementById('schedule-mode-switch');
+    if (!switchEl) return;
+    const labels = Array.from(switchEl.querySelectorAll('label'));
+    const visible = labels.filter(label => label.style.display !== 'none');
+    switchEl.classList.toggle('single-choice', visible.length <= 1);
+}
+
+function syncScheduleSelectedSummary() {
+    const summary = document.getElementById('schedule-selected-summary');
+    const slotSel = document.getElementById('schedule-slot');
+    const schedRadio = document.querySelector('input[name="scheduleMode"][value="scheduled"]');
+    if (!summary || !slotSel || !schedRadio || !schedRadio.checked || !slotSel.value) {
+        if (summary) {
+            summary.style.display = 'none';
+            summary.textContent = '';
+        }
+        return;
+    }
+    const label = slotSel.selectedOptions && slotSel.selectedOptions[0]
+        ? String(slotSel.selectedOptions[0].textContent || '').trim()
+        : String(slotSel.value || '').trim();
+    summary.textContent = label ? `Horario elegido: ${label}` : '';
+    summary.style.display = label ? '' : 'none';
+}
+
+function syncOrderTypeRadiosWithAvailability(avail) {
+    const radios = Array.from(document.querySelectorAll('input[name="orderType"]'));
+    if (!radios.length) return;
+    const mustSchedule = Boolean(avail && avail.has_hours && avail.block_when_closed && !avail.is_open);
+    const mesaRadio = radios.find(r => r.value === 'mesa');
+    const mesaLabel = mesaRadio ? mesaRadio.closest('label') : null;
+    if (mesaLabel) mesaLabel.style.display = mustSchedule ? 'none' : '';
+    if (mustSchedule && mesaRadio && mesaRadio.checked) {
+        const alt = radios.find(r => r.value === 'direccion') || radios.find(r => r.value === 'espera');
+        if (alt) {
+            alt.checked = true;
+            alt.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+}
+
+function applyAvailabilityToUI(avail) {
+    const box = document.getElementById('order-schedule-box');
+    if (!box) return;
+    syncOrderTypeRadiosWithAvailability(avail);
+    if (!avail || !avail.has_hours) {
+        box.style.display = 'none';
+        return;
+    }
+
+    const slotWrap = document.getElementById('schedule-slot-wrap');
+    const slotSel = document.getElementById('schedule-slot');
+    const banner = document.getElementById('store-status-banner');
+    const asapRadio = document.querySelector('input[name="scheduleMode"][value="asap"]');
+    const schedRadio = document.querySelector('input[name="scheduleMode"][value="scheduled"]');
+    const asapLabel = document.getElementById('schedule-asap-label');
+    const laterLabel = document.getElementById('schedule-later-label');
+
+    box.style.display = '';
+    const isOpen = Boolean(avail.is_open);
+    const allowScheduleOpen = Boolean(avail.allow_schedule_when_open);
+    const slots = Array.isArray(avail.slots) ? avail.slots : [];
+
+    if (slotSel) {
+        slotSel.innerHTML = '';
+        slots.forEach(slot => {
+            const opt = document.createElement('option');
+            opt.value = String(slot.iso || '');
+            opt.textContent = String(slot.label || slot.local || opt.value);
+            slotSel.appendChild(opt);
+        });
+    }
+
+    if (isOpen && !allowScheduleOpen) {
+        if (asapLabel) asapLabel.style.display = '';
+        if (laterLabel) laterLabel.style.display = 'none';
+        if (asapRadio) asapRadio.checked = true;
+        if (slotWrap) slotWrap.style.display = 'none';
+        if (banner) { banner.style.display = 'none'; banner.textContent = ''; }
+        syncScheduleModeUI();
+        syncScheduleSelectedSummary();
+        return;
+    }
+
+    const mustSchedule = !isOpen;
+    const hasSlots = slots.length > 0;
+    if (asapLabel) asapLabel.style.display = mustSchedule ? 'none' : '';
+    if (laterLabel) laterLabel.style.display = (mustSchedule && !hasSlots) ? 'none' : '';
+    if (mustSchedule && hasSlots && schedRadio) schedRadio.checked = true;
+    if (slotWrap) slotWrap.style.display = (schedRadio && schedRadio.checked && hasSlots) ? '' : 'none';
+    syncScheduleModeUI();
+    syncScheduleSelectedSummary();
+
+    if (banner) {
+        if (mustSchedule) {
+            banner.style.display = '';
+            const firstLabel = String((slots[0] && slots[0].label) || '').trim();
+            banner.textContent = hasSlots
+                ? (firstLabel
+                    ? `El local está cerrado ahora. Programá tu pedido (primera franja: ${firstLabel}).`
+                    : 'El local está cerrado ahora. Programá tu pedido para más tarde.')
+                : 'El local está cerrado ahora y no hay franjas disponibles para programar.';
+        } else {
+            banner.style.display = 'none';
+            banner.textContent = '';
+        }
+    }
+}
+
+async function refreshOrderAvailability(force) {
+    buildOrderScheduleBox();
+    const avail = await fetchOrderAvailability(force);
+    applyAvailabilityToUI(avail);
+    return avail;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     try { initDeliveryGeoUI(); } catch (e) { console.error(e); }
+    try { refreshOrderAvailability(false); } catch (e) { console.error(e); }
 });

@@ -35,7 +35,7 @@ import {
 import { 
     initSearch
 } from './search.js?v=11';
-import { handleCheckout } from './checkout.js?v=17';
+import { handleCheckout } from './checkout.js?v=20';
 import { 
     initializeCarousel, 
     loadAndInitCarousel,
@@ -56,7 +56,7 @@ import {
 } from './ui.js?v=11';
  
  
-import { initOrderStatus } from './order-status.js?v=11';
+import { initOrderStatus } from './order-status.js?v=14';
 
 // Exponer funciones globales necesarias para HTML inline (onclick="...")
 window.addToCart = function(id, name, price, imageSrc, event) {
@@ -1105,7 +1105,8 @@ function initHeaderContact() {
                 locationLink.setAttribute('data-tooltip', locationLabel || locationUrl || '');
             }
         }
-        if (headerContact && openingHours && typeof openingHours === 'object') {
+        const hasAnyHours = Object.keys(openingHours || {}).some(k => Array.isArray(openingHours[k]) && openingHours[k].length);
+        if (headerContact && openingHours && typeof openingHours === 'object' && hasAnyHours) {
             let isOpenNow = false;
             let nextOpeningMinutes = null;
             let nextOpening = null;

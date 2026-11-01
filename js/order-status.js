@@ -111,6 +111,57 @@ function closeStatusModal() {
     document.body.style.overflow = '';
 }
 
+function formatOrderStatusDate(dateStr) {
+    let raw = String(dateStr || '').trim();
+    if (!raw) return '';
+    if (!/([zZ]|[+\-]\d{2}:\d{2})$/.test(raw)) {
+        raw += 'Z';
+    }
+    try {
+        const dt = new Date(raw);
+        if (Number.isNaN(dt.getTime())) {
+            return String(dateStr || '').trim();
+        }
+        return dt.toLocaleString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: '2-digit',
+            timeZone: 'America/Argentina/Buenos_Aires'
+        });
+    } catch (_) {
+        return String(dateStr || '').trim();
+    }
+}
+
+function formatScheduledForDisplay(dateStr) {
+    let raw = String(dateStr || '').trim();
+    if (!raw) return '';
+    if (!/([zZ]|[+\-]\d{2}:\d{2})$/.test(raw)) {
+        raw += 'Z';
+    }
+    try {
+        const dt = new Date(raw);
+        if (Number.isNaN(dt.getTime())) {
+            return String(dateStr || '').trim();
+        }
+        const datePart = new Intl.DateTimeFormat('es-AR', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+            day: '2-digit',
+            month: '2-digit'
+        }).format(dt);
+        const timePart = new Intl.DateTimeFormat('es-AR', {
+            timeZone: 'America/Argentina/Buenos_Aires',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(dt);
+        return `${datePart}, ${timePart} hs`;
+    } catch (_) {
+        return String(dateStr || '').trim();
+    }
+}
+
 function getTenantSlug() {
     let slug = getBusinessSlug();
     const alias = {
@@ -394,6 +445,7 @@ function renderStatus(order, config = {}) {
     }
     
     const statusMap = {
+        'programado': { label: 'Programado', class: 'pendiente', icon: 'fa-calendar-check' },
         'por_aprobar': { label: 'Por aprobar', class: 'pendiente', icon: 'fa-user-check' },
         'pendiente': { label: 'Pendiente', class: 'pendiente', icon: 'fa-clock' },
         'preparacion': { label: 'En preparación', class: 'preparacion', icon: 'fa-fire' },
@@ -406,15 +458,13 @@ function renderStatus(order, config = {}) {
     const s = statusMap[order.status] || { label: order.status, class: 'default', icon: 'fa-info-circle' };
     
     // Ensure date is treated as UTC if it doesn't have timezone info
-    let dateStr = order.created_at || '';
-    if (dateStr && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
-        dateStr += 'Z';
-    }
-    
-    const date = new Date(dateStr).toLocaleString('es-AR', { 
-        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit',
-        timeZone: 'America/Argentina/Buenos_Aires'
-    });
+    const date = formatOrderStatusDate(order.created_at || '');
+    const scheduledForText = formatScheduledForDisplay(order.scheduled_for || '');
+    const scheduledInfoHtml = scheduledForText ? `
+        <div class="estimated-time" style="text-align: center; margin-top: -0.5rem; margin-bottom: 1.25rem; color: #1d4ed8; font-size: 0.95rem; font-weight: 600;">
+            <i class="fas fa-calendar-check"></i> Programado para: <strong>${scheduledForText}</strong>
+        </div>
+    ` : '';
 
     // Estimated Time Logic
     let estimatedTimeHtml = '';
@@ -640,6 +690,7 @@ function renderStatus(order, config = {}) {
                 <span class="order-time" style="font-size: 0.75rem; color: #9ca3af;">${date}</span>
             </div>
 
+            ${scheduledInfoHtml}
             ${estimatedTimeHtml}
 
             <div class="order-details">

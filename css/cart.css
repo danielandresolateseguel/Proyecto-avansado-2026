@@ -123,11 +123,17 @@ body.sector-gastronomia .order-type-switch label {
   justify-content: center;
 }
 
+body.sector-gastronomia .order-type-switch label:hover {
+  background: rgba(255,255,255,0.72);
+  color: var(--gastro-accent);
+}
+
 body.sector-gastronomia .order-type-switch label:has(input:checked) {
   background: white;
   color: var(--gastro-accent);
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
   font-weight: 700;
+  border: 1px solid var(--gastro-accent-18);
 }
 
 body.sector-gastronomia .order-type-switch input {
@@ -154,7 +160,8 @@ body.sector-gastronomia .order-extra label {
 }
 
 body.sector-gastronomia .order-extra input,
-body.sector-gastronomia .order-extra textarea {
+body.sector-gastronomia .order-extra textarea,
+body.sector-gastronomia .order-extra select {
   width: 100%;
   padding: 12px;
   border: 1px solid #e5e7eb;
@@ -167,11 +174,73 @@ body.sector-gastronomia .order-extra textarea {
 }
 
 body.sector-gastronomia .order-extra input:focus,
-body.sector-gastronomia .order-extra textarea:focus {
+body.sector-gastronomia .order-extra textarea:focus,
+body.sector-gastronomia .order-extra select:focus {
   outline: none;
   border-color: var(--gastro-accent);
   box-shadow: 0 0 0 3px var(--gastro-accent-18);
   background: white;
+}
+
+body.sector-gastronomia .order-schedule-switch.single-choice {
+  background: linear-gradient(180deg, rgba(255,255,255,0.96) 0%, #f8fafc 100%);
+  border: 1px solid #e5e7eb;
+  padding: 6px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+body.sector-gastronomia .order-schedule-switch .schedule-mode-option {
+  gap: 8px;
+}
+
+body.sector-gastronomia .order-schedule-switch.single-choice .schedule-mode-option {
+  min-height: 44px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+body.sector-gastronomia .schedule-slot-wrap {
+  margin-top: 10px;
+}
+
+body.sector-gastronomia .schedule-select-wrap {
+  position: relative;
+}
+
+body.sector-gastronomia .schedule-select-wrap::after {
+  content: '\f107';
+  font-family: 'Font Awesome 5 Free';
+  font-weight: 900;
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+body.sector-gastronomia .schedule-slot-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  padding-right: 42px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  font-weight: 600;
+}
+
+body.sector-gastronomia .schedule-slot-select:hover {
+  border-color: var(--gastro-accent);
+  background: #ffffff !important;
+}
+
+body.sector-gastronomia .schedule-selected-summary {
+  margin-top: 10px;
+  margin-bottom: 0;
+  border-color: rgba(29, 78, 216, 0.14);
+  background: linear-gradient(180deg, rgba(239,246,255,0.95) 0%, rgba(219,234,254,0.72) 100%);
+  color: #1d4ed8;
+  font-weight: 700;
 }
 
 body.sector-gastronomia .cart-order-mode-summary {

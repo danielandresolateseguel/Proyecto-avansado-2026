@@ -131,6 +131,7 @@
     .status-failed { background:#b91c1c; }
     .status-cancelado { background:#c62828; }
     .status-por_aprobar { background:#455a64; }
+    .status-programado { background:#00695c; }
     table { width:100%; border-collapse: collapse; }
     body { max-width: 100vw; overflow-x: hidden; }
     th, td { border-bottom: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -1369,6 +1370,7 @@
     #cash-panel .cash-panel-toolbar { display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
     .orders-quick-filters { display:flex; gap:6px; align-items:center; margin-left: 8px; flex-wrap: wrap; }
     .orders-quick-filters button { border:none; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:700; font-size:12px; background:#607d8b; color:#fff; line-height:1; position:relative; }
+    .orders-quick-filters button.qf-programmed { background:#607d8b; }
     .orders-quick-filters button.qf-pending { background:#607d8b; }
     .orders-quick-filters button.qf-prep { background:#607d8b; }
     .orders-quick-filters button.qf-ready { background:#607d8b; }
@@ -3735,85 +3737,49 @@
       color: #0f172a;
     }
 
-    /* KPI NUEVOS — azul atento */
-    html body .orders-empty-kpi:nth-child(1) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(59,130,246,0.18) 0%, rgba(59,130,246,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #eff6ff 100%) !important;
-      border-color: rgba(59,130,246,0.28) !important;
+    /* KPI pedidos — misma base, acento suave por estado */
+    html body .orders-empty-kpi {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+      border: 1px solid #d8e1eb !important;
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.92) inset,
+        0 8px 18px -14px rgba(15,23,42,0.22) !important;
     }
-    html body .orders-empty-kpi:nth-child(1)::before {
-      background: linear-gradient(180deg, #2563eb, #06b6d4);
+    html body .orders-empty-kpi::before {
+      width: 5px !important;
+      left: 0 !important;
+      top: 0 !important;
+      bottom: 0 !important;
+      border-radius: 14px 0 0 14px !important;
     }
-    html body .orders-empty-kpi:nth-child(1) .k { color: #1d4ed8 !important; }
-    html body .orders-empty-kpi:nth-child(1) .v { color: #1e3a8a !important; }
+    html body .orders-empty-kpi .k { color: #475569 !important; }
+    html body .orders-empty-kpi .v { color: #0f172a !important; }
 
-    /* KPI PREPARACIÓN — ámbar */
-    html body .orders-empty-kpi:nth-child(2) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(245,158,11,0.18) 0%, rgba(245,158,11,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #fffbeb 100%) !important;
-      border-color: rgba(245,158,11,0.30) !important;
-    }
-    html body .orders-empty-kpi:nth-child(2)::before {
-      background: linear-gradient(180deg, #f59e0b, #f97316);
-    }
-    html body .orders-empty-kpi:nth-child(2) .k { color: #b45309 !important; }
-    html body .orders-empty-kpi:nth-child(2) .v { color: #92400e !important; }
+    html body .orders-empty-kpi:nth-child(1)::before { background: #3b82f6 !important; }
+    html body .orders-empty-kpi:nth-child(1) .k,
+    html body .orders-empty-kpi:nth-child(1) .v { color: #1e40af !important; }
 
-    /* KPI LISTOS — verde éxito */
-    html body .orders-empty-kpi:nth-child(3) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(16,185,129,0.18) 0%, rgba(16,185,129,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%) !important;
-      border-color: rgba(16,185,129,0.28) !important;
-    }
-    html body .orders-empty-kpi:nth-child(3)::before {
-      background: linear-gradient(180deg, #10b981, #059669);
-    }
-    html body .orders-empty-kpi:nth-child(3) .k { color: #047857 !important; }
-    html body .orders-empty-kpi:nth-child(3) .v { color: #064e3b !important; }
+    html body .orders-empty-kpi:nth-child(2)::before { background: #f59e0b !important; }
+    html body .orders-empty-kpi:nth-child(2) .k,
+    html body .orders-empty-kpi:nth-child(2) .v { color: #b45309 !important; }
 
-    /* KPI EN CAMINO — cian entrega */
-    html body .orders-empty-kpi:nth-child(4) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(6,182,212,0.18) 0%, rgba(6,182,212,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #ecfeff 100%) !important;
-      border-color: rgba(6,182,212,0.30) !important;
-    }
-    html body .orders-empty-kpi:nth-child(4)::before {
-      background: linear-gradient(180deg, #06b6d4, #0891b2);
-    }
-    html body .orders-empty-kpi:nth-child(4) .k { color: #0e7490 !important; }
-    html body .orders-empty-kpi:nth-child(4) .v { color: #155e75 !important; }
+    html body .orders-empty-kpi:nth-child(3)::before { background: #10b981 !important; }
+    html body .orders-empty-kpi:nth-child(3) .k,
+    html body .orders-empty-kpi:nth-child(3) .v { color: #047857 !important; }
 
-    /* KPI INCIDENCIAS — rojo alerta */
-    html body .orders-empty-kpi:nth-child(5) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #fef2f2 100%) !important;
-      border-color: rgba(239,68,68,0.30) !important;
-    }
-    html body .orders-empty-kpi:nth-child(5)::before {
-      background: linear-gradient(180deg, #ef4444, #dc2626);
-    }
-    html body .orders-empty-kpi:nth-child(5) .k { color: #b91c1c !important; }
-    html body .orders-empty-kpi:nth-child(5) .v { color: #991b1b !important; }
+    html body .orders-empty-kpi:nth-child(4)::before { background: #06b6d4 !important; }
+    html body .orders-empty-kpi:nth-child(4) .k,
+    html body .orders-empty-kpi:nth-child(4) .v { color: #0f766e !important; }
 
-    /* KPI COBRAR EN CAJA — índigo caja */
-    html body .orders-empty-kpi:nth-child(6) {
-      background:
-        radial-gradient(140px 100px at 110% -20%, rgba(99,102,241,0.18) 0%, rgba(99,102,241,0) 70%),
-        linear-gradient(180deg, #ffffff 0%, #eef2ff 100%) !important;
-      border-color: rgba(99,102,241,0.28) !important;
-    }
-    html body .orders-empty-kpi:nth-child(6)::before {
-      background: linear-gradient(180deg, #6366f1, #4f46e5);
-    }
-    html body .orders-empty-kpi:nth-child(6) .k { color: #4338ca !important; }
-    html body .orders-empty-kpi:nth-child(6) .v { color: #3730a3 !important; }
+    html body .orders-empty-kpi:nth-child(5)::before { background: #ef4444 !important; }
+    html body .orders-empty-kpi:nth-child(5) .k,
+    html body .orders-empty-kpi:nth-child(5) .v { color: #b91c1c !important; }
 
-    /* 6. Filtros rápidos — pills con acentos temáticos */
+    html body .orders-empty-kpi:nth-child(6)::before { background: #6366f1 !important; }
+    html body .orders-empty-kpi:nth-child(6) .k,
+    html body .orders-empty-kpi:nth-child(6) .v { color: #4338ca !important; }
+
+    /* 6. Filtros rápidos — pills estandarizadas */
     html body .orders-quick-filters {
       gap: 8px !important;
     }
@@ -3823,8 +3789,8 @@
       border-radius: 999px !important;
       font-weight: 800 !important;
       font-size: 12.5px !important;
-      border: 1px solid transparent !important;
-      background: #f1f5f9 !important;
+      border: 1px solid #d8e1eb !important;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
       color: #334155 !important;
       box-shadow:
         0 1px 0 rgba(255,255,255,0.9) inset,
@@ -3833,42 +3799,48 @@
     }
     html body .orders-quick-filters button:hover {
       transform: translateY(-1px);
+      border-color: #b8c7d8 !important;
+      background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%) !important;
+    }
+    html body .orders-quick-filters button.qf-programmed {
+      color: #166534 !important;
+      border-color: rgba(34,197,94,0.22) !important;
     }
     html body .orders-quick-filters button.qf-pending {
-      background: #dbeafe !important;
-      color: #1e3a8a !important;
-      border-color: rgba(59,130,246,0.35) !important;
+      color: #1e40af !important;
+      border-color: rgba(59,130,246,0.22) !important;
     }
     html body .orders-quick-filters button.qf-prep {
-      background: #fef3c7 !important;
       color: #92400e !important;
-      border-color: rgba(245,158,11,0.40) !important;
+      border-color: rgba(245,158,11,0.24) !important;
     }
     html body .orders-quick-filters button.qf-ready {
-      background: #d1fae5 !important;
-      color: #064e3b !important;
-      border-color: rgba(16,185,129,0.40) !important;
+      color: #047857 !important;
+      border-color: rgba(16,185,129,0.24) !important;
     }
     html body .orders-quick-filters button.qf-en-camino {
-      background: #cffafe !important;
-      color: #155e75 !important;
-      border-color: rgba(6,182,212,0.40) !important;
+      color: #0f766e !important;
+      border-color: rgba(6,182,212,0.24) !important;
     }
     html body .orders-quick-filters button.qf-entregado {
-      background: #ede9fe !important;
-      color: #4c1d95 !important;
-      border-color: rgba(139,92,246,0.40) !important;
+      color: #5b21b6 !important;
+      border-color: rgba(139,92,246,0.24) !important;
+    }
+    html body .orders-quick-filters button.qf-cash-followup {
+      color: #4338ca !important;
+      border-color: rgba(99,102,241,0.24) !important;
     }
     html body .orders-quick-filters button.qf-incidents {
-      background: #fee2e2 !important;
       color: #7f1d1d !important;
-      border-color: rgba(239,68,68,0.40) !important;
+      border-color: rgba(239,68,68,0.24) !important;
     }
     html body .orders-quick-filters button.active {
+      background: linear-gradient(180deg, #e8eef6 0%, #dde7f2 100%) !important;
+      border-color: #9db0c5 !important;
       box-shadow:
-        0 1px 0 rgba(255,255,255,0.18) inset,
-        0 0 0 3px rgba(15,23,42,0.08),
-        0 12px 24px -10px rgba(15,23,42,0.35) !important;
+        0 1px 0 rgba(255,255,255,0.55) inset,
+        0 0 0 3px rgba(148,163,184,0.12),
+        0 12px 24px -14px rgba(15,23,42,0.22) !important;
       transform: translateY(-1px);
     }
     html body .orders-quick-filters .qf-count {
@@ -4342,6 +4314,7 @@
         <svg style="width:16px;height:16px;fill:currentColor" viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.58 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       </button>
       <div class="orders-quick-filters" id="orders-quick-filters">
+        <button type="button" id="orders-qf-programmed" class="qf-programmed" title="Pedidos programados" aria-label="Pedidos programados">Programados<span class="qf-count" id="orders-qf-programmed-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-pending" class="qf-pending" title="Nuevos / Pendientes" aria-label="Nuevos / Pendientes">Nuevos<span class="qf-count" id="orders-qf-pending-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-prep" class="qf-prep" title="En preparación" aria-label="En preparación">Preparación<span class="qf-count" id="orders-qf-prep-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
         <button type="button" id="orders-qf-ready" class="qf-ready" title="Listos para entrega" aria-label="Listos para entrega">Listos<span class="qf-count" id="orders-qf-ready-count" aria-hidden="true"></span><span class="qf-dot" aria-hidden="true"></span></button>
@@ -12808,6 +12781,8 @@
         const safeCancelReason = cancelReason ? escapeHtml(cancelReason) : '';
         const closedAt = String(order.closed_at || order.delivered_at || '').trim();
         const safeClosedAt = closedAt ? formatARDate(closedAt) : '';
+        const scheduledFor = String(order.scheduled_for || '').trim();
+        const safeScheduledFor = scheduledFor ? formatScheduledForDisplay(scheduledFor) : '';
         const closedBy = String(order.closed_by || '').trim();
         const safeClosedBy = closedBy ? escapeHtml(closedBy) : '';
         const paidAt = String(order.paid_at || '').trim();
@@ -12847,6 +12822,7 @@
           <p class="d-tenant">Establecimiento: ${safeTenantSlug}</p>
           <p class="d-date">Fecha: ${formatARDate(order.created_at)}</p>
           <p class="d-type">Tipo: ${safeOrderType}</p>
+          ${safeScheduledFor ? `<p class="d-scheduled"><strong>Programado para:</strong> ${safeScheduledFor}</p>` : ''}
           <p class="d-dest">Destino: ${(order.order_type === 'mesa' || order.order_type === 'espera') ? `<span class="pill pill-mesa">${safeDestino}</span>` : safeDestino}</p>
           ${telefono ? `<p class="d-phone">Teléfono de contacto: ${safeTelefono}</p>` : ''}
           <p class="d-status">Estado: ${safeStatusLabel}</p>
@@ -13082,6 +13058,7 @@
     let ordersQuickStatusFilter = '';
     let ordersQuickDotsInitialized = false;
     const ordersQuickSeen = {
+      programado: new Set(),
       pending: new Set(),
       preparacion: new Set(),
       listo: new Set(),
@@ -13092,6 +13069,7 @@
     };
     function getOrdersQuickBuckets(activeAll) {
       const buckets = {
+        programado: new Set(),
         pending: new Set(),
         preparacion: new Set(),
         listo: new Set(),
@@ -13107,6 +13085,7 @@
         const st = _getOrdersBoardStageKey(o);
         const ot = String(o && o.order_type || '').trim().toLowerCase();
         const pay = String(o && o.payment_status || '').trim().toLowerCase();
+        if (st === 'programado') buckets.programado.add(id);
         if (st === 'pendiente' || st === 'por_aprobar' || st === 'confirmado') buckets.pending.add(id);
         if (st === 'preparacion') buckets.preparacion.add(id);
         if (st === 'listo') buckets.listo.add(id);
@@ -13150,6 +13129,7 @@
         for (const id of now) { if (!seen.has(id)) { hasUnseen = true; break; } }
         if (hasUnseen) btn.classList.add('has-dot'); else btn.classList.remove('has-dot');
       };
+      setDot('orders-qf-programmed', 'programado');
       setDot('orders-qf-pending', 'pending');
       setDot('orders-qf-prep', 'preparacion');
       setDot('orders-qf-ready', 'listo');
@@ -13173,6 +13153,7 @@
           el.textContent = '';
         }
       };
+      setCount('orders-qf-programmed', 'orders-qf-programmed-count', 'programado');
       setCount('orders-qf-pending', 'orders-qf-pending-count', 'pending');
       setCount('orders-qf-prep', 'orders-qf-prep-count', 'preparacion');
       setCount('orders-qf-ready', 'orders-qf-ready-count', 'listo');
@@ -13229,6 +13210,7 @@
         if (!b) return;
         if (on) b.classList.add('active'); else b.classList.remove('active');
       };
+      setActive('orders-qf-programmed', ordersQuickStatusFilter === 'programado');
       setActive('orders-qf-pending', ordersQuickStatusFilter === 'pending');
       setActive('orders-qf-prep', ordersQuickStatusFilter === 'preparacion');
       setActive('orders-qf-ready', ordersQuickStatusFilter === 'listo');
@@ -13238,6 +13220,7 @@
       setActive('orders-qf-incidents', ordersQuickStatusFilter === 'failed');
     };
     (function bindOrdersQuickFilters(){
+      const pg = document.getElementById('orders-qf-programmed');
       const p = document.getElementById('orders-qf-pending');
       const pr = document.getElementById('orders-qf-prep');
       const r = document.getElementById('orders-qf-ready');
@@ -13245,6 +13228,7 @@
       const e = document.getElementById('orders-qf-entregado');
       const cf = document.getElementById('orders-qf-cash-followup');
       const fi = document.getElementById('orders-qf-incidents');
+      if (pg) pg.addEventListener('click', () => window.setOrdersQuickStatusFilter('programado'));
       if (p) p.addEventListener('click', () => window.setOrdersQuickStatusFilter('pending'));
       if (pr) pr.addEventListener('click', () => window.setOrdersQuickStatusFilter('preparacion'));
       if (r) r.addEventListener('click', () => window.setOrdersQuickStatusFilter('listo'));
@@ -13284,6 +13268,7 @@
         }
         if (!ordersQuickDotsInitialized) {
           ordersQuickDotsInitialized = true;
+          markOrdersQuickSeenFor('programado', buckets);
           markOrdersQuickSeenFor('pending', buckets);
           markOrdersQuickSeenFor('preparacion', buckets);
           markOrdersQuickSeenFor('listo', buckets);
@@ -13306,6 +13291,7 @@
               const st = _getOrdersBoardStageKey(o);
               const ot = String(o && o.order_type || '').trim().toLowerCase();
               const pay = String(o && o.payment_status || '').trim().toLowerCase();
+              if (f === 'programado') return st === 'programado';
               if (f === 'pending') return (st === 'pendiente' || st === 'por_aprobar');
               if (f === 'en_camino_delivery') return (st === 'en_camino' && ot === 'direccion');
               if (f === 'cash_followup') return (st === 'entregado' && pay !== 'paid');
@@ -13567,11 +13553,13 @@
           const safePhoneText2 = escapeAdminHtml(phoneRaw2);
           const safeWaUrl2 = escapeAdminAttr(safeWhatsAppHref(waUrl2));
           const cashFollowupHtml2 = _renderOrderFollowupSignals(o);
+          const scheduledForText2 = String(o.scheduled_for || '').trim();
+          const scheduledMeta2 = scheduledForText2 ? `  ·  Programado para ${formatScheduledForDisplay(scheduledForText2)}` : '';
           card.className = 'card';
           card.innerHTML = `
               <div class="card-content">
               <div class="title">Pedido #${safeOrderNumber}  ·  Destino: ${(isMesa || isEspera)?`<span class='pill pill-mesa'>${safeDestLabel}</span>`:safeDestLabel}</div>
-              <div class="meta">${formatARDate(o.created_at||'')}  ·  ${safeOrderType}</div>
+              <div class="meta">${formatARDate(o.created_at||'')}  ·  ${safeOrderType}${scheduledMeta2}</div>
               <div class="meta">${phoneRaw2 ? `Tel: ${safePhoneText2}` : ''} ${safeWaUrl2 ? `<a href='${safeWaUrl2}' target='_blank' rel='noopener'>WhatsApp</a>`:''}</div>
               <div class="grid">
                 <div>Total: $${baseTotal2}</div>
@@ -17023,6 +17011,25 @@
         if (Number.isNaN(ts)) return String(str || '');
         const d = new Date(ts);
         return new Intl.DateTimeFormat('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+      } catch (_) { return String(str || ''); }
+    }
+    function formatScheduledForDisplay(str) {
+      try {
+        const ts = parseDateSafe(str);
+        if (Number.isNaN(ts)) return String(str || '');
+        const d = new Date(ts);
+        const datePart = new Intl.DateTimeFormat('es-AR', {
+          timeZone: 'America/Argentina/Buenos_Aires',
+          day: '2-digit',
+          month: '2-digit'
+        }).format(d);
+        const timePart = new Intl.DateTimeFormat('es-AR', {
+          timeZone: 'America/Argentina/Buenos_Aires',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d);
+        return `${datePart}, ${timePart} hs`;
       } catch (_) { return String(str || ''); }
     }
     function formatAnalyticsComparisonDelta(previousValue, currentValue, percentValue, fallbackText) {

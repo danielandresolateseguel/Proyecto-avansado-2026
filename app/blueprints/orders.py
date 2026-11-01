@@ -6,7 +6,11 @@ import hmac
 from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, session, Response
 from app.database import get_db, is_postgres
-from app.utils import is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config, get_tv_device_auth
+from app.utils import (
+    is_authed, check_csrf, get_cached_tenant_config, invalidate_tenant_config, get_tv_device_auth,
+    compute_order_availability, validate_scheduled_slot, get_order_settings,
+    get_tenant_timezone_name, resolve_timezone,
+)
 import io
 import csv
 
@@ -901,6 +905,72 @@ def ensure_orders_delivery_columns(conn, cur):
         except Exception:
             pass
 
+def ensure_orders_schedule_columns(conn, cur):
+    """Agrega las columnas de programación de pedidos si faltan (SQLite y Postgres)."""
+    try:
+        cur.execute("PRAGMA table_info(orders)")
+        cols = [r[1] for r in (cur.fetchall() or [])]
+        stmts = []
+        if 'schedule_mode' not in cols:
+            stmts.append("ALTER TABLE orders ADD COLUMN schedule_mode TEXT DEFAULT 'asap'")
+        if 'scheduled_for' not in cols:
+            stmts.append("ALTER TABLE orders ADD COLUMN scheduled_for TEXT")
+        if 'fire_at' not in cols:
+            stmts.append("ALTER TABLE orders ADD COLUMN fire_at TEXT")
+        if stmts:
+            for s in stmts:
+                cur.execute(s)
+            conn.commit()
+        return
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+    for ddl in (
+        "schedule_mode TEXT DEFAULT 'asap'",
+        "scheduled_for TEXT",
+        "fire_at TEXT",
+    ):
+        try:
+            cur.execute(f"ALTER TABLE orders ADD COLUMN IF NOT EXISTS {ddl}")
+        except Exception:
+            pass
+    try:
+        conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
+def release_due_scheduled_orders(conn, cur, tenant_slug=None):
+    """Pasa a 'pendiente' los pedidos programados cuyo horario de preparación ya llegó.
+
+    Se ejecuta en cada lectura de pedidos (el panel ya polea), así no hace falta un cron.
+    """
+    now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    sql = (
+        "UPDATE orders SET status = 'pendiente' "
+        "WHERE status = 'programado' AND COALESCE(fire_at, '') <> '' AND fire_at <= ?"
+    )
+    params = [now_iso]
+    if tenant_slug:
+        sql += " AND tenant_slug = ?"
+        params.append(tenant_slug)
+    try:
+        cur.execute(sql, params)
+        if cur.rowcount:
+            conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+
+
 def ensure_delivery_run_tables(conn, cur):
     if is_postgres():
         cur.execute(
@@ -1436,6 +1506,10 @@ def create_order():
             ensure_orders_tenant_number_columns(conn, cur)
         except Exception:
             pass
+        try:
+            ensure_orders_schedule_columns(conn, cur)
+        except Exception:
+            pass
 
         cfg = {}
         try:
@@ -1448,6 +1522,63 @@ def create_order():
             is_admin_origin = bool(is_authed() and check_csrf())
         except Exception:
             is_admin_origin = False
+
+        # --- Programación de pedidos / bloqueo con local cerrado -----------------
+        order_settings = get_order_settings(cfg)
+        schedule_mode = str(payload.get('schedule_mode') or '').strip().lower()
+        requested_schedule = (
+            payload.get('scheduled_for')
+            or payload.get('scheduled_at')
+            or payload.get('scheduled_for_local')
+        )
+        if str(requested_schedule or '').strip():
+            schedule_mode = 'scheduled'
+        if schedule_mode != 'scheduled':
+            schedule_mode = 'asap'
+
+        scheduled_dt = None
+        if schedule_mode == 'scheduled':
+            if str(order_type or '').strip().lower() not in order_settings['schedule_order_types']:
+                return jsonify({'error': 'Esta modalidad de pedido no se puede programar.'}), 400
+            if is_admin_origin:
+                try:
+                    parsed = datetime.fromisoformat(str(requested_schedule).replace('Z', '+00:00'))
+                    if parsed.tzinfo is None:
+                        parsed = parsed.replace(tzinfo=timezone.utc)
+                    scheduled_dt = parsed.astimezone(timezone.utc).replace(second=0, microsecond=0)
+                except Exception:
+                    return jsonify({'error': 'El horario elegido no es válido.'}), 400
+            else:
+                availability = compute_order_availability(tenant_slug, cfg)
+                scheduled_dt, slot_error = validate_scheduled_slot(availability, requested_schedule)
+                if not scheduled_dt:
+                    return jsonify({
+                        'error': slot_error,
+                        'slots': availability.get('slots') or [],
+                    }), 409
+        elif not is_admin_origin:
+            availability = compute_order_availability(tenant_slug, cfg)
+            if (
+                availability.get('block_when_closed')
+                and availability.get('has_hours')
+                and not availability.get('is_open')
+            ):
+                return jsonify({
+                    'error': 'El local está cerrado en este momento. Podés programar tu pedido para más tarde.',
+                    'closed': True,
+                    'next_opening': availability.get('next_opening'),
+                    'schedule_order_types': availability.get('schedule_order_types') or [],
+                    'slots': availability.get('slots') or [],
+                }), 409
+
+        scheduled_for_value = ''
+        fire_at_value = ''
+        if scheduled_dt is not None:
+            status = 'programado'
+            tz_local = resolve_timezone(get_tenant_timezone_name(cfg))
+            scheduled_for_value = scheduled_dt.astimezone(tz_local).replace(microsecond=0).isoformat()
+            fire_at_value = (scheduled_dt - timedelta(minutes=order_settings['prep_minutes'])).replace(microsecond=0).isoformat()
+        # -------------------------------------------------------------------------
 
         if not is_admin_origin:
             public_token = (
@@ -1494,7 +1625,7 @@ def create_order():
                     'conflict_order_number': order_ref,
                 }), 409
 
-        if bool(cfg.get('require_order_approval')) and (not is_admin_origin):
+        if bool(cfg.get('require_order_approval')) and (not is_admin_origin) and status != 'programado':
             status = 'por_aprobar'
         
         shipping_cost = 0
@@ -1541,10 +1672,10 @@ def create_order():
         try:
             cur.execute(
                 """
-                INSERT INTO orders (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, shipping_cost)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, shipping_cost, schedule_mode, scheduled_for, fire_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, json.dumps(address_json, ensure_ascii=False), status, total, None, None, created_at, order_notes, shipping_cost)
+                (tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, json.dumps(address_json, ensure_ascii=False), status, total, None, None, created_at, order_notes, shipping_cost, schedule_mode, scheduled_for_value or None, fire_at_value or None)
             )
             order_id = cur.lastrowid
         except Exception as e:
@@ -1739,12 +1870,21 @@ def list_orders():
         ensure_orders_tenant_number_columns(conn, cur)
     except Exception:
         pass
+    try:
+        ensure_orders_schedule_columns(conn, cur)
+    except Exception:
+        pass
+    try:
+        # Disparo perezoso: al polear el panel se liberan los programados que ya vencieron.
+        release_due_scheduled_orders(conn, cur, tenant_slug)
+    except Exception:
+        pass
     closed_eff = "COALESCE(o.delivered_at, h.last_change, o.created_at)" if use_closed_date else "created_at"
     if use_closed_date:
         base = (
             "SELECT o.id, o.tenant_slug, o.tenant_order_number, o.order_type, o.table_number, o.address_json, o.status, o.total, o.created_at, "
             "o.customer_phone, o.customer_name, o.payment_status, o.payment_method, o.tip_amount, o.shipping_cost, o.delivery_assigned_to, "
-            "o.delivery_status, o.delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at, "
+            "o.delivery_status, o.delivery_sequence, o.delivery_notes, o.delivery_assigned_at, o.delivered_at, o.schedule_mode, o.scheduled_for, o.fire_at, "
             + closed_eff + " AS closed_at "
             "FROM orders o "
             "LEFT JOIN (SELECT order_id, MAX(changed_at) AS last_change FROM order_status_history WHERE status = ? GROUP BY order_id) h ON h.order_id = o.id "
@@ -1752,7 +1892,7 @@ def list_orders():
         )
         params = [str(status).strip().lower(), tenant_slug]
     else:
-        base = "SELECT id, tenant_slug, tenant_order_number, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at FROM orders WHERE tenant_slug = ?"
+        base = "SELECT id, tenant_slug, tenant_order_number, order_type, table_number, address_json, status, total, created_at, customer_phone, customer_name, payment_status, payment_method, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at, schedule_mode, scheduled_for, fire_at FROM orders WHERE tenant_slug = ?"
         params = [tenant_slug]
     if exclude_archived == 'true':
         base += " AND " + ("o.id" if use_closed_date else "id") + " NOT IN (SELECT order_id FROM archived_orders)"
@@ -1964,9 +2104,13 @@ def get_order_detail(order_id):
         ensure_orders_tenant_number_columns(conn, cur)
     except Exception:
         pass
+    try:
+        ensure_orders_schedule_columns(conn, cur)
+    except Exception:
+        pass
     cur.execute(
         """
-        SELECT id, tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at
+        SELECT id, tenant_slug, tenant_order_number, customer_name, customer_phone, order_type, table_number, address_json, status, total, payment_method, payment_status, created_at, order_notes, tip_amount, shipping_cost, delivery_assigned_to, delivery_status, delivery_sequence, delivery_notes, delivery_assigned_at, delivered_at, schedule_mode, scheduled_for, fire_at
         FROM orders WHERE id = ?
         """,
         (order_id,)
@@ -2040,7 +2184,9 @@ def get_order_detail(order_id):
             'total': order['total'],
             'created_at': order['created_at'],
             'order_type': order['order_type'],
-            'table_number': order['table_number']
+            'table_number': order['table_number'],
+            'schedule_mode': order.get('schedule_mode'),
+            'scheduled_for': order.get('scheduled_for')
         }
         return jsonify({'order': sanitized_order, 'items': items})
     
@@ -2057,7 +2203,7 @@ def update_order_status(order_id):
     payload = request.get_json(silent=True) or {}
     new_status = payload.get('status')
     reason = (payload.get('reason') or '').strip()
-    if new_status not in ('por_aprobar', 'pendiente', 'preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'):
+    if new_status not in ('por_aprobar', 'programado', 'pendiente', 'preparacion', 'listo', 'en_camino', 'entregado', 'cancelado'):
         return jsonify({'error': 'status inválido'}), 400
         
     conn = get_db()

@@ -286,7 +286,10 @@ def init_db_postgres(cur):
             source TEXT DEFAULT 'local',
             external_order_id TEXT,
             external_fee_amount INTEGER DEFAULT 0,
-            external_payload_json TEXT
+            external_payload_json TEXT,
+            schedule_mode TEXT DEFAULT 'asap',
+            scheduled_for TEXT,
+            fire_at TEXT
         )
         """
     )
@@ -418,6 +421,27 @@ def init_db_postgres(cur):
         cur.execute("RELEASE SAVEPOINT add_external_payload_json")
     except Exception:
         cur.execute("ROLLBACK TO SAVEPOINT add_external_payload_json")
+
+    cur.execute("SAVEPOINT add_schedule_mode")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN schedule_mode TEXT DEFAULT 'asap'")
+        cur.execute("RELEASE SAVEPOINT add_schedule_mode")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_schedule_mode")
+
+    cur.execute("SAVEPOINT add_scheduled_for")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN scheduled_for TEXT")
+        cur.execute("RELEASE SAVEPOINT add_scheduled_for")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_scheduled_for")
+
+    cur.execute("SAVEPOINT add_fire_at")
+    try:
+        cur.execute("ALTER TABLE orders ADD COLUMN fire_at TEXT")
+        cur.execute("RELEASE SAVEPOINT add_fire_at")
+    except Exception:
+        cur.execute("ROLLBACK TO SAVEPOINT add_fire_at")
 
     try:
         cur.execute(
@@ -854,7 +878,10 @@ def init_db_sqlite(cur):
             source TEXT DEFAULT 'local',
             external_order_id TEXT,
             external_fee_amount INTEGER DEFAULT 0,
-            external_payload_json TEXT
+            external_payload_json TEXT,
+            schedule_mode TEXT DEFAULT 'asap',
+            scheduled_for TEXT,
+            fire_at TEXT
         )
         """
     )
@@ -920,6 +947,12 @@ def init_db_sqlite(cur):
             cur.execute("ALTER TABLE orders ADD COLUMN external_fee_amount INTEGER DEFAULT 0")
         if 'external_payload_json' not in cols:
             cur.execute("ALTER TABLE orders ADD COLUMN external_payload_json TEXT")
+        if 'schedule_mode' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN schedule_mode TEXT DEFAULT 'asap'")
+        if 'scheduled_for' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN scheduled_for TEXT")
+        if 'fire_at' not in cols:
+            cur.execute("ALTER TABLE orders ADD COLUMN fire_at TEXT")
     except Exception:
         pass
 
