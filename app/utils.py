@@ -717,7 +717,7 @@ def get_order_settings(cfg):
         'slot_step_minutes': _int('slot_step_minutes', 30, 5, 240),
         'max_days_ahead': _int('max_days_ahead', 2, 1, 2),
         'block_when_closed': bool(raw.get('block_when_closed', True)),
-        'allow_schedule_when_open': bool(raw.get('allow_schedule_when_open', False)),
+        'allow_schedule_when_open': bool(raw.get('allow_schedule_when_open', True)),
         'schedule_order_types': types,
     }
 

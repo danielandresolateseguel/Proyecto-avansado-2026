@@ -3204,7 +3204,8 @@ def update_order_content(order_id):
 
     # Verificar existencia y estado
     cur.execute(
-        "SELECT status, tenant_slug, payment_status, order_type, shipping_cost, customer_phone, customer_name, address_json, table_number "
+        "SELECT status, tenant_slug, payment_status, order_type, shipping_cost, customer_phone, customer_name, "
+        "address_json, table_number, schedule_mode, scheduled_for, fire_at "
         "FROM orders WHERE id = ?",
         (order_id,)
     )
@@ -3212,7 +3213,21 @@ def update_order_content(order_id):
     if not row:
         return jsonify({'error': 'orden no encontrada'}), 404
     
-    status, tenant_slug, payment_status, order_type, shipping_cost, current_phone, current_name, current_address_raw, current_table_number = row
+    (
+        status,
+        tenant_slug,
+        payment_status,
+        order_type,
+        shipping_cost,
+        current_phone,
+        current_name,
+        current_address_raw,
+        current_table_number,
+        current_schedule_mode,
+        current_scheduled_for,
+        current_fire_at,
+    ) = row
+    previous_status = str(status or '').strip().lower()
     session_tenant = str(session.get('tenant_slug') or '').strip()
     if session_tenant and tenant_slug and session_tenant != tenant_slug:
         return jsonify({'error': 'acceso denegado al tenant'}), 403
@@ -3233,6 +3248,12 @@ def update_order_content(order_id):
     next_customer_phone = str(current_phone or '').strip()
     next_customer_name = str(current_name or '').strip()
     next_address_json = current_address_json
+    current_schedule_mode = str(current_schedule_mode or 'asap').strip().lower()
+    current_scheduled_for = str(current_scheduled_for or '').strip()
+    current_fire_at = str(current_fire_at or '').strip()
+    next_schedule_mode = current_schedule_mode if current_schedule_mode in ('asap', 'scheduled') else 'asap'
+    next_scheduled_for = current_scheduled_for
+    next_fire_at = current_fire_at
 
     if 'table_number' in payload:
         next_table_number = str(payload.get('table_number') or '').strip()
@@ -3280,6 +3301,50 @@ def update_order_content(order_id):
                 'conflict_order_id': conflict.get('id'),
                 'conflict_order_number': order_ref,
             }), 409
+    else:
+        try:
+            cfg = get_cached_tenant_config(tenant_slug) or {}
+        except Exception:
+            cfg = {}
+
+    requested_schedule_mode = payload.get('schedule_mode')
+    requested_scheduled_for = payload.get('scheduled_for')
+    if requested_schedule_mode is not None:
+        requested_schedule_mode = str(requested_schedule_mode or '').strip().lower()
+    if requested_scheduled_for is not None:
+        requested_scheduled_for = str(requested_scheduled_for or '').strip()
+    schedule_requested = (
+        requested_schedule_mode is not None
+        or requested_scheduled_for is not None
+    )
+    if schedule_requested:
+        if status in ('preparacion', 'listo', 'en_camino'):
+            return jsonify({'error': 'No se puede reprogramar un pedido que ya está en preparación o más avanzado.'}), 409
+        order_settings = get_order_settings(cfg)
+        requested_mode = requested_schedule_mode if requested_schedule_mode in ('asap', 'scheduled') else next_schedule_mode
+        if requested_scheduled_for:
+            requested_mode = 'scheduled'
+        if requested_mode == 'scheduled':
+            if order_type_norm not in order_settings['schedule_order_types']:
+                return jsonify({'error': 'Esta modalidad de pedido no se puede programar.'}), 400
+            availability = compute_order_availability(tenant_slug, cfg)
+            scheduled_dt, slot_error = validate_scheduled_slot(availability, requested_scheduled_for)
+            if not scheduled_dt:
+                return jsonify({
+                    'error': slot_error,
+                    'slots': availability.get('slots') or [],
+                }), 409
+            tz_local = resolve_timezone(get_tenant_timezone_name(cfg))
+            next_schedule_mode = 'scheduled'
+            next_scheduled_for = scheduled_dt.astimezone(tz_local).replace(microsecond=0).isoformat()
+            next_fire_at = (scheduled_dt - timedelta(minutes=order_settings['prep_minutes'])).replace(microsecond=0).isoformat()
+            status = 'programado'
+        else:
+            next_schedule_mode = 'asap'
+            next_scheduled_for = ''
+            next_fire_at = ''
+            if current_schedule_mode == 'scheduled' and status == 'programado':
+                status = 'pendiente'
 
     cur.execute("SELECT id, product_id, name, qty, unit_price, modifiers_json, notes FROM order_items WHERE order_id = ?", (order_id,))
     old_rows = cur.fetchall()
@@ -3585,8 +3650,28 @@ def update_order_content(order_id):
                     (order_id, tenant_slug, item['product_id'], item['name'], item['qty'], item['price'], int(item.get('unit_cost') or 0), item['modifiers_json'], item['notes'])
                 )
             
-        order_sets = ["total = ?", "shipping_cost = ?", "customer_phone = ?", "customer_name = ?", "table_number = ?"]
-        order_params = [total, base_shipping, next_customer_phone, next_customer_name, next_table_number]
+        order_sets = [
+            "total = ?",
+            "shipping_cost = ?",
+            "customer_phone = ?",
+            "customer_name = ?",
+            "table_number = ?",
+            "status = ?",
+            "schedule_mode = ?",
+            "scheduled_for = ?",
+            "fire_at = ?",
+        ]
+        order_params = [
+            total,
+            base_shipping,
+            next_customer_phone,
+            next_customer_name,
+            next_table_number,
+            status,
+            next_schedule_mode,
+            next_scheduled_for or None,
+            next_fire_at or None,
+        ]
         if order_type_norm == 'direccion':
             order_sets.append("address_json = ?")
             order_params.append(json.dumps(next_address_json, ensure_ascii=False))
@@ -3597,6 +3682,12 @@ def update_order_content(order_id):
             order_params.append(order_notes)
         order_params.append(order_id)
         cur.execute(f"UPDATE orders SET {', '.join(order_sets)} WHERE id = ?", tuple(order_params))
+
+        if previous_status != str(status or '').strip().lower():
+            cur.execute(
+                "INSERT INTO order_status_history (order_id, status, changed_at, changed_by) VALUES (?, ?, ?, ?)",
+                (order_id, status, datetime.utcnow().isoformat(), session.get('admin_user') or 'admin'),
+            )
         
         # Registrar Evento
         actor = session.get('admin_user') or 'admin'
@@ -3614,6 +3705,10 @@ def update_order_content(order_id):
                     'customer_phone': next_customer_phone,
                     'customer_name': next_customer_name,
                     'address': next_address_json if order_type_norm == 'direccion' else None,
+                    'status': status,
+                    'schedule_mode': next_schedule_mode,
+                    'scheduled_for': next_scheduled_for or None,
+                    'fire_at': next_fire_at or None,
                 }, ensure_ascii=False),
                 datetime.utcnow().isoformat()
             )
@@ -3629,6 +3724,10 @@ def update_order_content(order_id):
             'customer_phone': next_customer_phone,
             'customer_name': next_customer_name,
             'address': next_address_json if order_type_norm == 'direccion' else None,
+            'status': status,
+            'schedule_mode': next_schedule_mode,
+            'scheduled_for': next_scheduled_for or None,
+            'fire_at': next_fire_at or None,
         })
         
     except Exception as e:

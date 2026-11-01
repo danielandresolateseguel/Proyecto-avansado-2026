@@ -6500,6 +6500,28 @@
                         <input type="text" id="eom-locality" name="edit_order_delivery_locality_field" autocomplete="new-password" data-lpignore="true" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit;" placeholder="Barrio o localidad">
                     </div>
                 </div>
+                <div id="eom-schedule-box" style="display:none; margin-bottom:10px; padding:12px; border:1px solid #dbe4f0; border-radius:12px; background:#ffffff; box-shadow:0 1px 3px rgba(15,23,42,0.04);">
+                    <div id="eom-schedule-banner" style="display:none; margin:0 0 10px; padding:10px 12px; border-radius:10px; background:#fff7ed; color:#9a3412; font-size:13px; line-height:1.45; font-weight:700;"></div>
+                    <div style="font-size:12px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:#334155; margin-bottom:8px;">Horario del pedido</div>
+                    <div id="eom-schedule-switch" style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <label id="eom-schedule-asap-label" style="flex:1 1 140px; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 12px; border:1px solid #cbd5e1; border-radius:10px; background:#f8fafc; color:#334155; font-weight:800; cursor:pointer;">
+                            <input type="radio" name="eom-schedule-mode" value="asap" checked>
+                            <span>Lo antes posible</span>
+                        </label>
+                        <label id="eom-schedule-later-label" style="flex:1 1 140px; display:flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 12px; border:1px solid #cbd5e1; border-radius:10px; background:#f8fafc; color:#334155; font-weight:800; cursor:pointer;">
+                            <input type="radio" name="eom-schedule-mode" value="scheduled">
+                            <span>Programar</span>
+                        </label>
+                    </div>
+                    <div id="eom-schedule-slot-wrap" style="display:none; margin-top:10px;">
+                        <label for="eom-schedule-slot" style="font-size:13px; font-weight:700; color:#334155; display:block; margin-bottom:6px;">Quiero que esté listo a las...</label>
+                        <select id="eom-schedule-slot" style="width:100%; min-height:44px; padding:0 12px; border:1px solid #cbd5e1; border-radius:10px; background:#f8fafc; color:#0f172a; font-weight:700; font-family:inherit;">
+                            <option value="">Seleccionar horario...</option>
+                        </select>
+                        <div id="eom-schedule-summary" style="display:none; margin-top:8px; padding:8px 10px; border-radius:10px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:13px; font-weight:700;"></div>
+                    </div>
+                    <div id="eom-schedule-fire-hint" style="display:none; margin-top:8px; color:#64748b; font-size:12px; line-height:1.4;"></div>
+                </div>
                 <div style="margin-bottom: 10px;">
                     <label style="font-size: 0.9rem; font-weight: 600; display: block; margin-bottom: 4px;">Detalle adicional (Orden)</label>
                     <textarea id="eom-notes" rows="2" name="edit_order_notes_field" autocomplete="off" spellcheck="false" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical;" placeholder="Notas generales del pedido..."></textarea>
@@ -13096,6 +13118,103 @@
       }
       return buckets;
     }
+    function sortOperationalOrders(list, activeQuickFilter) {
+      const arr = Array.isArray(list) ? list.slice() : [];
+      const filterKey = String(activeQuickFilter || '').trim();
+      const getStage = (order) => String(_getOrdersBoardStageKey(order) || '').trim().toLowerCase();
+      return arr.sort((a, b) => {
+        const aStage = getStage(a);
+        const bStage = getStage(b);
+        const aScheduled = aStage === 'programado';
+        const bScheduled = bStage === 'programado';
+        if (filterKey === 'programado' || (aScheduled && bScheduled)) {
+          const aTs = parseDateSafe(a && a.scheduled_for || '');
+          const bTs = parseDateSafe(b && b.scheduled_for || '');
+          if (!Number.isNaN(aTs) && !Number.isNaN(bTs) && aTs !== bTs) return aTs - bTs;
+          if (!Number.isNaN(aTs) && Number.isNaN(bTs)) return -1;
+          if (Number.isNaN(aTs) && !Number.isNaN(bTs)) return 1;
+        }
+        const aCreated = parseDateSafe(a && a.created_at || '');
+        const bCreated = parseDateSafe(b && b.created_at || '');
+        if (!Number.isNaN(aCreated) && !Number.isNaN(bCreated) && aCreated !== bCreated) return aCreated - bCreated;
+        return Number(a && a.id || 0) - Number(b && b.id || 0);
+      });
+    }
+    window.releaseScheduledOrder = async function(orderId) {
+      const oid = safeAdminInt(orderId);
+      if (!oid) return;
+      let detail = null;
+      try {
+        detail = await fetchOrderDetail(oid);
+      } catch (_) {
+        alert('No se pudo cargar el pedido para liberarlo.');
+        return;
+      }
+      const order = detail && detail.order ? detail.order : {};
+      const items = Array.isArray(detail && detail.items) ? detail.items : [];
+      const payload = {
+        items: items.map((it) => ({
+          id: it.product_id || it.id,
+          product_id: it.product_id || it.id,
+          item_id: it.id,
+          name: it.name,
+          quantity: Number(it.qty || it.quantity || 1),
+          qty: Number(it.qty || it.quantity || 1),
+          price: Number(it.unit_price || it.price || 0),
+          unit_price: Number(it.unit_price || it.price || 0),
+          notes: it.notes || '',
+          modifiers: (() => {
+            try {
+              if (it && typeof it.modifiers_json === 'string' && it.modifiers_json.trim()) {
+                return JSON.parse(it.modifiers_json);
+              }
+            } catch (_) {}
+            return {};
+          })()
+        })),
+        order_notes: order.order_notes || '',
+        schedule_mode: 'asap',
+        scheduled_for: ''
+      };
+      const orderType = String(order.order_type || '').trim().toLowerCase();
+      if (orderType === 'mesa') payload.table_number = String(order.table_number || '').trim();
+      if (orderType === 'direccion' || orderType === 'espera') {
+        payload.customer_name = String(order.customer_name || '').trim();
+        payload.customer_phone = String(order.customer_phone || '').trim();
+      }
+      if (orderType === 'direccion') {
+        let address = order.address_json || {};
+        if (typeof address === 'string') {
+          try { address = JSON.parse(address); } catch (_) { address = { address }; }
+        }
+        payload.address = (address && typeof address === 'object') ? address : { address: '' };
+      }
+      if (!window.CSRF_TOKEN || window.CSRF_TOKEN === '') {
+        try { await window.fetchCsrfToken(); } catch (_) {}
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      if (window.CSRF_TOKEN) headers['X-CSRFToken'] = window.CSRF_TOKEN;
+      const url = new URL(`/api/orders/${oid}`, API_BASE).toString();
+      let resp = await wFetch(url, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(payload)
+      });
+      if (resp.status === 403) {
+        try { await window.fetchCsrfToken(); } catch (_) {}
+        if (window.CSRF_TOKEN) headers['X-CSRFToken'] = window.CSRF_TOKEN;
+        resp = await wFetch(url, { method: 'PUT', headers, body: JSON.stringify(payload) });
+      }
+      let data = {};
+      try { data = await resp.json(); } catch (_) {}
+      if (!resp.ok) {
+        alert(data.error || 'No se pudo liberar el pedido programado.');
+        return;
+      }
+      try {
+        if (typeof loadOrdersSafe === 'function') await loadOrdersSafe();
+      } catch (_) {}
+    };
     window.__kdsSetOrdersListHidden = function(hidden) {
       const els = [
         document.getElementById('orders-table'),
@@ -13300,6 +13419,7 @@
             });
           }
         } catch (_) {}
+        active = sortOperationalOrders(active, ordersQuickStatusFilter);
         try { window.updateOrdersQuickFilterUI(); } catch (_) {}
 
         const total = Number(data.total || orders.length || 0);
@@ -13474,6 +13594,9 @@
         const safeOrderId = safeAdminInt(o.id);
         const safeTotal = Number(o.total || 0);
         const cashFollowupHtml = _renderOrderFollowupSignals(o);
+        const releaseNowBtn = String(o.status || '').trim().toLowerCase() === 'programado'
+          ? `<button class="status-action" onclick="window.releaseScheduledOrder(${safeOrderId})" style="background:#ecfeff; color:#0f766e; width:auto; padding:0 8px; margin-right:4px;" title="Liberar ahora" aria-label="Liberar ahora">Ahora</button>`
+          : '';
 
         tr.innerHTML = `
           <td>${safeOrderNumber}</td>
@@ -13504,6 +13627,7 @@
               ${entregadoBtn}
             </div>
             <div class="status-quick status-quick-tools">
+              ${releaseNowBtn}
               <button class="status-action" onclick="window.showPrintOptions(${safeOrderId})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
                 <svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg>
               </button>
@@ -13577,6 +13701,7 @@
                 ${entregadoBtn}
               </div>
               <div class="status-quick status-quick-tools">
+                ${releaseNowBtn}
                 <button class="status-action" onclick="window.showPrintOptions(${safeOrderId})" style="width:auto; padding:0 8px; margin-right:4px; background:#607d8b; color:white;" title="Imprimir" aria-label="Imprimir">
                   <svg style="width:16px;height:16px;vertical-align:middle;" viewBox="0 0 24 24"><path fill="currentColor" d="M19 8h-1V3H6v5H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zM8 5h8v3H8V5zm8 12v2H8v-2h8zm2-2v-2H6v2H4v-4c0-.55.45-1 1-1h14c.55 0 1 .45 1 1v4h-2z"/></svg>
                 </button>
@@ -28480,12 +28605,34 @@ window.EditOrder = {
         this.addressWrapEl = document.getElementById('eom-address-wrap');
         this.localityWrapEl = document.getElementById('eom-locality-wrap');
         this.paidLockHintEl = document.getElementById('eom-paid-lock-hint');
+        this.scheduleBoxEl = document.getElementById('eom-schedule-box');
+        this.scheduleBannerEl = document.getElementById('eom-schedule-banner');
+        this.scheduleSwitchEl = document.getElementById('eom-schedule-switch');
+        this.scheduleAsapLabelEl = document.getElementById('eom-schedule-asap-label');
+        this.scheduleLaterLabelEl = document.getElementById('eom-schedule-later-label');
+        this.scheduleSlotWrapEl = document.getElementById('eom-schedule-slot-wrap');
+        this.scheduleSlotEl = document.getElementById('eom-schedule-slot');
+        this.scheduleSummaryEl = document.getElementById('eom-schedule-summary');
+        this.scheduleFireHintEl = document.getElementById('eom-schedule-fire-hint');
         
         if(this.closeBtn) this.closeBtn.onclick = () => this.close();
         const overlay = this.modal.querySelector('.kds-modal-overlay');
         if(overlay) overlay.onclick = () => this.close();
         if(this.search) this.search.oninput = (e) => this.renderProducts(e.target.value);
         if(this.saveBtn) this.saveBtn.onclick = () => this.save();
+        if (this.scheduleSwitchEl) {
+            this.scheduleSwitchEl.querySelectorAll('input[name="eom-schedule-mode"]').forEach((radio) => {
+                radio.addEventListener('change', () => {
+                    this._syncScheduleModeUI();
+                    this._syncScheduleSummary();
+                });
+            });
+        }
+        if (this.scheduleSlotEl) {
+            this.scheduleSlotEl.addEventListener('change', () => {
+                this._syncScheduleSummary();
+            });
+        }
     },
 
     _getCurrentOrderType: function() {
@@ -28538,6 +28685,182 @@ window.EditOrder = {
         if (this.phoneWrapEl) this.phoneWrapEl.style.display = (isDelivery || isPickup) ? 'block' : 'none';
         if (this.addressWrapEl) this.addressWrapEl.style.display = isDelivery ? 'block' : 'none';
         if (this.localityWrapEl) this.localityWrapEl.style.display = isDelivery ? 'block' : 'none';
+    },
+
+    _getCurrentTenantSlug: function() {
+        return String(
+            (this.currentOrder && this.currentOrder.tenant_slug)
+            || currentTenantSlug
+            || ((typeof getActiveTenantSlug === 'function' ? getActiveTenantSlug() : '') || '')
+            || (tenantInput && tenantInput.value ? tenantInput.value.trim() : '')
+            || defaultSlug()
+            || 'gastronomia-local1'
+        ).trim() || 'gastronomia-local1';
+    },
+
+    _canScheduleCurrentOrder: function() {
+        const orderType = this._getCurrentOrderType();
+        return orderType === 'direccion' || orderType === 'espera';
+    },
+
+    _getScheduleModeValue: function() {
+        const checked = this.scheduleSwitchEl
+            ? this.scheduleSwitchEl.querySelector('input[name="eom-schedule-mode"]:checked')
+            : null;
+        return String((checked && checked.value) || 'asap').trim().toLowerCase();
+    },
+
+    _setScheduleModeValue: function(mode) {
+        const normalized = String(mode || '').trim().toLowerCase() === 'scheduled' ? 'scheduled' : 'asap';
+        if (!this.scheduleSwitchEl) return;
+        const target = this.scheduleSwitchEl.querySelector(`input[name="eom-schedule-mode"][value="${normalized}"]`);
+        if (target) target.checked = true;
+    },
+
+    _syncScheduleChoiceStyles: function() {
+        if (!this.scheduleSwitchEl) return;
+        this.scheduleSwitchEl.querySelectorAll('label').forEach((label) => {
+            const input = label.querySelector('input');
+            const active = !!(input && input.checked && label.style.display !== 'none');
+            label.style.background = active ? '#e8f0fe' : '#f8fafc';
+            label.style.borderColor = active ? '#93c5fd' : '#cbd5e1';
+            label.style.color = active ? '#1d4ed8' : '#334155';
+            label.style.boxShadow = active ? '0 0 0 1px rgba(59,130,246,0.12)' : 'none';
+        });
+    },
+
+    _syncScheduleModeUI: function() {
+        if (!this.scheduleBoxEl) return;
+        const canSchedule = this._canScheduleCurrentOrder();
+        const avail = this.scheduleAvailability || null;
+        const order = this.currentOrder || {};
+        const isScheduled = String(order.schedule_mode || '').trim().toLowerCase() === 'scheduled'
+            || String(order.status || '').trim().toLowerCase() === 'programado';
+        if (!canSchedule || !avail || !avail.has_hours) {
+            this.scheduleBoxEl.style.display = 'none';
+            return;
+        }
+        this.scheduleBoxEl.style.display = 'block';
+        const isOpen = !!avail.is_open;
+        const allowScheduleOpen = !!avail.allow_schedule_when_open;
+        const mustSchedule = !isOpen;
+        const hasSlots = Array.isArray(avail.slots) && avail.slots.length > 0;
+        if (this.scheduleAsapLabelEl) this.scheduleAsapLabelEl.style.display = mustSchedule ? 'none' : '';
+        if (this.scheduleLaterLabelEl) this.scheduleLaterLabelEl.style.display = (mustSchedule && !hasSlots) ? 'none' : '';
+        if (mustSchedule && hasSlots) this._setScheduleModeValue('scheduled');
+        if (!mustSchedule && !allowScheduleOpen && !isScheduled) this._setScheduleModeValue('asap');
+        const currentMode = this._getScheduleModeValue();
+        if (this.scheduleSlotWrapEl) {
+            this.scheduleSlotWrapEl.style.display = (currentMode === 'scheduled' && hasSlots) ? 'block' : 'none';
+        }
+        this._syncScheduleChoiceStyles();
+    },
+
+    _syncScheduleSummary: function() {
+        this._syncScheduleChoiceStyles();
+        if (!this.scheduleSummaryEl || !this.scheduleSlotEl) return;
+        const isScheduled = this._getScheduleModeValue() === 'scheduled';
+        const label = this.scheduleSlotEl.selectedOptions && this.scheduleSlotEl.selectedOptions[0]
+            ? String(this.scheduleSlotEl.selectedOptions[0].textContent || '').trim()
+            : '';
+        if (!isScheduled || !this.scheduleSlotEl.value || !label) {
+            this.scheduleSummaryEl.style.display = 'none';
+            this.scheduleSummaryEl.textContent = '';
+        } else {
+            this.scheduleSummaryEl.style.display = 'block';
+            this.scheduleSummaryEl.textContent = `Horario elegido: ${label}`;
+        }
+        const order = this.currentOrder || {};
+        const fireAt = String(order.fire_at || '').trim();
+        const currentScheduledFor = String(order.scheduled_for || '').trim().replace(' ', 'T');
+        const usingCurrentScheduledSlot = !!(currentScheduledFor && String(this.scheduleSlotEl.value || '').trim() === currentScheduledFor);
+        if (this.scheduleFireHintEl) {
+            if (isScheduled && this.scheduleSlotEl.value && fireAt && usingCurrentScheduledSlot) {
+                this.scheduleFireHintEl.style.display = 'block';
+                this.scheduleFireHintEl.textContent = `Se libera a cocina a las ${formatScheduledForDisplay(fireAt)}.`;
+            } else if (isScheduled && this.scheduleSlotEl.value) {
+                this.scheduleFireHintEl.style.display = 'block';
+                this.scheduleFireHintEl.textContent = 'El pedido se liberará automáticamente unos minutos antes para dar tiempo a cocina.';
+            } else {
+                this.scheduleFireHintEl.style.display = 'none';
+                this.scheduleFireHintEl.textContent = '';
+            }
+        }
+    },
+
+    _applyScheduleAvailability: function() {
+        const avail = this.scheduleAvailability || null;
+        const order = this.currentOrder || {};
+        const canSchedule = this._canScheduleCurrentOrder();
+        const currentScheduledFor = String(order.scheduled_for || '').trim();
+        if (!this.scheduleBoxEl) return;
+        if (!canSchedule || !avail || !avail.has_hours) {
+            this.scheduleBoxEl.style.display = 'none';
+            return;
+        }
+        const slots = Array.isArray(avail.slots) ? avail.slots : [];
+        if (this.scheduleSlotEl) {
+            this.scheduleSlotEl.innerHTML = '<option value="">Seleccionar horario...</option>';
+            slots.forEach((slot) => {
+                const opt = document.createElement('option');
+                opt.value = String(slot.iso || '').trim();
+                opt.textContent = String(slot.label || slot.local || opt.value);
+                this.scheduleSlotEl.appendChild(opt);
+            });
+            if (currentScheduledFor) {
+                const normalizedCurrent = currentScheduledFor.replace(' ', 'T');
+                const existing = Array.from(this.scheduleSlotEl.options).find((opt) => String(opt.value || '').trim() === normalizedCurrent);
+                if (!existing) {
+                    const extra = document.createElement('option');
+                    extra.value = normalizedCurrent;
+                    extra.textContent = formatScheduledForDisplay(normalizedCurrent);
+                    this.scheduleSlotEl.appendChild(extra);
+                }
+                this.scheduleSlotEl.value = normalizedCurrent;
+            } else if (slots[0] && slots[0].iso) {
+                this.scheduleSlotEl.value = String(slots[0].iso || '').trim();
+            }
+        }
+        if (this.scheduleBannerEl) {
+            const isOpen = !!avail.is_open;
+            const firstLabel = String((slots[0] && slots[0].label) || '').trim();
+            if (!isOpen) {
+                this.scheduleBannerEl.style.display = 'block';
+                this.scheduleBannerEl.textContent = firstLabel
+                    ? `El local está cerrado ahora. Primera franja disponible: ${firstLabel}.`
+                    : 'El local está cerrado ahora y no hay franjas disponibles para programar.';
+            } else if (avail.allow_schedule_when_open) {
+                this.scheduleBannerEl.style.display = 'block';
+                this.scheduleBannerEl.textContent = 'Podés dejar este pedido programado para más tarde o liberarlo ahora.';
+            } else {
+                this.scheduleBannerEl.style.display = 'none';
+                this.scheduleBannerEl.textContent = '';
+            }
+        }
+        this._syncScheduleModeUI();
+        this._syncScheduleSummary();
+    },
+
+    loadScheduleAvailability: async function(force) {
+        if (!this._canScheduleCurrentOrder()) {
+            this.scheduleAvailability = null;
+            this._applyScheduleAvailability();
+            return null;
+        }
+        const slug = this._getCurrentTenantSlug();
+        const url = new URL('/api/public/order_availability', API_BASE);
+        url.searchParams.set('tenant_slug', slug);
+        if (force) url.searchParams.set('_', String(Date.now()));
+        try {
+            const resp = await wFetch(url.toString());
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            this.scheduleAvailability = await resp.json();
+        } catch (err) {
+            console.warn('No se pudo cargar disponibilidad para edición:', err);
+            this.scheduleAvailability = null;
+        }
+        this._applyScheduleAvailability();
+        return this.scheduleAvailability;
     },
 
     _buildAddonsSignature: function(addons) {
@@ -28718,7 +29041,11 @@ window.EditOrder = {
                 payment_status: detail.order ? detail.order.payment_status : '',
                 customer_name: detail.order ? detail.order.customer_name : '',
                 customer_phone: detail.order ? detail.order.customer_phone : '',
-                address_json: detail.order ? detail.order.address_json : {}
+                address_json: detail.order ? detail.order.address_json : {},
+                status: detail.order ? detail.order.status : '',
+                schedule_mode: detail.order ? detail.order.schedule_mode : 'asap',
+                scheduled_for: detail.order ? detail.order.scheduled_for : '',
+                fire_at: detail.order ? detail.order.fire_at : ''
             }, detail.items || []);
             try { window.kdsLastOrderId = orderId; } catch (_) {}
         } catch(e) {
@@ -28800,6 +29127,9 @@ window.EditOrder = {
         if (this.notesEl) {
             this.notesEl.value = order.order_notes || '';
         }
+        this.scheduleAvailability = null;
+        this._setScheduleModeValue(String(order.schedule_mode || '').trim().toLowerCase() === 'scheduled' ? 'scheduled' : 'asap');
+        this._applyScheduleAvailability();
         
         this.modal.style.display = 'flex';
         this.modal.classList.add('active');
@@ -28810,6 +29140,7 @@ window.EditOrder = {
             this.renderProducts('');
             this.renderItems();
         });
+        this.loadScheduleAvailability(true).catch(() => {});
         this.renderItems();
     },
     
@@ -28825,6 +29156,13 @@ window.EditOrder = {
         if (this.customerPhoneEl) this.customerPhoneEl.value = '';
         if (this.addressEl) this.addressEl.value = '';
         if (this.localityEl) this.localityEl.value = '';
+        this.scheduleAvailability = null;
+        if (this.scheduleSlotEl) this.scheduleSlotEl.innerHTML = '<option value="">Seleccionar horario...</option>';
+        if (this.scheduleBannerEl) { this.scheduleBannerEl.style.display = 'none'; this.scheduleBannerEl.textContent = ''; }
+        if (this.scheduleSummaryEl) { this.scheduleSummaryEl.style.display = 'none'; this.scheduleSummaryEl.textContent = ''; }
+        if (this.scheduleFireHintEl) { this.scheduleFireHintEl.style.display = 'none'; this.scheduleFireHintEl.textContent = ''; }
+        if (this.scheduleBoxEl) this.scheduleBoxEl.style.display = 'none';
+        this._setScheduleModeValue('asap');
         this._syncPaidEditMode();
     },
 
@@ -29225,6 +29563,22 @@ window.EditOrder = {
                     return;
                 }
             }
+            if (this._canScheduleCurrentOrder() && this.scheduleBoxEl && this.scheduleBoxEl.style.display !== 'none') {
+                const scheduleMode = this._getScheduleModeValue();
+                if (scheduleMode === 'scheduled') {
+                    const selectedSlot = this.scheduleSlotEl ? String(this.scheduleSlotEl.value || '').trim() : '';
+                    if (!selectedSlot) {
+                        alert('Elegí un horario para programar el pedido.');
+                        return;
+                    }
+                    payload.schedule_mode = 'scheduled';
+                    payload.scheduled_for = selectedSlot;
+                } else if (String((this.currentOrder && this.currentOrder.schedule_mode) || '').trim().toLowerCase() === 'scheduled'
+                    || String((this.currentOrder && this.currentOrder.status) || '').trim().toLowerCase() === 'programado') {
+                    payload.schedule_mode = 'asap';
+                    payload.scheduled_for = '';
+                }
+            }
 
             if (!window.CSRF_TOKEN || window.CSRF_TOKEN === '') {
               try { await window.fetchCsrfToken(); } catch (_) {}
@@ -29256,6 +29610,10 @@ window.EditOrder = {
                         found.customer_phone = payload.customer_phone || '';
                     }
                     if (typeof payload.order_notes !== 'undefined') found.order_notes = payload.order_notes;
+                    if (typeof result.status !== 'undefined') found.status = result.status;
+                    if (typeof result.schedule_mode !== 'undefined') found.schedule_mode = result.schedule_mode;
+                    if (typeof result.scheduled_for !== 'undefined') found.scheduled_for = result.scheduled_for;
+                    if (typeof result.fire_at !== 'undefined') found.fire_at = result.fire_at;
                     if (result && typeof result.total !== 'undefined') found.total = result.total;
                 };
                 try { patchLocalOrder(window.currentOrders); } catch (_) {}
